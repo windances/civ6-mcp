@@ -6,10 +6,77 @@ Connect any MCP-compatible client — Claude Code, Codex, Gemini CLI, or your ow
 
 ## DeepSeek Harness orchestrator
 
-This fork includes a directly runnable DeepSeek Harness orchestrator with four
-no-tool specialist advisors and a sole-writer parent agent. See the
-[DeepSeek Harness quickstart](docs/deepseek-harness.md) and the
-[implementation and qualification plan](docs/DSH_ORCHESTRATOR_REWRITE_PLAN.md).
+This fork includes a directly runnable
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+orchestrator. A parent agent owns the live Civ connection and delegates an
+immutable turn snapshot to four specialist advisors:
+
+| Advisor | Responsibility |
+|---------|----------------|
+| Strategy | Long-term priorities, research, civics, and victory path |
+| Military and map | Combat, unit safety, exploration, and settlement |
+| Economy and cities | Production, growth, districts, trade, and spending |
+| Diplomacy and victory | Relationships, deals, Congress, and victory threats |
+
+Advisor workers have no tools and cannot change the game. They return proposed
+actions to the parent, which validates conflicts and remains the sole writer.
+
+### Run with DeepSeek Harness
+
+Requirements:
+
+- Node.js 24 or newer
+- Civilization VI with FireTuner enabled on TCP port 4318
+- `DEEPSEEK_API_KEY` exported in the shell
+
+Bootstrap installs DSH, `uv`, and Python into project-local directories:
+
+```bash
+git clone https://github.com/windances/civ6-mcp.git
+cd civ6-mcp
+npm run bootstrap
+```
+
+Start Civ VI, load a game, and launch the headless orchestrator:
+
+```bash
+export DEEPSEEK_API_KEY="your-key"
+npm run dsh:play -- \
+  "Play one complete turn using the civ6-orchestrator skill."
+```
+
+To use the DSH web interface instead:
+
+```bash
+npm run dsh:web
+```
+
+### Qualify the installation
+
+The complete keyless gate runs schema and prompt checks, the Python regression
+suite, a real MCP stdio handshake, restricted tool discovery, and DSH overlay
+resolution:
+
+```bash
+npm run qualify:all
+```
+
+The gate does not require a DeepSeek key or a running game. Live-turn
+qualification does require both.
+
+Safety controls in the current milestone include:
+
+- arbitrary `run_lua` access removed from the DSH MCP inventory;
+- generic subagent, fork, workflow, and Ralph routes disabled;
+- a single depth-limited advisor route with an empty tool allowlist;
+- Civ telemetry, diaries, DSH state, and dependency caches kept inside the
+  workspace; and
+- the embedded Civ dashboard disabled in headless DSH mode.
+
+See the [DSH quickstart](docs/deepseek-harness.md) for directory layout and
+operations. The
+[implementation and qualification plan](docs/DSH_ORCHESTRATOR_REWRITE_PLAN.md)
+documents every phase, acceptance gate, fault test, and remaining milestone.
 
 <!-- TODO: Add screenshot or GIF of agent playing -->
 
@@ -85,7 +152,7 @@ Restart Civ 6. The game will listen on TCP port 4318 for connections.
 ### 2. Install
 
 ```bash
-git clone https://github.com/lmwilki/civ6-mcp.git
+git clone https://github.com/windances/civ6-mcp.git
 cd civ6-mcp
 uv sync
 ```
