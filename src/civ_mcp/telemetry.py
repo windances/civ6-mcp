@@ -27,7 +27,7 @@ from civ_mcp.version import GIT_DESCRIBE, GIT_SHA, VERSION
 
 log = logging.getLogger(__name__)
 
-LOCAL_DIR = Path.home() / ".civ6-mcp"
+LOCAL_DIR = Path(os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp"))
 
 # Event types emitted by the MCP server
 EVENT_DIARY_ROW = "diary_row"

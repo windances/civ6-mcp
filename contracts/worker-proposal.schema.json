@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civ6-dsh.local/contracts/worker-proposal.schema.json",
+  "title": "Civ6 Worker Proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "gameId",
+    "turn",
+    "worker",
+    "assessment",
+    "priority",
+    "actions",
+    "warnings",
+    "confidence"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "gameId": { "type": "string", "minLength": 1 },
+    "turn": { "type": "integer", "minimum": 0 },
+    "worker": {
+      "enum": ["strategy", "military-map", "economy-cities", "diplomacy-victory"]
+    },
+    "assessment": { "type": "string", "minLength": 1 },
+    "priority": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "actions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/action" }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionId",
+        "tool",
+        "arguments",
+        "preconditions",
+        "expectedEffects",
+        "risk"
+      ],
+      "properties": {
+        "actionId": { "type": "string", "minLength": 1 },
+        "tool": { "type": "string", "minLength": 1 },
+        "arguments": { "type": "object" },
+        "preconditions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "expectedEffects": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "risk": { "enum": ["low", "medium", "high"] }
+      }
+    }
+  }
+}

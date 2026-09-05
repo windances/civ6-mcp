@@ -330,12 +330,20 @@ async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     popup_watcher.start()
     watchdog.start()
 
-    # Start the web dashboard API as a background task (port 8000)
-    web_app = create_app(gs)
-    uvi_config = uvicorn.Config(web_app, host="0.0.0.0", port=8000, log_level="info")
-    uvi_server = uvicorn.Server(uvi_config)
-    api_task = asyncio.create_task(uvi_server.serve())
-    log.info("Web API starting on http://0.0.0.0:8000")
+    # The dashboard is optional for headless and sandboxed agent deployments.
+    # Bind to loopback by default when enabled; remote exposure must be explicit.
+    uvi_server: uvicorn.Server | None = None
+    api_task: asyncio.Task | None = None
+    if not os.environ.get("CIV_MCP_DISABLE_WEB_API"):
+        web_host = os.environ.get("CIV_MCP_WEB_HOST", "127.0.0.1")
+        web_port = int(os.environ.get("CIV_MCP_WEB_PORT", "8000"))
+        web_app = create_app(gs)
+        uvi_config = uvicorn.Config(
+            web_app, host=web_host, port=web_port, log_level="info"
+        )
+        uvi_server = uvicorn.Server(uvi_config)
+        api_task = asyncio.create_task(uvi_server.serve())
+        log.info("Web API starting on http://%s:%d", web_host, web_port)
 
     try:
         yield AppContext(
@@ -352,8 +360,9 @@ async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         await watchdog.stop()
         await camera.stop()
         await popup_watcher.stop()
-        uvi_server.should_exit = True
-        await api_task
+        if uvi_server is not None and api_task is not None:
+            uvi_server.should_exit = True
+            await api_task
         await conn.disconnect()
 
 

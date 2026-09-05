@@ -4,6 +4,13 @@ An MCP server that lets LLM agents play full games of Civilization VI.
 
 Connect any MCP-compatible client — Claude Code, Codex, Gemini CLI, or your own — to a running Civ 6 game. The agent reads game state, moves units, manages cities, conducts diplomacy, and ends turns, all through the game's own rule-enforcing APIs. No cheats, no vision model required.
 
+## DeepSeek Harness orchestrator
+
+This fork includes a directly runnable DeepSeek Harness orchestrator with four
+no-tool specialist advisors and a sole-writer parent agent. See the
+[DeepSeek Harness quickstart](docs/deepseek-harness.md) and the
+[implementation and qualification plan](docs/DSH_ORCHESTRATOR_REWRITE_PLAN.md).
+
 <!-- TODO: Add screenshot or GIF of agent playing -->
 
 ## Capabilities

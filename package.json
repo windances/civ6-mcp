@@ -1,0 +1,22 @@
+{
+  "name": "civ6-dsh-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DeepSeek Harness orchestrator for the civ6-mcp environment adapter",
+  "scripts": {
+    "bootstrap": "bash scripts/bootstrap.sh",
+    "qualify": "node scripts/qualify-static.mjs",
+    "qualify:python": ".venv/bin/pytest tests -q",
+    "qualify:mcp": "bash scripts/qualify-mcp.sh",
+    "qualify:all": "npm run qualify && npm run qualify:python && npm run qualify:mcp && npm run dsh:dump",
+    "dsh:dump": "bash scripts/dump-dsh-config.sh",
+    "dsh:play": "bash scripts/run-dsh-headless.sh",
+    "dsh:web": "bash scripts/run-dsh-web.sh"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.1.2-rc.1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -6,9 +6,10 @@ Writes/reads JSONL diary files stored in ~/.civ6-mcp/.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
-DIARY_DIR = Path.home() / ".civ6-mcp"
+DIARY_DIR = Path(os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp"))
 _REFLECTION_FIELDS = ("tactical", "strategic", "tooling", "planning", "hypothesis")
 
 

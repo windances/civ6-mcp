@@ -9,6 +9,14 @@ wheels/
 # Virtual environments
 .venv
 
+# DeepSeek Harness project runtime
+.dsh-home/
+.civ6-mcp-data/
+.tools/
+.uv-cache/
+.pytest_cache/
+node_modules/
+
 # Claude Code user settings
 .claude/
 

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civ6-dsh.local/contracts/turn-snapshot.schema.json",
+  "title": "Civ6 Turn Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "gameId",
+    "turn",
+    "overview",
+    "units",
+    "cities",
+    "map",
+    "diplomacy",
+    "victory",
+    "blockers",
+    "recentEvents"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "gameId": { "type": "string", "minLength": 1 },
+    "turn": { "type": "integer", "minimum": 0 },
+    "overview": { "type": "object" },
+    "units": { "type": "array", "items": { "type": "object" } },
+    "cities": { "type": "array", "items": { "type": "object" } },
+    "map": { "type": "object" },
+    "diplomacy": { "type": "array", "items": { "type": "object" } },
+    "victory": { "type": "object" },
+    "blockers": { "type": "array", "items": { "type": "object" } },
+    "recentEvents": { "type": "array", "items": { "type": "object" } }
+  }
+}

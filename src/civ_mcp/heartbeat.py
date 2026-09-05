@@ -12,7 +12,9 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-HEARTBEAT_PATH = Path.home() / ".civ6-mcp" / "heartbeat.json"
+HEARTBEAT_PATH = Path(
+    os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp")
+) / "heartbeat.json"
 
 # Module-level state — set once, reused on every write
 _run_id: str = ""

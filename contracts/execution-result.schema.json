@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civ6-dsh.local/contracts/execution-result.schema.json",
+  "title": "Civ6 Execution Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "gameId",
+    "turn",
+    "actionId",
+    "status",
+    "toolResult",
+    "verified",
+    "observedEffects",
+    "replanRequired"
+  ],
+  "properties": {
+    "version": { "const": 1 },
+    "gameId": { "type": "string", "minLength": 1 },
+    "turn": { "type": "integer", "minimum": 0 },
+    "actionId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["executed", "rejected", "failed", "uncertain"] },
+    "toolResult": { "type": "string" },
+    "verified": { "type": "boolean" },
+    "observedEffects": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "replanRequired": { "type": "boolean" }
+  }
+}

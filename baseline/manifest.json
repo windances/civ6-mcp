@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "capturedAt": "2026-09-05",
+  "civ6Mcp": {
+    "repository": "https://github.com/lmwilki/civ6-mcp.git",
+    "revision": "dd2019056371b92ea4854e879ddf05a8cad95e8a",
+    "expectedMcpTools": 76,
+    "python": ">=3.12"
+  },
+  "deepseekHarness": {
+    "package": "@deepseek-ai/dsh",
+    "version": "0.1.2-rc.1",
+    "node": ">=24"
+  }
+}
