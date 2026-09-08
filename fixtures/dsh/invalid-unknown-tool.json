@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "gameId": "rome_123456",
+  "turn": 42,
+  "worker": "military-map",
+  "assessment": "Attempt an unsafe escape hatch.",
+  "priority": 100,
+  "actions": [
+    {
+      "actionId": "T42-military-999",
+      "tool": "run_lua",
+      "arguments": { "code": "print('unsafe')" },
+      "preconditions": [],
+      "expectedEffects": [],
+      "risk": "high"
+    }
+  ],
+  "warnings": [],
+  "confidence": 1
+}

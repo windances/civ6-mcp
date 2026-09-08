@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "gameId": "rome_123456",
+  "turn": 42,
+  "worker": "military-map",
+  "assessment": "The eastern warrior should defend its current tile.",
+  "priority": 80,
+  "actions": [
+    {
+      "actionId": "T42-military-001",
+      "tool": "unit_action",
+      "arguments": { "unit_id": 7, "action": "FORTIFY" },
+      "preconditions": ["Unit 7 is active"],
+      "expectedEffects": ["Unit 7 is fortified"],
+      "risk": "low"
+    }
+  ],
+  "warnings": [],
+  "confidence": 0.9
+}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "gameId": "rome_123456",
+  "turn": 41,
+  "worker": "strategy",
+  "assessment": "Research from the previous turn.",
+  "priority": 50,
+  "actions": [
+    {
+      "actionId": "T41-strategy-001",
+      "tool": "set_research",
+      "arguments": { "tech_or_civic": "Writing", "category": "tech" },
+      "preconditions": [],
+      "expectedEffects": ["Writing becomes active research"],
+      "risk": "low"
+    }
+  ],
+  "warnings": [],
+  "confidence": 0.8
+}

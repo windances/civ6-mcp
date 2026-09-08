@@ -53,9 +53,9 @@ npm run dsh:web
 
 ### Qualify the installation
 
-The complete keyless gate runs schema and prompt checks, the Python regression
-suite, a real MCP stdio handshake, restricted tool discovery, and DSH overlay
-resolution:
+The complete keyless gate runs schema and prompt checks, deterministic
+orchestrator tests, the Python regression suite, a real MCP stdio handshake,
+restricted tool discovery, and DSH overlay resolution:
 
 ```bash
 npm run qualify:all
@@ -69,6 +69,10 @@ Safety controls in the current milestone include:
 - arbitrary `run_lua` access removed from the DSH MCP inventory;
 - generic subagent, fork, workflow, and Ralph routes disabled;
 - a single depth-limited advisor route with an empty tool allowlist;
+- executable proposal validation, deterministic conflict resolution, and an
+  append-only per-turn action ledger;
+- serialized mutation execution with stale-state, precondition, postcondition,
+  and ambiguous-timeout handling;
 - Civ telemetry, diaries, DSH state, and dependency caches kept inside the
   workspace; and
 - the embedded Civ dashboard disabled in headless DSH mode.

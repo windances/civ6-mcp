@@ -684,3 +684,34 @@ npm run dsh:play -- "Play one complete turn using the civ6-orchestrator skill."
 Milestone 1 is not the final rollout gate. Live parity, fault injection,
 multi-turn shadow evaluation, and deterministic code-level enforcement of the
 proposal/action ledger remain governed by Phases 3 through 12 above.
+
+## 21. Deterministic Core Progress (2026-09-06)
+
+The repository now implements and tests the first code-level orchestration
+boundaries:
+
+- Ajv-backed validation for snapshots, worker proposals, and execution results;
+- immutable validated inputs and typed TypeScript declarations;
+- per-worker tool/domain allowlists;
+- rejection of stale game/turn data, duplicate action IDs, missing unit/city
+  references, invalid coordinates, arbitrary Lua, and unknown tools;
+- deterministic action ordering and unit/city/global conflict resolution;
+- degraded collection when one worker returns an invalid proposal;
+- a per-turn claim/result action ledger; and
+- a sole-writer executor that serializes mutations, validates identity and
+  preconditions, verifies effects, never blindly retries ambiguous failures,
+  and stops after failed verification.
+
+Fixture-backed tests include 100 malformed proposals with zero mutation calls,
+stable conflict outcomes, duplicate protection, serial execution, stale-state
+rejection, ambiguous-timeout verification, and stop-on-verification-failure.
+
+Run these tests directly with:
+
+```bash
+npm run test:orchestrator
+```
+
+Phases 4, 6, and 7 are materially advanced but are not fully qualified until
+the core is wired into a fixed DSH workflow/plugin and exercised against live
+worker and Civ sessions.

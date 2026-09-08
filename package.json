@@ -6,15 +6,17 @@
   "scripts": {
     "bootstrap": "bash scripts/bootstrap.sh",
     "qualify": "node scripts/qualify-static.mjs",
+    "test:orchestrator": "node --test test/dsh/*.test.mjs",
     "qualify:python": ".venv/bin/pytest tests -q",
     "qualify:mcp": "bash scripts/qualify-mcp.sh",
-    "qualify:all": "npm run qualify && npm run qualify:python && npm run qualify:mcp && npm run dsh:dump",
+    "qualify:all": "npm run qualify && npm run test:orchestrator && npm run qualify:python && npm run qualify:mcp && npm run dsh:dump",
     "dsh:dump": "bash scripts/dump-dsh-config.sh",
     "dsh:play": "bash scripts/run-dsh-headless.sh",
     "dsh:web": "bash scripts/run-dsh-web.sh"
   },
   "dependencies": {
-    "@deepseek-ai/dsh": "0.1.2-rc.1"
+    "@deepseek-ai/dsh": "0.1.2-rc.1",
+    "ajv": "8.20.0"
   },
   "engines": {
     "node": ">=24"

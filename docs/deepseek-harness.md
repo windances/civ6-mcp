@@ -69,6 +69,11 @@ Create a Standard agent and ask it to use the `civ6-orchestrator` skill.
 ## Safety properties in this milestone
 
 - `run_lua` is removed from the MCP tool inventory.
+- Worker JSON is schema-validated before entering the action plan.
+- Unknown tools, stale turns, duplicate action IDs, missing entities, and
+  invalid coordinates fail closed.
+- Conflicts resolve deterministically and mutations execute through a
+  serialized, verification-aware action ledger.
 - Civ telemetry and diaries remain under `.civ6-mcp-data/`.
 - The embedded Civ dashboard API is disabled in DSH mode.
 - Generic subagent, fork, dynamic workflow, and Ralph routes are disabled by the
@@ -85,7 +90,8 @@ The complete implementation and qualification roadmap is in
 ## Current milestone
 
 Milestone 1 is runnable: DSH can load the project overlay, start the MCP adapter,
-discover its restricted tool inventory, and expose a no-tool advisor route. The
-JSON contracts and sole-writer policy are currently enforced by configuration,
-schema checks, and the orchestrator skill. A future deterministic orchestration
-plugin can enforce the same contracts in code before live-game rollout.
+discover its restricted tool inventory, and expose a no-tool advisor route.
+Contracts, tool policies, conflict resolution, and the sole-writer ledger now
+have deterministic runtime implementations and fixture-backed tests. Wiring
+this core into a fixed DSH plugin and completing live-game qualification remain
+the next milestones.

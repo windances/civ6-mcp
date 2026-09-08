@@ -27,6 +27,22 @@ const schemas = [
   'contracts/execution-result.schema.json',
 ]
 
+const orchestratorRuntime = [
+  'dsh/orchestrator/contracts.mjs',
+  'dsh/orchestrator/conflict-resolver.mjs',
+  'dsh/orchestrator/action-ledger.mjs',
+  'dsh/orchestrator/sole-writer-executor.mjs',
+  'dsh/orchestrator/types.d.ts',
+]
+
+const contractFixtures = [
+  'fixtures/dsh/valid-snapshot.json',
+  'fixtures/dsh/valid-military-proposal.json',
+  'fixtures/dsh/invalid-unknown-tool.json',
+  'fixtures/dsh/invalid-stale-turn.json',
+  'fixtures/dsh/invalid-missing-unit.json',
+]
+
 for (const path of schemas) {
   const schema = parseJson(path)
   if (schema) {
@@ -35,6 +51,16 @@ for (const path of schemas) {
     check(Array.isArray(schema.required) && schema.required.length > 0, `${path}: required fields missing`)
   }
 }
+
+for (const path of orchestratorRuntime) {
+  try {
+    check(statSync(join(root, path)).size > 100, `${path}: runtime artifact is unexpectedly short`)
+  } catch (error) {
+    failures.push(`${path}: missing: ${error.message}`)
+  }
+}
+
+for (const path of contractFixtures) parseJson(path)
 
 const workerSchema = parseJson('contracts/worker-proposal.schema.json')
 const expectedWorkers = ['strategy', 'military-map', 'economy-cities', 'diplomacy-victory']
@@ -83,6 +109,11 @@ check(
   packageJson?.dependencies?.['@deepseek-ai/dsh'] === manifest?.deepseekHarness?.version,
   'DSH package and baseline versions must match',
 )
+check(packageJson?.dependencies?.ajv === '8.20.0', 'Ajv contract validator must remain exactly pinned')
+check(
+  packageJson?.scripts?.['test:orchestrator'] === 'node --test test/dsh/*.test.mjs',
+  'orchestrator runtime test command must be registered',
+)
 check(
   packageJson?.scripts?.['qualify:mcp'] === 'bash scripts/qualify-mcp.sh',
   'MCP qualification command must be registered',
@@ -97,6 +128,8 @@ if (failures.length > 0) {
 console.log('Static qualification passed:')
 console.log(`- ${schemas.length} fail-closed JSON schemas parsed`)
 console.log(`- ${expectedWorkers.length} no-tool worker prompts checked`)
+console.log(`- ${orchestratorRuntime.length} deterministic runtime artifacts checked`)
+console.log(`- ${contractFixtures.length} contract fixtures parsed`)
 console.log(`- DSH safety overlay checked`)
 console.log(`- civ6-mcp tool inventory: ${toolCount}`)
 console.log(`- DSH version pin: ${manifest.deepseekHarness.version}`)

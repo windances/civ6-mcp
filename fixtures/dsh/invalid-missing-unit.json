@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "gameId": "rome_123456",
+  "turn": 42,
+  "worker": "military-map",
+  "assessment": "Act with a unit absent from the snapshot.",
+  "priority": 50,
+  "actions": [
+    {
+      "actionId": "T42-military-404",
+      "tool": "unit_action",
+      "arguments": { "unit_id": 404, "action": "FORTIFY" },
+      "preconditions": [],
+      "expectedEffects": [],
+      "risk": "medium"
+    }
+  ],
+  "warnings": [],
+  "confidence": 0.5
+}
