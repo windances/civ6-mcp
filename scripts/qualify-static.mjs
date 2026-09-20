@@ -11,8 +11,18 @@ function check(condition, message) {
   if (!condition) failures.push(message)
 }
 
+// A Windows checkout hands these files CRLF (Git for Windows ships core.autocrlf=true), and a
+// pattern like `- id: x\n\s+disabled: true` then never matches, because `\r` sits between the
+// token and the newline. That is a checkout artefact, not a defect in the repository, so the
+// line endings are normalised once here instead of writing \r? into every pattern - seen live:
+// a fresh clone's `npm run bootstrap:win` failed four overlay checks this way while the same
+// commit passed on an LF checkout.
+function normalize(text) {
+  return text.replace(/\r\n/g, '\n')
+}
+
 function read(relativePath) {
-  return readFileSync(join(root, relativePath), 'utf8')
+  return normalize(readFileSync(join(root, relativePath), 'utf8'))
 }
 
 function parseJson(relativePath) {
@@ -125,6 +135,11 @@ for (const id of ['tool-subagent', 'tool-subagent-fork', 'tool-workflow', 'tool-
     `${id} must be disabled`,
   )
 }
+// Guard the guard: the checks above must not depend on how the checkout wrote its line endings.
+check(
+  normalize(overlay.replace(/\n/g, '\r\n')) === overlay,
+  'overlay checks must survive a CRLF checkout',
+)
 
 const server = read('src/civ_mcp/server.py')
 const toolCount = (server.match(/^@mcp\.tool/gm) ?? []).length
