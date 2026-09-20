@@ -535,6 +535,27 @@ async def load_game_save(conn: GameConnection, save_name: str) -> str:
     # restarting. Only restart_and_load if we're in-game.
     from . import game_launcher
 
+    # The cached connection state is not the same question as "is a game loaded". A
+    # connection opened while the game was still starting caches gamecore_index=None,
+    # and the menu path then waits out every one of its timeouts clicking through a main
+    # menu that is not on screen. Measured 2026-09-20: 172s spent on a turn-80 game that
+    # was in progress and perfectly fine, after which the caller read the turn in 3s.
+    # Ask the game instead of the cache.
+    current_turn = await asyncio.to_thread(game_launcher._game_turn_number)
+    if current_turn is not None:
+        wanted = game_launcher._save_turn(save_name)
+        if wanted == current_turn:
+            return (
+                f"Already loaded: the game is at turn {current_turn}, which is what "
+                f"'{save_name}' holds. Nothing to load - continue with get_game_overview."
+            )
+        return (
+            f"FAILED: a game is already in progress at turn {current_turn}, and "
+            f"'{save_name}' is turn {wanted}. The main menu is not on screen, so it "
+            f"cannot be loaded from there. Call restart_and_load('{save_name}') to "
+            f"relaunch and load it, or keep playing the game that is open."
+        )
+
     if conn.gamecore_index is None:
         log.info("At main menu — loading '%s' via OCR menu nav", save_name)
         return await game_launcher.load_save_from_menu(save_name)

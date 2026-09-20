@@ -126,6 +126,35 @@ local function getAbility(ind)
     if #parts > 0 then return table.concat(parts, ", ") end
     return ""
 end
+-- The aura a Great General or Great Admiral grants simply by being alive, which
+-- is a different thing from the individual's own action: that one is a
+-- retirement, and `activate` consumes the unit. Reporting only the action hid the
+-- reason to keep the unit, so report both. Only these two classes have an aura;
+-- the keys are the game's own localization, so the text follows the game language
+-- and a missing key simply yields nothing.
+local function getPassive(classType)
+    local strengthKey = ""
+    local movementKey = ""
+    if classType == "GREAT_PERSON_CLASS_GENERAL" then
+        strengthKey = "LOC_GREATPERSON_COMBAT_STRENGTH_AOE_LAND_MODIFIER"
+        movementKey = "LOC_ABILITY_GREAT_GENERAL_MOVEMENT_DESCRIPTION"
+    elseif classType == "GREAT_PERSON_CLASS_ADMIRAL" then
+        strengthKey = "LOC_GREATPERSON_COMBAT_STRENGTH_AOE_SEA_MODIFIER"
+        movementKey = "LOC_ABILITY_GREAT_ADMIRAL_MOVEMENT_DESCRIPTION"
+    else
+        return ""
+    end
+    local strengthText = ""
+    local movementText = ""
+    local ok1, t1 = pcall(Locale.Lookup, strengthKey)
+    if ok1 and t1 and t1 ~= "" and t1 ~= strengthKey then strengthText = t1 end
+    local ok2, t2 = pcall(Locale.Lookup, movementKey)
+    if ok2 and t2 and t2 ~= "" and t2 ~= movementKey then movementText = t2 end
+    if strengthText ~= "" and movementText ~= "" then
+        return strengthText .. " " .. movementText
+    end
+    return strengthText .. movementText
+end
 for _, entry in ipairs(timeline) do
     if entry.Class ~= nil and entry.Individual ~= nil then
     local classInfo = GameInfo.GreatPersonClasses[entry.Class]
@@ -156,7 +185,8 @@ for _, entry in ipairs(timeline) do
             canRecruit = gp:CanRecruitPerson(me, entry.Individual)
         end)
         local costStr = "gold:" .. goldCost .. ",faith:" .. faithCost .. ",recruit:" .. tostring(canRecruit)
-        print("GP|" .. className .. "|" .. indivName .. "|" .. eraName .. "|" .. threshold .. "|" .. claimant .. "|" .. myPoints .. "|" .. ability .. "|" .. costStr .. "|" .. entry.Individual)
+        local passive = getPassive(entry.Class)
+        print("GP|" .. className .. "|" .. indivName .. "|" .. eraName .. "|" .. threshold .. "|" .. claimant .. "|" .. myPoints .. "|" .. ability .. "|" .. costStr .. "|" .. entry.Individual .. "|" .. passive)
     end
     end
 end
@@ -340,6 +370,7 @@ def parse_great_people_response(lines: list[str]) -> list[GreatPersonInfo]:
             parts = line.split("|")
             if len(parts) >= 7:
                 ability = parts[7] if len(parts) >= 8 else ""
+                passive = parts[10] if len(parts) >= 11 else ""
                 gold_cost = 0
                 faith_cost = 0
                 can_recruit = False
@@ -364,6 +395,7 @@ def parse_great_people_response(lines: list[str]) -> list[GreatPersonInfo]:
                         claimant=parts[5],
                         player_points=_int(parts[6]),
                         ability=ability,
+                        passive=passive,
                         gold_cost=gold_cost,
                         faith_cost=faith_cost,
                         can_recruit=can_recruit,

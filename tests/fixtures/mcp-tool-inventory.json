@@ -1,0 +1,11 @@
+{
+  "unit_action": ["unit_id", "action", "target_x", "target_y"],
+  "get_units": [],
+  "get_cities": [],
+  "city_action": ["city_id", "action", "target_x", "target_y"],
+  "set_city_production": ["city_id", "item_type", "item_name", "target_x", "target_y"],
+  "get_map_area": ["x", "y", "radius"],
+  "get_pathing_estimate": ["unit_id", "target_x", "target_y"],
+  "skip_remaining_units": [],
+  "end_turn": []
+}

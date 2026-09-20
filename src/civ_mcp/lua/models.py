@@ -480,6 +480,10 @@ class CitySnapshot:
     name: str
     population: int
     currently_building: str
+    # City-centre coordinates. The check engine needs them to tell a garrison (a unit standing
+    # on the city tile) from a unit that is merely near a city.
+    x: int = 0
+    y: int = 0
     food_surplus: float = 0.0
     turns_to_grow: int = 0
     loyalty: float = 100.0
@@ -534,6 +538,10 @@ class CombatEstimate:
     est_damage_to_attacker: int  # 0 for ranged
     defender_hp: int
     attacker_hp: int
+    # Name of the city on the target tile, "" when the tile holds none. When it
+    # is set, the named defender is a unit standing in that city and the CITY is
+    # what actually takes the damage.
+    target_city: str = ""
 
 
 @dataclass
@@ -629,6 +637,35 @@ class NearbyResource:
 
 
 @dataclass
+class SiegePosture:
+    """Where one of our siege units stands relative to the enemy.
+
+    Distances are the game's own (``Map.GetPlotDistance``): ``enemy_distance`` to the nearest
+    visible enemy unit, ``screen_enemy_distance`` to the nearest enemy of the friendly front
+    line unit that is closest to this siege unit (999 when there is no screen at all), and
+    ``city_distance`` to the nearest visible enemy city.
+    """
+
+    unit_type: str
+    x: int
+    y: int
+    enemy_distance: int = 999
+    screen_distance: int = 999
+    screen_enemy_distance: int = 999
+    city_distance: int = 999
+    city_name: str = ""
+
+    @property
+    def exposed(self) -> bool:
+        """Within enemy reach with nothing *closer* to the enemy than itself.
+
+        Strictly closer: a screen standing exactly as close as the siege unit is not between it
+        and the enemy, so it does not count as cover.
+        """
+        return self.enemy_distance <= 2 and self.screen_enemy_distance >= self.enemy_distance
+
+
+@dataclass
 class ThreatInfo:
     """A hostile military unit spotted near our empire."""
 
@@ -644,6 +681,16 @@ class ThreatInfo:
     owner_name: str = "Barbarian"
     is_city_state: bool = False
     unit_id: int = 0
+    # PROMOTION_CLASS_* - the game's own rock/paper/scissors axis (MELEE, RANGED,
+    # LIGHT_CAVALRY, HEAVY_CAVALRY, ANTI_CAVALRY, SIEGE, RECON, NAVAL_*).
+    promotion_class: str = ""
+    # Distance to the nearest of our units, cities excluded (999 when we have no units).
+    unit_distance: int = 999
+    # How many of our *military* units sit within two tiles / adjacent to this enemy. The
+    # difference between a lone unit trading blows and a force that can actually kill is this
+    # count, so the check engine asks the game for it rather than guessing from coordinates.
+    friendly_within_2: int = 0
+    friendly_within_1: int = 0
 
 
 @dataclass
@@ -1074,7 +1121,10 @@ class GreatPersonInfo:
     cost: int  # great person points needed to recruit
     claimant: str  # civ name or "Unclaimed"
     player_points: int  # our points toward this class
-    ability: str = ""  # activation/passive ability description
+    ability: str = ""  # the individual's own action: for a General/Admiral this
+    #                    is a RETIREMENT and `activate` consumes the unit
+    passive: str = ""  # aura the unit grants while alive; only Great Generals and
+    #                    Great Admirals have one, and activating throws it away
     gold_cost: int = 0  # gold patronize cost
     faith_cost: int = 0  # faith patronize cost
     can_recruit: bool = False  # have enough GP points

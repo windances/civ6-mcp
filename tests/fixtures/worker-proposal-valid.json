@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "gameId": "china_-1894041591",
+  "turn": 111,
+  "worker": "military-map",
+  "assessment": "prompts/tactics/02-contact-on-discovery.md | UNIT_SWORDSMAN at 53/100 HP with 2 of our units in range and 1 adjacent - killable this turn; the UNUSED ATTACK line names the two units that discarded the shot.",
+  "priority": 90,
+  "actions": [
+    {
+      "actionId": "mil-111-01",
+      "tool": "unit_action",
+      "arguments": { "unit_id": 1376265, "action": "attack", "target_x": 53, "target_y": 35 },
+      "preconditions": ["UNIT_SWORDSMAN is still on (53,35)", "archer has not attacked this turn"],
+      "expectedEffects": ["ranged attack, no retaliation", "leaves the Swordsman inside killing range of the Heavy Chariot"],
+      "risk": "low"
+    }
+  ],
+  "warnings": ["no terrain or line-of-sight data in the snapshot"],
+  "confidence": 0.7
+}

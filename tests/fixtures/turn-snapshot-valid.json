@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "gameId": "china_-1894041591",
+  "turn": 111,
+  "overview": { "military": 342, "cities": 5 },
+  "units": [
+    {
+      "name": "archer",
+      "type": "UNIT_ARCHER",
+      "x": 53,
+      "y": 34,
+      "detail": "CS:15 RS:25 moves 2/2 [id:1376265, idx:9]"
+    },
+    {
+      "name": "heavy chariot",
+      "type": "UNIT_HEAVY_CHARIOT",
+      "x": 53,
+      "y": 36,
+      "detail": "CS:28 moves 2/2 [id:1310724, idx:4]"
+    }
+  ],
+  "cities": [ { "name": "Xi'an", "x": 54, "y": 27 } ],
+  "map": { "target_city": { "name": "Moscow", "x": 54, "y": 40, "owner": "Russia" } },
+  "diplomacy": [ { "civ": "Russia", "state_index": 6 } ],
+  "victory": {},
+  "blockers": [],
+  "recentEvents": [ { "type": "UNIT_SWORDSMAN", "x": 53, "y": 35, "hp": 53 } ]
+}

@@ -25,7 +25,12 @@ Early choices compound. Each decision shapes what's available 20, 40, 60 turns l
 ## Turn Loop
 
 Each turn in order:
-1. `get_game_overview` — turn, yields, research, score, era score, difficulty. If resuming after context compaction, call `get_diary` first.
+1. `get_game_overview` — turn, yields, research, score, era score, difficulty. It also carries
+   the **TURN START** briefing once per turn: the rules from `prompts/checks/turn-checks.md`
+   that are failing, how many turns each has been failing, what the last turn actually bought,
+   your own plan quoted back, and a verdict. Read it **before** planning — if it says the plan
+   is not being executed, change one thing this turn and say in the diary which turn it lands.
+   If resuming after context compaction, call `get_diary` first.
 2. `get_units` — positions, HP, moves, charges, nearby threats
 3. `get_map_area` around cities/units — terrain, resources, enemy units
 4. Move/action each unit
@@ -33,7 +38,42 @@ Each turn in order:
 6. `get_district_advisor` if placing a new district
 7. `set_city_production` / `set_research` if needed
 8. Run **Strategic Checkpoints** if it's time
-9. `end_turn`
+9. `end_turn` — it also evaluates `prompts/checks/turn-checks.md` on **every** turn and
+   prints every failing rule in the result (`CHECK FAILED [id]: … (require: …)`). Those are
+   not suggestions: they are the strategy directive's checkable rules, measured against the
+   units you actually have and this turn's diary row. Fix the gap, or record in the diary
+   why it is being accepted — either way it must not pass unnoticed. A rule marked `once: true`
+   is a **goal**: when you satisfy it you get one `CHECK ACHIEVED … retired` line and it stops
+   being checked for the rest of the game, so a rule disappearing from the list means it was
+   done, not that the check broke. The same turn also reports `CHECK FILE PRUNED`: the achieved
+   goal is removed from `prompts/checks/turn-checks.md`, after a timestamped copy is written to
+   `prompts/checks/archive/`. What stays in the file is exactly what is still outstanding.
+   Two of those rules are about **contact on the march**: if enemy units are within two tiles
+   of your units while the army is assembling, you are walking past something that will kill the
+   siege train — the requirement is `use-your-attacks` (no legal attack may be left unused) plus
+   `mass-on-contact` (two or three attackers on the target, not one), and `counter-the-cavalry`
+   when the enemy in contact is cavalry with no anti-cavalry unit in the army. Deal with it this
+   turn, with the counter unit — or record in the diary why you deliberately let it pass. Two
+   more are about **attacks you already have**: `use-your-attacks` fires while a
+   legal attack is still unused (`skip_remaining_units` now names those units as it discards
+   them), and `finish-the-wounded` fires when an enemy within two tiles is at 20 HP or less and
+   nothing attacked — a wounded enemy heals about twenty points a turn and comes back. Once a
+   war is on, two more apply: `one-garrison-per-city` (one unit per city, everything else at the
+   front) and `answer-the-attack` (a unit that was hit gets a response this turn — fight back,
+   screen it, or withdraw and say so). When a unit is hit — or the moment enemy forces come into
+   contact — the turn result also carries a **BATTLE ASSESSMENT**: every enemy within three tiles
+   with its class, strength, HP, distance, and how many of your fighting units are already in
+   range. Use it — mass two or three attackers on one target so it dies this turn
+   (`mass-on-contact` fails while an enemy is in contact and only one of your units is in range),
+   rather than trading one-for-one. Before an assault, the same result carries a **SIEGE POSTURE**
+   line per siege unit — distance to the nearest enemy, how far that enemy is from the unit
+   screening it, and distance to the nearest enemy city. Form up outside enemy range with the
+   melee in front and the siege behind (`screen-the-siege` fails while a siege unit is within two
+   tiles of an enemy with nothing closer to that enemy than itself), then advance. When you are
+   attacking a city, the result now always carries its numbers — `city hp: N/200, walls: N/100 or
+   none` — and the turn result carries a **SIEGE PROGRESS** block with the delta, escalating to
+   `SIEGE STALLED` after three recorded turns without a net drop. A city heals about twenty points
+   a turn: if it is not going down, fix the assault or break it off rather than feeding it.
 
 ## Diary
 
@@ -53,6 +93,15 @@ Five reflection fields each turn (all required, non-empty):
 Periodic checks worth doing regularly. The game doesn't surface most of this proactively.
 
 ### Around every 10 turns:
+- **The `end_turn` result carries a `10-TURN REVIEW`** — the MCP measures the window
+  (what the last 10 turns bought, per-turn rates), quotes your own plan and prediction from
+  10 turns earlier back at you, lists the assault prerequisites the directive requires
+  against the units you actually have, flags idle district slots and the gold/turn carrying
+  limit, and projects the current rates forward. **Answer its three questions in that turn's
+  diary**: (1) was the window efficient, with numbers; (2) which prerequisite for the next
+  goal is in place and which is missing; (3) does the planned completion turn still hold,
+  and if not, what changes. Ten flat turns are invisible turn by turn — this is where they
+  show up.
 - `get_empire_resources` — unimproved luxuries and nearby strategics
 - Surplus luxuries: duplicates beyond 1 copy provide zero amenity benefit. Trade them via `propose_trade` for GPT, strategic resources, or luxury types you don't own (each new type = +1 amenity to 4 cities). Even 5 GPT per surplus luxury adds up over 30 turns. Use `mode="test"` to check what the AI will accept before sending.
 - Gold/faith balance: if either is accumulating with no plan, spend it — `purchase_item`, `purchase_tile`, `patronize_great_person`
@@ -73,6 +122,20 @@ Periodic checks worth doing regularly. The game doesn't surface most of this pro
 - Wonder scan: `get_city_production` in your best city — wonders that align with your victory path are worth considering
 - Victory path check: is your chosen path still viable? Is any rival close to winning something you haven't been tracking?
 - Civ kit check: are you building/using your unique units, buildings, or improvements? If not, you're playing a generic civ and giving up your structural advantage. The unique unit often requires a specific tech — if that tech isn't on your current research path, that's a problem.
+
+## Military tactics, by decision
+
+`prompts/tactics/` holds six files, one per military decision, written for the `military-map`
+advisor (its prompt names which to read when). Read the matching one before improvising:
+
+| File | 主题 |
+|---|---|
+| `tactics/01-unit-production.md` | 部队的生产策略 — the assault establishment, what to build first, what to buy |
+| `tactics/02-contact-on-discovery.md` | 发现敌人时的行动 — assess, counter unit, mass or bypass |
+| `tactics/03-under-attack.md` | 被攻击时的行动 — assess, mass, annihilate; the withdrawal cases |
+| `tactics/04-staging-out-of-range.md` | 攻城前在敌射程外集结 — rally point choice, when to advance |
+| `tactics/05-formation-and-screening.md` | 攻城前站位 — screen in front, siege behind at range 2 |
+| `tactics/06-assault-composition-and-fire.md` | 开打后的搭配与火力 — order of work, concentration, when to break off |
 
 ## Strategic Patterns
 
@@ -261,9 +324,17 @@ Use `get_district_advisor(city_id, district_type)` for ranked tiles. Then `set_c
 - `patronize_great_person(individual_id)` — buy instantly with gold or faith
 - `reject_great_person(individual_id)` — pass, advance to next candidate in that class
 - Rivals will recruit what you pass on — recruiting quickly tends to be worth it
-- Once recruited, move the GP to its matching completed district; `unit_action(action='activate')`
+- **Great Generals and Great Admirals are the exception to activating.** The aura is
+  what they are worth: +5 combat strength and +1 movement to land units within range
+  (naval units for an Admiral), granted **passively while the unit is alive**.
+  `activate` is a *retirement* — it consumes the unit and pays out a one-off.
+  `get_great_people` prints both: keep the general with the army and do not activate
+  it unless that one-off is what you actually want. Activating a general on the turn
+  it is recruited throws away the aura for the rest of the game.
+- For every other class, move the GP to its matching completed district and
+  `unit_action(action='activate')`
 - If activation fails, the error message includes the requirements (district type, buildings needed)
-- Don't delete GPs — they show 0 builder charges but that's a different system; they're not consumed until activated
+- Don't delete GPs — they show 0 builder charges but that's a different system; they're not consumed until activated (except a general or admiral, which activation retires)
 
 ## World Congress
 
@@ -298,6 +369,17 @@ All victories trigger immediately when the condition is met — they do not wait
 
 ## Game Recovery
 
+**Ask where the game is before touching anything:**
+```
+get_game_status   # not_running / starting / in_game / leader_screen / main_menu / loading / tuner_busy
+```
+It answers with the state, the turn, and a `NEXT:` line, so a recovery does not have to be
+inferred from whichever call happened to fail. Two answers change what you do: `in_game`
+means a game is already playable (nothing to launch or load), and `tuner_busy` means another
+process holds the FireTuner connection — FireTuner serves exactly one, so no call from here
+can work while that one lives. Waiting does not help: stop that process with
+`scripts\civ6-clean.ps1`, or keep playing in its session.
+
 **MCP autosaves:** `end_turn` automatically saves every turn as `0_MCP_NNNN` (last 5 kept). These are your primary recovery points.
 
 **Load by name** (preferred — no `list_saves` needed):
@@ -316,3 +398,10 @@ get_game_overview                 # verify load
 
 Other tools: `list_saves`, `load_save(index)`, `kill_game`, `launch_game`, `load_save_from_menu(name)`.
 Save names omit extension: `"AutoSave_0221"` not `"AutoSave_0221.Civ6Save"`.
+
+**One session at a time.** `kill_game` and `restart_and_load` refuse while another session is
+playing (they name the pid holding the FireTuner connection or writing a recent heartbeat), so
+a recovery cannot throw away a position someone else is mid-turn in. Pass `force=True` only
+when you know that session is dead. Loading a save the game is already sitting on is not a
+load: `load_game_save` answers "Already loaded" from the current turn instead of clicking
+through a main menu that is not on screen.

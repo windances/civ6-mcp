@@ -15,6 +15,7 @@ from civ_mcp.lua.models import (
     BuilderTask,
     CombatEstimate,
     PathingEstimate,
+    SiegePosture,
     ThreatInfo,
     UnitInfo,
 )
@@ -684,7 +685,19 @@ if not isRanged then
 end
 local effDefCS = defCS + defModTotal
 effAttCS = effAttCS + attModTotal
-print("ESTIMATE|" .. attType .. "|" .. defType .. "|" .. effAttCS .. "|" .. effDefCS .. "|" .. (isRanged and "1" or "0") .. "|" .. table.concat(mods, ";") .. "|" .. myHP .. "|" .. enemyHP)
+-- A city on the target tile changes what an attack means. The defender found
+-- above is whatever unit occupies the tile, but the thing that takes damage is
+-- the CITY, and when that unit has 0 combat strength the formula below returns
+-- a meaningless ~0 that reads as "this attack does nothing". Seen live on T167:
+-- seven attacks reported "Est damage to defender: ~0" while the walls went
+-- 13 -> 3. Cities.GetCityInPlot(x, y) is the API the game's own UI uses
+-- (UnitFlagManager.lua:941, WorldInput.lua:456); pcall guards the probe so a
+-- failure cannot break the estimate.
+local tCity = nil
+pcall(function() tCity = Cities.GetCityInPlot({target_x}, {target_y}) end)
+local tCityName = ""
+if tCity then tCityName = Locale.Lookup(tCity:GetName()):gsub("|", "/") end
+print("ESTIMATE|" .. attType .. "|" .. defType .. "|" .. effAttCS .. "|" .. effDefCS .. "|" .. (isRanged and "1" or "0") .. "|" .. table.concat(mods, ";") .. "|" .. myHP .. "|" .. enemyHP .. "|" .. tCityName)
 print("{SENTINEL}")
 """
 
@@ -728,6 +741,7 @@ def parse_combat_estimate(
                 est_damage_to_attacker=int(round(dmg_to_att)),
                 defender_hp=enemy_hp,
                 attacker_hp=my_hp,
+                target_city=p[9] if len(p) > 9 else "",
             )
     return None
 
@@ -748,12 +762,21 @@ local me = Game.GetLocalPlayer()
 local pDiplo = Players[me]:GetDiplomacy()
 local pVis = PlayersVisibility[me]
 local myPos = {}
+local unitPos = {}
+local milPos = {}
 for _, c in Players[me]:GetCities():Members() do
     table.insert(myPos, {c:GetX(), c:GetY()})
 end
 for _, u in Players[me]:GetUnits():Members() do
     local ux, uy = u:GetX(), u:GetY()
-    if ux ~= -9999 then table.insert(myPos, {ux, uy}) end
+    if ux ~= -9999 then
+        table.insert(myPos, {ux, uy})
+        table.insert(unitPos, {ux, uy})
+        local uEntry = GameInfo.Units[u:GetType()]
+        local ucs = uEntry and uEntry.Combat or 0
+        local urs = uEntry and uEntry.RangedCombat or 0
+        if ucs > 0 or urs > 0 then table.insert(milPos, {ux, uy}) end
+    end
 end
 local found = false
 for pid = 0, 63 do
@@ -782,11 +805,33 @@ for pid = 0, 63 do
                             local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
                             if d < minDist then minDist = d end
                         end
+                        -- Distance to the nearest of our *units*, ignoring cities: "the enemy
+                        -- is next to the army" is a different fact from "next to our borders",
+                        -- and the first one is what the march rule needs.
+                        local minUnit = 999
+                        for _, pos in ipairs(unitPos) do
+                            local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
+                            if d < minUnit then minUnit = d end
+                        end
+                        -- How many of our fighting units are close enough to join this one:
+                        -- one is a trade, two or three is a kill.
+                        local near = 0
+                        local adj = 0
+                        for _, pos in ipairs(milPos) do
+                            local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
+                            if d <= 2 then near = near + 1 end
+                            if d <= 1 then adj = adj + 1 end
+                        end
                         local name = entry and entry.UnitType or "UNKNOWN"
                         local hp = bu:GetMaxDamage() - bu:GetDamage()
                         local brs = entry and entry.RangedCombat or 0
                         local isCS = Players[pid]:IsMajor() and "0" or "1"
-                        print("THREAT|" .. pid .. "|" .. ownerName:gsub("|","/") .. "|" .. name .. "|" .. bx .. "," .. by .. "|" .. hp .. "/" .. bu:GetMaxDamage() .. "|CS:" .. bcs .. "|RS:" .. brs .. "|dist:" .. minDist .. "|cs:" .. isCS .. "|uid:" .. bu:GetID())
+                        -- PromotionClass is the game's own counter axis (MELEE, RANGED, LIGHT_CAVALRY,
+                        -- HEAVY_CAVALRY, ANTI_CAVALRY, SIEGE, RECON, NAVAL_*), so the caller can ask
+                        -- "is there cavalry next to the army" without a hardcoded unit-name table.
+                        local pc = ""
+                        pcall(function() pc = entry and entry.PromotionClass or "" end)
+                        print("THREAT|" .. pid .. "|" .. ownerName:gsub("|","/") .. "|" .. name .. "|" .. bx .. "," .. by .. "|" .. hp .. "/" .. bu:GetMaxDamage() .. "|CS:" .. bcs .. "|RS:" .. brs .. "|dist:" .. minDist .. "|cs:" .. isCS .. "|uid:" .. bu:GetID() .. "|pc:" .. pc .. "|udist:" .. minUnit .. "|near:" .. near .. "|adj:" .. adj)
                         found = true
                     end
                 end
@@ -871,6 +916,225 @@ end
 print("OK:FORTIFIED|" .. fortified .. " fortified, " .. healed .. " healing")
 print("{SENTINEL}")
 """.replace("{SENTINEL}", SENTINEL)
+
+
+def build_unused_attack_query() -> str:
+    """GameCore: our units that still have moves *and* a legal attack they have not used.
+
+    `get_units` advertises the same thing per unit as a `>> CAN ATTACK` line, but that line
+    is only in front of the agent on the turns it happens to call `get_units`, and it is one
+    line among fifteen. This query exists so the omission can be reported where it happens:
+    the turn result, and just before `skip_remaining_units` closes the turn by finishing the
+    moves of units that never attacked.
+
+    The legality test mirrors the units query exactly (adjacency for melee, LOS through
+    `CanStartOperation` for ranged beyond one tile, barbarians always hostile, war required
+    otherwise), so this report can never contradict the `CAN ATTACK` hints.
+    """
+    return """
+local me = Game.GetLocalPlayer()
+local out = {}
+for _, unit in Players[me]:GetUnits():Members() do
+    local x = unit:GetX()
+    if x ~= -9999 and unit:GetMovesRemaining() > 0 then
+        local entry = GameInfo.Units[unit:GetType()]
+        local cs = entry and entry.Combat or 0
+        local rs = entry and entry.RangedCombat or 0
+        if cs > 0 or rs > 0 then
+            local rng = (rs > 0) and (entry and entry.Range or 1) or 1
+            local hits = {}
+            for dy = -rng, rng do
+                for dx = -rng, rng do
+                    local tx, ty = x + dx, y + dy
+                    local d = Map.GetPlotDistance(x, y, tx, ty)
+                    if d >= 1 and d <= rng then
+                        local plotUnits = Map.GetUnitsAt(tx, ty)
+                        if plotUnits then
+                            for other in plotUnits:Units() do
+                                local otherOwner = other:GetOwner()
+                                if otherOwner ~= me and (otherOwner == 63 or Players[me]:GetDiplomacy():IsAtWarWith(otherOwner)) then
+                                    local losOK = true
+                                    if rs > 0 and d > 1 then
+                                        local lp = {}
+                                        lp[UnitOperationTypes.PARAM_X] = tx
+                                        lp[UnitOperationTypes.PARAM_Y] = ty
+                                        losOK = UnitManager.CanStartOperation(unit, UnitOperationTypes.RANGE_ATTACK, nil, lp)
+                                    end
+                                    if losOK then
+                                        local eInfo = GameInfo.Units[other:GetType()]
+                                        local eHP = other:GetMaxDamage() - other:GetDamage()
+                                        table.insert(hits, (eInfo and eInfo.UnitType or "UNKNOWN") .. "@" .. tx .. "," .. ty .. "(" .. eHP .. "hp)")
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            if #hits > 0 then
+                table.insert(out, (entry and entry.UnitType or "?") .. "|" .. unit:GetID() .. "|" .. x .. "," .. y .. "|" .. table.concat(hits, ";"))
+            end
+        end
+    end
+end
+if #out == 0 then print("NO_UNUSED_ATTACKS") end
+for _, line in ipairs(out) do print("UNUSED_ATTACK|" .. line) end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def parse_unused_attack_response(lines: list[str]) -> list[str]:
+    """One readable entry per unit that left a legal attack unused.
+
+    ``UNUSED_ATTACK|UNIT_HEAVY_CHARIOT|1310724|53,36|UNIT_SWORDSMAN@53,35(7hp)`` becomes
+    ``UNIT_HEAVY_CHARIOT@53,36 -> UNIT_SWORDSMAN@53,35(7hp)``.
+    """
+    entries: list[str] = []
+    for line in lines:
+        if not line.startswith("UNUSED_ATTACK|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 5:
+            continue
+        unit_type, _uid, where, targets = parts[1], parts[2], parts[3], parts[4]
+        entries.append(f"{unit_type}@{where} -> {targets}")
+    return entries
+
+
+def build_siege_posture_query() -> str:
+    """GameCore: where our siege units stand, and whether anything is in front of them.
+
+    Before an assault the army stages **outside** the enemy's reach (a city's ranged strike
+    reaches two tiles), the units that can take a hit stand in front, and the ranged and siege
+    units stand behind - with the siege unit's tile treated as the one that must be protected,
+    because a Catapult is the most expensive and most fragile thing in the stack. This asks the
+    game for exactly that geometry: for each of our siege units, the distance to the nearest
+    visible enemy unit, the distance from that enemy to the front-line unit closest to the siege
+    unit (the screen), and the distance to the nearest visible enemy city.
+
+    The game does all the distance work with ``Map.GetPlotDistance``, so no hex arithmetic is
+    guessed on the Python side.
+    """
+    return """
+local me = Game.GetLocalPlayer()
+local pVis = PlayersVisibility[me]
+local pDiplo = Players[me]:GetDiplomacy()
+local screens = {}
+local siege = {}
+for _, u in Players[me]:GetUnits():Members() do
+    local ux, uy = u:GetX(), u:GetY()
+    if ux ~= -9999 then
+        local entry = GameInfo.Units[u:GetType()]
+        local pc = ""
+        pcall(function() pc = entry and entry.PromotionClass or "" end)
+        local cs = entry and entry.Combat or 0
+        local rs = entry and entry.RangedCombat or 0
+        if cs > 0 or rs > 0 then
+            local uType = entry and entry.UnitType or "?"
+            if string.find(pc, "SIEGE") then
+                table.insert(siege, {uType, ux, uy})
+            elseif string.find(pc, "MELEE") or string.find(pc, "CAVALRY") then
+                table.insert(screens, {ux, uy})
+            end
+        end
+    end
+end
+if #siege == 0 then
+    print("NO_SIEGE")
+    print("{SENTINEL}")
+    return
+end
+local enemies = {}
+local cities = {}
+for pid = 0, 63 do
+    if pid ~= me and Players[pid] and Players[pid]:IsAlive() then
+        local isBarb = (pid == 63)
+        if isBarb or Players[pid]:IsMajor() or pDiplo:IsAtWarWith(pid) then
+            for _, bu in Players[pid]:GetUnits():Members() do
+                local bx, by = bu:GetX(), bu:GetY()
+                if bx ~= -9999 and pVis:IsVisible(bx, by) then
+                    local be = GameInfo.Units[bu:GetType()]
+                    local bcs = be and be.Combat or 0
+                    local brs = be and be.RangedCombat or 0
+                    if bcs > 0 or brs > 0 then table.insert(enemies, {bx, by}) end
+                end
+            end
+            pcall(function()
+                for _, c in Players[pid]:GetCities():Members() do
+                    local cx, cy = c:GetX(), c:GetY()
+                    if pVis:IsVisible(cx, cy) then
+                        table.insert(cities, {cx, cy, Locale.Lookup(c:GetName())})
+                    end
+                end
+            end)
+        end
+    end
+end
+for _, s in ipairs(siege) do
+    local eDist = 999
+    for _, e in ipairs(enemies) do
+        local d = Map.GetPlotDistance(s[2], s[3], e[1], e[2])
+        if d < eDist then eDist = d end
+    end
+    local scrDist = 999
+    local scrEnemyDist = 999
+    for _, sc in ipairs(screens) do
+        local d = Map.GetPlotDistance(sc[1], sc[2], s[2], s[3])
+        if d < scrDist then
+            scrDist = d
+            scrEnemyDist = 999
+            for _, e in ipairs(enemies) do
+                local de = Map.GetPlotDistance(sc[1], sc[2], e[1], e[2])
+                if de < scrEnemyDist then scrEnemyDist = de end
+            end
+        end
+    end
+    local cDist, cName = 999, ""
+    for _, c in ipairs(cities) do
+        local d = Map.GetPlotDistance(s[2], s[3], c[1], c[2])
+        if d < cDist then cDist = d; cName = c[3] end
+    end
+    print("SIEGE_POSTURE|" .. s[1] .. "|" .. s[2] .. "," .. s[3] .. "|enemy:" .. eDist
+        .. "|screen:" .. scrDist .. "|screen_enemy:" .. scrEnemyDist
+        .. "|city:" .. cDist .. "|" .. cName:gsub("|", "/"))
+end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
+    """``SIEGE_POSTURE|<type>|<x>,<y>|enemy:N|screen:N|screen_enemy:N|city:N|<name>``."""
+    postures: list[SiegePosture] = []
+    for line in lines:
+        if not line.startswith("SIEGE_POSTURE|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 8:
+            continue
+        try:
+            x_str, y_str = parts[2].split(",")
+        except ValueError:
+            continue
+
+        def number(token: str) -> int:
+            try:
+                return int(token.split(":", 1)[1])
+            except (IndexError, ValueError):
+                return 999
+
+        postures.append(
+            SiegePosture(
+                unit_type=parts[1],
+                x=int(x_str),
+                y=int(y_str),
+                enemy_distance=number(parts[3]),
+                screen_distance=number(parts[4]),
+                screen_enemy_distance=number(parts[5]),
+                city_distance=number(parts[6]),
+                city_name=parts[7],
+            )
+        )
+    return postures
 
 
 def build_skip_remaining_units() -> str:
@@ -1406,7 +1670,7 @@ def parse_threat_scan_response(lines: list[str]) -> list[ThreatInfo]:
         if not line.startswith("THREAT|"):
             continue
         parts = line.split("|")
-        # Format: THREAT|owner_id|owner_name|unit_type|x,y|hp/max|CS:n|RS:n|dist:n|cs:0/1|uid:N
+        # Format: THREAT|owner_id|owner_name|unit_type|x,y|hp/max|CS:n|RS:n|dist:n|cs:0/1|uid:N|pc:PROMOTION_CLASS_X|udist:n|near:n|adj:n
         if len(parts) >= 9:
             x_str, y_str = parts[4].split(",")
             hp_str, max_str = parts[5].split("/")
@@ -1420,6 +1684,18 @@ def parse_threat_scan_response(lines: list[str]) -> list[ThreatInfo]:
             uid = 0
             if len(parts) > 10 and parts[10].startswith("uid:"):
                 uid = int(parts[10][4:])
+            pc = ""
+            if len(parts) > 11 and parts[11].startswith("pc:"):
+                pc = parts[11][3:]
+            udist = 999
+            if len(parts) > 12 and parts[12].startswith("udist:"):
+                udist = int(parts[12][6:])
+            near = 0
+            if len(parts) > 13 and parts[13].startswith("near:"):
+                near = int(parts[13][5:])
+            adj = 0
+            if len(parts) > 14 and parts[14].startswith("adj:"):
+                adj = int(parts[14][4:])
             threats.append(
                 ThreatInfo(
                     unit_type=parts[3],
@@ -1436,6 +1712,10 @@ def parse_threat_scan_response(lines: list[str]) -> list[ThreatInfo]:
                     and parts[9].startswith("cs:")
                     and parts[9][3:] == "1",
                     unit_id=uid,
+                    promotion_class=pc,
+                    unit_distance=udist,
+                    friendly_within_2=near,
+                    friendly_within_1=adj,
                 )
             )
         elif len(parts) >= 7:

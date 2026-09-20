@@ -86,3 +86,16 @@ dev = [
     "matplotlib>=3.10.8",
     "pytest>=8.0",
 ]
+
+[tool.pytest.ini_options]
+# The sandbox denies the system temp directory, so pytest's temp factory fell back to
+# `pytest-cache-files-*` directories in the repository root - 169 of them accumulated, with
+# ACLs that deny even reading them back. `--basetemp` (a command-line option, so it goes in
+# addopts) pins the base temp inside the workspace instead. Tests should still prefer plain
+# `.tools/` scratch paths: the factory's own directories are not writable here.
+#
+# The cache provider does an atomic write through a staging directory in the system temp,
+# which is denied here too - it then falls back to the repository root and leaves another
+# unreadable directory behind. The cache is unwritable either way, so it is off rather than
+# noisy.
+addopts = "-p no:cacheprovider --basetemp=.pytest-tmp"

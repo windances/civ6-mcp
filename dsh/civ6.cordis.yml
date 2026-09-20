@@ -17,6 +17,14 @@
           CIV_MCP_DISABLE_WEB_API: '1'
           CIV_MCP_DATA_DIR: !!js process.cwd() + '/.civ6-mcp-data'
           UV_CACHE_DIR: !!js process.cwd() + '/.uv-cache'
+          # Non-UTF-8 locales (e.g. cp936 on Chinese Windows) otherwise break
+          # diary/telemetry text I/O inside the adapter.
+          PYTHONUTF8: '1'
+          # Set to '1' when you intend to replay from an earlier save: the
+          # turn-regression warning in end_turn.py cannot tell a deliberate
+          # rollback from an accidental wrong-save load, so it asks instead of
+          # telling the agent to reload. This suppresses even the question.
+          CIV_MCP_ALLOW_TURN_REGRESSION: '0'
         toolCallTimeoutMs: 720000
         failOnStartupError: true
         reconnect:

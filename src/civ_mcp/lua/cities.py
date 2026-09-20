@@ -198,7 +198,33 @@ if not hasWalls then
     {_bail("ERR:NO_WALLS|City has no walls — build Ancient Walls first")}
 end
 if dist > 2 then
-    {_bail_lua('"ERR:OUT_OF_RANGE|Target is " .. dist .. " tiles away (city attack range is 2)"')}
+    -- Report the distance together with somewhere the caller can actually aim.
+    -- Distance is a property of the command, not of the tile, so "3 tiles away"
+    -- on its own leaves nothing to act on: in a live game four of five
+    -- city_attack calls were rejected here, each costing a full round trip.
+    local inRange = {{}}
+    for dx = -2, 2 do for dy = -2, 2 do
+        local px, py = cx + dx, cy + dy
+        if Map.GetPlotDistance(cx, cy, px, py) <= 2 then
+            local atPlot = Map.GetUnitsAt(px, py)
+            if atPlot then
+                for other in atPlot:Units() do
+                    if other:GetOwner() ~= me then
+                        local oInfo = GameInfo.Units[other:GetType()]
+                        inRange[#inRange + 1] = (oInfo and oInfo.UnitType or "UNIT") .. "@" .. px .. "," .. py
+                        break
+                    end
+                end
+            end
+        end
+    end end
+    local hint
+    if #inRange > 0 then
+        hint = " In-range hostile units: " .. table.concat(inRange, ", ") .. "."
+    else
+        hint = " No hostile unit is within range 2 of " .. Locale.Lookup(pCity:GetName()) .. "."
+    end
+    {_bail_lua('"ERR:OUT_OF_RANGE|Target is " .. dist .. " tiles away (city attack range is 2; city at " .. cx .. "," .. cy .. ")." .. hint')}
 end
 -- Check if target is in the valid target list (covers LOS + already-fired)
 local validTargets = CityManager.GetCommandTargets(pCity, CityCommandTypes.RANGE_ATTACK)

@@ -293,6 +293,8 @@ from civ_mcp.lua.units import (  # noqa: F401
     build_skip_remaining_units,
     build_skip_unit,
     build_sleep_unit,
+    build_siege_posture_query,
+    build_unused_attack_query,
     build_fog_neighbor_query,
     build_threat_scan_query,
     build_unit_position_query,
@@ -304,7 +306,9 @@ from civ_mcp.lua.units import (  # noqa: F401
     parse_fog_neighbor_response,
     parse_pathing_estimate,
     parse_post_move_visibility,
+    parse_siege_posture_response,
     parse_threat_scan_response,
+    parse_unused_attack_response,
     parse_units_response,
 )
 from civ_mcp.lua.victory import (  # noqa: F401

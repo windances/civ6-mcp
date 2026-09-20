@@ -59,6 +59,17 @@ class GameState:
         # (e.g. Gemini Pro's 1,567 get_wonder_advisor calls in a single turn).
         # Reset in execute_end_turn on successful turn advance.
         self._advisor_calls_this_turn: int = 0
+        # Attacks actually executed during the current turn. The check engine reads it:
+        # "there is an enemy two tiles from the army and nothing attacked it" is only
+        # measurable if the attacks are counted where they happen. end_turn resets it after
+        # the checks have run.
+        self._attacks_this_turn: int = 0
+        # Enemy city HP seen from our own attacks, per city name: (turn, hp, max_hp). Read by
+        # end_turn's siege-progress report.
+        self._city_hp_history: dict[str, list[tuple[int, int, int]]] = {}
+        # Our units' HP at the moment ACTION_ENDTURN was sent, so the damage report cannot miss
+        # a hit just because a blocker re-entry moved the snapshot baseline.
+        self._hp_at_end_turn_request: dict[int, int] = {}
         # One-shot warning from the most recent advisor call, consumed and
         # cleared by the server wrapper.
         self._advisor_budget_warning: str | None = None
@@ -339,6 +350,7 @@ class GameState:
         is_melee = result.startswith("MELEE_ATTACK")
         is_air = result.startswith("AIR_ATTACK")
         if result.startswith("RANGE_ATTACK") or is_melee or is_air:
+            self._attacks_this_turn += 1
             pre_hp = _extract_pre_hp(result)
             est_dmg = est.est_damage_to_defender if est else None
             local_id = self._local_player_id
@@ -385,10 +397,15 @@ class GameState:
 
                 if city_def:
                     w_hp, w_max, g_hp, g_max = city_def
-                    if w_max > 0:
-                        damage_info += (
-                            f"|city walls: {w_hp}/{w_max}, garrison: {g_hp}/{g_max}"
-                        )
+                    # A city's own HP must be reported whether or not it has walls. The old
+                    # `if w_max > 0` guard threw the whole line away for an unwalled city - and
+                    # an unwalled city is exactly the case where the city HP pool is the only
+                    # progress there is. Seen live T105-T116: twelve turns of Catapult fire at
+                    # Moscow with no city number reported anywhere, so neither side of the
+                    # table could tell whether the assault was working.
+                    walls = f"{w_hp}/{w_max}" if w_max > 0 else "none"
+                    damage_info += f"|city hp: {g_hp}/{g_max}, walls: {walls}"
+                    self._record_city_hp(est, g_hp, g_max)
 
                 result += damage_info + "\n  Post-combat: " + followup_str
             except Exception as e:
@@ -515,7 +532,60 @@ class GameState:
         lines = await self.conn.execute_read(lua)
         return _action_result(lines)
 
+    def city_hp_history(self) -> dict[str, list[tuple[int, int, int]]]:
+        """Enemy city HP we have actually seen, per city, as (turn, hp, max_hp)."""
+        return dict(self._city_hp_history)
+
+    def _record_city_hp(self, estimate, hp: int, max_hp: int) -> None:
+        """Remember the target city's HP from an attack we just made.
+
+        `end_turn` reads this to say whether the assault is progressing; without it a siege can
+        run for a dozen turns with nothing on either side of the table able to tell whether the
+        city was losing a single point (live, T105-T116).
+        """
+        name = str(getattr(estimate, "target_city", "") or "").strip()
+        if not name or max_hp <= 0:
+            return
+        turn = int(getattr(self._last_snapshot, "turn", 0) or self._high_water_turn or 0)
+        history = self._city_hp_history.setdefault(name, [])
+        if history and history[-1][0] == turn and history[-1][1] == hp:
+            return  # same reading twice in one turn adds nothing
+        history.append((turn, int(hp), int(max_hp)))
+        if len(history) > 30:
+            del history[:-30]
+
+    async def unused_attacks(self) -> list[str]:
+        """Units that still have moves and a legal attack they have not used.
+
+        Read-only. Same legality test as the `>> CAN ATTACK` hints in `get_units`, so the two
+        can never disagree - this is the same fact, asked for at the moment it matters.
+        """
+        try:
+            lines = await self.conn.execute_read(lq.build_unused_attack_query())
+        except Exception as e:
+            log.debug("Unused-attack scan failed: %s", e)
+            return []
+        return lq.parse_unused_attack_response(lines)
+
+    async def siege_posture(self) -> list:
+        """Our siege units with their distances to the enemy, their screen and the target city.
+
+        Read-only. What "stage outside enemy range, front line in front, siege behind" means is
+        geometry, and the game is asked for it rather than inferred from coordinates.
+        """
+        try:
+            lines = await self.conn.execute_read(lq.build_siege_posture_query())
+        except Exception as e:
+            log.debug("Siege posture scan failed: %s", e)
+            return []
+        return lq.parse_siege_posture_response(lines)
+
     async def skip_remaining_units(self) -> str:
+        # Look for attacks that are about to be thrown away *before* finishing moves: after
+        # this call the units are fortified and the attack is gone for the turn. Seen live at
+        # T109-T116, where a Heavy Chariot sat next to a 7 HP Swordsman for seven turns and
+        # was swept up by this call every time without anyone being told.
+        unused = await self.unused_attacks()
         # First try to fortify/heal combat units (InGame context)
         fortify_result = ""
         try:
@@ -528,9 +598,15 @@ class GameState:
         lua = lq.build_skip_remaining_units()
         lines = await self.conn.execute_read(lua)
         skip_result = _action_result(lines)
-        if fortify_result and not fortify_result.startswith("Error"):
-            return f"{fortify_result}\n{skip_result}"
-        return skip_result
+        parts = [p for p in (fortify_result, skip_result) if p and not p.startswith("Error")]
+        report = "\n".join(parts) if parts else skip_result
+        if unused:
+            listed = "\n".join(f"  {entry}" for entry in unused)
+            report += (
+                f"\nUNUSED ATTACK ({len(unused)} unit(s) had a legal attack and did not take it):"
+                f"\n{listed}\n  These moves are now finished for the turn."
+            )
+        return report
 
     async def automate_explore(self, unit_index: int) -> str:
         lua = lq.build_automate_explore(unit_index)
@@ -1451,6 +1527,8 @@ class GameState:
                     name=c.name,
                     population=c.population,
                     currently_building=c.currently_building,
+                    x=c.x,
+                    y=c.y,
                     food_surplus=c.food_surplus,
                     turns_to_grow=c.turns_to_grow,
                     loyalty=c.loyalty,
@@ -1764,10 +1842,9 @@ def _format_attack_followup(lines: list[str], attacker_owner: int = 0) -> str:
     city_def = _extract_city_defense(lines)
     if city_def:
         wall_hp, wall_max, gar_hp, gar_max = city_def
-        if wall_max > 0:
-            parts.append(f"Walls {wall_hp}/{wall_max}")
         if gar_max > 0:
-            parts.append(f"City garrison {gar_hp}/{gar_max}")
+            parts.append(f"City hp {gar_hp}/{gar_max}")
+        parts.append(f"Walls {wall_hp}/{wall_max}" if wall_max > 0 else "Walls none")
     if not parts:
         return "Target eliminated"
     return ", ".join(parts)

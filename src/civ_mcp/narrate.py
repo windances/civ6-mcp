@@ -151,9 +151,19 @@ def narrate_units(
     units: list[lq.UnitInfo],
     threats: list[lq.ThreatInfo] | None = None,
     trade_status: lq.TradeRouteStatus | None = None,
+    cities: dict | None = None,
 ) -> str:
     if not units:
         return "No units."
+    # City centres, so a unit's tile can be read correctly. Civ VI reports the units inside a
+    # city at the city's own tile - so "three of our units at (57,29)" is a garrison in Beijing,
+    # not three units in a field tile, and (before this annotation) it read as a telemetry bug
+    # to anyone who did not know where the cities were: the rehearsal workers both flagged it.
+    city_at: dict[tuple[int, int], str] = {}
+    for city in (cities or {}).values():
+        x, y = getattr(city, "x", None), getattr(city, "y", None)
+        if x is not None and y is not None:
+            city_at[(x, y)] = getattr(city, "name", "") or "city"
     # Build trader route lookup: unit_id -> TraderInfo
     trader_routes: dict[int, lq.TraderInfo] = {}
     if trade_status:
@@ -172,6 +182,10 @@ def narrate_units(
             status = f" [HP: {u.health}/{u.max_health}]"
         if u.moves_remaining < 0.01:
             status += " (no moves)"
+        # A unit standing on one of our city centres is inside that city: protected, healing,
+        # and one of the things `one-garrison-per-city` counts.
+        in_city = city_at.get((u.x, u.y))
+        city_flag = f" [IN {in_city}]" if in_city and u.combat_strength > 0 else ""
         # Annotate traders on active routes
         route_flag = ""
         if u.unit_id in trader_routes:
@@ -196,7 +210,8 @@ def narrate_units(
         )
         lines.append(
             f"  {u.name} ({u.unit_type}) at ({u.x},{u.y}) —{strength} "
-            f"moves {moves_disp}{charges}{religion_flag}{status}{route_flag}{promo_flag}{upgrade_flag} "
+            f"moves {moves_disp}{charges}{religion_flag}{status}{route_flag}{promo_flag}{upgrade_flag}"
+            f"{city_flag} "
             f"[id:{u.unit_id}, idx:{u.unit_index}]"
         )
         if u.targets:
@@ -204,6 +219,24 @@ def narrate_units(
                 lines.append(f"    >> CAN ATTACK: {t}")
         if u.valid_improvements:
             lines.append(f"    >> Can build: {', '.join(u.valid_improvements)}")
+    # A whole army at zero moves at the *start* of a turn is the state a live session spent
+    # four minutes and five re-reads on (2026-09-20, T81): the turn advanced - the counter
+    # said 81 - and no unit was ever granted movement points, while the game's own
+    # notification still said "units have moves remaining". 8 of 195 logged turns, in every
+    # era and run, unrelated to diplomacy pauses or to how soon the list is read; in half of
+    # them an action later in the same turn still worked, and in the rest every action was
+    # refused until the next rollover. Saying so here costs nothing - the data is already
+    # in hand - and it is the moment the agent looks.
+    if units and all(u.moves_remaining < 0.01 for u in units):
+        lines.append("")
+        lines.append(
+            f"NOTE: every unit is at 0 moves. If you have not acted yet this turn, the "
+            f"turn's movement points were never granted ({len(units)} units; seen in 8 of "
+            "195 logged turns, unrelated to diplomacy pauses or to how soon this list is "
+            "read, and in half of those a later action still worked). Re-read once; if it "
+            "holds, end the turn - the next turn starts with full moves. Do not restart "
+            "the game for this."
+        )
     if threats:
         lines.append("")
         lines.append(f"Nearby threats ({len(threats)}):")
@@ -438,19 +471,41 @@ def narrate_pathing_estimate(est: lq.PathingEstimate) -> str:
 def narrate_combat_estimate(est: lq.CombatEstimate) -> str:
     atk_type = "Ranged" if est.is_ranged else "Melee"
     mods_str = ", ".join(est.modifiers) if est.modifiers else "none"
+    # When the target tile holds a city, the "defender" is just a unit standing
+    # in it: the city is what takes the damage. Against a 0-combat-strength unit
+    # (a Great Writer, a Missionary) the damage formula short-circuits to 0 and
+    # the report reads "Est damage to defender: ~0" - which looks like "this
+    # attack does nothing" when the walls are in fact coming down. Say so.
+    city_swallows = bool(est.target_city) and est.defender_cs == 0
     lines = [
         f"Combat Estimate ({atk_type}):",
         f"  {est.attacker_type} (CS:{est.attacker_cs}, HP:{est.attacker_hp}) vs "
         f"{est.defender_type} (CS:{est.defender_cs}, HP:{est.defender_hp})",
-        f"  Modifiers: {mods_str}",
-        f"  Est damage to defender: ~{est.est_damage_to_defender}",
     ]
+    if est.target_city:
+        detail = (
+            f" ({est.defender_type} is a non-combatant, so the estimate below is "
+            f"meaningless)" if city_swallows else ""
+        )
+        lines.append(
+            f"  ** Target tile is a city ({est.target_city}){detail} - what takes "
+            f"damage is the CITY. Judge progress by `city hp: N/200` and `walls: N/100` "
+            f"on the result line, not by the damage number."
+        )
+    lines.append(f"  Modifiers: {mods_str}")
+    if city_swallows:
+        lines.append(
+            "  Est damage to defender: n/a (the city is the target, not this unit)"
+        )
+    else:
+        lines.append(f"  Est damage to defender: ~{est.est_damage_to_defender}")
     if not est.is_ranged:
         lines.append(f"  Est damage to attacker: ~{est.est_damage_to_attacker}")
-    if est.est_damage_to_defender >= est.defender_hp:
-        lines.append("  -> LIKELY KILL")
-    elif not est.is_ranged and est.est_damage_to_attacker >= est.attacker_hp:
-        lines.append("  -> WARNING: attacker likely dies!")
+    if not city_swallows:
+        if est.est_damage_to_defender >= est.defender_hp:
+            lines.append("  -> LIKELY KILL")
+        elif not est.is_ranged and est.est_damage_to_attacker >= est.attacker_hp:
+            lines.append("  -> WARNING: attacker likely dies!")
     return "\n".join(lines)
 
 
@@ -1375,8 +1430,15 @@ def narrate_great_people(gp: list[lq.GreatPersonInfo]) -> str:
         progress = f"{g.player_points}/{g.cost}"
         recruit_tag = " [CAN RECRUIT]" if g.can_recruit else ""
         entry = f"  {g.class_name}: {g.individual_name} ({g.era_name}) — {g.claimant} — your points: {progress}{recruit_tag}"
+        # A Great General or Great Admiral grants an aura just by being alive,
+        # which is worth more than the individual action in most games. Report it,
+        # and label the action for what it is: activating consumes the unit, so an
+        # agent told only about the action will trade the aura away by accident.
+        if g.passive:
+            entry += f"\n    Passive aura (granted while this unit lives): {g.passive}"
         if g.ability:
-            entry += f"\n    Ability: {g.ability}"
+            label = "Retire ability (activating CONSUMES the unit)" if g.passive else "Ability"
+            entry += f"\n    {label}: {g.ability}"
         # Show patronize costs (skip INT_MAX values which mean unavailable)
         costs = []
         if 0 < g.gold_cost < 2_000_000_000:

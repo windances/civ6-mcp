@@ -176,7 +176,9 @@ def main():
 
     # Step 2: Click "Single Player"
     print("Step 2: Click 'Single Player'")
-    clicked = game_launcher._click_text("Single Player", timeout=15, post_delay=2)
+    clicked = game_launcher._click_text(
+        game_launcher._menu_labels("single_player"), timeout=15, post_delay=2
+    )
     print(f"  Clicked: {clicked is not None}")
     if clicked:
         sp_menu = capture_and_ocr("02_single_player")
@@ -184,7 +186,9 @@ def main():
 
     # Step 3: Click "Load Game"
     print("Step 3: Click 'Load Game'")
-    clicked = game_launcher._click_text("Load Game", timeout=10, post_delay=2)
+    clicked = game_launcher._click_text(
+        game_launcher._menu_labels("load_game"), timeout=10, post_delay=2
+    )
     print(f"  Clicked: {clicked is not None}")
     if clicked:
         load_menu = capture_and_ocr("03_load_game")
@@ -201,7 +205,11 @@ def main():
     # Step 5: Click "Load Game" button (bottom)
     print("Step 5: Click 'Load Game' button")
     clicked = game_launcher._click_text(
-        "Load Game", timeout=10, post_delay=1, prefer_bottom=True, min_y_fraction=0.7
+        game_launcher._menu_labels("load_game"),
+        timeout=10,
+        post_delay=1,
+        prefer_bottom=True,
+        min_y_fraction=0.7,
     )
     print(f"  Clicked: {clicked is not None}")
     print()
@@ -211,9 +219,11 @@ def main():
     time.sleep(15)
     leader = capture_and_ocr("06_leader_screen")
 
-    # Check if CONTINUE is visible
+    # Check if CONTINUE is visible — accept any localized spelling.
+    continue_labels = [lbl.lower() for lbl in game_launcher._menu_labels("continue")]
     continue_found = any(
-        "continue" in item.get("text", "").lower() for item in leader.get("results", [])
+        any(lbl in item.get("text", "").lower() for lbl in continue_labels)
+        for item in leader.get("results", [])
     )
     print(f"  CONTINUE visible to OCR: {continue_found}")
     print()
@@ -232,7 +242,9 @@ def main():
     # Step 8: Click CONTINUE (try OCR first, then positional)
     print("Step 8: Clicking CONTINUE...")
     start = time.time()
-    clicked = game_launcher._click_text("CONTINUE", timeout=30, post_delay=1)
+    clicked = game_launcher._click_text(
+        game_launcher._menu_labels("continue"), timeout=30, post_delay=1
+    )
     if clicked:
         print(f"  OCR click succeeded in {time.time() - start:.1f}s")
     else:

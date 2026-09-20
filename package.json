@@ -12,7 +12,9 @@
     "qualify:all": "npm run qualify && npm run test:orchestrator && npm run qualify:python && npm run qualify:mcp && npm run dsh:dump",
     "dsh:dump": "bash scripts/dump-dsh-config.sh",
     "dsh:play": "bash scripts/run-dsh-headless.sh",
-    "dsh:web": "bash scripts/run-dsh-web.sh"
+    "dsh:web": "bash scripts/run-dsh-web.sh",
+    "dsh:play:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-dsh-headless.ps1",
+    "dsh:web:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-dsh-web.ps1"
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.2-rc.1",

@@ -166,7 +166,14 @@ class LocalSink:
     def _path(self, file_type: str) -> Path:
         """Build the file path for a given type."""
         if file_type == "diary_cities":
-            return self._dir / f"diary_{self._game_id}_{self._run_id}_cities.jsonl"
+            # Per-game for the same reason as the diary below: a game's city
+            # history should not be split across orchestrator restarts.
+            return self._dir / f"diary_{self._game_id}_cities.jsonl"
+        if file_type == "diary":
+            # Per-game, not per-run: the diary is the agent's memory across
+            # sessions, so a restart must append to the same file rather than
+            # start a blank one. Must match diary.diary_path().
+            return self._dir / f"diary_{self._game_id}.jsonl"
         if file_type == "mapturns":
             return self._dir / f"mapturns_{self._game_id}_{self._run_id}.jsonl"
         return self._dir / f"{file_type}_{self._game_id}_{self._run_id}.jsonl"

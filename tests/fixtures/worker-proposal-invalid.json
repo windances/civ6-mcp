@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "gameId": "china_-1894041591",
+  "turn": 111,
+  "worker": "military-map",
+  "assessment": "This proposal is the negative control for the Phase-3 validator: every one of its violations must be reported.",
+  "priority": 50,
+  "actions": [
+    {
+      "actionId": "bad-1",
+      "tool": "attack_unit_now",
+      "arguments": { "unit_id": 1376265, "target_x": 53, "target_y": 35 },
+      "preconditions": [],
+      "expectedEffects": [],
+      "risk": "low"
+    },
+    {
+      "actionId": "bad-2",
+      "tool": "unit_action",
+      "arguments": { "unit_id": 999999, "action": "attack", "target_x": 53, "target_y": 35 },
+      "preconditions": [],
+      "expectedEffects": [],
+      "risk": "low"
+    },
+    {
+      "actionId": "bad-3",
+      "tool": "unit_action",
+      "arguments": { "unit_id": 1310724, "action": "attack", "target_x": 53, "target_y": 35, "nonsense_argument": 1 },
+      "preconditions": [],
+      "expectedEffects": [],
+      "risk": "low"
+    },
+    {
+      "actionId": "bad-3",
+      "tool": "unit_action",
+      "arguments": { "unit_id": 1310724, "action": "skip" },
+      "preconditions": [],
+      "expectedEffects": [],
+      "risk": "low"
+    }
+  ],
+  "warnings": [],
+  "confidence": "high",
+  "extra_field_the_schema_forbids": true
+}

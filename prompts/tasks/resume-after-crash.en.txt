@@ -1,0 +1,52 @@
+The game exited abnormally - the process is gone, and so is the MCP. Relaunch it and
+carry on from the most recent autosave.
+
+This is not a rollback: the most recent autosave is where you already are. Loading it
+costs at most half a turn, and no completed turn.
+
+Do this in order, and do not explore:
+
+0. Call get_game_status first and read the actual state instead of guessing it, or
+   inferring it from whichever step failed. GAME STATE is one of not_running / starting /
+   in_game / leader_screen / main_menu / loading / tuner_busy, and its NEXT line says
+   what to do about it.
+   - in_game: the game is already in a match (it reports the turn, read from the screen
+     even when the tuner is not ours). Steps 1 and 3 are unnecessary; go to step 4 and
+     check the turn number.
+   - main_menu / leader_screen: the game is up but not in a match. Skip step 1 and start
+     at step 2.
+   - not_running: start at step 1.
+   - tuner_busy: FireTuner accepts one connection and another process already holds it
+     (get_game_status names the pid), so a second MCP can never attach. Waiting will not
+     change that - stop and report. Do not launch a second game instance and do not keep
+     retrying.
+1. If the game is not running, launch it with launch_game and wait for it to finish
+   starting (about 60-90 seconds). The menu-automation step after launch_game may
+   report an error - that does not mean the launch failed, the game may be coming up.
+2. Use list_saves: it is sorted by date, newest first, so entry 1 is the most recent.
+   Take that one. Do not insist on the 0_MCP_ prefix - the game's own AutoSave_ files
+   are often newer, and going by the prefix throws a turn away.
+3. Load it with load_game_save("<that save name>"), then call get_game_overview. When
+   the save asked for is the newest one, the MCP prefers the shorter route for it:
+   Single Player -> Continue Game.
+4. Check that the loaded turn equals the turn in the save's name (0_MCP_0077 -> turn
+   77). If it does not match, do not continue - stop and report the turn you actually
+   got, the save name, and the first few entries from list_saves.
+5. Once it matches, re-query everything from scratch: cities, units, the map around
+   them, tech and civics, policies, diplomacy, resources. Trust none of your old
+   impressions.
+6. Then continue, for at most 100 more turns counted from the turn confirmed in step
+   4, and report when you stop.
+
+Other rules:
+
+- Do not load any save later than the newest autosave, and do not load an earlier one
+  to recover progress.
+- If the game exits abnormally again, repeat this procedure. Retry a failed load at
+  most once, then stop and report - do not keep trying.
+- Use the civ6-orchestrator skill and the strategy directive written into it.
+
+When you stop, report: the turn you resumed at and the final turn, city count,
+population, science/culture/gold, military strength, what you built, which wars you
+fought, and every obstacle you hit (tool errors, hangs, recoveries), each with its
+turn number.

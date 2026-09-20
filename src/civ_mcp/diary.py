@@ -13,9 +13,18 @@ DIARY_DIR = Path(os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp"))
 _REFLECTION_FIELDS = ("tactical", "strategic", "tooling", "planning", "hypothesis")
 
 
-def diary_path(civ: str, seed: int, run_id: str) -> Path:
-    """Per-game diary file: diary_{civ}_{seed}_{run_id}.jsonl"""
-    return DIARY_DIR / f"diary_{civ}_{seed}_{run_id}.jsonl"
+def diary_path(civ: str, seed: int, run_id: str | None = None) -> Path:
+    """Per-game diary file: diary_{civ}_{seed}.jsonl
+
+    Keyed by the game (civilisation + map seed), **not** by the run. The diary is
+    the agent's memory across sessions, and AGENTS.md documents it as such, so
+    restarting the orchestrator has to continue the same file instead of starting
+    a blank one. Previously the run id was part of the name, which meant every
+    restart silently produced an empty diary and the agent resumed blind.
+
+    ``run_id`` is still accepted and ignored so existing callers keep working.
+    """
+    return DIARY_DIR / f"diary_{civ}_{seed}.jsonl"
 
 
 def merge_agent_reflections(
@@ -29,7 +38,7 @@ def merge_agent_reflections(
     """
     if not path.exists():
         return None
-    lines = path.read_text().strip().splitlines()
+    lines = path.read_text(encoding="utf-8").strip().splitlines()
     target_idx = None
     for i in range(len(lines) - 1, -1, -1):
         try:
@@ -52,7 +61,7 @@ def merge_agent_reflections(
     row["reflections"] = existing
     lines[target_idx] = json.dumps(row, separators=(",", ":"))
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
     return row
 
@@ -61,7 +70,7 @@ def read_diary_entries(path: Path) -> list[dict]:
     if not path.exists():
         return []
     entries = []
-    for line in path.read_text().strip().splitlines():
+    for line in path.read_text(encoding="utf-8").strip().splitlines():
         try:
             entries.append(json.loads(line))
         except json.JSONDecodeError:

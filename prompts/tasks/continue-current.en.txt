@@ -1,0 +1,30 @@
+The game is already running and is already in a match, waiting to be played. Carry this
+match on for at most 100 more turns, then stop and report.
+
+0. Call get_game_status first and read the state instead of guessing it. Expect in_game
+   with the current turn - that means everything is in place, so carry on with the steps
+   below: do not launch the game, and do not load any save. If it reports anything else:
+   - main_menu / leader_screen: take entry 1 of list_saves (the newest by date - do not
+     insist on the 0_MCP_ prefix, the game's own AutoSave_ files are often newer), load it
+     with load_game_save, then check that the loaded turn equals the number in its name.
+   - not_running: launch_game first and wait for it to finish starting (~60-90 seconds),
+     then use the rule above.
+   - tuner_busy: FireTuner serves one connection and another process holds it (the report
+     names the pid). Stop and report - do not start a second game and do not keep retrying.
+
+1. This is a fresh session with an empty context. Call get_diary for the history you left
+   yourself - the intent, the plans, the judgements - but take the position from the game,
+   never from your notes. Then re-query it in full: get_game_overview, get_units,
+   get_cities, get_map_area around every city and every unit, get_tech_civics,
+   get_policies, get_governors, get_diplomacy, get_victory_progress, get_trade_routes,
+   get_empire_resources.
+
+2. Decide only after that, then work the turn loop: get_game_overview, clear whatever
+   end_turn reports as a blocker, order every unit, set city production, then end_turn.
+
+3. Use the civ6-orchestrator skill and the strategy directive written into it (including
+   the governor and Great General rules).
+
+When you stop, report: the turn you started at and the final turn, city count, population,
+science/culture/gold, military strength, what you built, which wars you fought, and every
+obstacle you hit (tool errors, hangs, recoveries), each with its turn number.

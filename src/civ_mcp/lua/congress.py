@@ -260,7 +260,6 @@ local function handler()
     end
 
     local prefs = __civmcp_wc_votes
-    local nRes = #ress
 
     for ri, res in ipairs(ress) do
         local rHash = res.Type
@@ -296,8 +295,11 @@ local function handler()
                 else break end
             end
         else
-            local resLeft = nRes - ri
-            local budgetPerRes = math.floor(favor / (resLeft + 1))
+            -- No preferences registered: cast the free vote and nothing more.
+            -- This branch used to budget favour evenly across the remaining
+            -- resolutions, so a bare queue_wc_votes([]) silently spent the whole
+            -- diplomatic favour stock on resolutions nobody had looked at.
+            local budgetPerRes = 0
             for v = 2, maxV do
                 local totalCost = costs[v - 1] or 99999
                 if totalCost <= budgetPerRes then

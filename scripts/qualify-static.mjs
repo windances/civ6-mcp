@@ -1,7 +1,10 @@
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const root = new URL('..', import.meta.url).pathname.replace(/\/$/, '')
+// fileURLToPath (not URL.pathname) so Windows drive letters survive:
+// pathname yields "/C:/..." which join() turns into "C:\C:\...".
+const root = fileURLToPath(new URL('..', import.meta.url))
 const failures = []
 
 function check(condition, message) {
@@ -80,6 +83,33 @@ for (const worker of expectedWorkers) {
     failures.push(`${path}: missing: ${error.message}`)
   }
 }
+
+// The military tactics live in their own files, and the worker only finds them if its prompt
+// still names them. A file that exists but is unreferenced is dead weight, so both halves are
+// checked together.
+const tacticFiles = [
+  '01-unit-production.md',
+  '02-contact-on-discovery.md',
+  '03-under-attack.md',
+  '04-staging-out-of-range.md',
+  '05-formation-and-screening.md',
+  '06-assault-composition-and-fire.md',
+]
+const militaryPrompt = read('prompts/workers/military-map.md')
+for (const file of tacticFiles) {
+  const path = `prompts/tactics/${file}`
+  try {
+    check(statSync(join(root, path)).size > 500, `${path}: tactic file is unexpectedly short`)
+  } catch (error) {
+    failures.push(`${path}: missing: ${error.message}`)
+    continue
+  }
+  check(militaryPrompt.includes(`tactics/${file}`), `prompts/workers/military-map.md must name ${path}`)
+}
+check(
+  read('prompts/strategies/china-conquest/military-map.md').includes('tactics/05-formation-and-screening.md'),
+  'the china-conquest preset must keep the tactic references (use-strategy copies this file)',
+)
 
 const overlay = read('dsh/civ6.cordis.yml')
 check(overlay.includes("CIV_MCP_DISABLE_LUA: '1'"), 'overlay must disable arbitrary Lua')

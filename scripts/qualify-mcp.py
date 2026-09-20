@@ -8,13 +8,17 @@ from __future__ import annotations
 
 import json
 import os
-import select
+import queue
 import subprocess
 import sys
+import threading
 import time
 
 
-EXPECTED_TOOLS_AFTER_LUA_DISABLE = 75
+# The server offers 77 tools; CIV_MCP_DISABLE_LUA=1 hides run_lua, leaving 76.
+# Keep this in step with baseline/manifest.json's expectedMcpTools, which counts the
+# full set - the two numbers differ by exactly that one hidden tool.
+EXPECTED_TOOLS_AFTER_LUA_DISABLE = 76
 REQUIRED_TOOLS = {
     "get_game_overview",
     "get_units",
@@ -25,14 +29,27 @@ REQUIRED_TOOLS = {
 }
 
 
+def _pump(stream, sink: queue.Queue) -> None:
+    """Read stdout lines on a thread.
+
+    select() cannot poll a pipe on Windows (WinError 10093), so blocking reads
+    on a daemon thread are used instead.
+    """
+    try:
+        for line in stream:
+            sink.put(line)
+    finally:
+        sink.put(None)
+
+
 def _request(
     process: subprocess.Popen[str],
+    lines: queue.Queue,
     request_id: int,
     method: str,
     params: dict | None = None,
 ) -> dict:
     assert process.stdin is not None
-    assert process.stdout is not None
     message = {"jsonrpc": "2.0", "id": request_id, "method": method}
     if params is not None:
         message["params"] = params
@@ -42,10 +59,13 @@ def _request(
     deadline = time.monotonic() + 15
     while True:
         remaining = deadline - time.monotonic()
-        if remaining <= 0 or not select.select([process.stdout], [], [], remaining)[0]:
+        if remaining <= 0:
             raise TimeoutError(f"timed out waiting for {method}")
-        line = process.stdout.readline()
-        if not line:
+        try:
+            line = lines.get(timeout=remaining)
+        except queue.Empty:
+            raise TimeoutError(f"timed out waiting for {method}") from None
+        if line is None:
             raise RuntimeError(f"civ-mcp exited before replying to {method}")
         response = json.loads(line)
         if response.get("id") == request_id:
@@ -59,6 +79,9 @@ def qualify() -> None:
     child_env["CIV_MCP_DISABLE_LUA"] = "1"
     child_env["CIV_MCP_DISABLE_WEB_API"] = "1"
     child_env["CIV_MCP_DATA_DIR"] = os.path.join(os.getcwd(), ".civ6-mcp-data")
+    # The adapter speaks JSON-RPC, which is UTF-8 by definition. Without this the
+    # child inherits a non-UTF-8 locale (e.g. cp936) on Windows.
+    child_env["PYTHONUTF8"] = "1"
 
     process = subprocess.Popen(
         [sys.executable, "-m", "civ_mcp"],
@@ -67,10 +90,20 @@ def qualify() -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
+        # Decode explicitly: text mode would otherwise use the locale codec
+        # (cp936 here) and die on the first non-ASCII byte in a tool description.
+        encoding="utf-8",
+        errors="replace",
     )
     try:
+        assert process.stdout is not None
+        lines: queue.Queue = queue.Queue()
+        threading.Thread(
+            target=_pump, args=(process.stdout, lines), daemon=True
+        ).start()
         _request(
             process,
+            lines,
             1,
             "initialize",
             {
@@ -84,7 +117,7 @@ def qualify() -> None:
             '{"jsonrpc":"2.0","method":"notifications/initialized"}\n'
         )
         process.stdin.flush()
-        response = _request(process, 2, "tools/list", {})
+        response = _request(process, lines, 2, "tools/list", {})
     finally:
         # This is a protocol smoke test, not a live game session. Force a bounded
         # teardown so unavailable FireTuner background probes cannot hang CI.

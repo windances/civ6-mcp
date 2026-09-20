@@ -11,10 +11,15 @@ wheels/
 
 # DeepSeek Harness project runtime
 .dsh-home/
+.dsh-home.credentials.yaml
 .civ6-mcp-data/
 .tools/
 .uv-cache/
 .pytest_cache/
+.pytest-tmp/
+.npm-cache/
+.tmp/
+pytest-cache-files-*/
 node_modules/
 
 # Claude Code user settings
@@ -27,6 +32,10 @@ node_modules/
 # Logs
 *.log
 logs/
+
+# Screen captures taken while diagnosing the live game
+/screen_*.png
+/screen_*.jpg
 
 # Next.js web viewer
 web/node_modules/

@@ -1,0 +1,29 @@
+Continue the current game. Advance at most 100 more turns, then stop and report.
+
+0. Call get_game_status first and read the state instead of guessing it. Normally it
+   reports in_game with the current turn, which means the game is already in a match:
+   re-query everything and carry on, and load nothing. Only not_running / main_menu /
+   leader_screen call for a launch or a load, and tuner_busy means stop and report
+   (FireTuner serves one connection, so waiting changes nothing).
+   Do not try load_game_save while a match is in progress: the main menu is not on
+   screen, and that attempt spends minutes before failing (measured: 172 seconds).
+
+Background: I deliberately loaded an earlier save. The game is now at T59, and the
+line I played before has been abandoned. Do not roll forward: do not load any later
+save, and do not go looking for a more advanced position just because you see a
+turn-regression warning.
+
+Loading a save is allowed in exactly one case: recovering "the current turn" after
+a crash or a hang. Use the autosave written at the start of the current turn -- it
+restores where you already are; it is not a rollback.
+
+After the rollback, do not act from memory: everything you hold about cities,
+units, and the map is stale. Re-query it all first -- cities, units, the map
+around them, tech and civics, policies, diplomacy, resources -- before deciding
+anything.
+
+Use the civ6-orchestrator skill and the strategy directive written into it.
+
+When you stop, report: the final turn, city count, population, science/culture/gold,
+military strength, what you built, which wars you fought, and every obstacle you hit
+(tool errors, hangs, recoveries), each with its turn number.

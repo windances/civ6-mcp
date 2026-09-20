@@ -21,12 +21,16 @@ from __future__ import annotations
 
 import asyncio
 import glob
+import json
 import logging
 import os
+import re
 import socket
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
+from pathlib import Path
 from typing import NamedTuple
 
 log = logging.getLogger(__name__)
@@ -62,6 +66,46 @@ _ALLOWED_PROCESS_PATTERNS = ("Civ6",)  # pkill -f pattern — only matches Civ 6
 # CGWindowList/AppKit report app name ("Civilization VI"), not binary name ("Civ6_Exe")
 _APP_NAME_PATTERNS = ("Civilization",)
 
+
+def _windows_documents_dir() -> str | None:
+    """Return the real Documents folder on Windows, or None.
+
+    ``~/Documents`` is only a guess: Documents can be relocated anywhere, and
+    OneDrive redirection is common — on such a machine the shell reports
+    ``.../OneDrive/<localised>`` while ``~/Documents`` may not even exist. Civ 6
+    writes saves to whatever the shell reports, so ask the shell rather than
+    assume, and let the caller fall back to the guess.
+    """
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+        # CSIDL_PERSONAL = 0x0005, SHGFP_TYPE_CURRENT = 0
+        if ctypes.windll.shell32.SHGetFolderPathW(None, 0x0005, None, 0, buf) == 0:
+            candidate = buf.value
+            if candidate and os.path.isdir(candidate):
+                return candidate
+    except Exception:
+        pass
+    try:
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER,
+            r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders",
+        ) as key:
+            value, _ = winreg.QueryValueEx(key, "Personal")
+        value = os.path.expandvars(value)
+        if value and os.path.isdir(value):
+            return value
+    except Exception:
+        pass
+    return None
+
+
 if sys.platform == "darwin":
     _PROCESS_NAMES = ("Civ6_Exe_Child", "Civ6_Exe", "Civ6")
     _SAVE_BASE = os.path.expanduser(
@@ -77,8 +121,10 @@ elif sys.platform == "win32":
         "Civ6_Exe_Child.exe",
         "Civ6_Exe.exe",
     )
-    _SAVE_BASE = os.path.expanduser(
-        "~/Documents/My Games/Sid Meier's Civilization VI/Saves/Single"
+    # Ask the shell where Documents actually is; fall back to the common guess.
+    _documents = _windows_documents_dir() or os.path.expanduser("~/Documents")
+    _SAVE_BASE = os.path.join(
+        _documents, "My Games", "Sid Meier's Civilization VI", "Saves", "Single"
     )
     SAVE_DIR = os.path.join(_SAVE_BASE, "auto")
     SINGLE_SAVE_DIR = _SAVE_BASE
@@ -157,25 +203,73 @@ def _require_gui_deps() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _running_game_pids_win32() -> list[int]:
+    """PIDs of the game process on Windows, without spawning anything.
+
+    Uses the toolhelp snapshot rather than `tasklist`: tasklist is a child process read
+    through a pipe, and where pipe-spawning is blocked it returns nothing at all, so
+    the game reads as stopped while it is running. That happened on 2026-09-20 -
+    ``is_game_running()`` answered "Game not running" for a live game (pid 580), and
+    the load flow then spent a minute trying to launch a second one.
+    """
+    import ctypes
+    from ctypes import wintypes
+
+    class PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", ctypes.c_long),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * 260),
+        ]
+
+    TH32CS_SNAPPROCESS = 0x00000002
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateToolhelp32Snapshot.restype = ctypes.c_void_p
+    snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if not snapshot or snapshot == ctypes.c_void_p(-1).value:
+        return []
+
+    entry = PROCESSENTRY32W()
+    entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+    wanted = {name.lower() for name in _PROCESS_NAMES}
+    pids: list[int] = []
+    try:
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+            return []
+        while True:
+            if entry.szExeFile.lower() in wanted:
+                pids.append(int(entry.th32ProcessID))
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                break
+    finally:
+        kernel32.CloseHandle(ctypes.c_void_p(snapshot))
+    return pids
+
+
+def _running_game_pids() -> list[int]:
+    """PIDs of any running Civ 6 process."""
+    if sys.platform == "win32":
+        return _running_game_pids_win32()
+    result = subprocess.run(  # noqa: S603 - fixed pgrep pattern, hardcoded
+        ["pgrep", "-f", _ALLOWED_PROCESS_PATTERNS[0]],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return []
+    return [int(line) for line in result.stdout.split() if line.strip().isdigit()]
+
+
 def is_game_running() -> bool:
     """Check if Civ 6 is running."""
-    if sys.platform in ("darwin", "linux"):
-        r = subprocess.run(
-            ["pgrep", "-f", _ALLOWED_PROCESS_PATTERNS[0]],
-            capture_output=True,
-        )
-        return r.returncode == 0
-    elif sys.platform == "win32":
-        for name in _PROCESS_NAMES:
-            r = subprocess.run(
-                ["tasklist", "/FI", f"IMAGENAME eq {name}", "/NH"],
-                capture_output=True,
-                text=True,
-            )
-            if name.lower() in r.stdout.lower():
-                return True
-        return False
-    raise NotImplementedError(f"is_game_running not supported on {sys.platform}")
+    return bool(_running_game_pids())
 
 
 def _dismiss_crash_dialog() -> bool:
@@ -216,6 +310,55 @@ def _dismiss_crash_dialog() -> bool:
     except Exception as e:
         log.debug("Crash dialog check failed: %s", e)
         return False
+
+
+# A heartbeat younger than this means a session was playing moments ago.
+_ACTIVE_HEARTBEAT_SECONDS = 120
+
+
+def _heartbeat_candidates() -> list[Path]:
+    """Where a running MCP server may have written its heartbeat.
+
+    The data directory is configurable (``CIV_MCP_DATA_DIR``) and the launcher is often
+    run out of a project that keeps it beside the code, so more than one path has to be
+    considered - a heartbeat that is not looked for is a session that gets killed.
+    """
+    candidates = [Path.home() / ".civ6-mcp" / "heartbeat.json"]
+    data_dir = os.environ.get("CIV_MCP_DATA_DIR")
+    if data_dir:
+        candidates.insert(0, Path(data_dir) / "heartbeat.json")
+    candidates.append(Path.cwd() / ".civ6-mcp-data" / "heartbeat.json")
+    return candidates
+
+
+def _other_active_session() -> str | None:
+    """Describe another session that is playing this game right now, if there is one.
+
+    Killing the game is not a neutral diagnostic: on 2026-09-20 a test run called
+    ``kill_game`` while a live session was mid-turn-82 (that session's log shows a
+    ``get_units`` eight seconds before the kill), and it threw the position away. Two
+    independent signals say someone else is playing, and neither needs the other: the
+    FireTuner connection (only one client can hold it) and the heartbeat file the MCP
+    server writes while it plays.
+    """
+    own = os.getpid()
+    clients = [pid for pid in _tuner_port_state().get("clients", []) if pid != own]
+    if clients:
+        return f"pid {', '.join(str(pid) for pid in clients)} holds the FireTuner connection"
+
+    for path in _heartbeat_candidates():
+        try:
+            beat = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - a missing or unreadable file is not a session
+            continue
+        pid = int(beat.get("pid") or 0)
+        age = time.time() - float(beat.get("ts") or 0)
+        if pid != own and beat.get("phase") == "playing" and age < _ACTIVE_HEARTBEAT_SECONDS:
+            return (
+                f"pid {pid} wrote a 'playing' heartbeat {age:.0f}s ago "
+                f"(turn {beat.get('turn')}, run {beat.get('run_id')})"
+            )
+    return None
 
 
 def _kill_game_sync() -> str:
@@ -316,7 +459,12 @@ def _wait_for_game_process(timeout: int = _LAUNCH_TIMEOUT_SECONDS) -> int | None
 
 
 def _is_tuner_port_open() -> bool:
-    """Check if the FireTuner port accepts TCP connections."""
+    """Check if the FireTuner port accepts TCP connections.
+
+    "Accepts" is not the same as "is listening": FireTuner serves a single connection
+    for the life of the game process, so once one MCP server is attached every later
+    connect() is refused. Use ``_tuner_port_state`` to tell those two apart.
+    """
     try:
         s = socket.create_connection(("127.0.0.1", _TUNER_PORT), timeout=2)
         s.close()
@@ -325,12 +473,407 @@ def _is_tuner_port_open() -> bool:
         return False
 
 
-def _click_continue_positional() -> None:
-    """Click the CONTINUE GAME button by its known position on the leader screen.
+def _tuner_port_state() -> dict:
+    """Who owns the FireTuner socket: the game's listener and its one client.
 
-    The button is a teal ribbon at a fixed relative position across all
-    resolutions: roughly (38%, 75%) of the game window.  Used as a fallback
-    when OCR cannot read the low-contrast teal-on-teal text.
+    A refused connect is ambiguous, and the two readings call for opposite actions:
+    "the tuner has not started yet, wait" versus "the tuner is up and another process
+    holds its only connection, waiting is useless". Measured 2026-09-20: an agent was
+    playing a turn-80 game (its MCP server, pid 23276, held the connection) while a
+    second process saw "not listening" and would have advised a 30-60s wait.
+
+    Returns ``{"listening": bool, "clients": [pid, ...]}``. Off Windows, or if the
+    table cannot be read, both come back empty and callers degrade to the socket probe.
+    """
+    state: dict = {"listening": False, "clients": []}
+    if sys.platform != "win32":
+        return state
+
+    import ctypes
+    from ctypes import wintypes
+
+    class MIB_TCPROW_OWNER_PID(ctypes.Structure):
+        _fields_ = [
+            ("dwState", wintypes.DWORD),
+            ("dwLocalAddr", wintypes.DWORD),
+            ("dwLocalPort", wintypes.DWORD),
+            ("dwRemoteAddr", wintypes.DWORD),
+            ("dwRemotePort", wintypes.DWORD),
+            ("dwOwningPid", wintypes.DWORD),
+        ]
+
+    TCP_TABLE_OWNER_PID_ALL = 5
+    AF_INET = 2
+    MIB_TCP_STATE_LISTEN = 2
+    MIB_TCP_STATE_ESTAB = 5
+
+    iphlpapi = ctypes.windll.iphlpapi
+    size = wintypes.DWORD(0)
+    # First call sizes the table and is expected to fail with ERROR_INSUFFICIENT_BUFFER.
+    iphlpapi.GetExtendedTcpTable(None, ctypes.byref(size), False, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0)
+    if not size.value:
+        return state
+
+    buffer = ctypes.create_string_buffer(size.value)
+    ret = iphlpapi.GetExtendedTcpTable(
+        buffer, ctypes.byref(size), False, AF_INET, TCP_TABLE_OWNER_PID_ALL, 0
+    )
+    if ret != 0:
+        return state
+
+    count = ctypes.cast(buffer, ctypes.POINTER(wintypes.DWORD)).contents.value
+    row_size = ctypes.sizeof(MIB_TCPROW_OWNER_PID)
+    rows = ctypes.cast(
+        ctypes.byref(buffer, ctypes.sizeof(wintypes.DWORD)),
+        ctypes.POINTER(MIB_TCPROW_OWNER_PID * count),
+    ).contents
+
+    # Ports arrive in network byte order inside a DWORD, so take the low half and swap.
+    for row in rows:
+        local = socket.ntohs(row.dwLocalPort & 0xFFFF)
+        remote = socket.ntohs(row.dwRemotePort & 0xFFFF)
+        if local == _TUNER_PORT and row.dwState == MIB_TCP_STATE_LISTEN:
+            state["listening"] = True
+        elif local == _TUNER_PORT and row.dwState == MIB_TCP_STATE_ESTAB:
+            # The game's side of an accepted connection also proves the listener is up.
+            state["listening"] = True
+        elif remote == _TUNER_PORT and row.dwState == MIB_TCP_STATE_ESTAB:
+            pid = int(row.dwOwningPid)
+            if pid not in state["clients"]:
+                state["clients"].append(pid)
+    return state
+
+
+# --- the continue control: found by colour, verified by game state --------------
+#
+# The leader screen's continue control is a teal globe above a teal ribbon, and OCR
+# does not read it: at 3840x2160 the whole leader screen yields two text boxes and
+# neither is the button. Its position is not where the percentage grid below looks
+# either - measured on 2026-09-20 the globe is at (1694,1374) = (44%, 64%) of the
+# window, while the grid covers y 75-88%. That mismatch is why a load could sit on
+# the leader screen for the whole poll and then be reported as successful.
+#
+# Clicking "the most teal thing in the band" is a second-order version of the same
+# mistake: the control is a *shape* - a wide bar with the globe sitting on its centre -
+# and only the globe takes the click. _continue_control_point reads that shape, and the
+# area ranking is what is left when it cannot.
+
+_TEAL_MIN_SATURATION = 8
+_CONTINUE_BAND = (0.15, 0.50, 0.62, 0.82)  # x0, y0, x1, y1 as window fractions
+
+# The leader screen's panel heading is "特征与能力"; Windows OCR reads the first
+# character as 每 ("每征与能力"). Matching the whole string therefore fails on the one
+# screen the load is supposed to end on, so match the tail that survives OCR.
+_LEADER_SCREEN_SIGNATURE = "与能力"
+
+
+def _leader_screen_detected(results: list[tuple[str, int, int, int, int]] | None) -> bool:
+    """Is the game parked on the leader intro screen?
+
+    Distinguishing this from the main menu is what lets the flow stop waiting and
+    click, instead of timing out and then clicking positions that mean nothing.
+    """
+    for text, *_ in results or ():
+        if _LEADER_SCREEN_SIGNATURE in text.replace(" ", ""):
+            return True
+    return False
+
+
+def _wait_for_turn_number(max_seconds: float) -> int | None:
+    """Poll until the game reports a turn, or give up.
+
+    A readable turn is the only honest signal that a load finished; the FireTuner
+    port answers at the main menu as well.
+    """
+    deadline = time.time() + max_seconds
+    while time.time() < deadline:
+        turn = _game_turn_number()
+        if turn is not None:
+            return turn
+        time.sleep(3)
+    return None
+
+
+def _wait_for_game(max_seconds: float) -> bool:
+    """Poll until the game reports a turn (i.e. a game is actually in progress)."""
+    return _wait_for_turn_number(max_seconds) is not None
+
+
+def _grab_window(win: "WindowInfo"):
+    """The whole game window as an RGB image, straight off the screen."""
+    from PIL import ImageGrab
+
+    return ImageGrab.grab(
+        bbox=(win.x, win.y, win.x + win.w, win.y + win.h), all_screens=True
+    ).convert("RGB")
+
+
+def _band_box(image, band: tuple[float, float, float, float] | None) -> tuple[int, int, int, int]:
+    """``band`` (window fractions) as a pixel box inside ``image``."""
+    if not band:
+        return (0, 0, image.width, image.height)
+    return (
+        int(image.width * band[0]),
+        int(image.height * band[1]),
+        int(image.width * band[2]),
+        int(image.height * band[3]),
+    )
+
+
+def _teal_mask(image):
+    """The teal-pixel mask: green and blue both clearly above red, and neither dark.
+
+    PIL mask arithmetic, not a per-pixel Python loop - the loop version touched 518k
+    pixels per scan and is why a recovery that should take a minute ran for three.
+    """
+    from PIL import ImageChops
+
+    red, green, blue = image.split()
+    saturated = ImageChops.darker(
+        ImageChops.subtract(green, red).point(
+            lambda v: 255 if v > _TEAL_MIN_SATURATION else 0
+        ),
+        ImageChops.subtract(blue, red).point(
+            lambda v: 255 if v > _TEAL_MIN_SATURATION else 0
+        ),
+    )
+    lit = ImageChops.darker(
+        green.point(lambda v: 255 if v > 60 else 0),
+        blue.point(lambda v: 255 if v > 60 else 0),
+    )
+    return ImageChops.darker(saturated, lit)
+
+
+def _continue_control_point(mask) -> tuple[int, int] | None:
+    """The globe of the continue control, found by shape rather than by area.
+
+    Measured on a recorded leader screen (1920x1080, 2026-09-20): the control is a solid
+    teal bar 280px wide, and the ring-shaped globe ~70px across sits directly above the
+    bar's centre - the globe x 1664-1736, y 260-330, the bar y 340-370. Only the globe
+    responds to a click (observed live by the player: the label alone does nothing), so
+    clicking "the middle of the teal blob" is not enough even when the blob is right.
+
+    What this replaces is a ranking by teal area. Before the search was narrowed to the
+    lower-left band, that ranking was dominated by the screen's background art and the
+    flow clicked four wrong places; within the band it is unverified, because no
+    recorded leader screen has been kept that shows the whole screen. What is verified
+    is that this finder lands on the globe of the control it is aimed at, so it goes
+    first and the ranking stays as the fallback.
+
+    Returns a click point in ``mask`` coordinates, or None when no bar is on screen.
+    """
+    width, height = mask.size
+    min_run = max(24, int(width * 0.05))  # a bar, not a texture
+
+    bars: list[tuple[int, int, int]] = []
+    for y in range(height):
+        row = mask.crop((0, y, width, y + 1)).tobytes()
+        longest = max((m.end() - m.start() for m in re.finditer(b"\xff+", row)), default=0)
+        if longest >= min_run:
+            runs = [(m.start(), m.end() - m.start()) for m in re.finditer(b"\xff+", row)]
+            start, length = max(runs, key=lambda r: r[1])
+            bars.append((y, start, length))
+    if not bars:
+        return None
+
+    # Consecutive rows form one bar; the widest bar wins, and the tallest breaks ties.
+    groups: list[list[tuple[int, int, int]]] = []
+    for row in bars:
+        if groups and row[0] == groups[-1][-1][0] + 1:
+            groups[-1].append(row)
+        else:
+            groups.append([row])
+    group = max(groups, key=lambda g: (max(r[2] for r in g), len(g)))
+
+    top = group[0][0]
+    bar_height = len(group)
+    _, left, bar_width = max(group, key=lambda r: r[2])
+    centre_x = left + bar_width // 2
+
+    # The globe: whatever teal sits above the bar, in the column around the bar's centre.
+    # The column matters - the bar's own soft top edge and neighbouring panels reach into
+    # the band from the sides, and a bounding box over those reads as a globe 176px wide
+    # against a 280px bar on the recorded frame. That misreading is also how a live run
+    # clicked (1758,1446) on the ribbon instead of the globe at (1694,1374); the column
+    # keeps the click over the bar's centre, where the globe actually sits.
+    reach = max(6, bar_height * 3)
+    above_top = max(0, top - reach)
+    half = max(24, bar_width // 4)
+    col_left, col_right = max(0, centre_x - half), min(width, centre_x + half)
+    box = mask.crop((col_left, above_top, col_right, top)).getbbox()
+    if box is not None:
+        log.info(
+            "Continue: %dpx bar, globe %dpx wide above its centre (click %d,%d)",
+            bar_width,
+            box[2] - box[0],
+            col_left + (box[0] + box[2]) // 2,
+            above_top + (box[1] + box[3]) // 2,
+        )
+        return (col_left + (box[0] + box[2]) // 2, above_top + (box[1] + box[3]) // 2)
+
+    # No globe drawn (or it fell outside the crop): aim just above the bar's centre.
+    return (centre_x, max(0, top - max(3, bar_height // 2)))
+
+
+def _teal_candidates(
+    win: "WindowInfo",
+    band: tuple[float, float, float, float] | None,
+    *,
+    tiles: tuple[int, int] = (12, 8),
+) -> list[tuple[int, int, int]]:
+    """Teal blobs as (x, y, weight), biggest first.
+
+    ``band`` keeps the search to the part of the window the control lives in. Without
+    it the ranking is dominated by teal elsewhere on screen (background art), which is
+    how a first attempt clicked four wrong places.
+
+    This is the fallback for a control the shape finder cannot see; it answers "where is
+    the most teal", which on the leader screen is not the continue control.
+    """
+    shot = _grab_window(win)
+    x0, y0, x1, y1 = _band_box(shot, band)
+    region = shot.crop((x0, y0, x1, y1))
+    mask = _teal_mask(region)
+
+    cols, rows = tiles
+    found: list[tuple[int, int, int]] = []
+    for ty in range(rows):
+        for tx in range(cols):
+            bx0, bx1 = region.width * tx // cols, region.width * (tx + 1) // cols
+            by0, by1 = region.height * ty // rows, region.height * (ty + 1) // rows
+            tile = mask.crop((bx0, by0, bx1, by1))
+            box = tile.getbbox()
+            if box is None:
+                continue
+            weight = tile.histogram()[255]
+            found.append(
+                (
+                    win.x + x0 + bx0 + (box[0] + box[2]) // 2,
+                    win.y + y0 + by0 + (box[1] + box[3]) // 2,
+                    weight,
+                )
+            )
+    found.sort(key=lambda item: item[2], reverse=True)
+    return found
+
+
+def _wait_for_continue_to_take(win: "WindowInfo", max_seconds: float = 30) -> bool:
+    """Did the continue click take? The leader screen going away is the signal.
+
+    Clicking continue starts a real load, and the screen leaves the leader screen long
+    before the turn can be read. Measured 2026-09-20: the click landed, the screen
+    changed within seconds, and the turn was readable only minutes later - so a check
+    that waited 15s for the *turn* declared a good click a miss, then clicked seven more
+    times over three minutes, each one a stray click on a loading game.
+    """
+    deadline = time.time() + max_seconds
+    while time.time() < deadline:
+        try:
+            kind = _screen_kind(_ocr_game_window(win))
+        except Exception as exc:  # noqa: BLE001 - a failed read is not a failed click
+            log.debug("Continue: screen unreadable while checking the click (%s)", exc)
+            kind = ""
+        if kind and kind != "leader intro screen":
+            log.info("Continue: the leader screen is gone (%s) - the click took", kind)
+            return True
+        time.sleep(2)
+    return False
+
+
+def _wait_for_continue_control(
+    win: "WindowInfo", timeout: float = 120
+) -> tuple[int, int] | None:
+    """Wait for the continue control to be drawn, then return its click point.
+
+    The leader screen becomes *readable* well before its control exists. Measured
+    2026-09-20 during a relaunch and load: at the moment the leader screen was detected
+    the entire screen carried 715 teal samples and no bar at all, and once the bar and
+    globe were there it was 7639 - about a hundred seconds later. The flow spent that
+    time clicking teal blobs anywhere but the control, so waiting for it is both
+    shorter and safer than guessing at it.
+    """
+    deadline = time.time() + timeout
+    while True:
+        shot = _grab_window(win)
+        bx0, by0, _, _ = _band_box(shot, _CONTINUE_BAND)
+        point = _continue_control_point(
+            _teal_mask(shot.crop(_band_box(shot, _CONTINUE_BAND)))
+        )
+        if point is not None:
+            return (bx0 + point[0], by0 + point[1])
+        if time.time() >= deadline:
+            return None
+        time.sleep(2)
+
+
+def _click_continue_by_colour(max_candidates: int = 4) -> bool:
+    """Click the continue control, stopping once a game is readable.
+
+    The shape finder goes first because it aims at the one part of the control that
+    responds - the globe above the bar. Only if it finds nothing does the flow fall
+    back to clicking teal blobs by area, one at a time: clicking nine assumed positions
+    in a row is how a stray click ends up inside a game that was already running, so a
+    wrong guess costs one click, not eight.
+    """
+    win = _find_game_window()
+    if win is None:
+        log.warning("Continue by colour: no game window found")
+        return False
+
+    # Nothing to click if a game is already running. This is reachable from the
+    # OCR-timeout fallbacks below, which assume the leader screen without having
+    # confirmed it - and a click on the map is a move order when a unit is selected.
+    try:
+        if _screen_kind(_ocr_game_window(win)) == "in-game":
+            log.info("Continue: a game is already in progress; not clicking")
+            return True
+    except Exception as exc:  # noqa: BLE001 - a failed screen read must not block the click
+        log.debug("Continue: could not read the screen before clicking (%s)", exc)
+
+    tried: set[tuple[int, int]] = set()
+
+    point = _wait_for_continue_control(win)
+    if point is not None:
+        tried.add(point)
+        log.info("Continue: globe above the ribbon at (%d,%d)", *point)
+        _click(*point)
+        if _wait_for_continue_to_take(win):
+            return True
+    else:
+        log.info("Continue: no control drawn on the leader screen; ranking teal blobs")
+
+    for band in (_CONTINUE_BAND, None):
+        for x, y, count in _teal_candidates(win, band)[:max_candidates]:
+            if (x, y) in tried:
+                continue
+            tried.add((x, y))
+            log.info(
+                "Continue: teal candidate (%d,%d) samples=%d band=%s", x, y, count, band
+            )
+            _click(x, y)
+            if _wait_for_continue_to_take(win):
+                return True
+    return False
+
+
+def _click_continue_positional() -> None:
+    """Click the continue control on the leader screen.
+
+    Found by colour first; the percentage grid below is only reached when no teal
+    blob is on screen at all.
+    """
+    if _click_continue_by_colour():
+        return
+
+    _click_continue_grid()
+
+
+def _click_continue_grid() -> None:
+    """Click a grid of assumed continue-button positions.
+
+    Kept as a last resort for a window where the control's colour has changed. It
+    covers y 75-88% of the window, which is not where the control is at 4K (measured
+    at (44%, 64%)), so it is not the first thing tried any more.
 
     On macOS, kCGWindowBounds includes the title bar + shadow, so we detect
     the content area offset the same way _ocr_game_window does (capture →
@@ -460,7 +1003,7 @@ def _find_game_exe_win32() -> str | None:
 
     # Parse VDF to find library paths containing app 289070
     try:
-        with open(vdf_path, "r") as f:
+        with open(vdf_path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
     except OSError:
         return None
@@ -935,7 +1478,39 @@ def _capture_fullscreen_screencapture() -> object | None:
 
 
 def _capture_window_win32(hwnd: int) -> "PIL.Image.Image":
-    """Capture a window via PrintWindow + BitBlt into a PIL Image."""
+    """Capture the game window on Windows by reading the screen.
+
+    A screen grab is the default, not PrintWindow, and that is a safety choice.
+    PrintWindow asks the DX12 renderer to redraw itself into a device context, and
+    the load flow's own comment records the consequence: "PrintWindow +
+    SetForegroundWindow during the DX12 loading phase can crash the renderer".
+    Polling for the leader screen's continue button runs inside exactly that phase.
+    On 2026-09-20 a capture of the window during a load was followed by the game
+    disappearing; the flow then sat on a leader screen with nothing to click.
+
+    A grab reads pixels that are already on screen and sends the game no window
+    messages at all. The tradeoff is that it captures whatever is on top, so it is
+    wrong for an occluded or minimised window - set CIV_MCP_PRINTWINDOW_CAPTURE=1 to
+    use PrintWindow instead for that case, accepting the renderer risk.
+    """
+    if os.environ.get("CIV_MCP_PRINTWINDOW_CAPTURE", "").strip() == "1":
+        return _capture_window_printwindow(hwnd)
+
+    import win32gui
+    from PIL import ImageGrab
+
+    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    if right <= left or bottom <= top:
+        raise RuntimeError(f"Window {hwnd} has no extent ({left},{top})-({right},{bottom})")
+    return ImageGrab.grab(bbox=(left, top, right, bottom), all_screens=True)
+
+
+def _capture_window_printwindow(hwnd: int) -> "PIL.Image.Image":
+    """Capture a window via PrintWindow + BitBlt into a PIL Image.
+
+    Only reached when CIV_MCP_PRINTWINDOW_CAPTURE=1 is set: see
+    ``_capture_window_win32`` for why this is not the default on Windows.
+    """
     import ctypes
 
     import win32gui
@@ -1317,6 +1892,13 @@ def _ocr_tesseract(
 def _ocr_game_window(win: WindowInfo) -> list[tuple[str, int, int, int, int]]:
     """Capture the game window and OCR it. All coords in screen points."""
     if sys.platform == "win32":
+        # The capture is a screen grab, so it reads whatever is on top, and the game
+        # has to be raised before every read - not just before a click. After a cold
+        # launch the game comes up behind the terminal or the browser, and without
+        # this the flow OCRs that window instead: on 2026-09-20 it read the desktop
+        # clock, then a white browser page, and reported "the game is not showing its
+        # main menu" while the game sat at its menu underneath.
+        _bring_to_front()
         pil_image = _capture_window_win32(win.window_id)
         return _ocr_winrt(pil_image, win.x, win.y, win.w, win.h)
     if sys.platform == "linux":
@@ -1493,13 +2075,18 @@ def _normalize(s: str) -> str:
     - Underscores ↔ spaces (game UI shows underscores, OCR reads spaces)
     - 0 ↔ O (OCR confuses zero and capital O, especially in save names like 0A_...)
     - Leading/trailing punctuation noise from tesseract (e.g. ": Load Game =:")
+
+    Trimming is Unicode-aware. An earlier version used ``[^a-z0-9]``, which
+    deletes every non-ASCII character — so on a localized install both the
+    label and the OCR line normalized to "" and compared equal.
     """
     import re
 
     s = s.lower().strip().replace("_", " ").replace("0", "o")
-    # Strip leading/trailing non-alphanumeric chars (OCR artifacts)
-    s = re.sub(r"^[^a-z0-9]+", "", s)
-    s = re.sub(r"[^a-z0-9]+$", "", s)
+    # Strip leading/trailing non-word characters (OCR artifacts). \w is
+    # Unicode-aware, so CJK survives while punctuation and spaces do not.
+    s = re.sub(r"^[^\w]+", "", s)
+    s = re.sub(r"[^\w]+$", "", s)
     return s
 
 
@@ -1526,9 +2113,51 @@ def _fuzzy_suffix_match(
     return None
 
 
+def _label_list(target: str | Sequence[str]) -> list[str]:
+    """Normalise a label or a label set into a list of candidates."""
+    if isinstance(target, str):
+        return [target]
+    return [t for t in target if t]
+
+
+def _label_display(target: str | Sequence[str]) -> str:
+    """Human-readable form of a label set, for log messages.
+
+    A bare string may be a logical key (``"single_player"``), so it is expanded
+    before display — logs should never show the internal key instead of the
+    label that was actually searched for.
+    """
+    if isinstance(target, str):
+        return _label_display(_menu_labels(target))
+    return " | ".join(t for t in target if t)
+
+
+def _label_matches(text_norm: str, target_norm: str, exact: bool) -> bool:
+    """Does one normalized OCR line match one normalized label?
+
+    The Windows OCR engine inserts a space between CJK glyphs, so the game's
+    ``单人模式`` comes back as ``单 人 模 式``. A straight comparison never
+    matches, so when the direct test fails we compare again with every space
+    removed. English labels are unaffected: the first test already decides them.
+    """
+    if not target_norm:
+        # A label that normalized away to nothing must not match everything.
+        return False
+    if exact:
+        if text_norm == target_norm:
+            return True
+    elif target_norm in text_norm:
+        return True
+    squeezed_target = target_norm.replace(" ", "")
+    if not squeezed_target:
+        return False
+    squeezed_text = text_norm.replace(" ", "")
+    return squeezed_text == squeezed_target if exact else squeezed_target in squeezed_text
+
+
 def _find_text(
     ocr_results: list[tuple[str, int, int, int, int]],
-    target: str,
+    target: str | Sequence[str],
     exact: bool = False,
     prefer_bottom: bool = False,
     min_y_fraction: float = 0.0,
@@ -1539,6 +2168,9 @@ def _find_text(
     may display underscores but OCR can read them as spaces (or vice versa).
 
     Args:
+        target: One label, or several acceptable labels for the same control
+            (e.g. the English and localized spellings of a menu item). The
+            first match in screen order wins, as before.
         prefer_bottom: When True and multiple matches exist, return the one
             with the largest y coordinate (lowest on screen). Useful when a
             label and a button have the same text (e.g. "Load Game" title
@@ -1547,13 +2179,11 @@ def _find_text(
             0.7 means only accept matches in the bottom 30%. Requires a
             game window to determine screen bounds; ignored if no window.
     """
-    target_norm = _normalize(target)
+    targets_norm = [_normalize(t) for t in _label_list(target)]
     matches = []
     for text, x, y, w, h in ocr_results:
         text_norm = _normalize(text)
-        if exact and text_norm == target_norm:
-            matches.append((text, x, y, w, h))
-        elif not exact and target_norm in text_norm:
+        if any(_label_matches(text_norm, t, exact) for t in targets_norm):
             matches.append((text, x, y, w, h))
     if min_y_fraction > 0 and matches:
         # Filter by screen position — use the max y from all results as proxy
@@ -1563,22 +2193,28 @@ def _find_text(
         matches = [(t, x, y, w, h) for t, x, y, w, h in matches if y >= min_y]
     if not matches:
         # Second-chance: fuzzy suffix match on rejected low-confidence results
-        fuzzy = _fuzzy_suffix_match(target, _last_rejected_ocr) or _fuzzy_suffix_match(
-            target, ocr_results
-        )
+        fuzzy = None
+        for candidate in _label_list(target):
+            fuzzy = _fuzzy_suffix_match(
+                candidate, _last_rejected_ocr
+            ) or _fuzzy_suffix_match(candidate, ocr_results)
+            if fuzzy:
+                break
         if fuzzy:
             log.info(
                 "_find_text: '%s' not in confident results, "
                 "fuzzy suffix matched rejected '%s'",
-                target,
+                _label_display(target),
                 fuzzy[0],
             )
             return fuzzy
         log.debug(
-            "_find_text: '%s' not found in %d OCR results", target, len(ocr_results)
+            "_find_text: '%s' not found in %d OCR results",
+            _label_display(target),
+            len(ocr_results),
         )
         return None
-    log.debug("_find_text: '%s' -> %d matches", target, len(matches))
+    log.debug("_find_text: '%s' -> %d matches", _label_display(target), len(matches))
     if prefer_bottom:
         return max(matches, key=lambda m: m[2])
     return matches[0]
@@ -1767,13 +2403,47 @@ def _is_window_focused() -> bool:
         return False
 
 
+def _is_game_foreground() -> bool:
+    """Is the game window the foreground window right now?"""
+    if sys.platform != "win32":
+        return True
+    try:
+        import ctypes
+
+        win = _find_game_window()
+        if win is None:
+            return False
+        return ctypes.windll.user32.GetForegroundWindow() == win.window_id
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _bring_to_front(pid: int | None = None) -> None:
-    """Bring the game window to front.
+    """Bring the game window to front, unless it is already there.
+
+    This is needed, and why is worth stating: the capture is a screen grab, and a grab
+    reads whatever is on top. After a cold launch the game can come up behind the
+    terminal or the browser, and then the flow OCRs the wrong window entirely - on
+    2026-09-20 it read the desktop clock instead of the main menu and reported that
+    the game was "not showing its main menu" while the game was sitting right there.
+
+    It is also no longer the risk the load flow's comment describes. The danger
+    recorded there is the pair "PrintWindow + SetForegroundWindow during the DX12
+    loading phase"; the capture no longer uses PrintWindow, so the renderer is never
+    asked to redraw itself into a device context.
+
+    Skipped when the game is already foreground, so nothing is disturbed needlessly.
+    Set CIV_MCP_NO_FOREGROUND_STEAL=1 to disable even that.
 
     Args:
         pid: Process ID from WindowInfo. If None, looks up via
             _find_game_window().
     """
+    if os.environ.get("CIV_MCP_NO_FOREGROUND_STEAL", "").strip() == "1":
+        log.debug("_bring_to_front: disabled by CIV_MCP_NO_FOREGROUND_STEAL")
+        return
+    if _is_game_foreground():
+        return
     if sys.platform == "win32":
         return _bring_to_front_win32()
     if sys.platform == "linux":
@@ -1868,7 +2538,7 @@ def _bring_to_front_linux() -> None:
 
 
 def _wait_for_text(
-    target: str,
+    target: str | Sequence[str],
     timeout: int = 60,
     exact: bool = False,
     interval: float = 1.5,
@@ -1879,6 +2549,9 @@ def _wait_for_text(
 
     Captures only the game window (not the full screen). Falls back to
     full-screen capture when no game window exists (e.g. Aspyr launcher).
+
+    ``target`` may be one label or several acceptable labels for the same
+    control; see ``_find_text``.
     """
     _require_gui_deps()
     start = time.time()
@@ -1911,11 +2584,11 @@ def _wait_for_text(
         )
         elapsed = time.time() - start
         if match:
-            log.info("_wait_for_text: '%s' found after %.1fs", target, elapsed)
+            log.info("_wait_for_text: '%s' found after %.1fs", _label_display(target), elapsed)
             return match
         log.debug(
             "_wait_for_text: '%s' not found (%.1fs/%ds, %d results)",
-            target,
+            _label_display(target),
             elapsed,
             timeout,
             len(results),
@@ -1928,7 +2601,7 @@ def _wait_for_text(
         seen = [f"'{t}'" for t, *_ in last_results[:20]]
         log.warning(
             "_wait_for_text: '%s' not found after %.0fs. Saw %d items: %s",
-            target,
+            _label_display(target),
             elapsed,
             len(last_results),
             ", ".join(seen),
@@ -1936,14 +2609,14 @@ def _wait_for_text(
     else:
         log.warning(
             "_wait_for_text: '%s' not found after %.0fs (no OCR results at all)",
-            target,
+            _label_display(target),
             elapsed,
         )
     return None
 
 
 def _click_text(
-    target: str,
+    target: str | Sequence[str],
     timeout: int = 30,
     exact: bool = False,
     post_delay: float = 1,
@@ -1954,6 +2627,8 @@ def _click_text(
     """Find text via OCR and click it. Returns success.
 
     Args:
+        target: One label or several acceptable labels for the same control;
+            see ``_find_text``.
         y_offset: Pixels to shift the click vertically from bbox center.
             Positive = down, negative = up.  Useful when menu items are
             tightly packed and OCR bbox centers can land between items.
@@ -2080,6 +2755,404 @@ async def dismiss_crash_dialogs() -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def get_newest_save() -> tuple[str, float] | None:
+    """The most recently written save, whatever its prefix, as (name, mtime).
+
+    Not the same as ``get_latest_autosave``, which only looks at the game's own
+    AutoSave_* files. Both live on this box and either can be the newer one: the MCP
+    writes 0_MCP_<turn> when a turn begins, the game writes its own autosaves
+    alongside, and after a plain exit the game's file can be a turn ahead. "Continue
+    Game" resumes whichever is most recent, so this is what to compare against.
+    """
+    paths: list[str] = []
+    for directory in (SAVE_DIR, SINGLE_SAVE_DIR):
+        paths.extend(glob.glob(os.path.join(directory, "*.Civ6Save")))
+    if not paths:
+        return None
+    newest = max(paths, key=os.path.getmtime)
+    return os.path.basename(newest).replace(".Civ6Save", ""), os.path.getmtime(newest)
+
+
+def _save_turn(name: str) -> int | None:
+    """The turn number carried in a save name, or None if it has none.
+
+    ``0_MCP_0079`` is turn 79; that invariant is what the recovery verification rests
+    on, so it is parsed in one place.
+    """
+    match = re.search(r"(\d+)$", name)
+    return int(match.group(1)) if match else None
+
+
+def _game_probe(timeout: float = 5.0) -> dict:
+    """One short tuner query: connected, is a game loaded, and which turn.
+
+    ``_game_turn_number`` cannot tell "the tuner is not there" from "the tuner is there
+    but no game is loaded", and those two call for completely different actions: wait,
+    or click through a menu. This keeps them apart.
+    """
+    import asyncio
+
+    from civ_mcp.connection import GameConnection
+    from civ_mcp.lua._helpers import SENTINEL
+
+    lua = (
+        "local ok, turn = pcall(function() return Game.GetCurrentGameTurn() end) "
+        'print("TURN|" .. tostring(ok and turn or "none")) '
+        f'print("{SENTINEL}")'
+    )
+
+    async def probe() -> dict:
+        conn = GameConnection()
+        try:
+            await conn.connect()
+        except ConnectionRefusedError as exc:
+            # Nothing is listening: definitive, and a retry would only cost time.
+            return {
+                "connected": False,
+                "ingame": False,
+                "turn": None,
+                "transient": False,
+                "note": str(exc),
+            }
+        except (ConnectionError, OSError) as exc:
+            # The port answered and then dropped us - see the retry in _game_probe.
+            return {
+                "connected": False,
+                "ingame": False,
+                "turn": None,
+                "transient": True,
+                "note": str(exc),
+            }
+        if conn.ingame_index is None:
+            await conn.disconnect()
+            return {"connected": True, "ingame": False, "turn": None, "note": ""}
+        try:
+            for line in await conn.execute_write(lua, timeout=timeout):
+                if line.startswith("TURN|"):
+                    value = line.split("|", 1)[1]
+                    return {
+                        "connected": True,
+                        "ingame": True,
+                        "turn": int(value) if value.isdigit() else None,
+                        "note": "" if value.isdigit() else f"turn read as {value!r}",
+                    }
+            return {"connected": True, "ingame": True, "turn": None, "note": "no reply"}
+        finally:
+            await conn.disconnect()
+
+    def probe_once() -> dict:
+        try:
+            return asyncio.run(probe())
+        except RuntimeError:
+            # Already inside a running event loop: asyncio.run refuses to nest, and the
+            # refusal used to be caught below and handed back as "no connection" - the
+            # same reading as a game that is not there - for a game whose tuner was open.
+            # Observed on 2026-09-20 by calling game_status() from an async recovery
+            # script.
+            return _probe_off_loop(probe)
+        except Exception as exc:  # noqa: BLE001 - a probe must never raise into a caller
+            return {
+                "connected": False,
+                "ingame": False,
+                "turn": None,
+                "transient": isinstance(exc, OSError)
+                and not isinstance(exc, ConnectionRefusedError),
+                "note": f"{type(exc).__name__}: {exc}",
+            }
+
+    result = probe_once()
+    if result["connected"]:
+        return result
+
+    # A reconnect immediately after another client closed fails with
+    # ERROR_NETNAME_DELETED while the port itself is fine: measured on 2026-09-20 right
+    # after a load, the probe failed at 17:30:02 and answered turn 80 at 17:30:04. The
+    # retry keys on the *error*, not on the port table - at that moment the table had no
+    # LISTEN row at all, so a port-based condition silently never fired.
+    if result.get("transient"):
+        time.sleep(1.5)
+        retry = probe_once()
+        if retry["connected"]:
+            return retry
+    return result
+
+
+def _probe_off_loop(probe) -> dict:
+    """Run the probe coroutine on a thread of its own and return what it reported."""
+    import threading
+
+    box: dict = {}
+
+    def runner() -> None:
+        try:
+            box.update(asyncio.run(probe()))
+        except Exception as exc:  # noqa: BLE001 - reported, never raised
+            box.update(
+                {
+                    "connected": False,
+                    "ingame": False,
+                    "turn": None,
+                    "transient": isinstance(exc, OSError)
+                    and not isinstance(exc, ConnectionRefusedError),
+                    "note": f"{type(exc).__name__}: {exc}",
+                }
+            )
+
+    thread = threading.Thread(target=runner, name="civ6-tuner-probe", daemon=True)
+    thread.start()
+    thread.join(timeout=30)
+    return box or {
+        "connected": False,
+        "ingame": False,
+        "turn": None,
+        "note": "probe thread did not finish in 30s",
+    }
+
+
+def _game_turn_number(timeout: float = 5.0) -> int | None:
+    """The current turn, or None when no game is in progress."""
+    return _game_probe(timeout).get("turn")
+
+
+def _ocr_text(results: list[tuple[str, int, int, int, int]] | None) -> str:
+    """All OCR boxes as one string, with spaces squeezed out.
+
+    Windows OCR puts a space between every CJK glyph ("回 合 80 / 500"), so a literal
+    match on the game's own label fails until the spaces are gone.
+    """
+    return " ".join(text.replace(" ", "") for text, *_ in results or ())
+
+
+def _ocr_lines(results: list[tuple[str, int, int, int, int]] | None) -> list[str]:
+    """OCR boxes rebuilt into visual lines, top to bottom, spaces squeezed out.
+
+    One line of the game's UI often comes back as several boxes, and **the box order is
+    not the reading order**. Measured 2026-09-20: a live session reported turn 81 as
+    "turn 8" because the HUD's 回合 81 / 500 had been split into 回 合 8 and 1 / 5 0 0
+    and the tail arrived first, so joining the whole screen into one string put the
+    digits in the wrong order. Grouping by y and sorting by x is what makes the digits
+    adjacent again. Any label spanning two boxes benefits the same way.
+    """
+    lines: list[list[tuple[int, int, str]]] = []  # (y, x, text) per visual line
+    for text, x, y, _w, h in results or ():
+        for line in lines:
+            # Same visual line, not merely "nearby": the top strip of the window stacks
+            # three or four rows within about one text height of each other, and merging
+            # those produces a single 80-character pseudo-line.
+            if abs(line[0][0] - y) <= max(3, h // 3):
+                line.append((y, x, text))
+                break
+        else:
+            lines.append([(y, x, text)])
+    return [
+        "".join(text for _y, _x, text in sorted(line, key=lambda entry: entry[1])).replace(
+            " ", ""
+        )
+        for line in sorted(lines, key=lambda entries: entries[0][0])
+    ]
+
+
+_TURN_ON_SCREEN = re.compile(r"(?:回合|Turn)\s*(\d+)")
+# The canonical HUD form, preferred when it is readable: "回合 81 / 500". It is not
+# required, because the HUD is genuinely misread - a recorded turn-59 frame OCRs as
+# "回 合 59 巧 00", where the "/ 5" of "/ 500" comes back as one glyph, and requiring the
+# slash would lose the turn and read an in-game screen as "unrecognised".
+_TURN_ON_SCREEN_WITH_TOTAL = re.compile(r"(?:回合|Turn)\s*(\d+)\s*/\s*(\d+)")
+
+
+def _turn_in_line(line: str) -> int | None:
+    match = _TURN_ON_SCREEN_WITH_TOTAL.search(line) or _TURN_ON_SCREEN.search(line)
+    return int(match.group(1)) if match else None
+
+
+def _ocr_turn(results: list[tuple[str, int, int, int, int]] | None) -> int | None:
+    """The turn number the HUD shows, for when the tuner cannot answer.
+
+    The tuner is the better source, but it is exactly what is missing when another
+    process holds the single FireTuner connection - and "which turn is this save" is
+    the fact a recovery needs most. Parsed line by line, top first: the counter sits in
+    the top strip of the window, so the first readable line carrying it is the HUD.
+    """
+    for line in _ocr_lines(results):
+        turn = _turn_in_line(line)
+        if turn is not None:
+            log.info("Screen HUD read %r -> turn %s", line, turn)
+            return turn
+    return None
+
+
+def _screen_kind(results: list[tuple[str, int, int, int, int]] | None) -> str:
+    """What the game window is showing, from its OCR text alone."""
+    lines = _ocr_lines(results)
+    joined = " ".join(lines)
+    if any(_TURN_ON_SCREEN.search(line) for line in lines):
+        return "in-game"
+    if _leader_screen_detected(list(results or ())):
+        return "leader intro screen"
+    if "单人模式" in joined or "SinglePlayer" in joined:
+        return "main menu"
+    if "加载游戏" in joined or "LoadGame" in joined:
+        return "load game screen"
+    if not joined:
+        return "nothing readable (intro movie, splash, or a blank frame)"
+    return f"unrecognised ({len(results or ())} text boxes)"
+
+
+def _foreign_tuner_clients(clients: list[int], pids: list[int]) -> list[int]:
+    """Connection holders that are neither the game nor this process.
+
+    Our own pid can legitimately appear when the MCP server runs in-process; the game's
+    own pid appears as the accepting side, which is handled by the caller.
+    """
+    own = os.getpid()
+    return [pid for pid in clients if pid != own and pid not in pids]
+
+
+def game_status() -> str:
+    """Where the game is right now, and what that state calls for.
+
+    An agent otherwise has to infer this from the wording of whatever failed: "the game
+    is not showing its main menu" covers a game that is still starting, one parked on
+    the leader screen, and one whose window is simply behind the browser. The same
+    status is also what tells a recovery whether it needs to launch, click, or play.
+
+    The screen is read whenever there is a window, not only when the tuner answers:
+    with another agent holding the single FireTuner connection, OCR is the only way to
+    know that a game is loaded and at which turn.
+    """
+    pids = _running_game_pids()
+    window = _find_game_window()
+    tuner = _is_tuner_port_open()
+    probe = _game_probe() if tuner else {"connected": False, "ingame": False, "turn": None, "note": ""}
+
+    port = {"listening": False, "clients": []} if tuner else _tuner_port_state()
+    holders = _foreign_tuner_clients(port.get("clients", []), pids)
+    held_by = ", ".join(f"pid {pid}" for pid in holders)
+
+    boxes: list | None = None
+    screen = "not read (no window)"
+    screen_turn = None
+    if window is not None:
+        try:
+            boxes = _ocr_game_window(window)
+            screen = _screen_kind(boxes)
+            screen_turn = _ocr_turn(boxes)
+        except Exception as exc:  # noqa: BLE001
+            screen = f"unreadable ({type(exc).__name__})"
+
+    turn = probe.get("turn")
+    on_screen = turn if turn is not None else screen_turn
+
+    if not pids:
+        state = "not_running"
+        nxt = "Call launch_game, then check again. Nothing else can work yet."
+    elif turn is not None or screen == "in-game":
+        state = "in_game"
+        where = f"turn {on_screen}" if on_screen is not None else "the current turn"
+        if turn is not None:
+            nxt = (
+                f"In game at {where}. Play it: get_game_overview, then the turn loop. "
+                "Nothing needs loading."
+            )
+        elif held_by:
+            nxt = (
+                f"A game is loaded and on screen at {where}, but this process cannot "
+                f"attach: FireTuner serves one connection and {held_by} already holds "
+                "it, so no query or command from here will work. Play it from that "
+                "session, or stop it (scripts\\civ6-clean.ps1) and check again."
+            )
+        elif tuner or port.get("listening"):
+            # The port answers but the probe did not: the game is loading, or the tuner
+            # dropped the connection (WinError 64 does exactly this while a 4K load is in
+            # progress). Either way the game is fine - telling the caller to relaunch
+            # would throw away a good position, which is what this lane did before it
+            # checked whether anything was listening at all.
+            nxt = (
+                f"A game is on screen at {where} and FireTuner is listening, but the "
+                "probe did not answer"
+                + (f" ({probe['note']})" if probe.get("note") else "")
+                + ". Wait for the load to finish and call this again; do not restart the "
+                "game."
+            )
+        else:
+            nxt = (
+                f"A game is on screen at {where} but FireTuner is not listening, which "
+                "means the game was started outside the MCP. Restart it with "
+                "launch_game (or restart_and_load) to get a readable game."
+            )
+    elif held_by:
+        state = "tuner_busy"
+        nxt = (
+            f"FireTuner is listening but {held_by} holds its only connection, so this "
+            "process cannot attach and waiting will not change that. Stop that process "
+            "if it is stale (scripts\\civ6-clean.ps1), or keep playing in that session."
+        )
+    elif not tuner:
+        state = "starting"
+        nxt = (
+            "The process is up but FireTuner is not listening yet. Wait ~30-60s and "
+            "check again; do not launch a second instance."
+        )
+    elif screen == "leader intro screen":
+        state = "leader_screen"
+        nxt = (
+            "A save is loaded but the game is parked on the leader intro screen. Call "
+            "load_game_save with the same save again, or click through Continue Game - "
+            "the MCP does the clicking for either."
+        )
+    elif screen == "main menu":
+        newest = get_newest_save()
+        state = "main_menu"
+        if newest:
+            nxt = (
+                f'Nothing is loaded. Call load_game_save("{newest[0]}") - the newest '
+                f"save, turn {_save_turn(newest[0])}. Continue Game resumes that one."
+            )
+        else:
+            nxt = "Nothing is loaded and no save was found. Call list_saves."
+    elif screen == "load game screen":
+        state = "loading"
+        nxt = "The Load Game screen is open. A load is in progress or was started; let it finish."
+    else:
+        state = "loading_or_unknown"
+        nxt = (
+            "The tuner answers but no game is loaded, and the screen is not one this "
+            "knows. Wait, then check again; if it persists, the save is still opening "
+            "or the window is showing something else."
+        )
+
+    if tuner:
+        tuner_line = "listening (this process can attach)"
+    elif port.get("listening") and held_by:
+        tuner_line = f"listening, but {held_by} holds the only connection"
+    elif port.get("listening"):
+        tuner_line = "listening (no client attached, and connecting from here failed)"
+    else:
+        tuner_line = "not listening"
+
+    if turn is not None:
+        loaded_line = f"yes, turn {turn}"
+    elif on_screen is not None:
+        loaded_line = f"turn {on_screen} (read from the screen; this process is not attached)"
+    elif probe.get("connected"):
+        loaded_line = "connected, none loaded"
+    else:
+        loaded_line = "no connection"
+
+    lines = [
+        f"GAME STATE: {state}",
+        f"  process     : {'running, pid ' + ', '.join(str(p) for p in pids) if pids else 'not running'}",
+        f"  window      : {'yes' if window else 'none'}",
+        f"  FireTuner   : {tuner_line}",
+        f"  game loaded : {loaded_line}",
+        f"  screen      : {screen}",
+    ]
+    if probe.get("note"):
+        lines.append(f"  note        : {probe['note']}")
+    lines.append(f"NEXT: {nxt}")
+    return "\n".join(lines)
+
+
 def get_latest_autosave() -> str | None:
     """Find the most recent autosave name (without extension)."""
     saves = glob.glob(os.path.join(SAVE_DIR, "AutoSave_*.Civ6Save"))
@@ -2100,8 +3173,215 @@ def list_autosaves(limit: int = 10) -> list[str]:
 # Menu navigation (blocking — run via asyncio.to_thread)
 # ---------------------------------------------------------------------------
 
+# The game renders its front end in whatever language the player selected, so
+# a single English literal is not enough: on this machine AppOptions.txt has
+# DisplayLanguage=zh_Hans_CN and the main menu offers 单人模式, not
+# "Single Player", which made every OCR recovery fail. Each logical control
+# therefore carries every label it can appear under. The Chinese strings are
+# the game's own, joined out of LocalizationDatabase/Vanilla_zh_Hans_CN.xml by
+# Tag (see .tools/join-loc-strings.py), not transliterations.
+_MENU_LABELS: dict[str, tuple[str, ...]] = {
+    # LOC_SINGLE_PLAYER
+    "single_player": ("Single Player", "单人模式"),
+    # LOC_LOAD_GAME (the main-menu entry and the Load button are the same word)
+    "load_game": ("Load Game", "加载游戏"),
+    # LOC_CONTINUE. Matched non-exactly, so 继续 also covers LOC_CONTINUE_GAME
+    # (继续游戏), which is what the leader intro screen shows after a load.
+    "continue": ("CONTINUE", "继续"),
+    # LOC_CONTINUE_GAME, the Single Player submenu item that resumes the most recent
+    # save. Kept separate from "continue" because it is matched exactly: on that
+    # submenu 继续游戏 sits two rows above 创建游戏, and a fuzzy match there is how a
+    # click ends up on the wrong item.
+    "continue_game": ("Continue Game", "继续游戏"),
+    # LOC_AUTOSAVES — the filter checkbox on the Load Game screen
+    "autosaves": ("Autosaves", "自动保存"),
+}
 
-def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str:
+
+def _menu_labels(key: str) -> tuple[str, ...]:
+    """Accepted OCR labels for a logical menu control, English first.
+
+    Unknown keys pass through unchanged, so a caller may hand this either a
+    logical key from ``_MENU_LABELS`` or a literal label.
+    """
+    return _MENU_LABELS.get(key, (key,))
+
+
+def _game_text_language() -> str:
+    """The game's configured text language, e.g. ``zh_Hans_CN``.
+
+    Returns "" when AppOptions.txt is missing or unreadable — the callers only
+    use this to order label candidates, so a failure is not fatal.
+    """
+    if sys.platform != "win32":
+        return ""
+    appdata = os.environ.get("LOCALAPPDATA") or ""
+    if not appdata:
+        return ""
+    path = os.path.join(
+        appdata, "Firaxis Games", "Sid Meier's Civilization VI", "AppOptions.txt"
+    )
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if stripped.lower().startswith("displaylanguage"):
+                    return stripped.split(None, 1)[1].strip() if " " in stripped else ""
+    except OSError:
+        return ""
+    return ""
+
+
+def window_state() -> dict[str, object]:
+    """Diagnostic snapshot of the game window.
+
+    Used by the hang path in server.py to record *what the screen looked like*
+    before the recovery machinery kills and relaunches the game. Deliberately
+    free of Lua calls: the game may be mid-AI-turn, and extra InGame queries
+    during that window are themselves a known hang trigger.
+    """
+    state: dict[str, object] = {"found": False}
+    try:
+        win = _find_game_window()
+    except Exception as exc:  # noqa: BLE001 - diagnostics must never raise
+        state["error"] = f"{type(exc).__name__}: {exc}"
+        return state
+    if win is None:
+        return state
+
+    state.update(
+        {
+            "found": True,
+            "window_id": win.window_id,
+            "pid": win.pid,
+            "x": win.x,
+            "y": win.y,
+            "w": win.w,
+            "h": win.h,
+        }
+    )
+    if sys.platform != "win32":
+        return state
+    try:
+        import win32gui
+
+        hwnd = win.window_id
+        foreground = win32gui.GetForegroundWindow()
+        state.update(
+            {
+                "title": win32gui.GetWindowText(hwnd),
+                "visible": bool(win32gui.IsWindowVisible(hwnd)),
+                "minimised": bool(win32gui.IsIconic(hwnd)),
+                "foreground": foreground == hwnd,
+                "foreground_window": win32gui.GetWindowText(foreground),
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        state["win32_error"] = f"{type(exc).__name__}: {exc}"
+    return state
+
+
+def _wait_for_leader_screen(timeout: float = 120) -> bool:
+    """Wait for the leader intro screen, which is where a load ends up.
+
+    Returns False both on timeout and when the main menu is on screen instead, since
+    that means the load did not take and the caller has to fall back.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        win = _find_game_window()
+        try:
+            results = _ocr_game_window(win) if win else _ocr_fullscreen()
+        except Exception:  # noqa: BLE001 - OCR failure must not end the wait early
+            results = _ocr_fullscreen()
+        if _leader_screen_detected(results):
+            return True
+        if _find_text(results, _menu_labels("single_player")):
+            log.info("Still on the main menu - the load did not take")
+            return False
+        time.sleep(2.5)
+    return False
+
+
+def _continue_game_sync(expected_name: str) -> str | None:
+    """Load the most recent save via Single Player -> Continue Game (继续游戏).
+
+    Two clicks instead of four, and it is the mechanism the game itself uses to
+    resume: it picks the most recent save, so it also implements "the newest save by
+    date" rather than "the newest 0_MCP_ file". The turn is then checked against the
+    number in the save name, so choosing the save implicitly does not cost the
+    verification.
+
+    Returns None when the path is unavailable or the load does not verify, so the
+    caller can fall back to picking the save from the list. Returning None is the
+    contract: this function never reports a load it has not confirmed.
+    """
+    _require_gui_deps()
+    started = time.time()
+    steps: list[str] = []
+
+    # The submenu may already be open: from an earlier attempt, or because the pointer is
+    # resting on the item. Clicking the parent again *closes* it, and the parent itself
+    # moves ~95px left while the submenu is open, so a coordinate read before that shift
+    # misses the item completely. Both were observed on 2026-09-20 - look, then click.
+    if (
+        _wait_for_text(
+            _menu_labels("continue_game"), timeout=1.5, interval=0.75, prefer_bottom=True
+        )
+        is not None
+    ):
+        steps.append("Single Player submenu was already open")
+    else:
+        if not _click_text(
+            _menu_labels("single_player"), timeout=90, exact=True, post_delay=0.5
+        ):
+            log.info("Continue Game path: no main menu to click from")
+            return None
+        steps.append("Clicked Single Player")
+
+    # Matched exactly: 继续游戏 sits two rows above 创建游戏 on this submenu, and a
+    # loose match there is how a click lands on Create Game instead.
+    if not _click_text(
+        _menu_labels("continue_game"), timeout=5, exact=True, post_delay=1.5
+    ):
+        log.info("Continue Game path: the item is not on this submenu; using the list")
+        return None
+    steps.append("Clicked Continue Game")
+
+    if not _wait_for_leader_screen(timeout=120):
+        steps.append("WARNING: the leader screen never appeared")
+        return None
+
+    if _click_continue_by_colour():
+        steps.append("Clicked CONTINUE (colour match on the leader screen)")
+    else:
+        steps.append("WARNING: leader screen, but no continue click landed")
+
+    turn = _wait_for_turn_number(max_seconds=30)
+    if turn is None:
+        steps.append("WARNING: no game in progress after Continue Game")
+        return None
+
+    expected_turn = _save_turn(expected_name)
+    if expected_turn is not None and turn != expected_turn:
+        # Continue Game resumed something else. Say so and let the caller pick the
+        # save explicitly rather than reporting a load that is not the one asked for.
+        steps.append(
+            f"WARNING: Continue Game reached turn {turn}, but {expected_name} is "
+            f"turn {expected_turn}"
+        )
+        log.warning("Continue Game resumed turn %s, expected %s", turn, expected_turn)
+        return None
+
+    steps.append(f"Game in progress at turn {turn}")
+    elapsed = time.time() - started
+    return (
+        f"Save loading ({elapsed:.0f}s). Steps: {', '.join(steps)}. "
+        "Wait ~10s then use get_game_overview to verify."
+    )
+
+
+def _navigate_to_save_sync(save_name: str, tab: str | None = "autosaves") -> str:
     """Navigate: Main Menu → Single Player → Load Game → [tab] → select → Load.
 
     Args:
@@ -2114,6 +3394,64 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
     _require_gui_deps()  # Fail fast if deps missing
     nav_start = time.time()
     steps = []
+
+    # Every step below assumes the front end is on screen. When it is not, each wait runs
+    # to its own timeout instead of failing: measured 2026-09-20, a request to load
+    # turn-80 AutoSave_0080 against a game already in progress at turn 80 spent 172s
+    # trying to click 'Single Player' on a menu that was not there, and then reported a
+    # failure for a game that was fine. Ask the game what it is doing first (~2s).
+    loaded_turn = _game_turn_number()
+    if loaded_turn is not None:
+        wanted = _save_turn(save_name)
+        if wanted == loaded_turn:
+            return (
+                f"Already loaded ({time.time() - nav_start:.0f}s). The game is at turn "
+                f"{loaded_turn}, which is what '{save_name}' holds. Nothing to load."
+            )
+        return (
+            f"FAILED ({time.time() - nav_start:.0f}s): a game is already in progress at "
+            f"turn {loaded_turn}, so there is no main menu to navigate and "
+            f"'{save_name}' (turn {wanted}) cannot be loaded from one. Use "
+            f"restart_and_load('{save_name}') to relaunch and load it."
+        )
+
+    # The front end has to be up before any of its menus can be clicked, and a cold start
+    # can take minutes. Wait for it exactly once, here: the fast path used to wait for the
+    # main menu itself and then the list path waited for it again, so a game that had not
+    # reached its menu yet paid both timeouts (measured 2026-09-20: a load requested one
+    # second after launch spent 172s, then reported FAILED, and the caller only learned
+    # the game was fine by asking get_game_status 35s later).
+    if not _wait_for_text(_menu_labels("single_player"), timeout=180, exact=True):
+        try:
+            shown = _screen_kind(_ocr_game_window(_find_game_window()))
+        except Exception:  # noqa: BLE001 - a diagnostic must not mask the failure
+            shown = "unreadable"
+        turn = _game_turn_number()
+        if turn is not None:
+            detail = f"a game is already in progress at turn {turn}"
+        elif shown == "main menu":
+            detail = (
+                "the main menu is on screen but its 'Single Player' row was not matched"
+            )
+        else:
+            detail = f"the game is still starting (its window shows: {shown})"
+        return (
+            f"FAILED ({time.time() - nav_start:.0f}s): {detail}, so there was nothing to "
+            "navigate. Call get_game_status to see where the game actually is before "
+            "retrying, and do not launch a second copy."
+        )
+
+    # Fast path. When the caller is asking for the newest save - which is what a
+    # crash recovery asks for - Continue Game loads exactly that in two clicks, with
+    # no save list to read and no row to pick. It is only used when the requested name
+    # IS the newest save on disk, so it cannot silently load something else.
+    newest = get_newest_save()
+    if newest and newest[0] == save_name:
+        log.info("Newest save requested (%s) - trying Continue Game first", save_name)
+        fast = _continue_game_sync(save_name)
+        if fast is not None:
+            return fast
+        log.info("Continue Game did not verify; falling back to the save list")
 
     # Launch the game if it's not running
     if not is_game_running():
@@ -2128,20 +3466,35 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
         _click_aspyr_launcher_sync()
 
     log.info("[1/7] Waiting for main menu (Single Player)...")
-    if not _click_text("Single Player", timeout=90, exact=True, post_delay=0.5):
-        return "FAILED: Could not find 'Single Player' on main menu. Is the game at the main menu?"
+    if not _click_text(
+        _menu_labels("single_player"), timeout=90, exact=True, post_delay=0.5
+    ):
+        return (
+            "FAILED: the game is not showing its main menu, so the "
+            f"'Single Player' entry ({_label_display(_menu_labels('single_player'))}) "
+            "could not be clicked. It may still be loading a save, or already "
+            "be inside a game — check get_game_overview before retrying."
+        )
     steps.append("Clicked Single Player")
 
     log.info("[2/7] Clicking 'Load Game'...")
-    # y_offset nudges the click down from bbox center to avoid hitting
-    # "Resume Game" directly above in the tightly-packed single player menu.
-    if not _click_text("Load Game", timeout=5, exact=True, post_delay=0.5, y_offset=15):
+    # Click the centre of the OCR box it was found in, with no vertical nudge.
+    # A +15 px downward nudge used to be applied here to keep clear of "Resume Game"
+    # above, but any fixed offset is resolution-dependent and this one is wrong at
+    # 4K: the menu rows there are 38 px apart (measured: 继续游戏 at y=1076, 加载游戏
+    # at 1114, 创建游戏 at 1152), so the nudge lands in the gap below 加载游戏 or on
+    # 创建游戏. On 2026-09-20 that opened the Create Game screen and the load failed
+    # with "Save '0_MCP_0079' not found" while the save list was never on screen.
+    # The centre of the box cannot drift onto a neighbour.
+    if not _click_text(
+        _menu_labels("load_game"), timeout=5, exact=True, post_delay=0.5
+    ):
         return "FAILED: Could not find 'Load Game' button."
     steps.append("Clicked Load Game")
 
     if tab is not None:
-        log.info("[3/6] Clicking '%s' filter...", tab)
-        if not _click_text(tab, timeout=10, exact=True, post_delay=1):
+        log.info("[3/6] Clicking '%s' filter...", _label_display(_menu_labels(tab)))
+        if not _click_text(_menu_labels(tab), timeout=10, exact=True, post_delay=1):
             log.info("%s filter not found — may already be active", tab)
             steps.append(f"{tab} filter (may already be active)")
         else:
@@ -2161,7 +3514,11 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
     # prefer_bottom picks the button over the page title. If the only match
     # is the title (y < 50% of screen), skip it — the button wasn't detected.
     if not _click_text(
-        "Load Game", timeout=10, post_delay=1, prefer_bottom=True, min_y_fraction=0.7
+        _menu_labels("load_game"),
+        timeout=10,
+        post_delay=1,
+        prefer_bottom=True,
+        min_y_fraction=0.7,
     ):
         steps.append("Load Game button not found (may have loaded from double-click)")
     else:
@@ -2193,8 +3550,12 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
         except Exception:
             results = _ocr_fullscreen()
 
-        # Check for CONTINUE (leader screen — good)
-        match = _find_text(results, "CONTINUE")
+        # Check for CONTINUE (leader screen — good).
+        # prefer_bottom: the localized button (继续) is also a common word, and
+        # on the leader screen the intro paragraph can contain it — the real
+        # button is the bottom-most match, which is also where
+        # _click_continue_positional() looks when OCR misses it entirely.
+        match = _find_text(results, _menu_labels("continue"), prefer_bottom=True)
         if match:
             text, x, y, w, h = match
             log.info(
@@ -2211,12 +3572,30 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
             steps.append("Clicked CONTINUE")
             break
 
+        # The leader screen is where the load is supposed to end. OCR often cannot
+        # read its continue button at all, so recognise the screen and click the
+        # control by colour now, rather than waiting out the poll and then clicking
+        # positions that mean nothing on this screen.
+        if elapsed > 10 and _leader_screen_detected(results):
+            log.info(
+                "CONTINUE wait: leader screen at %.0fs but no readable button - "
+                "clicking by colour",
+                elapsed,
+            )
+            if _click_continue_by_colour():
+                continue_found = True
+                steps.append("Clicked CONTINUE (colour match on the leader screen)")
+            else:
+                steps.append("WARNING: leader screen, but no continue click landed")
+            break
+
         # Check for main menu (wrong screen — save load failed)
-        menu_match = _find_text(results, "Single Player")
+        menu_match = _find_text(results, _menu_labels("single_player"))
         if menu_match and elapsed > 20:  # give 20s grace for loading transition
             log.warning(
-                "CONTINUE wait: ABORT — detected main menu ('Single Player' visible) "
+                "CONTINUE wait: ABORT — detected main menu ('%s' visible) "
                 "after %.0fs. Save load likely failed. Will retry navigation.",
+                menu_match[0],
                 elapsed,
             )
             main_menu_detected = True
@@ -2234,12 +3613,14 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
     if main_menu_detected:
         # Save load failed — we're back at main menu. Redo from step 1.
         log.warning("Restarting save navigation from main menu")
-        if _click_text("Single Player", timeout=15, post_delay=2):
-            _click_text("Load Game", timeout=10, post_delay=1, prefer_bottom=False)
+        if _click_text(_menu_labels("single_player"), timeout=15, post_delay=2):
+            _click_text(
+                _menu_labels("load_game"), timeout=10, post_delay=1, prefer_bottom=False
+            )
             time.sleep(1)
             if _click_text(save_name, timeout=15, post_delay=0.5):
                 _click_text(
-                    "Load Game",
+                    _menu_labels("load_game"),
                     timeout=10,
                     post_delay=1,
                     prefer_bottom=True,
@@ -2247,7 +3628,12 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
                 )
                 time.sleep(15)
                 # One more attempt at CONTINUE
-                retry_match = _wait_for_text("CONTINUE", timeout=60, interval=2.5)
+                retry_match = _wait_for_text(
+                    _menu_labels("continue"),
+                    timeout=60,
+                    interval=2.5,
+                    prefer_bottom=True,
+                )
                 if retry_match:
                     text, x, y, w, h = retry_match
                     log.info("Retry: found CONTINUE at (%d,%d) — clicking", x, y)
@@ -2277,11 +3663,24 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
         time.sleep(3)
         steps.append("CONTINUE not found via OCR — used positional click fallback")
 
-    # Verify game loaded by checking FireTuner port
-    if _is_tuner_port_open():
-        steps.append("FireTuner port confirmed open")
+    # Verify the load by reading the game, not by checking that a port answers.
+    # The FireTuner port is open at the main menu as well, so "port open" reported a
+    # successful load for a run that never left the leader screen (2026-09-20).
+    # Reading the turn is the check the recovery prompt asks for anyway: the caller
+    # can compare it with the number in the save name.
+    turn = None
+    verify_deadline = time.time() + 30
+    while turn is None and time.time() < verify_deadline:
+        turn = _game_turn_number()
+        if turn is None:
+            time.sleep(3)
+    if turn is not None:
+        steps.append(f"Game in progress at turn {turn}")
     else:
-        steps.append("WARNING: FireTuner port not open after load")
+        steps.append(
+            "WARNING: no game in progress after the load - the save did not open "
+            "(a listening FireTuner port is not evidence of a loaded game)"
+        )
 
     nav_elapsed = time.time() - nav_start
     return f"Save loading ({nav_elapsed:.0f}s). Steps: {', '.join(steps)}. Wait ~10s then use get_game_overview to verify."
@@ -2292,9 +3691,23 @@ def _navigate_to_save_sync(save_name: str, tab: str | None = "Autosaves") -> str
 # ---------------------------------------------------------------------------
 
 
-async def kill_game() -> str:
-    """Kill Civ 6 and wait for Steam to deregister."""
+async def kill_game(force: bool = False) -> str:
+    """Kill Civ 6 and wait for Steam to deregister.
+
+    Refuses while another session is playing (see ``_other_active_session``): killing a
+    game someone else is mid-turn in throws their position away, which is exactly what a
+    diagnostic run did to a live session on 2026-09-20. ``force=True`` is for when that
+    session is known to be dead.
+    """
+    other = await asyncio.to_thread(_other_active_session)
+    if other and not force:
+        return (
+            f"NOT KILLED: another session is playing this game ({other}). Killing it "
+            "would interrupt that session mid-turn. Pass force=True if that session is "
+            "dead, or call get_game_status to see what the game is doing."
+        )
     return await asyncio.to_thread(_kill_game_sync)
+
 
 
 async def launch_game() -> str:
@@ -2320,12 +3733,13 @@ async def load_save_from_menu(save_name: str | None = None) -> str:
             return "No autosaves found in save directory."
 
     # The Load Game screen shows regular saves by default.
-    # "Autosaves" is a checkbox filter — only check it for autosaves.
+    # "autosaves" is the logical key for the checkbox filter — only relevant
+    # for autosaves. _menu_labels() expands it to the localized spellings.
     auto_path = os.path.join(SAVE_DIR, f"{save_name}.Civ6Save")
     single_path = os.path.join(SINGLE_SAVE_DIR, f"{save_name}.Civ6Save")
 
     if os.path.exists(auto_path):
-        tab = "Autosaves"  # need to toggle the Autosaves checkbox
+        tab = "autosaves"  # need to toggle the Autosaves checkbox
     elif os.path.exists(single_path):
         tab = None  # regular saves shown by default, no tab click needed
     else:
@@ -2342,12 +3756,24 @@ async def load_save_from_menu(save_name: str | None = None) -> str:
     return await asyncio.to_thread(_navigate_to_save_sync, save_name, tab)
 
 
-async def restart_and_load(save_name: str | None = None) -> str:
+async def restart_and_load(save_name: str | None = None, force: bool = False) -> str:
     """Kill game, relaunch, and load a save. Full recovery sequence.
 
     This is the recommended tool for recovering from game hangs.
     Takes 60-120 seconds total.
+
+    Refuses while another session is playing, for the same reason ``kill_game`` does:
+    a recovery is not worth another session's position. ``force=True`` when that session
+    is known to be dead.
     """
+    other = await asyncio.to_thread(_other_active_session)
+    if other and not force:
+        return (
+            f"NOT RESTARTED: another session is playing this game ({other}). Killing it "
+            "would interrupt that session mid-turn. Pass force=True if that session is "
+            "dead."
+        )
+
     results = []
 
     # Dismiss crash dialogs before kill — they block the process from exiting
@@ -2355,8 +3781,8 @@ async def restart_and_load(save_name: str | None = None) -> str:
     if pre_dismissed:
         log.info("Pre-kill: dismissed %s", pre_dismissed)
 
-    # Step 1: Kill
-    kill_result = await kill_game()
+    # Step 1: Kill. The check above already ran, so this must not run it again.
+    kill_result = await kill_game(force=True)
     results.append(f"Kill: {kill_result}")
 
     # Step 2: Launch

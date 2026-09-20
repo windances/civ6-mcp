@@ -1,0 +1,25 @@
+﻿游戏已经在运行，而且已经在一局对局里等着继续打。把这一局打下去，最多再推进 100 个回合，
+然后停下汇报。
+
+0. 先调 get_game_status 确认状态，不要靠猜。预期它报 in_game 并给出当前回合 —— 那就是已经
+   就位，直接按下面继续：不要启动游戏，也不要载入任何存档。如果它报的是别的：
+   - main_menu / leader_screen：用 list_saves 取第 1 项（按时间最新的那个，不要只认 0_MCP_
+     前缀，游戏自己的 AutoSave_ 往往更新），load_game_save 载入它，再核对回合号等于存档名里
+     的数字。
+   - not_running：先 launch_game 拉起并等它启动完成（约 60–90 秒），再回到上面这条。
+   - tuner_busy：FireTuner 只允许一个连接，已经被别的进程占着（它会报 pid）。停下并报告，
+     不要启动第二个游戏，也不要反复重试。
+
+1. 这是新会话，你的上下文是空的。先 get_diary 读你自己留下的历史，拿到意图、计划和判断；
+   但局面一律以游戏为准，然后完整查询一遍：get_game_overview、get_units、get_cities、每座城
+   与每支部队周边的 get_map_area、get_tech_civics、get_policies、get_governors、get_diplomacy、
+   get_victory_progress、get_trade_routes、get_empire_resources。不要凭日记里的数字行动 ——
+   日记给的是意图，不是当前局面。
+
+2. 查完再决定做什么，然后按回合循环推进：每回合先 get_game_overview，处理 end_turn 报出的
+   阻塞项，给每支部队下达命令，给城市设定生产，最后 end_turn。
+
+3. 使用 civ6-orchestrator skill 及其中写好的策略指令（含总督与大将军的用法）。
+
+结束时报：起始回合与最终回合、城市数、人口、科技/文化/金币、军力、建了什么、打过哪些仗，
+以及遇到的所有阻碍（工具报错、挂起、恢复），都带上回合号。

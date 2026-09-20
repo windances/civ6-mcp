@@ -20,6 +20,7 @@ import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
 
 from civ_mcp import game_launcher, heartbeat
+from civ_mcp import strategy_directive
 from civ_mcp.game_over_watchdog import GameOverWatchdog
 from civ_mcp import narrate as nr
 from civ_mcp.connection import GameConnection, LuaError
@@ -168,7 +169,9 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
     log.info("Auto-boot: waiting 15s for save to load...")
     await asyncio.sleep(15)
     clicked = await asyncio.to_thread(
-        lambda: game_launcher._click_text("CONTINUE", timeout=105, post_delay=1),
+        lambda: game_launcher._click_text(
+            game_launcher._menu_labels("continue"), timeout=105, post_delay=1
+        ),
     )
     if clicked:
         log.info("Auto-boot: clicked CONTINUE GAME via OCR")
@@ -525,9 +528,11 @@ async def get_game_overview(ctx: Context) -> str:
     Call this first to orient yourself.
     """
     gs = _get_game(ctx)
+    seen: dict = {}
 
     async def _run():
         ov = await gs.get_game_overview()
+        seen["turn"] = ov.turn
         logger = _get_logger(ctx)
         logger.set_turn(ov.turn)
         spatial = _get_spatial(ctx)
@@ -580,7 +585,22 @@ async def get_game_overview(ctx: Context) -> str:
                 log.warning("Failed to log game-over in overview", exc_info=True)
         return text
 
-    return await _logged(ctx, "get_game_overview", {}, _run)
+    result = await _logged(ctx, "get_game_overview", {}, _run)
+
+    # The start-of-turn reminder goes out with the first call of the turn - the one the turn
+    # loop starts with - so the rules, their streak and what the last turn actually bought are
+    # in hand while there is still a turn to change. It reports itself once per turn.
+    turn = seen.get("turn")
+    if turn is not None:
+        try:
+            from . import end_turn as end_turn_mod
+
+            briefing = await end_turn_mod.turn_start_briefing(gs, int(turn))
+            if briefing:
+                result = f"{result}\n\n{briefing}"
+        except Exception:
+            log.debug("turn-start briefing failed", exc_info=True)
+    return result
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -605,7 +625,12 @@ async def get_units(ctx: Context) -> str:
             trade_status = await gs.get_trade_routes()
         except Exception:
             pass
-        return nr.narrate_units(units, threats, trade_status)
+        # The city tiles come from the last snapshot (no extra round trip): a unit standing on
+        # one is *inside* that city, which is a different thing from several units sharing a
+        # field tile. Without the annotation, "2 Archers + 1 Warrior at (57,29)" reads like a
+        # telemetry bug instead of a garrison in Beijing.
+        cities = getattr(getattr(gs, "_last_snapshot", None), "cities", None)
+        return nr.narrate_units(units, threats, trade_status, cities=cities)
 
     return await _logged(ctx, "get_units", {}, _run, tiles=unit_tiles)
 
@@ -1781,6 +1806,80 @@ async def set_research(ctx: Context, tech_or_civic: str, category: str = "tech")
     )
 
 
+async def _diagnose_hang(turn: int) -> dict:
+    """Record what the screen looked like when end_turn gave up.
+
+    The recovery path kills the game and relaunches it, which destroys all
+    evidence of *why* the AI turn stopped advancing. This runs first, so the
+    next hang can be diagnosed from a file instead of re-derived from a
+    ten-minute silence.
+
+    Deliberately Lua-free: the game may be mid-AI-turn, and the poll loop's
+    own comments note that extra InGame queries during that window are
+    themselves a hang trigger. Window state plus one OCR pass is enough to
+    tell an unfocused window from a modal dialog from a truly idle game.
+    """
+    diag: dict = {
+        "turn": turn,
+        "ts": time.time(),
+        "iso": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    try:
+        diag["window"] = await asyncio.to_thread(game_launcher.window_state)
+    except Exception as exc:  # noqa: BLE001 - diagnostics must never raise
+        diag["window"] = {"error": f"{type(exc).__name__}: {exc}"}
+
+    # One OCR pass over the game window: the screen text is what distinguishes
+    # "waiting on a dialog" from "AI still thinking".
+    try:
+        screen = await asyncio.to_thread(_ocr_screen_lines)
+        diag["screen_lines"] = screen[:25]
+    except Exception as exc:  # noqa: BLE001
+        diag["screen_lines"] = []
+        diag["screen_error"] = f"{type(exc).__name__}: {exc}"
+
+    try:
+        from civ_mcp import telemetry
+
+        telemetry.LOCAL_DIR.mkdir(parents=True, exist_ok=True)
+        path = telemetry.LOCAL_DIR / "hang_diagnosis.jsonl"
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(json.dumps(diag, ensure_ascii=False) + "\n")
+        diag["written_to"] = str(path)
+    except Exception as exc:  # noqa: BLE001
+        diag["write_error"] = f"{type(exc).__name__}: {exc}"
+
+    return diag
+
+
+def _ocr_screen_lines() -> list[str]:
+    """Best-effort OCR of the game window, as plain text lines."""
+    win = game_launcher._find_game_window()
+    results = (
+        game_launcher._ocr_game_window(win)
+        if win
+        else game_launcher._ocr_fullscreen()
+    )
+    return [str(text) for text, *_ in (results or [])]
+
+
+def _hang_window_unfocused(diag: dict) -> bool:
+    """Was the game window not in the foreground when the turn hung?
+
+    Civ VI stops advancing an AI turn while its window is in the background,
+    and the end_turn poll loop never checks for that. Re-focusing costs
+    nothing and turns a kill-and-reload cycle into a cheap retry, so it is
+    worth one attempt before the recovery machinery destroys the session.
+    """
+    window = diag.get("window") or {}
+    if not window.get("found"):
+        return False
+    if window.get("minimised"):
+        return True
+    return window.get("foreground") is False
+
+
 @mcp.tool(annotations={"destructiveHint": True})
 async def end_turn(
     ctx: Context,
@@ -1956,6 +2055,38 @@ async def end_turn(
     # ---------------------------------------------------------------
     _MAX_HANG_RETRIES = 3
     _HANG_EXTRA_WAIT = [0, 15, 30]  # extra seconds before retry per attempt
+
+    if result.startswith("HANG:") and not gs._hang_retry_active:
+        # Diagnose before touching anything. The recovery below kills and
+        # relaunches the game, which erases the only evidence of why the AI
+        # turn stopped. This costs one window snapshot and one OCR pass.
+        _diag_turn = int(result.split(":", 2)[1])
+        diagnosis = await _diagnose_hang(_diag_turn)
+        log.error(
+            "HANG DIAGNOSIS T%s: %s",
+            _diag_turn,
+            json.dumps(diagnosis, ensure_ascii=False),
+        )
+
+        # A backgrounded Civ VI window does not advance its AI turn, and the
+        # poll loop never checks for that. Re-focusing is free, so try it once
+        # before paying for a restart. Only taken when the window really had
+        # lost focus, so the common case adds no extra wait.
+        if _hang_window_unfocused(diagnosis):
+            log.warning(
+                "HANG DIAGNOSIS T%s: game window was not in the foreground "
+                "(%s) — re-focusing and retrying end_turn before any restart",
+                _diag_turn,
+                (diagnosis.get("window") or {}).get("foreground_window", "?"),
+            )
+            try:
+                await asyncio.to_thread(game_launcher._bring_to_front)
+                # Give the renderer a moment to resume before re-issuing.
+                await asyncio.sleep(3)
+                result = await gs.end_turn()
+                log.warning("HANG DIAGNOSIS T%s: refocus retry -> %s", _diag_turn, result[:120])
+            except Exception:
+                log.error("HANG DIAGNOSIS T%s: refocus retry failed", _diag_turn, exc_info=True)
 
     if result.startswith("HANG:") and not gs._hang_retry_active:
         parts = result.split("|", 1)
@@ -2215,6 +2346,18 @@ async def end_turn(
     if "GAME OVER" not in result:
         _get_watchdog(ctx).arm()
 
+    # Deliver a changed strategy directive inside the result the agent already
+    # reads every turn. The skill itself is only read when the agent loads it, so
+    # without this a preset switch needs a restart; with it, the switch lands on
+    # the next turn. No-op while the directive is unchanged.
+    try:
+        update = strategy_directive.take_update()
+        if update:
+            result += update
+            log.info("Strategy directive delivered with end_turn result")
+    except Exception:
+        log.debug("Strategy directive delivery failed", exc_info=True)
+
     return result
 
 
@@ -2224,6 +2367,22 @@ async def end_turn(
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
+def _clamp_diary_to_turn(entries: list, live_turn: int | None) -> tuple[list, int]:
+    """Drop diary entries from beyond the live turn.
+
+    Returns ``(kept, withheld)``. The diary is keyed per game, not per run, so
+    after rolling back to an earlier save it still contains everything that was
+    played on the branch that was left behind. Read as "memory", that is a record
+    of a future that has not happened - and Phase 1 calls ``get_diary`` first, so
+    without this clamp a replay opens by being told about turns it never reached.
+    A live turn of None means the game could not be read; nothing is dropped.
+    """
+    if live_turn is None:
+        return entries, 0
+    kept = [e for e in entries if e.get("turn", 0) <= live_turn]
+    return kept, len(entries) - len(kept)
+
+
 async def get_diary(
     ctx: Context,
     last_n: int = 5,
@@ -2265,6 +2424,12 @@ async def get_diary(
     # Old format entries (no "v" key) pass through unchanged.
     entries = [e for e in entries if "v" not in e or e.get("is_agent")]
 
+    # Nothing from beyond the live turn - see _clamp_diary_to_turn.
+    from civ_mcp.end_turn import _get_turn_number
+
+    live_turn = await _get_turn_number(gs)
+    entries, withheld = _clamp_diary_to_turn(entries, live_turn)
+
     # Filter by query mode
     if turn is not None:
         entries = [e for e in entries if e.get("turn") == turn]
@@ -2279,7 +2444,17 @@ async def get_diary(
     if not entries:
         return "No diary entries match the query."
 
-    return "\n\n".join(_format_diary_entry(e) for e in entries)
+    body = "\n\n".join(_format_diary_entry(e) for e in entries)
+    if withheld:
+        # Say so, rather than silently returning less memory than the file holds:
+        # an agent that is missing entries will otherwise assume it forgot them.
+        body = (
+            f"NOTE: {withheld} diary entr{'y' if withheld == 1 else 'ies'} from turns "
+            f"after the current one (T{live_turn}) exist on a branch that is no longer "
+            f"being played, and are withheld. The game was rolled back; treat anything "
+            f"past T{live_turn} as not having happened.\n\n" + body
+        )
+    return body
 
 
 # ---------------------------------------------------------------------------
@@ -2614,6 +2789,21 @@ async def queue_wc_votes(ctx: Context, votes: str) -> str:
     """
     gs = _get_game(ctx)
     vote_list = json.loads(votes)
+    if not vote_list:
+        # An empty array is not "no opinion" - it used to fall through to the
+        # handler's no-preference path, which budgeted diplomatic favour evenly
+        # across every resolution. A bare queue_wc_votes([]) therefore spent the
+        # whole favour stock on resolutions the agent had never seen. Refuse it
+        # and make the caller say what it wants.
+        return (
+            "ERROR:EMPTY_VOTES|No vote preferences were supplied. Pass at least "
+            'one {"hash": <int>, "option": 1|2, "target": <id>, "votes": <int>} '
+            "object. Use get_world_congress() for the hashes and targets. "
+            "'votes': 1 casts the free vote and costs no favour; only the 2nd and "
+            "later votes spend favour. Calling end_turn without registering "
+            "anything is safe: it blocks once and registers a free-vote-only "
+            "fallback."
+        )
 
     async def _run():
         return await gs.queue_wc_votes(vote_list)
@@ -2790,14 +2980,36 @@ async def load_game_save(ctx: Context, save_name: str) -> str:
 # process itself. Hardcoded to Civ 6 only (no arbitrary system commands).
 
 
+@mcp.tool(annotations={"readOnlyHint": True})
+async def get_game_status(ctx: Context) -> str:
+    """Where is the game right now, and what does that state call for?
+
+    Reports the process, the window, the FireTuner connection, whether a game is
+    loaded, and what the screen is showing, then says what to do next.
+
+    Use this before anything else when a game is not responding as expected. It is the
+    difference between "the game is not showing its main menu" - which covers a game
+    that is still starting, one parked on the leader intro screen, and one whose window
+    is behind another application - and knowing which of those it is.
+
+    States: not_running, starting, main_menu, leader_screen, loading, in_game.
+    """
+    return await asyncio.to_thread(game_launcher.game_status)
+
+
 @mcp.tool(annotations={"destructiveHint": True})
-async def kill_game(ctx: Context) -> str:
+async def kill_game(ctx: Context, force: bool = False) -> str:
     """Kill the Civ 6 game process and wait for Steam to deregister.
 
     Only kills Civ 6 processes. Waits ~10 seconds for Steam to deregister
     so the game can be relaunched cleanly.
+
+    Refuses while another session is playing - the game reports which process holds
+    the FireTuner connection or wrote a recent heartbeat - because killing a game
+    someone else is mid-turn in throws their position away. Pass force=True only when
+    that session is known to be dead.
     """
-    return await game_launcher.kill_game()
+    return await game_launcher.kill_game(force=force)
 
 
 @mcp.tool(annotations={"destructiveHint": True})
@@ -2833,12 +3045,14 @@ async def load_save_from_menu(ctx: Context, save_name: str | None = None) -> str
 
 
 @mcp.tool(annotations={"destructiveHint": True})
-async def restart_and_load(ctx: Context, save_name: str | None = None) -> str:
+async def restart_and_load(ctx: Context, save_name: str | None = None, force: bool = False) -> str:
     """Full game recovery: kill, relaunch, and load a save.
 
     Args:
         save_name: Autosave name (e.g. "AutoSave_0221"). If not provided,
                    loads the most recent autosave.
+        force: Kill even if another session is playing. Leave it alone unless that
+               session is known to be dead.
 
     This is the recommended tool for recovering from game hangs (e.g. AI turn
     processing stuck in infinite loop). Takes 60-120 seconds total:
@@ -2852,7 +3066,7 @@ async def restart_and_load(ctx: Context, save_name: str | None = None) -> str:
     gs = _get_game(ctx)
     identity_before = gs._game_identity
 
-    result = await game_launcher.restart_and_load(save_name)
+    result = await game_launcher.restart_and_load(save_name, force=force)
 
     # Reconnect and verify correct game loaded
     conn = gs.conn
