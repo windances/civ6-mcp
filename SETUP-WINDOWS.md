@@ -145,6 +145,29 @@ $env:DEEPSEEK_API_KEY = "sk-..."        # current session only
 
 ## 3. How to run
 
+### Bootstrap on Windows
+
+```powershell
+npm run bootstrap:win
+```
+
+`scripts/bootstrap.ps1` does what `scripts/bootstrap.sh` does - install `uv` into `.tools\bin`,
+`npm install`, `uv sync`, `npm run qualify` - but without bash, for two Windows reasons:
+
+- `npm run bootstrap` calls `bash scripts/bootstrap.sh`, and plain `bash` on this machine is
+  `C:\WINDOWS\system32\bash.exe` (**WSL**), which reads the tree through a Linux view. On a CRLF
+  checkout it fails outright with `: invalid option name` / `line 2: set: pipefail`; the repo pins
+  `*.sh` to LF in `.gitattributes` for that reason, but WSL is still the wrong toolchain for a
+  Windows venv.
+- `npm run ...` in PowerShell may not even start: with the Windows default execution policy every
+  scope is `Undefined` (i.e. `Restricted`), PowerShell refuses to load `npm.ps1`
+  (`UnauthorizedAccess`), so use **`npm.cmd run ...`** or the `:win` scripts, which pass
+  `-ExecutionPolicy Bypass` explicitly.
+
+`bootstrap.ps1` also syncs `--extra launcher-windows`; a plain `uv sync` drops the `winrt`
+packages and four launcher/OCR tests start failing with *"Game launcher requires Windows OCR
+support"*.
+
 ### Headless — one turn
 
 ```powershell
