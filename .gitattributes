@@ -1,0 +1,19 @@
+# Line endings.
+#
+# `npm run bootstrap` runs `bash scripts/bootstrap.sh`, and on Windows `bash` resolves to
+# C:\WINDOWS\system32\bash.exe (WSL). A checked-out CRLF makes bash read the last token as
+# `pipefail\r`, which fails with:
+#
+#     : invalid option name
+#     line 2: set: pipefail
+#
+# Git for Windows ships `core.autocrlf=true` in its system config, so without this file every
+# clone on Windows writes CRLF into the scripts and every bash entry point breaks. Pin the
+# shell scripts to LF whatever the local setting is.
+*.sh    text eol=lf
+*.bash  text eol=lf
+
+# Windows launchers, invoked as `powershell -File` / cmd; CRLF is native there.
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+*.bat   text eol=crlf

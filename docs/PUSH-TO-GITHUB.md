@@ -25,8 +25,9 @@ git reset --soft origin/main
 git status --short
 git --no-pager diff --stat --cached origin/main
 
-# 4. Commit on top of upstream, reusing the message of the snapshot commit.
-git commit -C dbf1e50
+# 4. Commit on top of upstream. The snapshot commit's full message is kept in
+#    .git/COMMIT_MSG.txt, so it does not matter which hash it had before the reset.
+git commit -F .git/COMMIT_MSG.txt
 
 # 5. Push.
 git push origin main
@@ -35,9 +36,28 @@ git push origin main
 If step 3 shows upstream files being reverted that this work never touched, do not commit: say so
 and re-take the zip from a fresh clone instead.
 
+## Line endings: `*.sh` must stay LF
+
+`npm run bootstrap` runs `bash scripts/bootstrap.sh`, and on Windows `bash` resolves to
+`C:\WINDOWS\system32\bash.exe` (WSL). A CRLF checkout makes bash read the last token as
+`pipefail\r`, which fails with `: invalid option name` / `line 2: set: pipefail`. Git for Windows
+ships `core.autocrlf=true`, so without a `.gitattributes` every clone rewrites the scripts and
+every bash entry point breaks. The policy is pinned in `.gitattributes` (`*.sh`, `*.bash` = LF;
+`*.cmd`, `*.bat`, `*.ps1` = CRLF).
+
+In a clone that already has CRLF scripts, rewrite them from the index once:
+
+```powershell
+git add --renormalize .          # index: LF for the scripts
+git checkout -- '*.sh' '*.bash'  # working tree: rewritten with LF
+```
+
+`git config --global core.autocrlf input` prevents the class of problem for every repository on
+this machine; it is worth setting on a Windows box that runs POSIX shell scripts.
+
 ## What the snapshot commit contains
 
-`dbf1e50` - *Turn the strategy directive into an enforced, auditable contract*: the MCP-side turn
+*Turn the strategy directive into an enforced, auditable contract*: the MCP-side turn
 checks and their feedback (goal retirement and file sweep, contact metrics, `BATTLE ASSESSMENT`,
 `SIEGE POSTURE`, `SIEGE PROGRESS` / `SIEGE STALLED`, unused-attack reporting, city HP on every
 attack, our own losses reported from an `ACTION_ENDTURN` baseline, `[IN <city>]` marking), the six
