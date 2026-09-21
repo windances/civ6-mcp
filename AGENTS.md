@@ -74,6 +74,16 @@ Each turn in order:
    none` — and the turn result carries a **SIEGE PROGRESS** block with the delta, escalating to
    `SIEGE STALLED` after three recorded turns without a net drop. A city heals about twenty points
    a turn: if it is not going down, fix the assault or break it off rather than feeding it.
+   **A city only changes hands when a melee unit walks onto its tile**, and that last step has no
+   damage number attached to it, so the turn result carries a **TAKE THE CITY** block whenever an
+   enemy city's HP pool is empty: it names the melee unit in reach and the tile to move it to, and
+   `take-the-city` fails while a city at 0 HP is still standing with one of our melee units
+   adjacent. Two things this fixed in the adapter itself: an enemy city with **no garrison unit**
+   in it used to answer `ERR:NO_ENEMY` to `attack` (so a broken city could not be hit at all and
+   healed back while the army watched), and a move onto an enemy city tile went out without the
+   ATTACK modifier, so the capture move was refused. `attack` and `move` now both resolve a city
+   at the target tile through `Cities.GetCityInPlot`, and a melee unit ordered onto a 0 HP city
+   takes it and reports `CITY TAKEN` — resolve it with `city_action` keep/raze.
 
 ## Diary
 

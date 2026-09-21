@@ -580,6 +580,23 @@ class GameState:
             return []
         return lq.parse_siege_posture_response(lines)
 
+    async def capture_readiness(self) -> list:
+        """Visible enemy cities, and whether one of our melee units can take them now.
+
+        Read-only. The last step of an assault has no damage number attached to it: a melee
+        unit walks onto the city's own tile once its HP pool is empty. Only melee-class units
+        can do it and only from that tile, so "how many of ours are adjacent" *is* the answer to
+        whether the city falls this turn. Live, Moscow sat at `city hp: 0/200` for four turns
+        with a Spearman two tiles away, healed about twenty points a turn, and the siege had to
+        be fought again from nothing.
+        """
+        try:
+            lines = await self.conn.execute_read(lq.build_capture_check_query())
+        except Exception as e:
+            log.debug("Capture-readiness scan failed: %s", e)
+            return []
+        return lq.parse_capture_readiness_response(lines)
+
     async def skip_remaining_units(self) -> str:
         # Look for attacks that are about to be thrown away *before* finishing moves: after
         # this call the units are fortified and the attack is gone for the turn. Seen live at
@@ -1860,6 +1877,10 @@ def _extract_pre_hp(result: str) -> int | None:
         return int(m.group(1))
     # Melee: enemy HP:100 -> 80/100
     m = re.search(r"enemy HP:(\d+) ->", result)
+    if m:
+        return int(m.group(1))
+    # Melee against a city whose tile holds no garrison: city HP:0 -> 0/200
+    m = re.search(r"city HP:(\d+) ->", result)
     if m:
         return int(m.group(1))
     return None

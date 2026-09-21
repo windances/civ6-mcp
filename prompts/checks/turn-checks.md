@@ -167,6 +167,25 @@ the front-line unit nearest the siege unit, and the distance to the nearest visi
 nothing closer to that enemy than themselves; `siege_in_city_range` counts those already within
 two tiles of a city, and `siege_city_distance_min` is the closest approach to any target.
 
+## Finishing a city once its HP pool is empty
+
+<!-- check
+id: take-the-city
+when: metric(capture_ready) >= 1
+require: metric(downed_enemy_cities) <= 0
+message: An enemy city's HP pool is empty and one of our melee units is adjacent to it - the city falls this turn if that unit is ordered onto its tile, and does not if it is not. Only a melee-class unit can take a city (a Battering Ram or Siege Tower is refused with CAPTURE_MOVE BLOCKED, and cavalry, ranged and siege units cannot capture either), and only from the city's own tile. A city heals about twenty points a turn: live, Moscow sat at 0/200 with a Spearman two tiles away, was back to 120/200 six turns later, and the siege had to be fought again from nothing. Move the unit in (unit_action action='move', target_x/target_y of the city), then resolve keep/raze with city_action.
+-->
+
+`TAKE THE CITY` in the turn result names every enemy city whose HP pool is empty, the melee unit
+in reach of it, and what happens if it is ignored. `metric(capture_ready)` counts the cities that
+are takeable this turn; `downed_enemy_cities` counts all of them, reachable or not, and
+`enemy_city_hp_min` is the lowest city HP pool we can see.
+
+Every attack on a city tile records that city's HP, so a siege that is not working looks
+different from one that is. What has no number attached to it is the last step: **the city only
+changes hands when a melee unit walks onto the tile.** Damage can be finished by anything; the
+capture cannot.
+
 ## The assault train (before any declaration of war)
 
 The directive's list for one city: about 2 siege, 2 melee, 1 ram or tower, 4 ranged, 1

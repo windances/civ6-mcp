@@ -31,6 +31,10 @@ _CONTACT_METRIC_KEYS = (
     "siege_exposed",
     "siege_in_city_range",
     "siege_city_distance_min",
+    "enemy_cities_seen",
+    "downed_enemy_cities",
+    "capture_ready",
+    "enemy_city_hp_min",
     "garrisoned_units",
     "cities_over_garrison",
     "cities_guarded",
@@ -895,6 +899,13 @@ async def _check_turn_checks(
         if progress_text:
             events.append(lq.TurnEvent(priority=2, category="combat", message=progress_text))
         try:
+            capture_text = _capture_event(await _capture_for_checks(gs, turn), turn)
+        except Exception:
+            log.debug("capture report failed", exc_info=True)
+            capture_text = None
+        if capture_text:
+            events.append(lq.TurnEvent(priority=2, category="combat", message=capture_text))
+        try:
             stacks = _garrison_metrics(gs, units).get("unexplained_stacks", 0)
         except Exception:
             stacks = 0
@@ -997,6 +1008,80 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
             "  In firing position with a screen. Order of work: siege knocks the walls, melee takes"
             " the city, ranged shoots the garrison."
         )
+    return "\n".join(lines)
+
+
+def _capture_metrics(readiness: list) -> dict:
+    """Cities we have ground down, and whether a melee unit is in reach of one.
+
+    ``capture_ready`` counts enemy cities whose HP pool is empty **and** that have one of our
+    melee-class units adjacent: those are the cities that fall this turn if the unit is ordered
+    onto the tile. ``downed_enemy_cities`` counts all of them, reachable or not, so a city left
+    standing at 0 HP out of reach is still visible - it heals about twenty points a turn, and
+    "out of reach this turn" is a plan to fix, not a reason to stop looking.
+    """
+    metrics = {
+        "enemy_cities_seen": len(readiness or []),
+        "downed_enemy_cities": 0,
+        "capture_ready": 0,
+        "enemy_city_hp_min": 999,
+    }
+    for entry in readiness or []:
+        hp = int(getattr(entry, "hp", 0) or 0)
+        max_hp = int(getattr(entry, "max_hp", 0) or 0)
+        if max_hp <= 0:
+            continue
+        metrics["enemy_city_hp_min"] = min(metrics["enemy_city_hp_min"], hp)
+        if hp <= 0:
+            metrics["downed_enemy_cities"] += 1
+            if int(getattr(entry, "melee_adjacent", 0) or 0) > 0:
+                metrics["capture_ready"] += 1
+    return metrics
+
+
+def _capture_event(readiness: list, turn: int) -> str | None:
+    """A city at 0 HP: say it, name the melee unit, and say what happens if it is ignored.
+
+    The assault's last step is invisible in every other block. Damage from a Catapult shows as
+    a city number; the city falling shows as a capture dialog. Between the two, a city at
+    ``0/200`` with a melee unit next to it looks exactly like a city at ``0/200`` with nobody
+    near it - and one of those is the end of the campaign and the other is four turns of wasted
+    fire. Live Moscow: broken to 0 at T120, still standing at T124, back to 120/200 by T126.
+    """
+    downed = [e for e in (readiness or []) if getattr(e, "down", False)]
+    if not downed:
+        return None
+    lines = [f"TAKE THE CITY (T{turn}) - city HP pool is empty; only a melee unit can finish it:"]
+    for entry in downed:
+        name = getattr(entry, "city_name", "?") or "?"
+        walls = ""
+        wall_max = int(getattr(entry, "wall_max", 0) or 0)
+        if wall_max > 0:
+            walls = f", walls {int(getattr(entry, 'wall_hp', 0) or 0)}/{wall_max}"
+        adjacent = int(getattr(entry, "melee_adjacent", 0) or 0)
+        within_2 = int(getattr(entry, "melee_within_2", 0) or 0)
+        unit = getattr(entry, "melee_unit", "") or "a melee unit"
+        at = f"({getattr(entry, 'x', '?')},{getattr(entry, 'y', '?')})"
+        if adjacent:
+            lines.append(
+                f"  {name} {at}: city hp 0/{int(getattr(entry, 'max_hp', 0) or 0)}{walls} - "
+                f"{unit} is adjacent. MOVE IT ONTO THE CITY TILE this turn: `unit_action("
+                f"action='move', target_x={getattr(entry, 'x', '?')}, target_y={getattr(entry, 'y', '?')})`. "
+                f"A support unit cannot do it (CAPTURE_MOVE is refused) and neither can a unit one "
+                f"tile short."
+            )
+        elif within_2:
+            lines.append(
+                f"  {name} {at}: city hp 0/{int(getattr(entry, 'max_hp', 0) or 0)}{walls} - "
+                f"{unit} is within two tiles but not adjacent. It heals about twenty points a turn "
+                f"(leave it and the whole bombardment is undone); close on it now and take it next turn."
+            )
+        else:
+            lines.append(
+                f"  {name} {at}: city hp 0/{int(getattr(entry, 'max_hp', 0) or 0)}{walls} - no melee "
+                f"unit in reach. Bring one before it heals, or stop firing at it and use the army "
+                f"elsewhere."
+            )
     return "\n".join(lines)
 
 
@@ -1142,6 +1227,7 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         "damaged_this_turn": len(getattr(gs, "_damaged_last_turn", None) or []),
         **_garrison_metrics(gs, units),
         **_siege_metrics(await _siege_posture_for_checks(gs, turn)),
+        **_capture_metrics(await _capture_for_checks(gs, turn)),
     }
     threats = await _threats_for_checks(gs, turn)
     if not threats:
@@ -1212,6 +1298,21 @@ async def _siege_posture_for_checks(gs, turn: int) -> list:
     gs._last_siege_posture = posture
     gs._last_siege_posture_turn = turn
     return posture
+
+
+async def _capture_for_checks(gs, turn: int) -> list:
+    """Enemy-city capture readiness, cached per turn - the check path can run several times."""
+    cached = getattr(gs, "_last_capture_readiness", None)
+    if cached is not None and getattr(gs, "_last_capture_turn", None) == turn:
+        return cached
+    try:
+        readiness = await gs.capture_readiness()
+    except Exception:
+        log.debug("turn checks: capture-readiness scan failed", exc_info=True)
+        readiness = []
+    gs._last_capture_readiness = readiness
+    gs._last_capture_turn = turn
+    return readiness
 
 
 async def _threats_for_checks(gs, turn: int) -> list:

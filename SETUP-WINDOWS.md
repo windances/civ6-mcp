@@ -944,12 +944,12 @@ make it executable rather than aspirational:
 | Strategy (target, timing, establishment) | the human | `prompts/strategies/<preset>/directive.md`, injected into `SKILL.md` |
 | Analysis (threats, formation, composition) | the `military-map` worker, plus `strategy`, `economy-cities`, `diplomacy-victory` | `civ_advisor` - the only permitted worker route (`dsh/civ6.cordis.yml`, `toolFilter.allow: []`, so advisors hold **no tools at all**); proposals validated against `contracts/worker-proposal.schema.json` |
 | Execution (sole writer) | the orchestrator session | the MCP tools; SKILL Phase 4 |
-| Judgement and enforcement | the MCP itself | the 15 rules in `prompts/checks/turn-checks.md` plus `BATTLE ASSESSMENT`, `SIEGE POSTURE`, `SIEGE PROGRESS`, `UNUSED ATTACK` |
+| Judgement and enforcement | the MCP itself | the 16 rules in `prompts/checks/turn-checks.md` plus `BATTLE ASSESSMENT`, `SIEGE POSTURE`, `SIEGE PROGRESS`, `TAKE THE CITY`, `UNUSED ATTACK` |
 
 **The worker cannot read anything.** It has no filesystem and no tools, so the orchestrator must
 paste into the `civ_advisor` call: the matching tactic file's text, and the turn's own judgement
 signals - the `CHECK FAILED` lines, `BATTLE ASSESSMENT`, `SIEGE POSTURE`, `SIEGE PROGRESS` /
-`SIEGE STALLED`, and the `UNUSED ATTACK` line. Phase 2 of the skill requires that paste, and Phase 3
+`SIEGE STALLED`, `TAKE THE CITY`, and the `UNUSED ATTACK` line. Phase 2 of the skill requires that paste, and Phase 3
 requires the proposal to survive being checked against those same numbers. The worker's `assessment`
 string starts with the tactic file and the decisive metric (`tactics/05-... | siege_exposed=1 ...`)
 so the orchestrator can verify it cited real data.

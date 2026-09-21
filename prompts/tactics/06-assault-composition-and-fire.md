@@ -17,7 +17,18 @@ Read once the stack is in contact with the target city and the assault is runnin
 1. **Siege knocks the walls to 0.**
 2. **Melee (with the ram or tower adjacent) takes the city.**
 3. **Ranged shoots the garrison** - not the walls you already have siege for.
-4. **Re-check before the capture move**: a city only falls to a melee unit; a turn spent firing
+4. **When the city HP pool reaches 0, the capture move happens that turn.** The turn result
+   carries a `TAKE THE CITY` block naming the tile and the melee unit in reach; the rule
+   `take-the-city` fails while a city at 0 HP is still standing with a melee unit next to it.
+   Only a melee-class unit can do it and only from the city's own tile - a Battering Ram or
+   Siege Tower is refused (`CAPTURE_MOVE` BLOCKED), and cavalry, ranged and siege units cannot
+   capture either. A city with **no garrison unit** in it is still attackable (the adapter
+   resolves the city itself through `Cities.GetCityInPlot`): keep firing at the tile, and move
+   the melee unit in - an empty city is not a city that cannot be hit, it is a city that can be
+   entered. Two live failures to avoid: a city left at 0 HP heals about twenty points a turn
+   and is back to 120/200 six turns later, and a broken city with nobody to walk into it is
+   four turns of fire thrown away.
+5. **Re-check before the capture move**: a city only falls to a melee unit; a turn spent firing
    at a 0-wall city from range is a turn not spent finishing it.
 
 ## Fire discipline

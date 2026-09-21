@@ -163,6 +163,18 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   attacks on walls you have siege for. **Ranged attacks can never capture a city**
   - once the walls are at 0 the city only falls to a melee unit walking in, so a
   turn spent firing at a 0-wall city from range is a turn not spent finishing it.
+- **The capture is a separate step from the damage.** When the city's HP pool
+  reads 0, a melee unit must move onto the city's tile **that same turn**: a city
+  heals about twenty points a turn, so a broken city left alone is back to 120/200
+  six turns later and the whole barrage is undone. The turn result carries a
+  `TAKE THE CITY` block naming the tile and the melee unit in reach, and
+  `take-the-city` fails while a city at 0 HP is still standing with a melee unit
+  adjacent. Only melee-class units can take a city - a Battering Ram or Siege
+  Tower is refused with `CAPTURE_MOVE` BLOCKED, and cavalry, ranged and siege
+  units cannot capture either.
+- An enemy city with **no garrison unit** in it is still a legal target: attack
+  the tile as normal (the adapter resolves the city itself). An empty city is not
+  a city that cannot be hit - it is a city that can be entered.
 - What one city needs: about 2 siege, 2 melee, 1 ram or tower, 4 ranged
   (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry for
   survivors. Every Crouching Tiger needs a melee unit holding the tile in front
@@ -507,6 +519,10 @@ mattering:
 - the `SIEGE POSTURE` lines per siege unit (distance to the nearest enemy, that enemy's distance to
   the screen, distance to the nearest city);
 - the `SIEGE PROGRESS` block, including `SIEGE STALLED`;
+- the `TAKE THE CITY` block, when it appears: the city's HP pool is empty and the capture is
+  still pending. It names the tile and the melee unit in reach - a proposal that fires more
+  shots at a 0 HP city instead of moving that unit in is wrong, and the city heals about twenty
+  points a turn while it waits;
 - the `UNUSED ATTACK` line that `skip_remaining_units` prints.
 
 Then in Phase 3, hold the proposal to the numbers: a proposal that contradicts the pasted

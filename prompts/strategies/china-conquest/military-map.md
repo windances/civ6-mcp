@@ -32,7 +32,9 @@ instead of an opinion.
 
 **What the brief should carry, because you cannot query it yourself:** the tactic file for this
 decision, the last `CHECK FAILED [id]` lines, the `BATTLE ASSESSMENT` block, the `SIEGE POSTURE`
-lines, the `SIEGE PROGRESS` / `SIEGE STALLED` block, and the `UNUSED ATTACK` line from
+lines, the `SIEGE PROGRESS` / `SIEGE STALLED` block, the `TAKE THE CITY` block when it appears
+(city HP pool empty, capture still pending - the tile and the melee unit in reach are in it), and
+the `UNUSED ATTACK` line from
 `skip_remaining_units`. Start the `assessment` string with the tactic file and the decisive number,
 so the orchestrator can check the proposal against the same facts - for example
 `"tactics/05-formation-and-screening.md | siege_exposed=1 (Catapult at (54,39): enemy 1, screen to

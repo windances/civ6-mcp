@@ -177,10 +177,32 @@ local dist = Map.GetPlotDistance(cx, cy, {target_x}, {target_y})
 local enemy = nil
 local pu = Map.GetUnitsAt({target_x}, {target_y})
 if pu then for other in pu:Units() do if other:GetOwner() ~= me then enemy = other end end end
-if not enemy then {_bail("ERR:NO_ENEMY|No hostile unit at target tile")} end
-local eInfo = GameInfo.Units[enemy:GetType()]
-local eName = eInfo and eInfo.UnitType or "UNKNOWN"
-local eHP = enemy:GetMaxDamage() - enemy:GetDamage()
+-- An enemy city is a legal target for a city's ranged strike even with no garrison unit in it;
+-- Map.GetUnitsAt sees units only, so the empty city used to be rejected as NO_ENEMY.
+local eName, eHP = "UNKNOWN", 0
+if enemy then
+    local eInfo = GameInfo.Units[enemy:GetType()]
+    eName = eInfo and eInfo.UnitType or "UNKNOWN"
+    eHP = enemy:GetMaxDamage() - enemy:GetDamage()
+else
+    local tCity = nil
+    pcall(function()
+        local c = Cities.GetCityInPlot({target_x}, {target_y})
+        if c and c:GetOwner() ~= me then tCity = c end
+    end)
+    if tCity == nil then {_bail("ERR:NO_ENEMY|No hostile unit or city at target tile")} end
+    pcall(function() eName = Locale.Lookup(tCity:GetName()):gsub("|", "/") .. " (city)" end)
+    pcall(function()
+        local tccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
+        for _, d in tCity:GetDistricts():Members() do
+            if d:GetType() == tccIdx then
+                local gMax = d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0
+                eHP = gMax - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                break
+            end
+        end
+    end)
+end
 local params = {{}}
 params[CityCommandTypes.PARAM_X] = {target_x}
 params[CityCommandTypes.PARAM_Y] = {target_y}

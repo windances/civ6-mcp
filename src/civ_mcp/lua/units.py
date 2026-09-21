@@ -13,6 +13,7 @@ from civ_mcp.lua._helpers import (
 from civ_mcp.lua.models import (
     BuilderInfo,
     BuilderTask,
+    CaptureReadiness,
     CombatEstimate,
     PathingEstimate,
     SiegePosture,
@@ -216,12 +217,23 @@ local fromX, fromY = unit:GetX(), unit:GetY()
 local params = {{}}
 params[UnitOperationTypes.PARAM_X] = {target_x}
 params[UnitOperationTypes.PARAM_Y] = {target_y}
--- Add ATTACK modifier if hostile unit on target tile (needed for civilian capture)
+-- Add ATTACK modifier if a hostile unit - or an enemy city - is on the target tile (needed for
+-- civilian capture, and for taking a city). Map.GetUnitsAt only sees units, so an enemy city
+-- with no garrison in it looked like an ordinary tile: the move went out without the ATTACK
+-- modifier and the game refused it ("enemy territory but movement still blocked"), which is how
+-- a city sitting at `city hp: 0/200` stayed untaken. Moving a melee unit onto a city whose HP
+-- pool is empty is the capture.
 local hasHostile = false
 if tgtUnits then
     for other in tgtUnits:Units() do
         if other:GetOwner() ~= me then hasHostile = true end
     end
+end
+if not hasHostile then
+    pcall(function()
+        local c = Cities.GetCityInPlot({target_x}, {target_y})
+        if c and c:GetOwner() ~= me then hasHostile = true end
+    end)
 end
 if hasHostile then
     params[UnitOperationTypes.PARAM_MODIFIERS] = UnitOperationMoveModifiers.ATTACK
@@ -327,11 +339,25 @@ if tgtUnits then
     end
     if enemy == nil and fallback then enemy = fallback; enemyName = fallbackName end
 end
+-- A city centre is a legal target with or without a garrison, but Map.GetUnitsAt only ever sees
+-- units: an enemy city that is momentarily empty used to answer ERR:NO_ENEMY, and the assault
+-- stalled on a city that had already been broken. Live, Moscow sat at `city hp: 0/200` from T120
+-- while every attack returned NO_ENEMY, healed about twenty points a turn back to 120/200, and
+-- the campaign was abandoned; the same city fell in four turns once a human attacked the tile
+-- from the game UI. Cities.GetCityInPlot is the API the game's own UI uses.
+local targetCity = nil
+local cityOwner = -1
 if enemy == nil then
-    {_bail(f"ERR:NO_ENEMY|No hostile unit at ({target_x},{target_y})")}
+    pcall(function()
+        local c = Cities.GetCityInPlot({target_x}, {target_y})
+        if c then targetCity = c; cityOwner = c:GetOwner() end
+    end)
+end
+if enemy == nil and targetCity == nil then
+    {_bail(f"ERR:NO_ENEMY|No hostile unit or city at ({target_x},{target_y})")}
 end
 -- Check diplomatic status — can only attack units you're at war with (barbarians always attackable)
-local enemyOwner = enemy:GetOwner()
+local enemyOwner = enemy and enemy:GetOwner() or cityOwner
 if enemyOwner ~= 63 then
     local pDiplo = Players[me]:GetDiplomacy()
     if not pDiplo:IsAtWarWith(enemyOwner) then
@@ -340,8 +366,28 @@ if enemyOwner ~= 63 then
         {_bail_lua('"ERR:NOT_AT_WAR|Cannot attack " .. enemyName .. " — you are at peace with " .. ownerName .. ". Declare war first or target a different unit."')}
     end
 end
-local enemyHP = enemy:GetMaxDamage() - enemy:GetDamage()
-local enemyMaxHP = enemy:GetMaxDamage()
+local enemyHP = 0
+local enemyMaxHP = 0
+local targetIsCity = false
+if enemy then
+    enemyHP = enemy:GetMaxDamage() - enemy:GetDamage()
+    enemyMaxHP = enemy:GetMaxDamage()
+else
+    -- What is being attacked, and by which number: a unit's HP, or the city's own HP pool (the
+    -- garrison pool of the city centre district - walls are a separate pool, damaged first).
+    targetIsCity = true
+    pcall(function() enemyName = Locale.Lookup(targetCity:GetName()):gsub("|", "/") end)
+    pcall(function()
+        local ccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
+        for _, d in targetCity:GetDistricts():Members() do
+            if d:GetType() == ccIdx then
+                enemyMaxHP = d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0
+                enemyHP = enemyMaxHP - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                break
+            end
+        end
+    end)
+end
 local myHP = unit:GetMaxDamage() - unit:GetDamage()
 local params = {{}}
 params[UnitOperationTypes.PARAM_X] = {target_x}
@@ -366,7 +412,8 @@ if isRanged then
     local canRanged = UnitManager.CanStartOperation(unit, UnitOperationTypes.RANGE_ATTACK, nil, losParams)
     if canRanged then
         UnitManager.RequestOperation(unit, UnitOperationTypes.RANGE_ATTACK, params)
-        print("OK:RANGE_ATTACK|target:" .. enemyName .. " at ({target_x},{target_y})|pre_hp:" .. enemyHP .. "/" .. enemyMaxHP .. "|your HP:" .. myHP .. "|range:" .. rng .. " dist:" .. dist)
+        local kind = targetIsCity and " (city)" or ""
+        print("OK:RANGE_ATTACK|target:" .. enemyName .. kind .. " at ({target_x},{target_y})|pre_hp:" .. enemyHP .. "/" .. enemyMaxHP .. "|your HP:" .. myHP .. "|range:" .. rng .. " dist:" .. dist)
         print("{SENTINEL}"); return
     elseif dist <= 1 then
         -- Ranged failed at melee range: fall through to melee attack below
@@ -415,17 +462,37 @@ else
     local ok1, _ = pcall(function() myAfterHP = unit:GetMaxDamage() - unit:GetDamage() end)
     local enemyAfterHP = 0
     local enemyAlive = false
-    local ok2, _ = pcall(function()
-        local d = enemy:GetDamage()
-        if d ~= nil then enemyAfterHP = enemy:GetMaxDamage() - d; enemyAlive = true end
-    end)
+    if enemy then
+        local ok2, _ = pcall(function()
+            local d = enemy:GetDamage()
+            if d ~= nil then enemyAfterHP = enemy:GetMaxDamage() - d; enemyAlive = true end
+        end)
+    else
+        -- City target: re-read the city's own HP pool, and whether we are standing in the city
+        -- now - a melee move onto a city whose HP pool is empty is how a city is taken.
+        pcall(function()
+            local ccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
+            for _, d in targetCity:GetDistricts():Members() do
+                if d:GetType() == ccIdx then
+                    enemyAfterHP = (d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                        - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                    enemyAlive = true
+                    break
+                end
+            end
+        end)
+    end
+    local label = targetIsCity and "city HP:" or "enemy HP:"
     local report = "OK:MELEE_ATTACK|target:" .. enemyName .. " at ({target_x},{target_y})"
     if enemyAlive then
-        report = report .. "|enemy HP:" .. enemyHP .. " -> " .. enemyAfterHP .. "/" .. enemyMaxHP
+        report = report .. "|" .. label .. enemyHP .. " -> " .. enemyAfterHP .. "/" .. enemyMaxHP
     else
-        report = report .. "|enemy HP:" .. enemyHP .. " -> KILLED"
+        report = report .. "|" .. label .. enemyHP .. " -> KILLED"
     end
     report = report .. "|your HP:" .. myHP .. " -> " .. myAfterHP .. " CS:" .. myCS
+    if targetIsCity and unit:GetX() == {target_x} and unit:GetY() == {target_y} then
+        report = report .. "|CITY TAKEN - resolve keep/raze with city_action"
+    end
     print(report)
 end
 print("{SENTINEL}")
@@ -522,7 +589,31 @@ if tgtUnits then
         end
     end
 end
-if enemy == nil then {_bail(f"ERR:NO_ENEMY|No hostile unit at ({target_x},{target_y})")} end
+if enemy == nil then
+    -- A city with no garrison in it is still a legal target. Map.GetUnitsAt sees no defender,
+    -- so the estimate is synthesised for the city itself: defender CS 0 makes the narrator say
+    -- what is true - the CITY takes the damage, and the damage formula does not apply to it.
+    local tCity = nil
+    pcall(function() tCity = Cities.GetCityInPlot({target_x}, {target_y}) end)
+    if tCity == nil then {_bail(f"ERR:NO_ENEMY|No hostile unit or city at ({target_x},{target_y})")} end
+    local cName = "unknown"
+    pcall(function() cName = Locale.Lookup(tCity:GetName()):gsub("|", "/") end)
+    local cHP, cMax = 0, 0
+    pcall(function()
+        local ccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
+        for _, d in tCity:GetDistricts():Members() do
+            if d:GetType() == ccIdx then
+                cMax = d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0
+                cHP = cMax - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                break
+            end
+        end
+    end)
+    print("ESTIMATE|" .. attType .. "|CITY_CENTER|" .. effAttCS .. "|0|" .. (isRanged and "1" or "0")
+        .. "||" .. myHP .. "|" .. cHP .. "|" .. cName)
+    print("{SENTINEL}")
+    return
+end
 -- Check diplomatic status — estimates for units at peace are misleading
 local enemyOwner = enemy:GetOwner()
 if enemyOwner ~= 63 then
@@ -1135,6 +1226,128 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
             )
         )
     return postures
+
+
+def build_capture_check_query() -> str:
+    """InGame: enemy cities in sight, and whether one of our melee units can take them.
+
+    An assault has a last step that no damage number shows: a melee-class unit walks onto the
+    city's own tile once its HP pool is empty. Only melee-class units can do it - cavalry, siege
+    and support units cannot (`CAPTURE_MOVE` from a Battering Ram is refused), and neither can a
+    unit standing a tile away. This asks the game for exactly that, per visible enemy city: the
+    city HP pool, the walls, and how many of our capture-capable units are adjacent or one tile
+    out. Live, Moscow sat at 0/200 for four turns with a Spearman two tiles away, healed about
+    twenty points a turn back to 120/200, and the siege had to be fought again from nothing.
+    """
+    return """
+local me = Game.GetLocalPlayer()
+local pVis = PlayersVisibility[me]
+local pDiplo = Players[me]:GetDiplomacy()
+local melee = {}
+for _, u in Players[me]:GetUnits():Members() do
+    local ux, uy = u:GetX(), u:GetY()
+    if ux ~= -9999 then
+        local entry = GameInfo.Units[u:GetType()]
+        local pc = ""
+        pcall(function() pc = entry and entry.PromotionClass or "" end)
+        -- MELEE covers land melee and naval melee; ANTI_CAVALRY can take cities too. SIEGE,
+        -- RANGED, CAVALRY and SUPPORT cannot.
+        if string.find(pc, "MELEE") or string.find(pc, "ANTI_CAVALRY") then
+            table.insert(melee, {ux, uy, (entry and entry.UnitType or "?")})
+        end
+    end
+end
+for pid = 0, 63 do
+    if pid ~= me and Players[pid] and Players[pid]:IsAlive() then
+        local atWar = (pid == 63)
+        if not atWar then pcall(function() atWar = pDiplo:IsAtWarWith(pid) end) end
+        if atWar then
+            pcall(function()
+                for _, c in Players[pid]:GetCities():Members() do
+                    local cx, cy = c:GetX(), c:GetY()
+                    if pVis:IsVisible(cx, cy) then
+                        local cHP, cMax, wHP, wMax = 0, 0, 0, 0
+                        local ccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
+                        for _, d in c:GetDistricts():Members() do
+                            if d:GetType() == ccIdx then
+                                wMax = d:GetMaxDamage(DefenseTypes.DISTRICT_OUTER) or 0
+                                wHP = wMax - (d:GetDamage(DefenseTypes.DISTRICT_OUTER) or 0)
+                                cMax = d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0
+                                cHP = cMax - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                                break
+                            end
+                        end
+                        local adj, near, who = 0, 0, ""
+                        for _, m in ipairs(melee) do
+                            local d = Map.GetPlotDistance(m[1], m[2], cx, cy)
+                            if d <= 1 then
+                                adj = adj + 1
+                                who = m[3]
+                            end
+                            if d <= 2 then
+                                near = near + 1
+                                if who == "" then who = m[3] end
+                            end
+                        end
+                        local cName = "unknown"
+                        pcall(function() cName = Locale.Lookup(c:GetName()):gsub("|", "/") end)
+                        print("CAPTURE_READY|" .. cName .. "|" .. cx .. "," .. cy
+                            .. "|hp:" .. cHP .. "|max:" .. cMax
+                            .. "|walls:" .. wHP .. "/" .. wMax
+                            .. "|owner:" .. pid
+                            .. "|melee_adjacent:" .. adj .. "|melee_within_2:" .. near
+                            .. "|" .. who)
+                    end
+                end
+            end)
+        end
+    end
+end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]:
+    """``CAPTURE_READY|<name>|<x>,<y>|hp:N|max:N|walls:N/M|owner:N|melee_adjacent:N|melee_within_2:N|<unit>``."""
+    out: list[CaptureReadiness] = []
+    for line in lines:
+        if not line.startswith("CAPTURE_READY|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 6:
+            continue
+        try:
+            x_str, y_str = parts[2].split(",")
+            x, y = int(x_str), int(y_str)
+        except ValueError:
+            continue
+
+        def number(token: str, default: int = 0) -> int:
+            try:
+                return int(token.split(":", 1)[1])
+            except (IndexError, ValueError):
+                return default
+
+        walls = parts[5].split(":", 1)[-1] if len(parts) > 5 else "0/0"
+        try:
+            wall_hp, wall_max = (int(v) for v in walls.split("/", 1))
+        except ValueError:
+            wall_hp, wall_max = 0, 0
+        out.append(
+            CaptureReadiness(
+                city_name=parts[1],
+                x=x,
+                y=y,
+                hp=number(parts[3]) if len(parts) > 3 else 0,
+                max_hp=number(parts[4]) if len(parts) > 4 else 0,
+                wall_hp=wall_hp,
+                wall_max=wall_max,
+                melee_adjacent=number(parts[7]) if len(parts) > 7 else 0,
+                melee_within_2=number(parts[8]) if len(parts) > 8 else 0,
+                melee_unit=parts[9] if len(parts) > 9 else "",
+            )
+        )
+    return out
 
 
 def build_skip_remaining_units() -> str:

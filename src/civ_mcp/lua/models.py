@@ -666,6 +666,39 @@ class SiegePosture:
 
 
 @dataclass
+class CaptureReadiness:
+    """An enemy city we can see, with the numbers that decide whether it can be taken now.
+
+    ``hp`` is the city's own HP pool (the city centre's garrison pool - walls are a separate
+    pool and are damaged first). ``melee_adjacent`` counts our capture-capable units next to the
+    city and ``melee_within_2`` those one tile further out: only a melee-class unit can take a
+    city, and only from the city's own tile, so those two numbers *are* the answer to "is this
+    city takeable this turn".
+    """
+
+    city_name: str
+    x: int
+    y: int
+    hp: int = 0
+    max_hp: int = 0
+    wall_hp: int = 0
+    wall_max: int = 0
+    melee_adjacent: int = 0
+    melee_within_2: int = 0
+    melee_unit: str = ""
+
+    @property
+    def down(self) -> bool:
+        """A city whose HP pool is empty: the next melee attack takes it."""
+        return self.max_hp > 0 and self.hp <= 0
+
+    @property
+    def takeable(self) -> bool:
+        """Down, with one of our melee units already next to it."""
+        return self.down and self.melee_adjacent > 0
+
+
+@dataclass
 class ThreatInfo:
     """A hostile military unit spotted near our empire."""
 
