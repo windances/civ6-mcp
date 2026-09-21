@@ -699,6 +699,49 @@ class CaptureReadiness:
 
 
 @dataclass
+class CityLoyalty:
+    """One of our cities' loyalty, and what is holding it up.
+
+    ``loyalty`` is the 0-100 pool, ``loyalty_per_turn`` the current pressure (negative means the
+    city is falling) and ``turns_to_flip`` the game's own estimate of when it revolts
+    (``City:GetCulturalIdentity():GetTurnsToConversion()``). ``advice`` is the game's own
+    localized recommendation, which is worth more than our guess at the fix.
+
+    Why this exists: a city captured far from home revolts. Live, Moscow was taken at T112 with
+    pop 3, no governor and no garrison, appeared as a Free City in the logs at T116, and was
+    retaken at T121 - 9 attacks and four turns of the campaign spent on a city we already owned.
+    """
+
+    city_id: int
+    city_name: str
+    x: int
+    y: int
+    population: int = 0
+    loyalty: float = 100.0
+    loyalty_max: float = 100.0
+    loyalty_per_turn: float = 0.0
+    turns_to_flip: int = 0
+    governor: str = ""
+    garrison: int = 0
+    advice: str = ""
+
+    @property
+    def falling(self) -> bool:
+        """Loyalty is going down this turn."""
+        return self.loyalty_per_turn < 0
+
+    @property
+    def low(self) -> bool:
+        """Below the point where a revolt is a matter of when, not if."""
+        return self.loyalty_max > 0 and self.loyalty < 50
+
+    @property
+    def unsupported(self) -> bool:
+        """Low loyalty with no governor in the city and no military unit on its tile."""
+        return self.low and not self.governor and self.garrison <= 0
+
+
+@dataclass
 class ThreatInfo:
     """A hostile military unit spotted near our empire."""
 

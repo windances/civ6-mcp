@@ -64,6 +64,13 @@ the front (bring siege, heal, upgrade, reinforce) or change the target; never ne
 
 - Garrison the captured city with the **cheapest spare unit** - one unit, per
   `one-garrison-per-city`; everything else belongs at the next front.
+- **Then hold it.** A captured city can leave the empire with no enemy involved: live, Moscow was
+  taken at T112 (pop 3, no governor, no garrison) and was a Free City by T116, which cost nine
+  attacks and four turns to undo. The turn result carries a `LOYALTY WARNING` naming each city's
+  pool, its per-turn pressure, the game's own turns-to-conversion estimate and the game's own
+  advice string; `hold-what-you-take` fails while a city below 50 loyalty has neither a governor
+  nor a unit on its tile. `assign_governor` is the cheapest fix (moving a governor is free), and
+  a unit on the tile is the other one.
 - Keep the stack together and move it on the next city; do not let it disperse into garrisons.
 - Report the captured city's loyalty and whether a governor is needed.
 

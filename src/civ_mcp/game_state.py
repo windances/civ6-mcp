@@ -601,6 +601,21 @@ class GameState:
             return []
         return lq.parse_capture_readiness_response(lines)
 
+    async def city_loyalty(self) -> list:
+        """Our cities' loyalty, the pressure on each, and what is holding it up.
+
+        Read-only, InGame context (the loyalty and governor APIs the game's own city panel
+        uses). A city can leave the empire without an enemy touching it - live, Moscow was
+        captured at T112 and had revolted into a Free City by T116, with no governor and no
+        garrison, which cost four turns and nine attacks to undo.
+        """
+        try:
+            lines = await self.conn.execute_write(lq.build_loyalty_check_query())
+        except Exception as e:
+            log.debug("Loyalty scan failed: %s", e)
+            return []
+        return lq.parse_loyalty_response(lines)
+
     async def skip_remaining_units(self) -> str:
         # Look for attacks that are about to be thrown away *before* finishing moves: after
         # this call the units are fortified and the attack is gone for the turn. Seen live at

@@ -170,6 +170,8 @@ async def report(gs: GameState, turn: int) -> list:
 
 async def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--launch", action="store_true",
+                    help="launch Civ 6 first (only when it is not already running)")
     ap.add_argument("--save", default=None, help="load this save before testing (opt in)")
     ap.add_argument("--capture", action="store_true", help="order the capture move if one is pending")
     ap.add_argument("--attack", nargs=3, metavar=("UNIT_ID", "X", "Y"), default=None,
@@ -178,10 +180,20 @@ async def main() -> int:
                     help="run the combat estimate for a target and print it (read-only)")
     ap.add_argument("--cities", action="store_true",
                     help="list every visible city (any owner) with its HP pool and garrison (read-only)")
+    ap.add_argument("--loyalty", action="store_true",
+                    help="read our cities' loyalty, pressure, governor and the game's advice (read-only)")
     args = ap.parse_args()
 
     print("=== game status ===")
     print(gl.game_status())
+
+    if args.launch:
+        print("\n=== launching Civ 6 ===")
+        try:
+            print(await gl.launch_game())
+        except Exception as exc:  # noqa: BLE001
+            print(f"launch failed: {exc}")
+        await asyncio.sleep(10)
 
     conn = GameConnection()
     try:
@@ -199,6 +211,25 @@ async def main() -> int:
     turn = int(ov.turn)
     print(f"\nin game: T{turn}, {ov.civ_name}, cities {ov.num_cities}, units {ov.num_units}, "
           f"military score {ov.score}")
+
+    if args.loyalty:
+        print("\n=== loyalty of our cities - read-only ===")
+        rows = await gs.city_loyalty()
+        for city in rows:
+            print(
+                f"  {city.city_name}@({city.x},{city.y}) pop {city.population}:"
+                f" loyalty {city.loyalty:.0f}/{city.loyalty_max:.0f}"
+                f" {city.loyalty_per_turn:+.1f}/turn"
+                + (f", flips in {city.turns_to_flip}" if city.turns_to_flip > 0 else "")
+                + f" - governor: {city.governor or 'none'}, garrison: {city.garrison}"
+                + (f' | game advice: "{city.advice}"' if city.advice else "")
+            )
+        if not rows:
+            print("  (no cities returned - the scan failed or we have none)")
+        print("=== LOYALTY WARNING block ===")
+        print(et._loyalty_event(rows, turn) or "  (not printed: nothing below 50 or falling)")
+        print("=== loyalty metrics ===")
+        print("  " + str(et._loyalty_metrics(rows)))
 
     if args.cities:
         print("\n=== every visible city (any owner) - read-only ===")

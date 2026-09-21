@@ -351,6 +351,17 @@ is the binding constraint in every assault in this game.
   of the enemy's reach, and say so in the diary's tactical line. The rule fires on contact; the
   diary is where a deliberate withdrawal is recorded.
 - Leave a garrison in every captured city and report its loyalty.
+- **Loyalty takes a city back with no battle at all, so hold what you take.** A
+  captured city far from the core, at low population, with no governor and no unit
+  on its tile will revolt into a Free City and have to be besieged again: live,
+  Moscow was captured at T112 and was a Free City by T116 - nine attacks and four
+  turns spent retaking our own city, while St Petersburg waited. The turn result
+  carries a `LOYALTY WARNING` with each city's pool, its per-turn pressure, the
+  game's own turns-to-conversion estimate, the governor in residence, the garrison
+  and the game's own advice string; `hold-what-you-take` fails while a city below
+  50 loyalty has neither a governor nor a unit on its tile. The answer is
+  `assign_governor` (moving one is free) or a garrison - and if the governor is
+  needed at the front, that is a decision to record, not to skip.
 - Great Wall segments along the new frontier make captured ground cheap to hold.
 - **No peace, ever.** Once war is declared it ends only when the enemy's cities
   are yours. Never call propose_peace. Refuse every offer of peace - a diplomacy

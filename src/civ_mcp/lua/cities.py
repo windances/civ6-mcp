@@ -10,7 +10,131 @@ from civ_mcp.lua._helpers import (
     _bail_lua,
     _lua_get_city,
 )
-from civ_mcp.lua.models import CityInfo, ProductionOption
+from civ_mcp.lua.models import CityInfo, CityLoyalty, ProductionOption
+
+
+def build_loyalty_check_query() -> str:
+    """InGame: every one of our cities' loyalty, its pressure, and what is holding it up.
+
+    Loyalty is the one number that can take a city back off you with no enemy involved. Live,
+    Moscow was captured at T112 (pop 3, far from our core, no governor, no garrison), the game
+    logs show a Free City in its place from T116, and it cost T118-T121 - 9 attacks - to retake
+    a city that was already ours. Nothing in the turn result mentioned loyalty once.
+
+    The APIs are the ones the game's own UI uses (`CityPanelCulture.lua`, `CityBannerManager.lua`
+    in `DLC/Expansion2/UI`): ``City:GetCulturalIdentity()`` for the loyalty pool and
+    ``Player:GetGovernors():GetGovernorList()`` with ``Governor:GetAssignedCity()`` for who is
+    governing what. ``City:GetLoyaltyAdvice()`` is the game's own recommendation, printed
+    verbatim rather than guessed at.
+    """
+    return """
+local me = Game.GetLocalPlayer()
+local pPlayer = Players[me]
+local governed = {}
+pcall(function()
+    local has, list = pPlayer:GetGovernors():GetGovernorList()
+    if has and list then
+        for _, gov in ipairs(list) do
+            pcall(function()
+                local assigned = gov:GetAssignedCity()
+                if assigned then
+                    local gName = "GOVERNOR"
+                    pcall(function()
+                        local def = GameInfo.Governors[gov:GetType()]
+                        if def then gName = def.GovernorType end
+                    end)
+                    governed[assigned:GetID()] = gName
+                end
+            end)
+        end
+    end
+end)
+for _, c in pPlayer:GetCities():Members() do
+    local cid = c:GetID()
+    local loy, loyMax, loyPT, flip = 100.0, 100.0, 0.0, 0
+    pcall(function()
+        local cult = c:GetCulturalIdentity()
+        if cult then
+            loy = cult:GetLoyalty()
+            loyMax = cult:GetMaxLoyalty()
+            loyPT = cult:GetLoyaltyPerTurn()
+            flip = cult:GetTurnsToConversion()
+        end
+    end)
+    local garrison = 0
+    local stack = Map.GetUnitsAt(c:GetX(), c:GetY())
+    if stack then
+        for gu in stack:Units() do
+            if gu:GetOwner() == me then
+                local gi = GameInfo.Units[gu:GetType()]
+                if gi and (gi.FormationClass == "FORMATION_CLASS_LAND_COMBAT"
+                    or gi.FormationClass == "FORMATION_CLASS_NAVAL_COMBAT") then
+                    garrison = garrison + 1
+                end
+            end
+        end
+    end
+    local advice = ""
+    pcall(function() advice = Locale.Lookup(c:GetLoyaltyAdvice()) end)
+    local name = "unknown"
+    pcall(function() name = Locale.Lookup(c:GetName()) end)
+    -- The advice string is free text: strip the delimiters and every control character (newline,
+    -- tab, CR) so one city is still exactly one protocol line. `%c` rather than "[\\r\\n]": the
+    -- escaped form is a *character set* of backslash, r and n, which would eat letters instead.
+    advice = tostring(advice):gsub("|", "/"):gsub("%c", " ")
+    name = tostring(name):gsub("|", "/")
+    print("CITY_LOYALTY|" .. cid .. "|" .. name .. "|" .. c:GetX() .. "," .. c:GetY()
+        .. "|pop:" .. c:GetPopulation()
+        .. "|loyalty:" .. string.format("%.1f", loy)
+        .. "|max:" .. string.format("%.1f", loyMax)
+        .. "|per_turn:" .. string.format("%.2f", loyPT)
+        .. "|flip:" .. flip
+        .. "|governor:" .. (governed[cid] or "")
+        .. "|garrison:" .. garrison
+        .. "|" .. advice)
+end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
+    """``CITY_LOYALTY|<id>|<name>|<x>,<y>|pop:N|loyalty:N|max:N|per_turn:N|flip:N|governor:X|garrison:N|<advice>``."""
+    out: list[CityLoyalty] = []
+    for line in lines:
+        if not line.startswith("CITY_LOYALTY|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 6:
+            continue
+        try:
+            x_str, y_str = parts[3].split(",")
+            x, y = int(x_str), int(y_str)
+        except ValueError:
+            continue
+
+        def number(token: str, default: float = 0.0) -> float:
+            try:
+                return float(token.split(":", 1)[1])
+            except (IndexError, ValueError):
+                return default
+
+        out.append(
+            CityLoyalty(
+                city_id=int(parts[1]) if parts[1].lstrip("-").isdigit() else 0,
+                city_name=parts[2],
+                x=x,
+                y=y,
+                population=int(number(parts[4], 0)),
+                loyalty=number(parts[5], 100.0),
+                loyalty_max=number(parts[6], 100.0) if len(parts) > 6 else 100.0,
+                loyalty_per_turn=number(parts[7], 0.0) if len(parts) > 7 else 0.0,
+                turns_to_flip=int(number(parts[8], 0)) if len(parts) > 8 else 0,
+                governor=parts[9].split(":", 1)[-1] if len(parts) > 9 else "",
+                garrison=int(number(parts[10], 0)) if len(parts) > 10 else 0,
+                advice=parts[11] if len(parts) > 11 else "",
+            )
+        )
+    return out
 
 
 def build_cities_query() -> str:

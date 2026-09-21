@@ -41,6 +41,11 @@ _CONTACT_METRIC_KEYS = (
     "min_melee_upgrade_cost",
     "siege_upgrades_available",
     "min_siege_upgrade_cost",
+    "cities_low_loyalty",
+    "lowest_loyalty",
+    "low_loyalty_without_governor",
+    "cities_falling_loyalty",
+    "nearest_loyalty_flip",
     "garrisoned_units",
     "cities_over_garrison",
     "cities_guarded",
@@ -924,6 +929,13 @@ async def _check_turn_checks(
         if upgrade_text:
             events.append(lq.TurnEvent(priority=3, category="combat", message=upgrade_text))
         try:
+            loyalty_text = _loyalty_event(await _loyalty_for_checks(gs, turn), turn)
+        except Exception:
+            log.debug("loyalty report failed", exc_info=True)
+            loyalty_text = None
+        if loyalty_text:
+            events.append(lq.TurnEvent(priority=1, category="city", message=loyalty_text))
+        try:
             stacks = _garrison_metrics(gs, units).get("unexplained_stacks", 0)
         except Exception:
             stacks = 0
@@ -1231,6 +1243,89 @@ def _upgrade_event(units: dict | None, gold: float, turn: int) -> str | None:
     )
 
 
+def _loyalty_metrics(readiness: list) -> dict:
+    """How close any of our cities is to walking out of the empire.
+
+    ``low_loyalty_without_governor`` counts the cities that are both below the line **and**
+    unsupported - no governor in the city and no military unit on its tile - which is the state
+    Moscow was in when it revolted (T112 captured, T116 a Free City, T121 retaken).
+    ``nearest_loyalty_flip`` is the game's own turns-to-conversion for the worst of them.
+    """
+    metrics = {
+        "cities_low_loyalty": 0,
+        "lowest_loyalty": 100,
+        "low_loyalty_without_governor": 0,
+        "cities_falling_loyalty": 0,
+        "nearest_loyalty_flip": 0,
+    }
+    for city in readiness or []:
+        loyalty = float(getattr(city, "loyalty", 100.0) or 0.0)
+        if getattr(city, "low", False):
+            metrics["cities_low_loyalty"] += 1
+            if not getattr(city, "governor", "") and int(getattr(city, "garrison", 0) or 0) <= 0:
+                metrics["low_loyalty_without_governor"] += 1
+            flip = int(getattr(city, "turns_to_flip", 0) or 0)
+            if flip > 0 and (
+                metrics["nearest_loyalty_flip"] == 0 or flip < metrics["nearest_loyalty_flip"]
+            ):
+                metrics["nearest_loyalty_flip"] = flip
+        if getattr(city, "falling", False):
+            metrics["cities_falling_loyalty"] += 1
+        metrics["lowest_loyalty"] = min(metrics["lowest_loyalty"], int(loyalty))
+    return metrics
+
+
+def _loyalty_event(readiness: list, turn: int) -> str | None:
+    """Name the cities that are at risk of leaving, with the game's own advice for each.
+
+    Printed while any city is below 50 loyalty or losing loyalty this turn. Every fact in it
+    comes from the game - the pool, the per-turn pressure, the turns-to-conversion estimate and
+    `City:GetLoyaltyAdvice()` - because the fix depends on why the city is falling (population
+    pressure, no governor, a nearby rival's culture) and the game already says which.
+    """
+    at_risk = [
+        c
+        for c in (readiness or [])
+        if getattr(c, "low", False) or getattr(c, "falling", False)
+    ]
+    if not at_risk:
+        return None
+    worst = min(at_risk, key=lambda c: float(getattr(c, "loyalty", 100.0) or 0.0))
+    flip = int(getattr(worst, "turns_to_flip", 0) or 0)
+    head = f"LOYALTY WARNING (T{turn}) - {len(at_risk)} city(ies) below 50 loyalty or losing it"
+    if flip > 0:
+        head += f"; the first revolt is {flip} turn(s) away"
+    head += ":"
+    lines = [head]
+    for city in sorted(at_risk, key=lambda c: float(getattr(c, "loyalty", 100.0) or 0.0)):
+        name = getattr(city, "city_name", "?") or "?"
+        where = f"({getattr(city, 'x', '?')},{getattr(city, 'y', '?')})"
+        per_turn = float(getattr(city, "loyalty_per_turn", 0.0) or 0.0)
+        flip = int(getattr(city, "turns_to_flip", 0) or 0)
+        gov = getattr(city, "governor", "") or "none"
+        detail = (
+            f"  {name} {where} pop {int(getattr(city, 'population', 0) or 0)}:"
+            f" loyalty {float(getattr(city, 'loyalty', 0.0) or 0):.0f}"
+            f"/{float(getattr(city, 'loyalty_max', 100.0) or 100):.0f},"
+            f" {per_turn:+.1f}/turn"
+            + (f", flips in {flip}" if flip > 0 else "")
+            + f" - governor: {gov}, garrison: {int(getattr(city, 'garrison', 0) or 0)}"
+        )
+        advice = (getattr(city, "advice", "") or "").strip()
+        if advice:
+            detail += f'. Game advice: "{advice}"'
+        lines.append(detail)
+    if any(getattr(c, "low", False) for c in at_risk):
+        lines.append(
+            "  A city that revolts becomes a Free City and has to be taken again: live, Moscow was"
+            " captured at T112, revolted by T116 and retaken at T121 - nine attacks and four turns"
+            " spent on a city that was already ours. A governor in the city and a unit on its tile"
+            " are the two levers that do not need the army; if the governor is needed elsewhere,"
+            " say so in the diary."
+        )
+    return "\n".join(lines)
+
+
 def _siege_progress_event(gs, turn: int) -> str | None:
     """Say what the assault is doing to the city, and shout when it is doing nothing.
 
@@ -1375,6 +1470,7 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         **_siege_metrics(await _siege_posture_for_checks(gs, turn)),
         **_capture_metrics(await _capture_for_checks(gs, turn)),
         **_siege_upgrade_metrics(units),
+        **_loyalty_metrics(await _loyalty_for_checks(gs, turn)),
     }
     threats = await _threats_for_checks(gs, turn)
     metrics.update(_matchup_metrics(threats, units))
@@ -1446,6 +1542,21 @@ async def _siege_posture_for_checks(gs, turn: int) -> list:
     gs._last_siege_posture = posture
     gs._last_siege_posture_turn = turn
     return posture
+
+
+async def _loyalty_for_checks(gs, turn: int) -> list:
+    """Our cities' loyalty, cached per turn - the check path can run several times a turn."""
+    cached = getattr(gs, "_last_loyalty", None)
+    if cached is not None and getattr(gs, "_last_loyalty_turn", None) == turn:
+        return cached
+    try:
+        loyalty = await gs.city_loyalty()
+    except Exception:
+        log.debug("turn checks: loyalty scan failed", exc_info=True)
+        loyalty = []
+    gs._last_loyalty = loyalty
+    gs._last_loyalty_turn = turn
+    return loyalty
 
 
 async def _capture_for_checks(gs, turn: int) -> list:

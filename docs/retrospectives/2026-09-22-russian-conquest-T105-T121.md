@@ -100,17 +100,25 @@ hole is: loyalty.
 
 ## 5. Proposed optimizations, in priority order
 
-**A. Measure loyalty, and make "hold what you take" a rule.** *(not implemented yet — the
-loyalty API has to be checked live, and the game is closed)* A city we capture far from home is
-a city in revolt waiting to happen — Moscow went from ours (T112) to a Free City (T116) with
-nothing in the turn result saying so. Add a scan over our cities: loyalty, loyalty delta per turn,
-turns-to-revolt, governor, garrison.
-- metrics: `cities_low_loyalty`, `lowest_loyalty`, `cities_without_governor`
-- rule `hold-what-you-take`: fail while a city is below (say) 50 loyalty with no governor assigned
-  and no garrison on its tile — the fix is a governor (维克多/Victor), a garrison, or a monument,
-  and it must be named in the diary otherwise.
-- event `LOYALTY WARNING` naming the city, its loyalty and the nearest governor, printed on the
-  turn the capture happens and every turn after.
+**A. Measure loyalty, and make "hold what you take" a rule.** *(implemented)* A city we capture far
+from home is a city in revolt waiting to happen — Moscow went from ours (T112) to a Free City
+(T116) with nothing in the turn result saying so.
+- `CityLoyalty` + `build_loyalty_check_query` read each of our cities' pool, per-turn pressure, the
+  game's own turns-to-conversion estimate, the governor assigned to it (from
+  `Player:GetGovernors():GetGovernorList()` / `Governor:GetAssignedCity()`) and the garrison, plus
+  `City:GetLoyaltyAdvice()` verbatim.
+- metrics `cities_low_loyalty`, `lowest_loyalty`, `low_loyalty_without_governor`,
+  `cities_falling_loyalty`, `nearest_loyalty_flip`.
+- event `LOYALTY WARNING` naming every city at risk with the numbers and the game's own advice.
+- rule `hold-what-you-take`: fails while a city below 50 loyalty has **neither a governor in it nor
+  a unit on its tile** — exactly the state Moscow was in.
+
+The API was not guessed: the game's own UI uses it (`DLC/Expansion2/UI/CityPanelCulture.lua`,
+`CityBannerManager.lua` — `City:GetCulturalIdentity()`, `GetLoyaltyPerTurn()`,
+`GetTurnsToConversion()`), and the repo's existing `get_cities` query already reads the same pool,
+so the field names come from two independent places. It still wants a live run
+(`.tools/live-capture-test.py --loyalty`) once a game is open, because the query runs in the
+InGame context and only the game can confirm the governor list API in that context.
 
 **B. Measure the melee matchup, not just the melee count.** *(implemented)* `melee-screen` counts
 Warriors and Man-at-Arms alike. `_matchup_metrics` now reports `strongest_enemy_melee_cs` (enemy
@@ -133,8 +141,9 @@ spend whole turns on the field army rather than the walls — are exactly what `
 argument yet that they are the right rules. What none of them says is what to do *after* the
 capture, which is finding A.
 
-Captured by `tests/test_matchup_rules.py` (24 cases; suite 566) and pinned in `AGENTS.md` and
-`SETUP-WINDOWS.md` (18 rules).
+Captured by `tests/test_matchup_rules.py` (24 cases) and `tests/test_loyalty_rules.py` (19 cases);
+suite 585 passing, 19 rules. Pinned in `AGENTS.md` and `SETUP-WINDOWS.md`, and in the directive,
+the skill's directive block and `tactics/06-…md` (what to do after a capture).
 
 ## 6. Caveat on verification
 

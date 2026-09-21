@@ -231,6 +231,19 @@ require: metric(siege_upgrades_available) <= 0
 message: A siege unit can be upgraded with the gold in hand and the war is on. A Catapult does 45 against a city where a Trebuchet does 55, and the window in which a Catapult is the best you have is exactly the window an assault is being decided: live T105-T121 the army fired Catapults from T106 and Trebuchets only from T120 - eleven turns of the campaign at the lower number, and the same three cities took 64 attacks. Call upgrade_unit on it before the next attack, or say in the diary why the gold is being kept.
 -->
 
+## Holding what you take
+
+A captured city is not safe because the enemy is gone. Loyalty takes it back with no battle: live
+T112 Moscow was taken with pop 3, no governor and no garrison, and the game logs show a Free City
+in its place from T116 - T118-T121 and nine attacks went into retaking our own city.
+
+<!-- check
+id: hold-what-you-take
+when: metric(cities_low_loyalty) >= 1
+require: metric(low_loyalty_without_governor) <= 0
+message: A city is below 50 loyalty with no governor in it and no military unit on its tile - exactly the state Moscow was in when it revolted (captured T112, a Free City by T116, retaken T121 at a cost of nine attacks). The turn result carries a LOYALTY WARNING with each city's loyalty, its per-turn pressure, the game's own turns-to-conversion estimate and the game's own advice string. Assign a governor (assign_governor) or put a unit on the city tile before it flips; if the governor is needed at the front instead, say so in the diary - a city that revolts becomes a Free City and has to be besieged again, with metric(cities_low_loyalty) cities currently at risk and the nearest flip metric(nearest_loyalty_flip) turns away.
+-->
+
 ## Development rules that are checkable
 
 <!-- check
