@@ -128,6 +128,24 @@ class TestTheTargetCanBeACity:
         assert "Cities.GetCityInPlot" in lua
         assert "UnitOperationMoveModifiers.ATTACK" in lua
 
+    def test_the_city_estimate_does_not_use_a_later_local(self):
+        # Live T102: the early-return branch concatenated `myHP`, which this function only
+        # defines after it reads the *defender*, so an ungarrisoned city answered
+        # "operator .. is not supported for nil .. string" instead of an estimate. The normal
+        # estimate path (below the branch) still uses myHP - it is defined by then.
+        lua = lq.build_combat_estimate_query(1, 54, 40)
+        branch = lua[lua.index("if enemy == nil then"):lua.index("-- Check diplomatic status")]
+        assert ".. myHP .." not in branch, "myHP is nil at that point in the function"
+        assert "myHPNow" in branch, "the attacker's HP has to be read locally in that branch"
+
+    def test_a_city_target_is_named_before_the_war_check(self):
+        # Live T102: the not-at-war refusal read "Cannot attack unknown" because the city's name
+        # was only resolved after the check that quotes it.
+        lua = lq.build_attack_unit(1, 54, 40)
+        resolve = lua.index("enemyName = Locale.Lookup(c:GetName())")
+        war_check = lua.index("Cannot attack ")
+        assert resolve < war_check, "the name must be resolved before the refusal quotes it"
+
     def test_a_city_strike_can_bombard_an_enemy_city(self):
         lua = lq.build_city_attack(1, 54, 40)
         assert "Cities.GetCityInPlot" in lua

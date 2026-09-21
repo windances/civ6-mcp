@@ -350,7 +350,13 @@ local cityOwner = -1
 if enemy == nil then
     pcall(function()
         local c = Cities.GetCityInPlot({target_x}, {target_y})
-        if c then targetCity = c; cityOwner = c:GetOwner() end
+        if c then
+            targetCity = c
+            cityOwner = c:GetOwner()
+            -- Named here, not further down: the not-at-war message below quotes it, and a city
+            -- that is out of reach should be named in the refusal (live T102 it read "unknown").
+            pcall(function() enemyName = Locale.Lookup(c:GetName()):gsub("|", "/") end)
+        end
     end)
 end
 if enemy == nil and targetCity == nil then
@@ -609,8 +615,12 @@ if enemy == nil then
             end
         end
     end)
+    -- `myHP` is defined further down this function (it reads the defender's pool first), so the
+    -- attacker's HP is read here rather than concatenated as a nil - live T102, an ungarrisoned
+    -- city answered "operator .. is not supported for nil .. string" instead of an estimate.
+    local myHPNow = unit:GetMaxDamage() - unit:GetDamage()
     print("ESTIMATE|" .. attType .. "|CITY_CENTER|" .. effAttCS .. "|0|" .. (isRanged and "1" or "0")
-        .. "||" .. myHP .. "|" .. cHP .. "|" .. cName)
+        .. "||" .. myHPNow .. "|" .. cHP .. "|" .. cName)
     print("{SENTINEL}")
     return
 end
