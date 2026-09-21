@@ -35,6 +35,12 @@ _CONTACT_METRIC_KEYS = (
     "downed_enemy_cities",
     "capture_ready",
     "enemy_city_hp_min",
+    "strongest_enemy_melee_cs",
+    "our_best_melee_cs",
+    "melee_upgrades_available",
+    "min_melee_upgrade_cost",
+    "siege_upgrades_available",
+    "min_siege_upgrade_cost",
     "garrisoned_units",
     "cities_over_garrison",
     "cities_guarded",
@@ -772,6 +778,10 @@ async def _evaluate_checks(gs, turn: int, units: dict | None, now: dict | None):
     # must not cost the whole check run, and the rules read the keys as "no contact".
     metrics = dict(now or {})
     metrics["at_war"] = _at_war_from_row(now)
+    # Gold is read by the affordability gates (`upgrade-the-siege`). It comes from the diary row;
+    # a turn with no row yet reads as "unknown treasury", which switches an affordability gate
+    # off rather than reporting the rule as un-evaluable.
+    metrics.setdefault("gold", 0)
     try:
         metrics.update(await _contact_metrics(gs, turn, units))
     except Exception:
@@ -905,6 +915,14 @@ async def _check_turn_checks(
             capture_text = None
         if capture_text:
             events.append(lq.TurnEvent(priority=2, category="combat", message=capture_text))
+        try:
+            gold = float((now or {}).get("gold", 0) or 0)
+            upgrade_text = _upgrade_event(units, gold, turn)
+        except Exception:
+            log.debug("upgrade report failed", exc_info=True)
+            upgrade_text = None
+        if upgrade_text:
+            events.append(lq.TurnEvent(priority=3, category="combat", message=upgrade_text))
         try:
             stacks = _garrison_metrics(gs, units).get("unexplained_stacks", 0)
         except Exception:
@@ -1085,6 +1103,134 @@ def _capture_event(readiness: list, turn: int) -> str | None:
     return "\n".join(lines)
 
 
+# The front-line roles, by unit type: melee and anti-cavalry, the units that hold a tile, screen
+# a siege train and can take a city. The same set the assault train's "melee" means.
+_MELEE_TYPES = (
+    "WARRIOR",
+    "SWORDSMAN",
+    "MAN_AT_ARMS",
+    "MUSKETMAN",
+    "INFANTRY",
+    "PIKEMAN",
+    "SPEARMAN",
+    "AT_CREW",
+)
+# What the matchup rule wants in hand when the enemy fields one of these.
+_UPGRADED_MELEE = ("SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY")
+_SIEGE_TYPES = ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY")
+
+
+def _matches_type(unit, wanted: tuple[str, ...]) -> bool:
+    """Suffix match on the unit type, the same rule `units()` uses in the check file."""
+    name = (getattr(unit, "unit_type", "") or "").upper()
+    return any(name.endswith(want) or want in name for want in wanted)
+
+
+def _matchup_metrics(threats: list, units: dict | None) -> dict:
+    """The enemy's best front-line unit against ours, and whether an upgrade is waiting.
+
+    Counting melee units answers "do we have a front line"; it does not answer "does our front
+    line survive theirs", and that difference *is* the exchange. Live T116-T119: an enemy
+    Man-at-Arms (CS 45) took 11-20 damage from each of our Archers, hit a Spearman for 79 and an
+    Archer for 82 in single blows, and was removed only by attrition; T101-T116 lost a Battering
+    Ram and a Warrior to a single Battlecry Swordsman (effective CS 42). Both were filed as
+    "melee in contact" and nothing said the match was already lost.
+
+    Scope is three tiles from our units - the enemy this army will actually have to fight - and
+    naval melee is excluded, because a galley off the coast is not what our line is measured
+    against.
+    """
+    metrics = {
+        "strongest_enemy_melee_cs": 0,
+        "our_best_melee_cs": 0,
+        "melee_upgrades_available": 0,
+        "min_melee_upgrade_cost": 0,
+    }
+    for threat in threats or []:
+        klass = (getattr(threat, "promotion_class", "") or "").upper()
+        if "NAVAL" in klass:
+            continue
+        if not ("MELEE" in klass or "ANTI_CAVALRY" in klass):
+            continue
+        if int(getattr(threat, "unit_distance", 999) or 999) > 3:
+            continue
+        metrics["strongest_enemy_melee_cs"] = max(
+            metrics["strongest_enemy_melee_cs"], int(getattr(threat, "combat_strength", 0) or 0)
+        )
+    for unit in (units or {}).values():
+        if not _matches_type(unit, _MELEE_TYPES):
+            continue
+        metrics["our_best_melee_cs"] = max(
+            metrics["our_best_melee_cs"], int(getattr(unit, "combat_strength", 0) or 0)
+        )
+        if getattr(unit, "can_upgrade", False):
+            metrics["melee_upgrades_available"] += 1
+            cost = int(getattr(unit, "upgrade_cost", 0) or 0)
+            if cost and (
+                metrics["min_melee_upgrade_cost"] == 0 or cost < metrics["min_melee_upgrade_cost"]
+            ):
+                metrics["min_melee_upgrade_cost"] = cost
+    return metrics
+
+
+def _siege_upgrade_metrics(units: dict | None) -> dict:
+    """Siege units that can be upgraded, and what the cheapest one costs.
+
+    Live T105-T121: Catapults fired from T106 and Trebuchets only from T120 - eleven turns of
+    the campaign at 45 city damage where 55 was available, in a war that spent 64 attacks on
+    three cities. `UnitInfo` already carries `can_upgrade`/`upgrade_target`/`upgrade_cost`, so
+    the gap is one comparison the rules were not making.
+    """
+    metrics = {"siege_upgrades_available": 0, "min_siege_upgrade_cost": 0}
+    for unit in (units or {}).values():
+        if not _matches_type(unit, _SIEGE_TYPES):
+            continue
+        if not getattr(unit, "can_upgrade", False):
+            continue
+        metrics["siege_upgrades_available"] += 1
+        cost = int(getattr(unit, "upgrade_cost", 0) or 0)
+        if cost and (
+            metrics["min_siege_upgrade_cost"] == 0 or cost < metrics["min_siege_upgrade_cost"]
+        ):
+            metrics["min_siege_upgrade_cost"] = cost
+    return metrics
+
+
+def _upgrade_event(units: dict | None, gold: float, turn: int) -> str | None:
+    """The upgrades the treasury can already pay for, named one by one.
+
+    A rule can say "an upgrade is waiting"; only the unit list can say *which* unit and for how
+    much, which is the difference between a nudge and an order. Unaffordable upgrades are left
+    out when the gold is known: a reminder the treasury cannot satisfy is noise.
+    """
+    ready: list[str] = []
+    for unit in (units or {}).values():
+        if not getattr(unit, "can_upgrade", False):
+            continue
+        cost = int(getattr(unit, "upgrade_cost", 0) or 0)
+        if gold > 0 and cost > gold:
+            continue
+        target = (getattr(unit, "upgrade_target", "") or "?").replace("UNIT_", "")
+        ready.append(
+            f"  {getattr(unit, 'unit_type', '?')} {getattr(unit, 'unit_id', '?')}"
+            f" -> {target} (cost {cost}g)"
+        )
+    if not ready:
+        return None
+    return "\n".join(
+        [
+            f"UPGRADE AVAILABLE (T{turn}) - the treasury holds {gold:.0f}; one `upgrade_unit`"
+            " call each:"
+        ]
+        + ready
+        + [
+            "  A Catapult does 45 against a city where a Trebuchet does 55, and a Warrior (CS 20)"
+            " loses every trade with a Man-at-Arms (CS 45): paying for the upgrade before the"
+            " next assault is cheaper than replacing the unit during it."
+        ]
+    )
+
+
 def _siege_progress_event(gs, turn: int) -> str | None:
     """Say what the assault is doing to the city, and shout when it is doing nothing.
 
@@ -1228,8 +1374,10 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         **_garrison_metrics(gs, units),
         **_siege_metrics(await _siege_posture_for_checks(gs, turn)),
         **_capture_metrics(await _capture_for_checks(gs, turn)),
+        **_siege_upgrade_metrics(units),
     }
     threats = await _threats_for_checks(gs, turn)
+    metrics.update(_matchup_metrics(threats, units))
     if not threats:
         return metrics
     for threat in threats:
@@ -1406,7 +1554,34 @@ def _battle_assessment(metrics: dict, threats: list, turn: int) -> str | None:
     if int(metrics.get("enemies_melee_within_2", 0) or 0):
         lines.append(
             "  counter: enemy melee in contact - ranged fire takes no retaliation; if it is"
-            " promoted with Battlcry, a cavalry attack is not penalised by it, a ranged one is."
+            " promoted with Battlecry, a cavalry attack is not penalised by it, a ranged one is."
+        )
+    enemy_melee = int(metrics.get("strongest_enemy_melee_cs", 0) or 0)
+    our_melee = int(metrics.get("our_best_melee_cs", 0) or 0)
+    # The same threshold `match-their-melee` uses: a Swordsman (35) is where our Warrior/Spearman
+    # line stops being a line. Below that a five-point edge is ordinary terrain.
+    if enemy_melee >= 35 and enemy_melee >= our_melee + 5:
+        best = max(
+            (
+                t
+                for t in in_range
+                if "NAVAL" not in (getattr(t, "promotion_class", "") or "").upper()
+                and (
+                    "MELEE" in (getattr(t, "promotion_class", "") or "").upper()
+                    or "ANTI_CAVALRY" in (getattr(t, "promotion_class", "") or "").upper()
+                )
+            ),
+            key=lambda t: int(getattr(t, "combat_strength", 0) or 0),
+            default=None,
+        )
+        name = getattr(best, "unit_type", "") or "enemy melee"
+        upgrade = int(metrics.get("min_melee_upgrade_cost", 0) or 0)
+        fix = f"`upgrade_unit` for {upgrade}g" if upgrade else "`upgrade_unit`"
+        lines.append(
+            f"  MATCHUP: their {name} is CS {enemy_melee} against our best front-line unit at"
+            f" CS {our_melee or 'none'} - our melee loses every trade and our ranged fire is"
+            f" halved against it. Bring an upgraded melee unit ({fix}) or fight it with"
+            f" concentrated fire only, never one-for-one."
         )
     return "\n".join(lines)
 
@@ -1492,6 +1667,9 @@ def _context_from_row(row: dict | None) -> "object | None":
     # `at_war` is reconstructible from a stored row, so it is not one of the zero-defaults:
     # the war-phase rules can be evaluated against history exactly as they were live.
     metrics.setdefault("at_war", _at_war_from_row(row))
+    # Gold is a row field, but a synthetic or older row may not carry it, and `upgrade-the-siege`
+    # reads it: absent means "unknown treasury", which leaves the rule quiet.
+    metrics.setdefault("gold", 0)
     return turn_checks.CheckContext(
         turn=int(row.get("turn") or 0),
         units=units,

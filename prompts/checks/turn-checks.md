@@ -212,6 +212,25 @@ require: units(WARRIOR, SWORDSMAN, MAN_AT_ARMS, MUSKETMAN, INFANTRY, PIKEMAN, SP
 message: Fewer than 2 melee units. Ranged attacks can never capture a city - only a melee unit walking in takes it - so a stack without melee cannot finish anything it breaks.
 -->
 
+## Matching what they field, and upgrading what we have
+
+Counting units answers "do we have a front line"; it does not answer "does our front line
+survive theirs", and that difference decides the exchange before it starts.
+
+<!-- check
+id: match-their-melee
+when: metric(strongest_enemy_melee_cs) >= 35
+require: units(SWORDSMAN, MAN_AT_ARMS, MUSKETMAN, INFANTRY) >= 1 or metric(attacks_this_turn) >= 1
+message: Enemy melee within three tiles of the army is CS 35 or better while our front line is still Warrior/Spearman tier. The mismatch decides the exchange before it starts - live T116-T119 an enemy Man-at-Arms (CS 45) took 11-20 damage from each of our Archers, dealt 79 to a Spearman and 82 to an Archer in single blows, and was removed only by attrition; T101-T116 lost a Battering Ram and a Warrior to one Battlecry Swordsman (effective CS 42). Either upgrade the melee (Iron Working gives the Swordsman, Military Engineering the Man-at-Arms; metric(melee_upgrades_available) of ours can upgrade, the cheapest for metric(min_melee_upgrade_cost) gold) or mass two or three attackers on that one target this turn instead of trading one-for-one.
+-->
+
+<!-- check
+id: upgrade-the-siege
+when: metric(at_war) >= 1 and metric(siege_upgrades_available) >= 1 and metric(gold) >= metric(min_siege_upgrade_cost)
+require: metric(siege_upgrades_available) <= 0
+message: A siege unit can be upgraded with the gold in hand and the war is on. A Catapult does 45 against a city where a Trebuchet does 55, and the window in which a Catapult is the best you have is exactly the window an assault is being decided: live T105-T121 the army fired Catapults from T106 and Trebuchets only from T120 - eleven turns of the campaign at the lower number, and the same three cities took 64 attacks. Call upgrade_unit on it before the next attack, or say in the diary why the gold is being kept.
+-->
+
 ## Development rules that are checkable
 
 <!-- check

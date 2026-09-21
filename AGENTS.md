@@ -84,6 +84,15 @@ Each turn in order:
    ATTACK modifier, so the capture move was refused. `attack` and `move` now both resolve a city
    at the target tile through `Cities.GetCityInPlot`, and a melee unit ordered onto a 0 HP city
    takes it and reports `CITY TAKEN` — resolve it with `city_action` keep/raze.
+   Two more rules compare what the enemy fields with what you have. **`match-their-melee`** fails
+   while enemy melee within three tiles of the army is CS 35 or better and your front line is
+   still Warrior/Spearman tier — an unupgraded line loses every trade with a Swordsman (35) or a
+   Man-at-Arms (45), and the `BATTLE ASSESSMENT` block adds a `MATCHUP:` line naming the unit, the
+   two combat strengths and the gold an upgrade costs. **`upgrade-the-siege`** fails during a war
+   while a siege unit can be upgraded and the treasury covers it, because a Catapult does 45
+   against a city where a Trebuchet does 55; the turn result carries an **UPGRADE AVAILABLE**
+   block listing each unit, its upgrade target and its price. Massing attackers or doing the
+   upgrade both clear these rules — trading one-for-one with a better unit does not.
 
 ## Diary
 

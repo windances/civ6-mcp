@@ -100,7 +100,8 @@ hole is: loyalty.
 
 ## 5. Proposed optimizations, in priority order
 
-**A. Measure loyalty, and make "hold what you take" a rule.** A city we capture far from home is
+**A. Measure loyalty, and make "hold what you take" a rule.** *(not implemented yet — the
+loyalty API has to be checked live, and the game is closed)* A city we capture far from home is
 a city in revolt waiting to happen — Moscow went from ours (T112) to a Free City (T116) with
 nothing in the turn result saying so. Add a scan over our cities: loyalty, loyalty delta per turn,
 turns-to-revolt, governor, garrison.
@@ -111,16 +112,19 @@ turns-to-revolt, governor, garrison.
 - event `LOYALTY WARNING` naming the city, its loyalty and the nearest governor, printed on the
   turn the capture happens and every turn after.
 
-**B. Measure the melee matchup, not just the melee count.** `melee-screen` counts Warriors and
-Man-at-Arms alike. Add `strongest_enemy_melee_cs` to the threat scan (it already reports
-`promotion_class` and CS) and fail when the enemy has fielded ≥35/45 CS melee while our own melee
-is still Warrior/Spearman tier — with the tech and gold for the upgrade named, as
-`counter-the-cavalry` already does for Spearman/Pikeman. Evidence: T116–T119 above, and the
-promoted Swordsman of T101–T116.
+**B. Measure the melee matchup, not just the melee count.** *(implemented)* `melee-screen` counts
+Warriors and Man-at-Arms alike. `_matchup_metrics` now reports `strongest_enemy_melee_cs` (enemy
+land melee within three tiles) against `our_best_melee_cs`, plus `melee_upgrades_available` and
+`min_melee_upgrade_cost`; `BATTLE ASSESSMENT` adds a `MATCHUP:` line when their melee is CS 35+
+and five points ahead of ours, naming the unit and the price of the upgrade; the rule
+`match-their-melee` fails while that is true and we have neither an upgraded melee unit nor an
+attack going in this turn. Evidence: T116–T119 above, and the promoted Swordsman of T101–T116.
 
-**C. Nudge the siege upgrade.** `UnitInfo` already carries `can_upgrade`, `upgrade_target` and
-`upgrade_cost`; add `siege_upgrades_available` and a rule that fails while a siege unit can
-upgrade and gold covers it. Trebuchets from T120 instead of T108 is the difference between
+**C. Nudge the siege upgrade.** *(implemented)* `UnitInfo` already carries `can_upgrade`,
+`upgrade_target` and `upgrade_cost`; `_siege_upgrade_metrics` adds `siege_upgrades_available` and
+`min_siege_upgrade_cost`, the rule `upgrade-the-siege` fails during a war while an affordable
+siege upgrade is waiting, and the turn result carries an `UPGRADE AVAILABLE` block listing each
+unit, its target and its price. Trebuchets from T120 instead of T108 is the difference between
 1249 city damage over 13 turns and the same total in eight.
 
 **D. Keep what already works.** The two habits this run shows — mass every attacker in range, and
@@ -128,6 +132,9 @@ spend whole turns on the field army rather than the walls — are exactly what `
 `use-your-attacks` and `finish-the-wounded` now ask for; the T105–T121 evidence is the strongest
 argument yet that they are the right rules. What none of them says is what to do *after* the
 capture, which is finding A.
+
+Captured by `tests/test_matchup_rules.py` (24 cases; suite 566) and pinned in `AGENTS.md` and
+`SETUP-WINDOWS.md` (18 rules).
 
 ## 6. Caveat on verification
 
