@@ -1231,6 +1231,9 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
 def build_capture_check_query() -> str:
     """InGame: enemy cities in sight, and whether one of our melee units can take them.
 
+    InGame rather than GameCore because an enemy city's districts and their damage pools are an
+    InGame-only API (the same reason `build_attack_followup_query` runs there). Read-only.
+
     An assault has a last step that no damage number shows: a melee-class unit walks onto the
     city's own tile once its HP pool is empty. Only melee-class units can do it - cavalry, siege
     and support units cannot (`CAPTURE_MOVE` from a Battering Ram is refused), and neither can a

@@ -261,6 +261,43 @@ class TestTheReport:
         assert self._event(STPETERSBURG) is None
 
 
+class TestTheScanPath:
+    def test_the_scan_runs_in_the_ingame_context(self):
+        # An enemy city's districts and their damage pools are InGame-only APIs: sent through
+        # GameCore the query would come back empty, the metric would read 0, and the rule would
+        # never fire - silently, which is the failure mode this test exists for.
+        from civ_mcp.game_state import GameState
+
+        calls: list[str] = []
+
+        class FakeConn:
+            async def execute_write(self, lua, timeout=5.0):
+                calls.append("write")
+                assert "CAPTURE_READY" in lua
+                return [MOSCOW]
+
+            async def execute_read(self, lua, timeout=5.0):
+                calls.append("read")
+                return [MOSCOW]
+
+        gs = GameState.__new__(GameState)
+        gs.conn = FakeConn()
+        rows = asyncio.run(gs.capture_readiness())
+        assert calls == ["write"]
+        assert rows and rows[0].city_name == "Moscow"
+
+    def test_a_failed_scan_returns_nothing_rather_than_raising(self):
+        from civ_mcp.game_state import GameState
+
+        class Broken:
+            async def execute_write(self, lua, timeout=5.0):
+                raise RuntimeError("tuner busy")
+
+        gs = GameState.__new__(GameState)
+        gs.conn = Broken()
+        assert asyncio.run(gs.capture_readiness()) == []
+
+
 class TestTheRule:
     FILE = pathlib.Path("prompts/checks/turn-checks.md")
 

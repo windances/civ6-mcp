@@ -583,15 +583,19 @@ class GameState:
     async def capture_readiness(self) -> list:
         """Visible enemy cities, and whether one of our melee units can take them now.
 
-        Read-only. The last step of an assault has no damage number attached to it: a melee
-        unit walks onto the city's own tile once its HP pool is empty. Only melee-class units
-        can do it and only from that tile, so "how many of ours are adjacent" *is* the answer to
-        whether the city falls this turn. Live, Moscow sat at `city hp: 0/200` for four turns
-        with a Spearman two tiles away, healed about twenty points a turn, and the siege had to
-        be fought again from nothing.
+        Read-only, but run in the InGame context: reading an enemy city's districts and their
+        damage pools is an InGame-only API (the same reason `build_attack_followup_query` runs
+        there). Sent through `execute_write` like the threat scan, which is also read-only.
+
+        The last step of an assault has no damage number attached to it: a melee unit walks onto
+        the city's own tile once its HP pool is empty. Only melee-class units can do it and only
+        from that tile, so "how many of ours are adjacent" *is* the answer to whether the city
+        falls this turn. Live, Moscow sat at `city hp: 0/200` for four turns with a Spearman two
+        tiles away, healed about twenty points a turn, and the siege had to be fought again from
+        nothing.
         """
         try:
-            lines = await self.conn.execute_read(lq.build_capture_check_query())
+            lines = await self.conn.execute_write(lq.build_capture_check_query())
         except Exception as e:
             log.debug("Capture-readiness scan failed: %s", e)
             return []
