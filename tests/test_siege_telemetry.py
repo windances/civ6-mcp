@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import pathlib
 import sys
 
@@ -68,6 +69,80 @@ class TestCityHpHistory:
             gs._record_city_hp(self._estimate("Moscow"), 200 - hp, 200)
             gs._last_snapshot.turn += 1
         assert len(gs.city_hp_history()["Moscow"]) <= 30
+
+
+class TestACityHitIsNeverCalledAKill:
+    """Live T120: four hits on the Free City of Moscow each reported
+
+        damage dealt:200 (killed) | city hp: 200/200 | Post-combat: Target eliminated
+
+    while the city went 200 -> 90 and kept standing. The report took "no UNIT line on the target
+    tile" as a kill, and a city with no garrison unit in it has no UNIT line by definition - so
+    every shot at an empty city read as a kill. That is the same family as the two gaps above: the
+    city number is the only progress there is, and it was being replaced by fiction.
+    """
+
+    class FakeConn:
+        """Answers each builder with the canned reply for that kind of query."""
+
+        def __init__(self, estimate, attack, followup):
+            self.estimate, self.attack, self.followup = estimate, attack, followup
+            self.seen: list[str] = []
+
+        async def execute_write(self, lua, timeout=5.0):
+            self.seen.append(lua)
+            if "ESTIMATE|" in lua:
+                return list(self.estimate)
+            if "RANGE_ATTACK" in lua or "MELEE_ATTACK" in lua:
+                return list(self.attack)
+            if "CITY_DEF" in lua:
+                return list(self.followup)
+            return []
+
+    def _gs(self, followup: list[str]):
+        gs = GameState.__new__(GameState)
+        gs._attacks_this_turn = 0
+        gs._local_player_id = 0
+        gs._city_hp_history = {}
+        gs._last_snapshot = type("Snap", (), {"turn": 120})()
+        gs._high_water_turn = 120
+        gs.conn = self.FakeConn(
+            ["ESTIMATE|UNIT_ARCHER|CITY_CENTER|25|0|1||100|200|Moscow"],
+            ["OK:RANGE_ATTACK|target:Moscow (city) at (54,40)|pre_hp:86/200|your HP:51"
+             "|range:2 dist:2"],
+            followup,
+        )
+        return gs
+
+    def test_an_empty_city_is_not_reported_as_killed(self):
+        # The city read lags the hit in this reply (still 86/200, the pre-attack value).
+        gs = self._gs(["CITY_DEF|wall:0/0|garrison:86/200"])
+        text = asyncio.run(gs.attack_unit(983043, 54, 40))
+        assert "Target eliminated" not in text
+        assert "(killed)" not in text
+        assert "city hp: 86/200" in text
+
+    def test_a_real_city_delta_is_reported(self):
+        gs = self._gs(["CITY_DEF|wall:0/0|garrison:70/200"])
+        text = asyncio.run(gs.attack_unit(983043, 54, 40))
+        assert "damage dealt:16" in text
+        assert "city hp: 70/200" in text
+        assert "(killed)" not in text
+
+    def test_a_city_that_is_gone_still_reads_as_gone(self):
+        # No CITY_DEF line and no unit: the tile is empty, which is what a capture looks like.
+        gs = self._gs([])
+        text = asyncio.run(gs.attack_unit(983043, 54, 40))
+        assert "Target eliminated" in text
+
+    def test_a_killed_field_unit_still_reads_as_killed(self):
+        gs = self._gs([])
+        gs.conn.estimate = ["ESTIMATE|UNIT_ARCHER|UNIT_WARRIOR|25|20|1|none|100|71|"]
+        gs.conn.attack = ["OK:RANGE_ATTACK|target:UNIT_WARRIOR at (53,40)|pre_hp:71/100"
+                          "|your HP:100|range:2 dist:2"]
+        text = asyncio.run(gs.attack_unit(983043, 53, 40))
+        assert "Target eliminated" in text
+        assert "damage dealt:71 (killed)" in text
 
 
 class TestSiegeProgressEvent:

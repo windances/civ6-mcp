@@ -369,18 +369,40 @@ class GameState:
                 followup_str = _format_attack_followup(followup, local_id)
                 city_def = _extract_city_defense(followup)
 
-                # Check if target was eliminated (no enemy units on tile)
+                # Check if target was eliminated (no enemy units on tile). A city tile with no
+                # garrison unit in it has *no* UNIT line at all, so this read on its own calls a
+                # perfectly healthy city dead: live T120, four hits on the Free City of Moscow
+                # each answered "damage dealt:200 (killed)" and "Post-combat: Target eliminated"
+                # while the city went 200 -> 90 and kept standing. A city is only gone when the
+                # CITY_DEF line is gone with it.
                 enemy_units = [
                     l
                     for l in followup
                     if l.startswith("UNIT|") and f"owner:{local_id}" not in l
                 ]
-                eliminated = not enemy_units
+                eliminated = not enemy_units and city_def is None
 
                 # Build damage report from estimate (authoritative) or followup
                 post_hp = _extract_post_hp(followup, local_id)
                 damage_info = ""
-                if eliminated and pre_hp is not None:
+                if city_def is not None and pre_hp is not None:
+                    # For a city the pool is the progress - and it is the *only* progress for an
+                    # unwalled one. The followup read can lag the attack by a frame, so a real
+                    # delta wins and the estimate is the fallback; "killed" is never a city answer.
+                    city_hp, city_max = city_def[2], city_def[3]
+                    if city_hp < pre_hp:
+                        damage_info = f"|damage dealt:{pre_hp - city_hp}"
+                        followup_str = f"city {city_hp}/{city_max}"
+                    elif est_dmg and est_dmg > 0:
+                        capped = min(est_dmg, pre_hp)
+                        damage_info = f"|est damage dealt:~{capped}"
+                        followup_str = (
+                            f"~{pre_hp - capped}/{pre_hp} (estimate - the city read lags the hit)"
+                        )
+                    else:
+                        damage_info = f"|damage dealt:none read (city still {city_hp}/{city_max})"
+                        followup_str = f"city {city_hp}/{city_max} (read unchanged)"
+                elif eliminated and pre_hp is not None:
                     damage_info = f"|damage dealt:{pre_hp} (killed)"
                     followup_str = "Target eliminated"
                 elif pre_hp is not None and post_hp is not None and post_hp < pre_hp:

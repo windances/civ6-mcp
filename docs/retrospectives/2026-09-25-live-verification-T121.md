@@ -206,7 +206,51 @@ should use. Every unit answers `false` at T113, as it must: Nationalism is not r
 two same-type units are stacked. Note `Players[me]:GetCivics()` is **nil** in InGame, so civic
 state must be read in GameCore; the command gate is the better check anyway.
 
-## How to test these changes
+## 9. Fighting the siege: what the city-attack report actually said
+
+The capture check needs a city at 0 HP with a capture unit adjacent, and no save holds that state,
+so the siege was played out on the reloaded T120 (`AutoSave_0120`, Moscow a Free City at 200/200
+with no walls). Ranged fire only, per the human's instruction, with the chariots held back for the
+capture. Four things came out of it.
+
+**The attack report called every hit a kill.** Four hits in the first volley each answered:
+
+```
+RANGE_ATTACK|target:莫斯科 (city) at (54,40)|pre_hp:200/200|...|damage dealt:200 (killed)|city hp: 200/200
+Post-combat: Target eliminated
+```
+
+while the city went 200 -> 90 and kept standing. `game_state.py` decided `eliminated` from "are
+there enemy UNIT lines on the target tile", and a city with no garrison unit in it has no UNIT line
+by definition - so every shot at an empty city read as a kill, and the city HP that followed was the
+pre-attack value. This is the same family as the two telemetry gaps this file's tests were written
+for: the one number that says whether the siege is working was replaced by fiction. Fixed: a city
+tile is only "gone" when its `CITY_DEF` line is gone too, the city branch reports the pool delta (or
+says the read lagged), and four tests pin it.
+
+**The city heals exactly as the doctrine says.** 200 -> 90 in one volley, then 90 -> 110 across the
+turn boundary at `supply 4/6` - the twenty-point supply-line heal, on schedule.
+
+**Heavy cavalry is allowed to attack a city tile.** A 9 HP Heavy Chariot ordered onto the enemy city
+tile went through as an attack (`CAPTURE_MOVE|54,40|from:55,40|now_at:-9999,-9999|...|
+STOPPED_MID_PATH`), dealt about 24 damage and was destroyed by the retaliation. So the class gate is
+not on *attacking* a city. Whether a Heavy Chariot may **capture** a broken one is still open, and it
+matters: the capture scan counts only MELEE and ANTI_CAVALRY promotion classes, and the human's
+instruction for this battle was that the chariot is the unit for the capture. If a chariot takes
+Moscow, the scan has a false negative and the TAKE THE CITY block was silent next to a city a
+chariot could have walked into. The response above is also unreadable on its own - `now_at` prints
+the invalid-plot sentinel and the deltas are computed from it, with nothing saying the unit died.
+
+**Two writers cannot share one game.** The auto-battle was left running in the background; the human
+reloaded T120 while it was mid-turn, it kept the tuner connection and kept ending turns, and the
+branch ran on to T123 underneath the reload. FireTuner serves one client and the game has one state:
+a background loop and a human at the keyboard are two writers. The battle driver now runs in the
+foreground, one turn per command, and never in the background while the human may be playing.
+
+**Smaller note:** reading the unit list immediately after `end_turn` returns every unit on 0 moves -
+the turn has not finished settling. Re-read before concluding a unit is out of moves.
+
+
 
 Two ways in. **Launch the game yourself** (desktop or Steam) and the sandbox is not involved at
 all: the game writes its own profile with your own rights, and every command below runs under the
@@ -272,13 +316,18 @@ otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loya
 
 ## What is still not verified live
 
-- **The capture move itself.** `supply:C/T` is done (§5), but ordering a melee unit onto a 0 HP
-  city tile (`CAPTURE_MOVE` -> `CITY TAKEN`) still needs a board with a city at 0 HP and a melee
-  unit adjacent, and it is the one check that **orders a unit**. No save contains that state: the
-  game writes `AutoSave_NNNN` at the *start* of a turn, so the "broken to 0 and left standing"
-  window (T120, hand-played) exists only inside that turn. T113 and T120 both show the besieged
-  city at full 200 HP. Closing it therefore needs one of: playing a city down to 0 and capturing
-  it (a real multi-turn battle), or a disposable sandbox game where the board can be built.
+- **The capture move itself.** `supply:C/T` is done (§5), but ordering a unit onto a 0 HP city tile
+  (`CAPTURE_MOVE` -> `CITY TAKEN`) still needs a city at 0 HP with a capture unit adjacent, and it
+  is the one check that **orders a unit**. No save contains that state (the game writes
+  `AutoSave_NNNN` at the *start* of a turn), so it has to be played out - and the playing found the
+  reporting bug in §9. The T120 battle reached Moscow at 0/200 by T123; the run that finishes it
+  must (a) fire with ranged units only, (b) keep one chariot for the capture, (c) read the city's
+  own number rather than trusting the per-attack "damage dealt" line, and (d) run in the foreground
+  one turn at a time.
+- **Whether cavalry may capture.** The capture scan counts MELEE and ANTI_CAVALRY promotion classes
+  and excludes CAVALRY (§9). The game let a Heavy Chariot *attack* a city tile; capture is untested.
+  If a chariot takes the city, `build_capture_check_query` needs CAVALRY added and the doctrine text
+  corrected with it.
 - **The river `-5` branch.** No river-crossing pair existed at T113 or T121 (§6). To close it: a
   board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
   `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for
