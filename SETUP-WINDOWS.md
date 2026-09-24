@@ -1327,6 +1327,27 @@ the direct EXE starts and the process is gone within two minutes, and no tuner p
 opens. With `danger-full-access` the handoff works in 2s. The *load* step needs no wider
 mode - it was reproduced in the confined sandbox, which is how the submenu defect above
 was separated from a sandbox effect.
+
+Re-measured on 2026-09-25 with the mechanism, because "the game dies" invites the wrong
+diagnosis (crash, missing DX12, Steam not running): the process exits before writing a
+single line to `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\Logs` - the whole
+`Logs`/`dumps` tree still had 2026-09-22 timestamps afterwards. A write probe in that same
+tree is what fails:
+
+```
+New-Item : Access to the path '...\Firaxis Games\Sid Meier's Civilization VI\Logs\sandbox-probe.txt' is denied.
+[sandbox: file access denied under workspace-write mode]
+```
+
+The game writes its profile, cache and logs there (and saves under `Documents\My Games`),
+both outside the workspace, so a confined launch can only die at startup. Launching the
+DX12 EXE with `danger-full-access` opened the tuner port within 45s on the same machine, so
+nothing else was wrong: `EnableTuner 1` was already set at
+`%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\AppOptions.txt:75`, Steam was
+running, and app 289070 resolves through the `D:\SteamLibrary` entry in
+`libraryfolders.vdf` (`_find_game_exe_win32` reads that file, so a non-default library is
+fine). Under the confined mode this launch is not a "sometimes flaky" operation - it cannot
+work, and the escalation prompt is the intended path.
 | exact screen signatures | a tolerant one (`与能力`) | Windows OCR reads 特征与能力 as 每征与能力, so an exact match fails on the one screen the load must end on |
 
 `CIV_MCP_PRINTWINDOW_CAPTURE=1` restores PrintWindow for an occluded or minimised

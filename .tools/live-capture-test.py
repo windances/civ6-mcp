@@ -216,11 +216,22 @@ async def main() -> int:
         print("\n=== loyalty of our cities - read-only ===")
         rows = await gs.city_loyalty()
         for city in rows:
+            outcome = (getattr(city, "conversion_outcome", "") or "?")
+            if getattr(city, "losing", False):
+                direction = f"LOSING {city.loyalty_per_turn:+.1f}/turn"
+                if city.turns_to_revolt > 0:
+                    direction += f", revolts in {city.turns_to_revolt}"
+                owner = (getattr(city, "transfer_name", "") or "").strip()
+                if owner:
+                    direction += f" -> {owner}"
+            else:
+                direction = f"{outcome} {city.loyalty_per_turn:+.1f}/turn"
+                if city.turns_to_flip > 0:
+                    direction += f", full in {city.turns_to_flip}"
             print(
                 f"  {city.city_name}@({city.x},{city.y}) pop {city.population}:"
                 f" loyalty {city.loyalty:.0f}/{city.loyalty_max:.0f}"
-                f" {city.loyalty_per_turn:+.1f}/turn"
-                + (f", flips in {city.turns_to_flip}" if city.turns_to_flip > 0 else "")
+                f" {direction}"
                 + f" - governor: {city.governor or 'none'}, garrison: {city.garrison}"
                 + (f' | game advice: "{city.advice}"' if city.advice else "")
             )

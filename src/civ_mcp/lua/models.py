@@ -719,13 +719,20 @@ class CityLoyalty:
     """One of our cities' loyalty, and what is holding it up.
 
     ``loyalty`` is the 0-100 pool, ``loyalty_per_turn`` the current pressure (negative means the
-    city is falling) and ``turns_to_flip`` the game's own estimate of when it revolts
-    (``City:GetCulturalIdentity():GetTurnsToConversion()``). ``advice`` is the game's own
+    city is falling) and ``conversion_outcome`` the game's own word for which way it is going
+    (``GAINING_LOYALTY`` / ``LOSING_LOYALTY`` / ``STABLE``). ``turns_to_flip`` is
+    ``GetTurnsToConversion()`` verbatim, which **is not a revolt countdown on its own**: the game
+    reads it together with the outcome (`CityBannerManager.lua:2355-2358` warns only when
+    ``LOSING_LOYALTY and nTurns < 20``), and while a city gains, the same figure counts turns to a
+    full pool. Use ``turns_to_revolt`` for the revolt reading, ``losing`` for the direction, and
+    ``transfer_name`` (only set while losing) for who takes it. ``advice`` is the game's own
     localized recommendation, which is worth more than our guess at the fix.
 
     Why this exists: a city captured far from home revolts. Live, Moscow was taken at T112 with
     pop 3, no governor and no garrison, appeared as a Free City in the logs at T116, and was
     retaken at T121 - 9 attacks and four turns of the campaign spent on a city we already owned.
+    Live again at T121 the same city stood at 50/100, +15/turn, ``turns=4`` and
+    ``GAINING_LOYALTY``: recovered in four turns, which a bare countdown calls a revolt in four.
     """
 
     city_id: int
@@ -740,11 +747,33 @@ class CityLoyalty:
     governor: str = ""
     garrison: int = 0
     advice: str = ""
+    conversion_outcome: str = ""
+    transfer_to: int = -1
+    transfer_name: str = ""
+
+    @property
+    def losing(self) -> bool:
+        """The loyalty pool is draining - the only state in which a countdown means a revolt.
+
+        The game's own word wins when we have it (it is the same call the banner makes); without
+        it, the sign of the pressure is the best available reading.
+        """
+        outcome = (self.conversion_outcome or "").upper()
+        if outcome.endswith("LOSING_LOYALTY"):
+            return True
+        if outcome.endswith("GAINING_LOYALTY"):
+            return False
+        return self.loyalty_per_turn < 0
+
+    @property
+    def turns_to_revolt(self) -> int:
+        """Turns until this city becomes a Free City, or 0 when it is not draining."""
+        return self.turns_to_flip if self.losing else 0
 
     @property
     def falling(self) -> bool:
         """Loyalty is going down this turn."""
-        return self.loyalty_per_turn < 0
+        return self.losing
 
     @property
     def low(self) -> bool:

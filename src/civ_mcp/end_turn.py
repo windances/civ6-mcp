@@ -1281,7 +1281,7 @@ def _loyalty_metrics(readiness: list) -> dict:
             metrics["cities_low_loyalty"] += 1
             if not getattr(city, "governor", "") and int(getattr(city, "garrison", 0) or 0) <= 0:
                 metrics["low_loyalty_without_governor"] += 1
-            flip = int(getattr(city, "turns_to_flip", 0) or 0)
+            flip = int(getattr(city, "turns_to_revolt", 0) or 0)
             if flip > 0 and (
                 metrics["nearest_loyalty_flip"] == 0 or flip < metrics["nearest_loyalty_flip"]
             ):
@@ -1296,9 +1296,16 @@ def _loyalty_event(readiness: list, turn: int) -> str | None:
     """Name the cities that are at risk of leaving, with the game's own advice for each.
 
     Printed while any city is below 50 loyalty or losing loyalty this turn. Every fact in it
-    comes from the game - the pool, the per-turn pressure, the turns-to-conversion estimate and
-    `City:GetLoyaltyAdvice()` - because the fix depends on why the city is falling (population
-    pressure, no governor, a nearby rival's culture) and the game already says which.
+    comes from the game - the pool, the per-turn pressure, the direction the game says it is going
+    (``conversion_outcome``), the turns-to-conversion estimate, the next owner while it is
+    draining, and `City:GetLoyaltyAdvice()` - because the fix depends on why the city is falling
+    (population pressure, no governor, a nearby rival's culture) and the game already says which.
+
+    The direction is printed *next to* the countdown, never instead of it: the countdown is a
+    revolt countdown only while the city is losing (the game's own banner reads the two together,
+    `CityBannerManager.lua:2355-2358`). Live T121, Moscow read 50/100, +15/turn, 4 turns and
+    ``GAINING_LOYALTY`` - a city recovering in four turns that a bare countdown calls a revolt in
+    four, which is the same mistake in the other direction as missing the revolt T116.
     """
     at_risk = [
         c
@@ -1308,7 +1315,7 @@ def _loyalty_event(readiness: list, turn: int) -> str | None:
     if not at_risk:
         return None
     worst = min(at_risk, key=lambda c: float(getattr(c, "loyalty", 100.0) or 0.0))
-    flip = int(getattr(worst, "turns_to_flip", 0) or 0)
+    flip = int(getattr(worst, "turns_to_revolt", 0) or 0)
     head = f"LOYALTY WARNING (T{turn}) - {len(at_risk)} city(ies) below 50 loyalty or losing it"
     if flip > 0:
         head += f"; the first revolt is {flip} turn(s) away"
@@ -1318,14 +1325,30 @@ def _loyalty_event(readiness: list, turn: int) -> str | None:
         name = getattr(city, "city_name", "?") or "?"
         where = f"({getattr(city, 'x', '?')},{getattr(city, 'y', '?')})"
         per_turn = float(getattr(city, "loyalty_per_turn", 0.0) or 0.0)
-        flip = int(getattr(city, "turns_to_flip", 0) or 0)
+        losing = bool(getattr(city, "losing", False))
         gov = getattr(city, "governor", "") or "none"
+        # Which way the pool is moving decides what the countdown means, so it is always shown.
+        if losing:
+            direction = f", losing {abs(per_turn):.1f}/turn"
+            flip = int(getattr(city, "turns_to_revolt", 0) or 0)
+            owner = (getattr(city, "transfer_name", "") or "").strip()
+            if not owner:
+                transfer = int(getattr(city, "transfer_to", -1) or -1)
+                owner = f"player {transfer}" if transfer >= 0 else ""
+            if flip > 0:
+                direction += f", revolts in {flip}" + (f" -> {owner}" if owner else "")
+            elif owner:
+                direction += f" -> {owner}"
+        else:
+            direction = f", gaining {abs(per_turn):.1f}/turn"
+            full = int(getattr(city, "turns_to_flip", 0) or 0)
+            if full > 0:
+                direction += f", full in {full}"
         detail = (
             f"  {name} {where} pop {int(getattr(city, 'population', 0) or 0)}:"
             f" loyalty {float(getattr(city, 'loyalty', 0.0) or 0):.0f}"
-            f"/{float(getattr(city, 'loyalty_max', 100.0) or 100):.0f},"
-            f" {per_turn:+.1f}/turn"
-            + (f", flips in {flip}" if flip > 0 else "")
+            f"/{float(getattr(city, 'loyalty_max', 100.0) or 100):.0f}"
+            + direction
             + f" - governor: {gov}, garrison: {int(getattr(city, 'garrison', 0) or 0)}"
         )
         advice = (getattr(city, "advice", "") or "").strip()

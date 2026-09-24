@@ -2841,14 +2841,22 @@ def _game_probe(timeout: float = 5.0) -> dict:
             await conn.disconnect()
 
     def probe_once() -> dict:
+        # Inside a running event loop `asyncio.run` refuses to nest - and it refuses *after*
+        # `probe()` has already built the coroutine, which is then collected un-awaited and
+        # prints "coroutine 'probe' was never awaited" on stderr. Check for the loop first so
+        # the off-loop path is taken without ever creating the orphan. Observed 2026-09-25
+        # (the warning, from a recovery script) - the nesting itself was found 2026-09-20.
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            return _probe_off_loop(probe)
         try:
             return asyncio.run(probe())
         except RuntimeError:
-            # Already inside a running event loop: asyncio.run refuses to nest, and the
-            # refusal used to be caught below and handed back as "no connection" - the
-            # same reading as a game that is not there - for a game whose tuner was open.
-            # Observed on 2026-09-20 by calling game_status() from an async recovery
-            # script.
+            # Not the nesting case (that was handled above), but asyncio.run can still fail
+            # to start a loop; the thread path is the only remaining answer.
             return _probe_off_loop(probe)
         except Exception as exc:  # noqa: BLE001 - a probe must never raise into a caller
             return {

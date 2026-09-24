@@ -1012,6 +1012,47 @@ class TestGameStateIsQueryable:
         assert probe["turn"] == 80
         assert "event loop" not in probe["note"]
 
+    def test_the_off_loop_probe_does_not_build_an_orphan_coroutine(self, monkeypatch):
+        # The nesting check used to live in an `except RuntimeError`, but asyncio.run refuses
+        # to nest only *after* probe() has already built its coroutine: that object was then
+        # collected un-awaited and Python printed
+        #   RuntimeWarning: coroutine '_game_probe.<locals>.probe' was never awaited
+        # on stderr on every call from inside a loop (seen 2026-09-25 in a recovery script).
+        # Ask for the loop before constructing anything.
+        import asyncio
+        import gc
+        import warnings
+
+        import civ_mcp.connection as connection
+
+        class LiveConnection:
+            def __init__(self, *args, **kwargs):
+                self.ingame_index = 0
+
+            async def connect(self):
+                return None
+
+            async def disconnect(self):
+                return None
+
+            async def execute_write(self, lua, timeout=5.0):
+                return ["TURN|80"]
+
+        monkeypatch.setattr(connection, "GameConnection", LiveConnection)
+
+        async def inside_a_loop():
+            return gl._game_probe()
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            probe = asyncio.run(inside_a_loop())
+            gc.collect()
+
+        assert probe["turn"] == 80, probe
+        assert not [w for w in caught if "never awaited" in str(w.message)], (
+            "the off-loop probe left an un-awaited coroutine behind"
+        )
+
     def test_the_probe_survives_a_dead_tuner(self, monkeypatch):
         # Nothing listening: the probe answers, it does not raise. The fake goes on
         # the connection module because the probe imports the class at call time.

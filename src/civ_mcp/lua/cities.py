@@ -26,6 +26,14 @@ def build_loyalty_check_query() -> str:
     ``Player:GetGovernors():GetGovernorList()`` with ``Governor:GetAssignedCity()`` for who is
     governing what. ``City:GetLoyaltyAdvice()`` is the game's own recommendation, printed
     verbatim rather than guessed at.
+
+    ``GetTurnsToConversion()`` is printed **with** ``GetConversionOutcome()`` (STABLE=0,
+    LOSING_LOYALTY=1, GAINING_LOYALTY=2, measured live 2026-09-25), because on its own the number
+    is ambiguous: the game's own banner reads the two together
+    (`CityBannerManager.lua:2355-2358` - warn only when ``LOSING_LOYALTY and nTurns < 20``).
+    While a city is *gaining*, the same figure counts turns to a full pool. Live, Moscow at
+    T121 stood at 50/100, +15/turn, ``turns=4`` and ``GAINING_LOYALTY`` - a city recovering in
+    four turns that a countdown read on its own calls a revolt in four.
     """
     return """
 local me = Game.GetLocalPlayer()
@@ -49,9 +57,17 @@ pcall(function()
         end
     end
 end)
+-- Only TAB/LF/CR can break "one city, one protocol line". The %c class cannot be used for it: it
+-- is not locale-neutral. The C locale and CP1252 both count 0x81 0x8D 0x8F 0x90 0x9D as control
+-- codes, and those byte values occur inside CJK UTF-8 sequences - live 2026-09-25 that class ate
+-- 20 bytes out of a 540-byte Chinese advice string (366 high bytes in, 346 out) and the client
+-- then decoded the mangled sequence as U+FFFD. Built with string.char so no escape can be
+-- misread as a pattern class.
+local breaks = "[" .. string.char(9) .. string.char(10) .. string.char(13) .. "]"
 for _, c in pPlayer:GetCities():Members() do
     local cid = c:GetID()
     local loy, loyMax, loyPT, flip = 100.0, 100.0, 0.0, 0
+    local outcome, transfer, transferName = "", -1, ""
     pcall(function()
         local cult = c:GetCulturalIdentity()
         if cult then
@@ -59,6 +75,24 @@ for _, c in pPlayer:GetCities():Members() do
             loyMax = cult:GetMaxLoyalty()
             loyPT = cult:GetLoyaltyPerTurn()
             flip = cult:GetTurnsToConversion()
+            local oc = cult:GetConversionOutcome()
+            pcall(function()
+                for k, v in pairs(IdentityConversionOutcome) do
+                    if v == oc then outcome = k end
+                end
+            end)
+            if outcome == "" then outcome = tostring(oc) end
+            -- The next owner is only meaningful while the city is draining, which is also the
+            -- only case the game names it for.
+            if outcome == "LOSING_LOYALTY" then
+                transfer = cult:GetPotentialTransferPlayer()
+                if transfer and transfer >= 0 then
+                    pcall(function()
+                        transferName = Locale.Lookup(
+                            PlayerConfigurations[transfer]:GetCivilizationDescription())
+                    end)
+                end
+            end
         end
     end)
     local garrison = 0
@@ -78,11 +112,9 @@ for _, c in pPlayer:GetCities():Members() do
     pcall(function() advice = Locale.Lookup(c:GetLoyaltyAdvice()) end)
     local name = "unknown"
     pcall(function() name = Locale.Lookup(c:GetName()) end)
-    -- The advice string is free text: strip the delimiters and every control character (newline,
-    -- tab, CR) so one city is still exactly one protocol line. `%c` rather than "[\\r\\n]": the
-    -- escaped form is a *character set* of backslash, r and n, which would eat letters instead.
-    advice = tostring(advice):gsub("|", "/"):gsub("%c", " ")
-    name = tostring(name):gsub("|", "/")
+    advice = tostring(advice):gsub("|", "/"):gsub(breaks, " ")
+    name = tostring(name):gsub("|", "/"):gsub(breaks, " ")
+    transferName = tostring(transferName):gsub("|", "/"):gsub(breaks, " ")
     print("CITY_LOYALTY|" .. cid .. "|" .. name .. "|" .. c:GetX() .. "," .. c:GetY()
         .. "|pop:" .. c:GetPopulation()
         .. "|loyalty:" .. string.format("%.1f", loy)
@@ -91,14 +123,22 @@ for _, c in pPlayer:GetCities():Members() do
         .. "|flip:" .. flip
         .. "|governor:" .. (governed[cid] or "")
         .. "|garrison:" .. garrison
-        .. "|" .. advice)
+        .. "|" .. advice
+        .. "|outcome:" .. outcome
+        .. "|transfer:" .. transfer
+        .. "|transfer_name:" .. transferName)
 end
 print("{SENTINEL}")
 """.replace("{SENTINEL}", SENTINEL)
 
 
 def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
-    """``CITY_LOYALTY|<id>|<name>|<x>,<y>|pop:N|loyalty:N|max:N|per_turn:N|flip:N|governor:X|garrison:N|<advice>``."""
+    """``CITY_LOYALTY|<id>|<name>|<x>,<y>|pop:N|loyalty:N|max:N|per_turn:N|flip:N|governor:X|garrison:N|<advice>|outcome:X|transfer:N|transfer_name:X``.
+
+    The three trailing fields are read by prefix rather than by position: the advice is free text
+    and is the one field whose content the game chooses, so anything appended after it must not be
+    addressed by index.
+    """
     out: list[CityLoyalty] = []
     for line in lines:
         if not line.startswith("CITY_LOYALTY|"):
@@ -118,6 +158,19 @@ def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
             except (IndexError, ValueError):
                 return default
 
+        def text_field(prefix: str) -> str:
+            for token in parts[12:]:
+                if token.startswith(prefix + ":"):
+                    return token.split(":", 1)[1]
+            return ""
+
+        outcome = text_field("outcome")
+        transfer_name = text_field("transfer_name")
+        try:
+            transfer = int(text_field("transfer"))
+        except ValueError:
+            transfer = -1
+
         out.append(
             CityLoyalty(
                 city_id=int(parts[1]) if parts[1].lstrip("-").isdigit() else 0,
@@ -132,6 +185,9 @@ def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
                 governor=parts[9].split(":", 1)[-1] if len(parts) > 9 else "",
                 garrison=int(number(parts[10], 0)) if len(parts) > 10 else 0,
                 advice=parts[11] if len(parts) > 11 else "",
+                conversion_outcome=outcome,
+                transfer_to=transfer,
+                transfer_name=transfer_name,
             )
         )
     return out
