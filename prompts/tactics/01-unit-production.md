@@ -5,7 +5,8 @@ Read when proposing production, a purchase or an upgrade.
 ## What the army is for, in one line
 
 Production is not "build units". It is **keeping the establishment the current war needs**:
-enough siege to break a city, enough melee to take it, enough ranged to clear the garrison, and
+enough siege to break a city, enough melee to take it, enough ranged to take the city's HP down
+(a garrison sitting inside the city takes no damage - see file 6), and
 enough screens to keep the siege alive - while every city still keeps one garrison and the
 economy keeps compounding.
 

@@ -73,7 +73,10 @@ Each turn in order:
    attacking a city, the result now always carries its numbers — `city hp: N/200, walls: N/100 or
    none` — and the turn result carries a **SIEGE PROGRESS** block with the delta, escalating to
    `SIEGE STALLED` after three recorded turns without a net drop. A city heals about twenty points
-   a turn: if it is not going down, fix the assault or break it off rather than feeding it.
+   a turn **while it has a supply line** — the manual's rule is that any adjacent hex outside your
+   units' zone of control is a supply line, so standing on (or beside) every adjacent hex stops the
+   heal outright, which is cheaper than out-damaging it. Fire that neither cuts the supply nor
+   out-damages the healing is fire that never happened: fix the assault or break it off.
    **A city only changes hands when a melee unit walks onto its tile**, and that last step has no
    damage number attached to it, so the turn result carries a **TAKE THE CITY** block whenever an
    enemy city's HP pool is empty: it names the melee unit in reach and the tile to move it to, and

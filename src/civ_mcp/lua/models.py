@@ -686,6 +686,22 @@ class CaptureReadiness:
     melee_adjacent: int = 0
     melee_within_2: int = 0
     melee_unit: str = ""
+    # Supply line: how many of the city's adjacent hexes are cut (one of our military units is on
+    # them or beside them). The manual's rule is that a city heals while **any** adjacent hex is
+    # outside our zone of control, so `supply_open` decides whether an assault has to out-damage a
+    # heal at all - cutting the last open hex is a lever the army can pull.
+    supply_covered: int = 0
+    supply_total: int = 0
+
+    @property
+    def supply_open(self) -> int:
+        """Adjacent hexes still feeding the city; zero means it is not healing."""
+        return max(0, self.supply_total - self.supply_covered)
+
+    @property
+    def supplied(self) -> bool:
+        """Still has a supply line, so it still heals about twenty points a turn."""
+        return self.supply_total > 0 and self.supply_open > 0
 
     @property
     def down(self) -> bool:

@@ -35,6 +35,8 @@ _CONTACT_METRIC_KEYS = (
     "downed_enemy_cities",
     "capture_ready",
     "enemy_city_hp_min",
+    "enemy_supply_open_min",
+    "enemy_cities_supplied",
     "strongest_enemy_melee_cs",
     "our_best_melee_cs",
     "melee_upgrades_available",
@@ -907,7 +909,9 @@ async def _check_turn_checks(
         if posture_text:
             events.append(lq.TurnEvent(priority=3, category="combat", message=posture_text))
         try:
-            progress_text = _siege_progress_event(gs, turn)
+            progress_text = _siege_progress_event(
+                gs, turn, await _capture_for_checks(gs, turn)
+            )
         except Exception:
             log.debug("siege progress report failed", exc_info=True)
             progress_text = None
@@ -1036,7 +1040,8 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
     elif int(metrics.get("siege_in_city_range", 0) or 0):
         lines.append(
             "  In firing position with a screen. Order of work: siege knocks the walls, melee takes"
-            " the city, ranged shoots the garrison."
+            " the city, ranged shoots the city's HP - a garrison inside takes no damage (its"
+            " strength is added to the city's) and is only a target once it steps out."
         )
     return "\n".join(lines)
 
@@ -1055,6 +1060,11 @@ def _capture_metrics(readiness: list) -> dict:
         "downed_enemy_cities": 0,
         "capture_ready": 0,
         "enemy_city_hp_min": 999,
+        # Supply line: an enemy city heals while any adjacent hex is outside our zone of control,
+        # so the count of open hexes on the city we are grinding is what decides whether the
+        # bombardment is fighting a heal or not.
+        "enemy_supply_open_min": 999,
+        "enemy_cities_supplied": 0,
     }
     for entry in readiness or []:
         hp = int(getattr(entry, "hp", 0) or 0)
@@ -1062,6 +1072,11 @@ def _capture_metrics(readiness: list) -> dict:
         if max_hp <= 0:
             continue
         metrics["enemy_city_hp_min"] = min(metrics["enemy_city_hp_min"], hp)
+        open_hexes = int(getattr(entry, "supply_open", 0) or 0)
+        if int(getattr(entry, "supply_total", 0) or 0) > 0:
+            metrics["enemy_supply_open_min"] = min(metrics["enemy_supply_open_min"], open_hexes)
+            if open_hexes > 0:
+                metrics["enemy_cities_supplied"] += 1
         if hp <= 0:
             metrics["downed_enemy_cities"] += 1
             if int(getattr(entry, "melee_adjacent", 0) or 0) > 0:
@@ -1326,7 +1341,7 @@ def _loyalty_event(readiness: list, turn: int) -> str | None:
     return "\n".join(lines)
 
 
-def _siege_progress_event(gs, turn: int) -> str | None:
+def _siege_progress_event(gs, turn: int, readiness: list | None = None) -> str | None:
     """Say what the assault is doing to the city, and shout when it is doing nothing.
 
     Every attack on a city tile records that city's HP (`GameState._record_city_hp`), so the
@@ -1334,10 +1349,21 @@ def _siege_progress_event(gs, turn: int) -> str | None:
     turn, and - after three turns without a net drop - that the assault has stalled. Live, the
     Moscow assault ran twelve turns with no city number reported anywhere, which is how a
     stalled siege looks exactly like a progressing one.
+
+    The supply line rides along, because it decides whether the healing is happening at all: the
+    manual (HEALING DAMAGE TO CITIES) says a city heals "as long as it has a supply line", and a
+    supply line is "any hex adjacent to the city that is not within an enemy unit's Zone of
+    Control". Cutting every adjacent hex stops the heal entirely - which is a cheaper plan than
+    out-damaging twenty points a turn, and the only one that works when the army is too small.
     """
     history = getattr(gs, "_city_hp_history", None) or {}
     if not history:
         return None
+    supply = {
+        str(getattr(entry, "city_name", "")): entry
+        for entry in (readiness or [])
+        if int(getattr(entry, "supply_total", 0) or 0) > 0
+    }
     lines: list[str] = []
     for city, entries in history.items():
         recent = [(t, hp, mx) for t, hp, mx in entries if t >= turn - 3]
@@ -1351,14 +1377,29 @@ def _siege_progress_event(gs, turn: int) -> str | None:
             head += f" ({moved:+d} over {recent[-1][0] - recent[0][0] + 1} turn(s))"
         if hit_this_turn:
             head += " - hit this turn"
+        entry = supply.get(city)
+        if entry is not None:
+            open_hexes = int(getattr(entry, "supply_open", 0) or 0)
+            total = int(getattr(entry, "supply_total", 0) or 0)
+            head += (
+                f"; supply line {total - open_hexes}/{total} cut - "
+                + (
+                    "the city is still healing"
+                    if open_hexes
+                    else "no open hex, so it is NOT healing this turn"
+                )
+            )
         lines.append(head)
         if len(recent) >= 3 and moved >= 0:
             lines.append(
                 f"  SIEGE STALLED: {city} has not lost city HP in {len(recent)} recorded turns"
-                f" ({first_hp} -> {last_hp}). The city heals about twenty points a turn, so fire"
-                f" that does not out-damage the healing is fire that never happened. Fix the"
-                f" assault (siege in position and screened, more attackers on the same target)"
-                f" or break it off - do not keep feeding it."
+                f" ({first_hp} -> {last_hp}). A supplied city heals about twenty points a turn, so"
+                f" fire that does not out-damage the healing is fire that never happened. Two"
+                f" fixes, in this order: cut the supply line (stand on, or beside, every hex"
+                f" adjacent to the city - the manual's rule is that any adjacent hex outside our"
+                f" zone of control is a supply line) so the heal stops, then put siege in position"
+                f" and screened with more attackers on the same target. If neither is possible,"
+                f" break the assault off - do not keep feeding it."
             )
     if not lines:
         return None

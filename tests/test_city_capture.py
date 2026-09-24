@@ -221,6 +221,8 @@ class TestTheMetric:
             "downed_enemy_cities": 0,
             "capture_ready": 0,
             "enemy_city_hp_min": 999,
+            "enemy_supply_open_min": 999,
+            "enemy_cities_supplied": 0,
         }
 
     def test_the_contact_metrics_carry_them_and_scan_once(self):

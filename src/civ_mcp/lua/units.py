@@ -724,12 +724,16 @@ if tgtPlot then
         end
     end
 end
--- River crossing penalty (attacker crosses river for melee)
+-- River crossing penalty (attacker crosses river for melee). The manual is explicit and this is
+-- not a small number: "When attacking across a river, the attacking unit gets a -5 modifier to
+-- its combat strength" (25th anniversary manual, RIVERS -> OFFENSIVE PENALTY; the same section
+-- adds that crossing costs 3 movement points). This code used to say -2, which made every
+-- across-the-river attack look two points better than the game would resolve it.
 if not isRanged and tgtPlot then
     local attPlot = Map.GetPlot(ux, uy)
     if attPlot and tgtPlot:IsRiverCrossingToPlot(attPlot) then
-        table.insert(mods, "river -2")
-        attModTotal = attModTotal - 2
+        table.insert(mods, "river -5")
+        attModTotal = attModTotal - 5
     end
 end
 -- Flanking: count our units adjacent to defender (excluding attacker)
@@ -1304,11 +1308,63 @@ for pid = 0, 63 do
                         end
                         local cName = "unknown"
                         pcall(function() cName = Locale.Lookup(c:GetName()):gsub("|", "/") end)
+                        -- Supply line, and whether it is still open. The manual (HEALING DAMAGE
+                        -- TO CITIES) is explicit: "A city heals a small amount every turn, even
+                        -- during combat, as long as it has a supply line. A supply line is any hex
+                        -- adjacent to the city that is not within an enemy unit's Zone of
+                        -- Control." So each adjacent hex is either cut - one of our military
+                        -- units stands on it or beside it - or open, and a city with *every*
+                        -- adjacent hex cut does not heal at all. That is a lever the army can
+                        -- pull; out-damaging the healing is only the fallback.
+                        local covered, total = 0, 0
+                        for sdx = -1, 1 do for sdy = -1, 1 do
+                            if sdx ~= 0 or sdy ~= 0 then
+                                local nx, ny = cx + sdx, cy + sdy
+                                if Map.GetPlot(nx, ny)
+                                    and Map.GetPlotDistance(cx, cy, nx, ny) == 1 then
+                                    total = total + 1
+                                    local cut = false
+                                    local onHex = Map.GetUnitsAt(nx, ny)
+                                    if onHex then
+                                        for u2 in onHex:Units() do
+                                            if u2:GetOwner() == me then
+                                                local i2 = GameInfo.Units[u2:GetType()]
+                                                if i2 and ((i2.Combat or 0) + (i2.RangedCombat or 0)) > 0 then
+                                                    cut = true
+                                                end
+                                            end
+                                        end
+                                    end
+                                    if not cut then
+                                        for zdx = -1, 1 do for zdy = -1, 1 do
+                                            if (zdx ~= 0 or zdy ~= 0) and not cut then
+                                                local zx, zy = nx + zdx, ny + zdy
+                                                if Map.GetPlotDistance(nx, ny, zx, zy) == 1 then
+                                                    local beside = Map.GetUnitsAt(zx, zy)
+                                                    if beside then
+                                                        for u3 in beside:Units() do
+                                                            if u3:GetOwner() == me then
+                                                                local i3 = GameInfo.Units[u3:GetType()]
+                                                                if i3 and ((i3.Combat or 0) + (i3.RangedCombat or 0)) > 0 then
+                                                                    cut = true
+                                                                end
+                                                            end
+                                                        end
+                                                    end
+                                                end
+                                            end
+                                        end end
+                                    end
+                                    if cut then covered = covered + 1 end
+                                end
+                            end
+                        end end
                         print("CAPTURE_READY|" .. cName .. "|" .. cx .. "," .. cy
                             .. "|hp:" .. cHP .. "|max:" .. cMax
                             .. "|walls:" .. wHP .. "/" .. wMax
                             .. "|owner:" .. pid
                             .. "|melee_adjacent:" .. adj .. "|melee_within_2:" .. near
+                            .. "|supply:" .. covered .. "/" .. total
                             .. "|" .. who)
                     end
                 end
@@ -1321,7 +1377,7 @@ print("{SENTINEL}")
 
 
 def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]:
-    """``CAPTURE_READY|<name>|<x>,<y>|hp:N|max:N|walls:N/M|owner:N|melee_adjacent:N|melee_within_2:N|<unit>``."""
+    """``CAPTURE_READY|<name>|<x>,<y>|hp:N|max:N|walls:N/M|owner:N|melee_adjacent:N|melee_within_2:N|supply:C/T|<unit>``."""
     out: list[CaptureReadiness] = []
     for line in lines:
         if not line.startswith("CAPTURE_READY|"):
@@ -1346,6 +1402,18 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
             wall_hp, wall_max = (int(v) for v in walls.split("/", 1))
         except ValueError:
             wall_hp, wall_max = 0, 0
+        # `supply:C/T` was added after the melee counts; a line from an older build simply has the
+        # unit name there, so both shapes are accepted.
+        supply_covered, supply_total, unit_name = 0, 0, ""
+        if len(parts) > 9 and parts[9].startswith("supply:"):
+            try:
+                covered, total = parts[9].split(":", 1)[1].split("/", 1)
+                supply_covered, supply_total = int(covered), int(total)
+            except ValueError:
+                supply_covered, supply_total = 0, 0
+            unit_name = parts[10] if len(parts) > 10 else ""
+        elif len(parts) > 9:
+            unit_name = parts[9]
         out.append(
             CaptureReadiness(
                 city_name=parts[1],
@@ -1357,7 +1425,9 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
                 wall_max=wall_max,
                 melee_adjacent=number(parts[7]) if len(parts) > 7 else 0,
                 melee_within_2=number(parts[8]) if len(parts) > 8 else 0,
-                melee_unit=parts[9] if len(parts) > 9 else "",
+                supply_covered=supply_covered,
+                supply_total=supply_total,
+                melee_unit=unit_name,
             )
         )
     return out

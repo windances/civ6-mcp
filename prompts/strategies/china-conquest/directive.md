@@ -142,10 +142,20 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   the front, put your **melee** next to it and take the city that way. Check
   `get_units` for where the melee actually is before assuming this is available.
 - Order of work each turn: siege knocks the walls to 0, melee (with the ram or
-  tower adjacent) takes the city, ranged shoots the garrison. Do not spend ranged
-  attacks on walls you have siege for. **Ranged attacks can never capture a city**
-  - once the walls are at 0 the city only falls to a melee unit walking in, so a
-  turn spent firing at a 0-wall city from range is a turn not spent finishing it.
+  tower adjacent) takes the city, **ranged shoots the city's HP**. Do not spend
+  ranged attacks on walls you have siege for. **Ranged attacks can never capture a
+  city** - once the walls are at 0 the city only falls to a melee unit walking in,
+  so a turn spent firing at a 0-wall city from range is a turn not spent finishing
+  it.
+- **Do not aim at the garrison while it sits inside the city.** The manual
+  (`GARRISON UNITS IN CITIES`) is explicit: a portion of the garrisoned unit's
+  combat strength is added to the city's, the garrisoned unit **takes no damage**
+  while the city is attacked, and it is destroyed only if the city falls. What
+  takes damage is the city: walls first, then its HP pool. The garrison becomes a
+  target the moment it steps out - and if it attacks from inside, the city loses
+  its garrison bonus, which is the turn to hit it hard. The earlier doctrine line
+  "ranged shoots the garrison" was wrong, and it is why eight turns of fire traded
+  with a unit that was never losing HP.
 - **The capture is a separate step from the damage.** When the city's HP pool
   reads 0, a melee unit must move onto the city's tile **that same turn**: a city
   heals about twenty points a turn, so a broken city left alone is back to 120/200
@@ -155,6 +165,14 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   adjacent. Only melee-class units can take a city - a Battering Ram or Siege
   Tower is refused with `CAPTURE_MOVE` BLOCKED, and cavalry, ranged and siege
   units cannot capture either.
+- **Cut the supply line instead of out-damaging the heal.** The manual (`HEALING
+  DAMAGE TO CITIES`): a city heals "as long as it has a supply line", and a supply
+  line is "any hex adjacent to the city that is not within an enemy unit's Zone of
+  Control". So the heal is conditional, and an army that stands on (or beside)
+  every adjacent hex stops it outright - far cheaper than finding twenty extra
+  damage a turn. The `SIEGE PROGRESS` block reports the count (`supply line 4/6
+  cut`), and walls can only be repaired through the production queue, and only
+  after three turns of taking no damage.
 - An enemy city with **no garrison unit** in it is still a legal target: attack
   the tile as normal (the adapter resolves the city itself). An empty city is not
   a city that cannot be hit - it is a city that can be entered.

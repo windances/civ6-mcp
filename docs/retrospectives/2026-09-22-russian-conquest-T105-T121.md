@@ -151,3 +151,22 @@ The game is closed (only Steam is running) and this run's turns have no MCP tele
 A–C would ship unverified against the live game until a session plays again. The loyalty API in
 particular (`city:GetLoyalty()`, turns-to-revolt) has to be checked in-game before a rule depends
 on it — `.tools/live-capture-test.py` is the harness for that check.
+
+## 7. Manual verification (2026-09-24): three corrections
+
+The 25th anniversary manual was extracted (`.tools/pdf-text.py` → `.tools/manuals/manual.clean.txt`,
+searchable mid-turn through `search_knowledge`) and checked against what this repo assumes. It
+confirmed most of it — 200 HP cities, melee-enters-tile capture, support units cannot attack,
+ranged takes no damage and cannot capture, flanking +2 per adjacent unit, fortification capping
+after two turns, city strength not degrading with damage — and corrected three things:
+
+| Correction | Manual | Was | Now |
+|---|---|---|---|
+| River crossing penalty | *RIVERS → OFFENSIVE PENALTY*: **-5** | `river -2` in the estimator | `river -5` (`lua/units.py`), pinned by test |
+| Garrisons inside cities | *GARRISON UNITS IN CITIES*: the garrison's strength is added to the city's and it **takes no damage**; it dies only if the city falls | "ranged shoots the garrison" in the directive, the skill, `tactics/06`, `tactics/01` and the SIEGE POSTURE advice | "ranged shoots the city's HP", with the garrison a target only when it steps out |
+| City healing | *HEALING DAMAGE TO CITIES*: heals "as long as it has a supply line", i.e. while **any adjacent hex** is outside our zone of control | "the city heals about twenty points a turn", unconditionally | conditional phrasing everywhere, plus a **measurement**: each enemy city's `supply:C/T` is scanned, reported in `SIEGE PROGRESS` (`supply line 4/6 cut`), and `SIEGE STALLED` names cutting the supply line as the first fix |
+
+The supply-line count is the one that changes play: cutting every adjacent hex stops a twenty-point
+heal outright, which is far cheaper than finding twenty extra damage a turn. It rides in the scan
+that already reports the city's HP pool, walls and melee reach, so it costs no extra query.
+
