@@ -27,6 +27,8 @@ async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--lua", help="a read-only Lua snippet to run")
     ap.add_argument("--lua-file", help="a file holding a read-only Lua snippet")
+    ap.add_argument("--state", choices=("ingame", "gamecore"), default="ingame",
+                    help="which Lua state to run in (GameCore has the player/tech/civic APIs)")
     args = ap.parse_args()
     if not args.lua and not args.lua_file:
         ap.error("give --lua or --lua-file")
@@ -42,7 +44,8 @@ async def main() -> int:
         print(f"could not connect to FireTuner: {exc}")
         return 1
     try:
-        lines = await conn.execute_write(lua)
+        run = conn.execute_write if args.state == "ingame" else conn.execute_read
+        lines = await run(lua)
     finally:
         await conn.disconnect()
 

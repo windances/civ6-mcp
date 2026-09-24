@@ -206,6 +206,29 @@ should use. Every unit answers `false` at T113, as it must: Nationalism is not r
 two same-type units are stacked. Note `Players[me]:GetCivics()` is **nil** in InGame, so civic
 state must be read in GameCore; the command gate is the better check anyway.
 
+The exact call is known from the game's own code rather than guessed:
+`UnitManager.RequestCommand(pSelectedUnit, actionHash)` with **no parameter table**
+(`Base/Assets/UI/Panels/UnitPanel.lua:2513`, inside the `eInterfaceMode == NONE` branch that
+`FORM_CORPS` and `FORM_ARMY` take at lines 488/494). `CanStartCommand` is the gate; `RequestCommand`
+is the action.
+
+**The civic cannot be granted to test it.** With the human's approval to cheat on this throwaway
+branch, `.tools/probes/grant-civic.lua` walked the prerequisite chain
+(Medieval Faires -> Humanism -> The Enlightenment -> Nationalism) and found that
+`Players[me]:GetCulture()` - the civic object is `GetCulture`, not `GetCivics` - exposes only
+`HasCivic` and `SetProgressingCivic`:
+
+```
+METHOD|HasCivic|function
+METHOD|SetProgressingCivic|function
+METHOD|SetProgress|nil        METHOD|SetCivicProgress|nil
+METHOD|AddProgress|nil        METHOD|SetCivicAdopted|nil
+```
+
+No progress setter means no grant, and `SetProgressingCivic` on a locked civic does not skip its
+prerequisites. Reaching Nationalism on this branch means playing it out, not switching it on.
+
+
 ## 9. Fighting the siege: what the city-attack report actually said
 
 The capture check needs a city at 0 HP with a capture unit adjacent, and no save holds that state,
