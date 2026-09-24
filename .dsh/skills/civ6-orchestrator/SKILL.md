@@ -520,6 +520,15 @@ it is being held to, and hold its proposal to that file's prohibitions when you 
 Phase 3. Without that paste the worker proposes from general knowledge and the tactic files may as
 well not exist.
 
+**Look a mechanic up instead of guessing, and paste what you find.** `search_knowledge(query, k, doc)`
+queries a local index of the game manual, the directive, the rule file and the retrospectives, and
+answers with the source path and line range - read those lines, and give the passage to the worker
+with the rest of the brief. This is the only way a worker ever sees the manual: it has no tools. Use
+it whenever the decision turns on a rule you are not certain of (how healing depends on a supply
+line, what a support unit may do, whether ranged fire can take a city), and prefer the manual over
+the doctrine when they disagree - the doctrine is a summary of it. Build or refresh the index with
+`python .tools/kb.py index [--source <path>]`; it is per checkout.
+
 **Paste the turn's own judgement signals as well.** The worker cannot query anything, and these are
 the facts that decide the outcome - the replay of the T101-T116 siege showed every one of them
 mattering:

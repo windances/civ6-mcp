@@ -4,8 +4,8 @@
   "civ6Mcp": {
     "repository": "https://github.com/lmwilki/civ6-mcp.git",
     "revision": "dd2019056371b92ea4854e879ddf05a8cad95e8a",
-    "expectedMcpTools": 77,
-    "expectedMcpToolsNote": "upstream is 76; +1 for get_game_status, which reports where the game is (not running / starting / main menu / leader screen / loading / in game) so an agent does not have to infer it from the wording of a failure",
+    "expectedMcpTools": 78,
+    "expectedMcpToolsNote": "upstream is 76; +1 for get_game_status, which reports where the game is (not running / starting / main menu / leader screen / loading / in game) so an agent does not have to infer it from the wording of a failure; +1 for search_knowledge, which queries the local manual/prompt index (SQLite FTS5) so an in-game session can look a mechanic up mid-turn",
     "python": ">=3.12"
   },
   "deepseekHarness": {

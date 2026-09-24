@@ -27,8 +27,38 @@ two actions that still need a human.
 | **CivBench scenario saves** | **INSTALLED** — `0A_GROUND_CONTROL`, `0B_SNOWFLAKE`, `0C_CRY_HAVOC` copied into the game's `Saves\Single` (22 saves listed in total) |
 | **`DEEPSEEK_API_KEY`** | **NOT SET — action required (last blocker)** |
 
-Qualification totals: 76 tools available to a plain MCP client; 75 once the DSH
-overlay sets `CIV_MCP_DISABLE_LUA=1`, which is the intended safety control.
+Qualification totals: **78 tools** available to a plain MCP client; **77** once the DSH
+overlay sets `CIV_MCP_DISABLE_LUA=1`, which is the intended safety control. The two counts that
+matter live in `baseline/manifest.json` (`expectedMcpTools`) and
+`scripts/qualify-mcp.py` (`EXPECTED_TOOLS_AFTER_LUA_DISABLE`); a new tool has to move both.
+
+### Knowledge index (`search_knowledge`)
+
+An in-game session can look a mechanic up mid-turn instead of guessing: `search_knowledge`
+queries a local **SQLite FTS5** index (BM25 ranking, snippets, no embeddings, no network) and
+answers with the source path and line range, which the agent then reads in full.
+
+```
+python .tools/kb.py index                    # prompts/, docs/, AGENTS.md, SETUP-WINDOWS.md
+python .tools/kb.py index --source .tools/manuals/manual.clean.txt   # + the game manual
+python .tools/kb.py search "city heals supply line" -k 3
+python .tools/kb.py stats
+```
+
+* The index lives at `.tools/kb/knowledge.sqlite` (override with `--db` or
+  `$CIV_MCP_KNOWLEDGE_DB`) and is **per checkout** — a game clone needs its own
+  `python .tools/kb.py index` run, and a rebuild after the corpus changes.
+* The manual text is copyrighted and stays local (`.tools/manuals/`); only the reader
+  (`.tools/pdf-text.py`) and the indexer are committed.
+* Chinese queries fall back to substring matching: the `unicode61` tokenizer does not split CJK
+  into words and this SQLite build has no `trigram` tokenizer.
+
+**Do not edit repo files with PowerShell text cmdlets.** `Get-Content`/`Set-Content` (and
+`[IO.File]::WriteAllText` on a file read that way) have twice corrupted this checkout: a UTF-8
+BOM was added to `baseline/manifest.json`, which broke its JSON gate, and the first character of
+`scripts/qualify-mcp.py` was eaten, which broke its docstring. Use the file-edit tools, or
+`git checkout -- <file>` and redo the edit when it has already happened; `python -c` probes need
+their own script file, because PowerShell strips the quotes out of inline `-c "..."` arguments.
 
 ---
 

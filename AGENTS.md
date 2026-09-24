@@ -102,6 +102,26 @@ Each turn in order:
    cost of nine attacks). Assign a governor (`assign_governor`) or garrison the tile; if the
    governor is needed at the front, say so in the diary.
 
+## Looking things up: `search_knowledge`
+
+You only know what you query, and part of what decides a turn is documentation, not game state —
+how a city heals, what a support unit may do, what the doctrine says about screening.
+`search_knowledge(query, k=5, doc=None)` searches a local index of the **game manual**, the
+**directive and rule file**, `AGENTS.md`, `SETUP-WINDOWS.md` and the retrospectives, and answers
+with the source path and line range plus a highlighted snippet. Read those lines (and cite them)
+instead of paraphrasing from memory:
+
+```
+search_knowledge("city heals supply line zone of control")
+search_knowledge("what can a battering ram do", doc="manual")
+search_knowledge("城墙 修复", doc="manual")          # Chinese falls back to substring match
+```
+
+Build or refresh the index with `python .tools/kb.py index [--source <path>]` (it is per
+checkout, and stale after the corpus changes). When a mechanic is in doubt, this is cheaper and
+more honest than a guess — and the manual beats the doctrine when they disagree, because the
+doctrine is only ever a summary of it.
+
 ## Diary
 
 The diary is your persistent memory across sessions. When context compacts or you return to a game, `get_diary` is how you reconstruct where you were and why you made the decisions you did. Entries with specific details — unit names, coordinates, yield numbers, reasoning — are far more useful to your future self than brief summaries.

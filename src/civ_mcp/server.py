@@ -19,7 +19,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
 
-from civ_mcp import game_launcher, heartbeat
+from civ_mcp import game_launcher, heartbeat, knowledge
 from civ_mcp import strategy_directive
 from civ_mcp.game_over_watchdog import GameOverWatchdog
 from civ_mcp import narrate as nr
@@ -2978,6 +2978,28 @@ async def load_game_save(ctx: Context, save_name: str) -> str:
 # ---------------------------------------------------------------------------
 # These tools do NOT require a FireTuner connection — they manage the game
 # process itself. Hardcoded to Civ 6 only (no arbitrary system commands).
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+async def search_knowledge(
+    ctx: Context, query: str, k: int = 5, doc: Optional[str] = None
+) -> str:
+    """Look up reference material mid-turn: the game manual, the directive, the rules, the reviews.
+
+    The agent only knows what it queries, and some of what decides a turn is *documentation*
+    rather than game state - how a city heals, what a support unit can do, what the doctrine says
+    about screening. This searches a local SQLite FTS5 index (BM25 ranking, no embeddings, no
+    network) and answers with the exact source and line range, so the full passage can be read
+    with `read` and cited instead of paraphrased.
+
+    Args:
+        query: keywords or a phrase, e.g. "zone of control", "city healing supply line",
+            "城墙 修复". Chinese queries fall back to substring matching.
+        k: how many chunks to return (default 5, max 25).
+        doc: restrict to documents whose path contains this, e.g. "manual" or "tactics/06".
+    """
+    hits = await asyncio.to_thread(knowledge.search, query, k, doc, None)
+    return knowledge.format_hits(hits, query)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
