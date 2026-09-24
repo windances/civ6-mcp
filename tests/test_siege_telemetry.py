@@ -19,6 +19,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from civ_mcp import end_turn as et  # noqa: E402
+from civ_mcp import lua as lq  # noqa: E402
 from civ_mcp.game_state import GameState, _extract_city_defense  # noqa: E402
 from civ_mcp.lua import models as m  # noqa: E402
 
@@ -143,6 +144,29 @@ class TestACityHitIsNeverCalledAKill:
         text = asyncio.run(gs.attack_unit(983043, 53, 40))
         assert "Target eliminated" in text
         assert "damage dealt:71 (killed)" in text
+
+
+class TestTheSnapshotReadsUnitsInGame:
+    """Live T122: the post-turn snapshot right after Moscow was captured answered
+
+        turn checks: no unit list available for T122 at all
+        LuaError: ERR:Runtime Error: [string "..."]:65: function expected instead of nil
+
+    `_take_snapshot` read `build_units_query` in the **GameCore** state, and that query's
+    line-of-sight filter calls `UnitManager.CanStartOperation`, which GameCore does not have.
+    One unguarded call lost the whole unit list for the turn, so the turn checks ran blind.
+    """
+
+    def test_the_units_query_is_read_in_game(self):
+        src = pathlib.Path("src/civ_mcp/game_state.py").read_text(encoding="utf-8")
+        assert "unit_lines = await self.conn.execute_write(lq.build_units_query())" in src, (
+            "build_units_query is an InGame query; GameCore has no UnitManager.CanStartOperation"
+        )
+
+    def test_the_los_call_is_guarded(self):
+        lua = lq.build_units_query()
+        assert "UnitManager.CanStartOperation" in lua
+        assert "losOK = UnitManager.CanStartOperation" not in lua, "the raw call lost a whole turn"
 
 
 class TestSiegeProgressEvent:

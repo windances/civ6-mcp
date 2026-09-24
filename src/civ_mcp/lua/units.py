@@ -88,7 +88,17 @@ for i, u in Players[id]:GetUnits():Members() do
                                         local lp = {{}}
                                         lp[UnitOperationTypes.PARAM_X] = tx
                                         lp[UnitOperationTypes.PARAM_Y] = ty
-                                        losOK = UnitManager.CanStartOperation(u, UnitOperationTypes.RANGE_ATTACK, nil, lp)
+                                        -- Guarded: `UnitManager` exists in the GameCore state but
+                                        -- without CanStartOperation, and calling it there raised
+                                        -- "function expected instead of nil" - live T122, the
+                                        -- post-turn snapshot after Moscow was taken lost the whole
+                                        -- unit list to this one line. Without the engine check the
+                                        -- LOS filter is skipped rather than the query failing.
+                                        local okL, los = pcall(function()
+                                            return UnitManager.CanStartOperation(
+                                                u, UnitOperationTypes.RANGE_ATTACK, nil, lp)
+                                        end)
+                                        losOK = (okL and los) and true or (not okL)
                                     end
                                     if losOK then
                                         local eInfo = GameInfo.Units[other:GetType()]

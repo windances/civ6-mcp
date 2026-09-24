@@ -371,8 +371,17 @@ otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loya
 - **The capture move itself - DONE (§10).** A Heavy Chariot walked into Moscow at 0/200 and took
   it; `CAPTURE_MOVE`, `cities 6 -> 7`, `KEEP| Москва ... captured`, scan to zero. It also proved
   the scan's class filter wrong (cavalry), which is fixed.
-- **The river `-5` branch.** No river-crossing pair existed at T113, T120 or T122 (§6, §9). To
-  close it: a board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
+- **The post-turn snapshot failure after a capture - FIXED.** The cause was a state mismatch:
+  `_take_snapshot` read `build_units_query` in **GameCore** (`game_state.py:1591`) while that query
+  is documented InGame, and its line-of-sight filter calls `UnitManager.CanStartOperation` - which
+  GameCore does not have. Chunk line 65 is exactly that call. The snapshot now reads units InGame
+  (as the cities query in the same function already did) and the LOS call is wrapped in `pcall`
+  so a GameCore read degrades to "no LOS filter" instead of losing the turn's unit list. Verified
+  live: `_take_snapshot()` answered `turn 122, 17 units, 7 cities`, and the units query now answers
+  in both states.
+
+- **The river `-5` branch.** No river-crossing pair existed at T113, T120 or T122 (§11). To close
+  it: a board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
   `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for
   `river -5` (the estimate orders nothing).
 - **The estimate against the engine's numbers.** `CombatManager.SimulateAttackVersus` is the oracle
@@ -380,15 +389,26 @@ otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loya
   defender-terrain modifiers, and the meaning of `FINAL_DAMAGE_TO`, are not yet modelled or decoded.
 - **Corps/Armies end to end.** The API and the command gate are reachable in InGame (§8), but
   forming one needs Nationalism or Mobilization plus two same-type units, which no save here has.
-- **The post-turn snapshot failure after a capture** (§10): `build_units_query` read in GameCore
-  answered `line 65: function expected instead of nil` and the T122 unit list was lost.
-- **The river `-5` branch.** No river-crossing pair existed at T113 or T121 (§6). To close it: a
-  board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
-  `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for
-  `river -5` (the estimate orders nothing).
-- **The estimate against the engine's numbers.** `CombatManager.SimulateAttackVersus` is the oracle
-  (§7) and the flanking count has been reconciled with it; the difficulty, damaged-unit and
-  defender-terrain modifiers, and the meaning of `FINAL_DAMAGE_TO`, are not yet modelled or decoded.
-- **Corps/Armies end to end.** The API and the command gate are reachable in InGame (§8), but
-  forming one needs Nationalism or Mobilization plus two same-type units, which no save here has.
-- **Corps/Armies.** `UnitCommandTypes.FORM_CORPS` / `FORM_ARMY` still have no tool.
+
+## 11. The river `-5`: a concrete edge, and no enemy standing on it
+
+The modifier needs our unit on one side of a river edge and an enemy on the other. At T122 there is
+exactly one river edge anywhere near the army, and it is the useful one:
+
+```
+EDGE|54,39|river:true|empty        <- Moscow is (54,40), ours since T122
+EDGE|53,39|river:false|empty
+EDGE|54,41|river:false|ours:UNIT_ARCHER
+```
+
+So the recipe is concrete rather than hypothetical: **an enemy standing on (54,39) makes an estimate
+from Moscow onto it show `river -5`**. Every other nearby side was checked
+(`.tools/probes/river-firing-position.lua`): the only enemies within three tiles were a barbarian
+scout at (55,23) and two barbarian galleys, and none of their adjacent tiles is across a river from
+them (`SIDE|55,24|river:false|ours:UNIT_HEAVY_CHARIOT`, `SIDE|50,24|river:false|enemy:UNIT_GALLEY`).
+No pair of ours crossed a river on any board checked (four to sixteen candidates each time).
+
+What *is* verified is that the branch runs and answers correctly on a real board: the call is stable
+in both directions and returns `false` for every pair that does not cross. The `-5` constant still
+rests on the manual's `RIVERS -> OFFENSIVE PENALTY` plus its unit test.
+

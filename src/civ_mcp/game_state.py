@@ -1588,7 +1588,13 @@ class GameState:
             ov_lines = await self.conn.execute_write(lq.build_overview_query())
             overview = lq.parse_overview_response(ov_lines)
 
-        unit_lines = await self.conn.execute_read(lq.build_units_query())
+        # InGame, not GameCore: `build_units_query` is documented InGame and its line-of-sight
+        # filter calls `UnitManager.CanStartOperation`, which GameCore does not have. Read there,
+        # the query died with "function expected instead of nil" and the whole unit list was lost -
+        # live T122, the post-turn snapshot right after Moscow was captured answered
+        # "turn checks: no unit list available for T122 at all". The cities query in this same
+        # function already reads InGame.
+        unit_lines = await self.conn.execute_write(lq.build_units_query())
         units = lq.parse_units_response(unit_lines)
 
         city_lines = await self.conn.execute_write(lq.build_cities_query())
