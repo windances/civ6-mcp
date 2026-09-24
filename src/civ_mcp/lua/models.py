@@ -275,6 +275,7 @@ class CityInfo:
     loyalty_max: float = 100.0
     loyalty_per_turn: float = 0.0
     turns_to_loyalty_flip: int = 0
+    loyalty_outcome: str = ""  # GAINING_LOYALTY / LOSING_LOYALTY / STABLE (see `losing_loyalty`)
     garrison_unit: str = ""
     unimproved_resources: list[str] = field(
         default_factory=list
@@ -283,6 +284,21 @@ class CityInfo:
     buildings: list[str] = field(
         default_factory=list
     )  # completed buildings (BUILDING_ prefix stripped)
+
+    @property
+    def losing_loyalty(self) -> bool:
+        """Which way the pool is moving - and therefore what ``turns_to_loyalty_flip`` means.
+
+        ``GetTurnsToConversion()`` is a revolt countdown only while the city is losing loyalty;
+        while it gains, the same figure counts turns to a full pool. The game's own word decides
+        when we have it; without it, the sign of the pressure is the best reading available.
+        """
+        outcome = (self.loyalty_outcome or "").upper()
+        if outcome.endswith("LOSING_LOYALTY"):
+            return True
+        if outcome.endswith("GAINING_LOYALTY"):
+            return False
+        return self.loyalty_per_turn < 0
 
 
 @dataclass

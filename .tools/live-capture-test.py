@@ -182,6 +182,8 @@ async def main() -> int:
                     help="list every visible city (any owner) with its HP pool and garrison (read-only)")
     ap.add_argument("--loyalty", action="store_true",
                     help="read our cities' loyalty, pressure, governor and the game's advice (read-only)")
+    ap.add_argument("--raw-capture", action="store_true",
+                    help="print the capture-readiness query's raw lines, including supply:C/T (read-only)")
     args = ap.parse_args()
 
     print("=== game status ===")
@@ -278,6 +280,15 @@ async def main() -> int:
         unit_id, x, y = args.attack
         print(f"\n=== attack: unit {unit_id} -> ({x},{y}) ===")
         print(await gs.attack_unit(int(unit_id), int(x), int(y)))
+
+    if args.raw_capture:
+        # The parsed scan above hides the per-hexarithmetic fields; this is the same query's raw
+        # output, which is where `supply:C/T` lives. It is the only way to see the supply count
+        # without a war to measure it in (T121 had no enemy city both visible and at war).
+        print("\n=== capture-readiness query, raw lines (read-only) ===")
+        for line in await gs.conn.execute_write(lq.build_capture_check_query()):
+            if line != "---END---":
+                print("  " + line)
 
     rows = await report(gs, turn)
 

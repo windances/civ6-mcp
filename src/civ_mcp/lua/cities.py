@@ -308,12 +308,22 @@ for i, c in Players[me]:GetCities():Members() do
     end end
     table.insert(cityCoords, {name=nm, x=c:GetX(), y=c:GetY()})
     local loy, loyMax, loyPT, loyFlip = 100, 100, 0, 0
+    local loyOutcome = ""
     local cult = c:GetCulturalIdentity()
     if cult then
         loy = cult:GetLoyalty()
         loyMax = cult:GetMaxLoyalty()
         loyPT = cult:GetLoyaltyPerTurn()
         loyFlip = cult:GetTurnsToConversion()
+        -- Read with the outcome, never on its own: the figure is a revolt countdown only while
+        -- the city is losing loyalty (see build_loyalty_check_query).
+        local oc = cult:GetConversionOutcome()
+        pcall(function()
+            for k, v in pairs(IdentityConversionOutcome) do
+                if v == oc then loyOutcome = k end
+            end
+        end)
+        if loyOutcome == "" then loyOutcome = tostring(oc) end
     end
     local garrisonUnit = ""
     local garFound = false
@@ -332,7 +342,7 @@ for i, c in Players[me]:GetCities():Members() do
             end
         end
     end
-    print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit)
+    print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit .. "|" .. loyOutcome)
     if #unimproved > 0 or #pillImprov > 0 then
         print("CITYTILES|" .. c:GetID() .. "|" .. table.concat(unimproved, ",") .. "|" .. table.concat(pillImprov, ","))
     end
@@ -1008,6 +1018,9 @@ def parse_cities_response(lines: list[str]) -> tuple[list[CityInfo], list[str]]:
                     b for b in (parts[28].split(";") if len(parts) > 28 else []) if b
                 ],
                 garrison_unit=parts[29] if len(parts) > 29 else "",
+                # Appended after everything else: `GAINING_LOYALTY` / `LOSING_LOYALTY` / `STABLE`,
+                # which decides what turns_to_loyalty_flip means.
+                loyalty_outcome=parts[30] if len(parts) > 30 else "",
             )
         )
         city_by_id[cities[-1].city_id] = cities[-1]

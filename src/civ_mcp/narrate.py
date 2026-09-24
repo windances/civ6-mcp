@@ -376,12 +376,21 @@ def narrate_cities(
             defense = f" | Gar:{garrison_str}"
         loyalty_str = ""
         if c.loyalty_per_turn < 0 or c.loyalty < 75:
-            flip_info = (
-                f", flips in {c.turns_to_loyalty_flip} turns"
-                if c.turns_to_loyalty_flip > 0
-                else ""
+            # The countdown is a revolt countdown only while the city is losing loyalty; while it
+            # gains, the same figure is turns to a full pool (the game's own banner reads the two
+            # together, CityBannerManager.lua:2355-2358). Live T121, Moscow read 50/100, +15/turn
+            # and 4 turns - recovering, and called a revolt until this was fixed.
+            flip_info = ""
+            if c.turns_to_loyalty_flip > 0:
+                if c.losing_loyalty:
+                    flip_info = f", revolts in {c.turns_to_loyalty_flip}"
+                else:
+                    flip_info = f", full in {c.turns_to_loyalty_flip}"
+            direction = "losing" if c.losing_loyalty else "gaining"
+            loyalty_str = (
+                f" | !! Loyalty: {c.loyalty:.0f}/{c.loyalty_max:.0f} "
+                f"({direction} {c.loyalty_per_turn:+.1f}/turn{flip_info})"
             )
-            loyalty_str = f" | !! Loyalty: {c.loyalty:.0f}/{c.loyalty_max:.0f} ({c.loyalty_per_turn:+.1f}/turn{flip_info})"
         # Growth display: show surplus and progress, not just turns
         if c.turns_to_grow <= 0 or c.food_surplus <= 0:
             growth_str = f"STAGNANT ({c.food_surplus:+.1f} food/t)"

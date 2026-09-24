@@ -101,23 +101,82 @@ so the nesting guard in the `except RuntimeError` arm came too late. The loop is
 before anything is constructed. A warning on stderr is not cosmetic for an MCP client reading the
 same pipe.
 
+## How to test these changes
+
+Two ways in. **Launch the game yourself** (desktop or Steam) and the sandbox is not involved at
+all: the game writes its own profile with your own rights, and every command below runs under the
+default confined mode. Only a *launched-from-here* game needs `danger-full-access` (see §1).
+
+FireTuner serves exactly one client, so nothing else may hold 4318 while these run - stop the agent
+session (or its MCP server) first.
+
+### The loyalty reading (both fixes)
+
+```powershell
+.venv\Scripts\python.exe .tools\verify-live.py --no-load --get-cities   # the MCP tool's own line
+.venv\Scripts\python.exe .tools\verify-live.py --no-load --loyalty      # the scan + LOYALTY WARNING
+```
+
+Look for the difference between these two lines - the same city, one turn after it was retaken:
+
+```
+before:  莫斯科 ... (+15.0/turn, flips in 4)          # a city four turns from a full pool, called a revolt
+after:   莫斯科 ... (gaining +15.0/turn, full in 4)   # and the advice string is readable Chinese
+```
+
+The advice text is the encoding fix; the `gaining ... full in` is the outcome fix. A city that is
+really draining reads `losing -7.8/turn, revolts in 4 -> 自由城市`.
+
+To see the bug itself rather than the fix, check out the commit before it and run the same
+command - the tree is committed, so this is a clean A/B:
+
+```powershell
+git switch --detach db17838^
+.venv\Scripts\python.exe .tools\live-capture-test.py --loyalty
+git switch -
+```
+
+### The encoding fix, independent of our code
+
+`.tools/probes/loyalty-encoding.lua` computes both sanitisers itself, so it demonstrates the byte
+loss whatever the checkout:
+
+```powershell
+.venv\Scripts\python.exe .tools\live-lua.py --lua-file .tools\probes\loyalty-encoding.lua
+```
+
+`high:366,346,366` is the raw string, the `%c` version and the TAB/LF/CR version: twenty high
+bytes eaten by `%c`, none by the replacement. `.tools/probes/loyalty-enum.lua` prints the enum
+(`STABLE=0`, `LOSING_LOYALTY=1`, `GAINING_LOYALTY=2`) and the next owner the game names.
+
+### The coroutine warning
+
+```powershell
+.venv\Scripts\python.exe .tools\verify-live.py --no-load --loyalty 2>&1 | Select-String never
+```
+
+Nothing should match. The guard has a test that fails on the old code:
+`pytest tests/test_menu_navigation.py -q -k orphan`.
+
+### Through the agent instead of the scripts
+
+The MCP server imports the Lua builders at call time, so a running server serves the *old* code
+until it is restarted. Start a fresh session (or restart the MCP) before judging a fix this way;
+otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loyalty line and
+`end_turn` carries the `LOYALTY WARNING`.
+
 ## What is still not verified live
 
 - **`supply:C/T` and the capture move.** T121 has no enemy city both visible and at war (the
   capture scan returned `0 enemy cit(ies) in sight`, the two visible cities are city-states), so
   the per-city supply arithmetic and `CAPTURE_MOVE` could not be exercised. The query itself ran
-  without error in the InGame context, which is all that proves.
+  without error in the InGame context, which is all that proves. To close it: be at war with an
+  enemy whose city is visible, put a melee unit next to that city, then
+  `.tools\verify-live.py --no-load --raw-capture` and read the `supply:C/T` field on the
+  `CITY_READY` line. The capture move itself (`--capture`) **orders a unit** - that is the one
+  check here that changes the game state.
 - **The river `-5`.** No attack across a river existed to measure; the change is a constant with a
-  unit test and an unverified live reading.
+  unit test and an unverified live reading. To close it: `.tools\verify-live.py --no-load
+  --estimate <unit_id> <x> <y>` against a target on the far side of a river and read the
+  `Modifiers:` line for `river -5` (the estimate is read-only and orders nothing).
 - **Corps/Armies.** `UnitCommandTypes.FORM_CORPS` / `FORM_ARMY` still have no probe and no tool.
-
-## Reproduce
-
-```powershell
-.venv\Scripts\python.exe .tools\verify-live.py                      # load the newest save, then read-only
-.venv\Scripts\python.exe .tools\verify-live.py --no-load --cities --loyalty
-.venv\Scripts\python.exe .tools\live-lua.py --lua-file .tools\probes\loyalty-encoding.lua
-```
-
-The game must be launched with `danger-full-access` (see §1); everything after that needs no wider
-mode than the default.

@@ -241,6 +241,45 @@ class TestTheWarning:
         assert et._loyalty_event([], 112) is None
 
 
+class TestTheCitiesTool:
+    """`get_cities` narrates loyalty as well, and it carried the same misread.
+
+    Its line ends with the outcome, because ``GetTurnsToConversion()`` cannot be read on its own
+    (`narrate.py` used to print "flips in N turns" for every city with a countdown). The tool is
+    the one the agent reads every turn, so the wrong reading had the widest reach here.
+    """
+
+    # ...|loyalty|loyalty_max|loyalty_pt|turns_flip|food_surplus|food_stored|growth|pillaged|garrison|outcome
+
+    def line(self, loyalty: float, per_turn: float, flip: int, outcome: str) -> str:
+        return (
+            "0|Delhi|10,24|4|8.0|5.0|3.0|2.0|1.5|0.0|"
+            "6.0|3|12|BUILDING_GRANARY|5|"
+            "15|200/200|0/0|"
+            "||DISTRICT_CITY_CENTER@10,24|"
+            f"{loyalty:.1f}|100.0|{per_turn:.1f}|{flip}|3.5|20.0|36||Warrior|{outcome}"
+        )
+
+    def narration(self, line: str) -> str:
+        from civ_mcp import narrate as nr
+
+        cities, distances = lq.parse_cities_response([line])
+        return nr.narrate_cities(cities, distances)
+
+    def test_a_recovering_city_says_full_in_not_flips_in(self):
+        text = self.narration(self.line(40.0, 15.0, 4, "GAINING_LOYALTY"))
+        assert "gaining +15.0/turn, full in 4" in text
+        assert "flips in" not in text and "revolts" not in text
+
+    def test_a_losing_city_keeps_the_revolt_countdown(self):
+        text = self.narration(self.line(31.0, -7.8, 4, "LOSING_LOYALTY"))
+        assert "losing -7.8/turn, revolts in 4" in text
+
+    def test_a_line_without_an_outcome_falls_back_to_the_pressure(self):
+        text = self.narration(self.line(31.0, -7.8, 4, ""))
+        assert "losing -7.8/turn, revolts in 4" in text
+
+
 class TestTheRule:
     FILE = pathlib.Path("prompts/checks/turn-checks.md")
 
