@@ -53,6 +53,33 @@ class TestEstimateKnowsAboutCities:
         assert 'gsub("|", "/")' in lua
 
 
+class TestFlankingCountsOnlyAdjacentUnits:
+    """The 3x3 box is not the hex neighbourhood.
+
+    Two of its eight plots are two tiles away in a hex grid, and a unit standing on one does not
+    flank. Live T113, our Heavy Chariot in Moscow attacking the Russian Warrior at (53,40): our
+    estimate said `flank +6` (three friendlies in the box) while the engine's own preview said
+    `+4夹击加成` (two). The game's answer comes from `CombatManager.SimulateAttackVersus`
+    (`Base/Assets/UI/Panels/UnitPanel.lua:3352`), which is available in the InGame state and is
+    what the rest of these assertions are checked against.
+    """
+
+    def lua(self) -> str:
+        return build_combat_estimate_query(1310724, 53, 40)
+
+    def test_flanking_filters_by_hex_distance(self):
+        lua = self.lua()
+        assert "Map.GetPlotDistance(53, 40, fx, fy) == 1" in lua, "flank must count neighbours only"
+
+    def test_support_filters_by_hex_distance(self):
+        lua = self.lua()
+        assert "Map.GetPlotDistance(53, 40, sx, sy) == 1" in lua, "support must count neighbours only"
+
+    def test_the_attacker_still_excludes_its_own_tile(self):
+        lua = self.lua()
+        assert "and not (fx == ux and fy == uy) then" in lua
+
+
 class TestParseCombatEstimateCityField:
     def test_ten_field_line_parses_the_city(self):
         line = "ESTIMATE|UNIT_CROSSBOWMAN|UNIT_GREAT_WRITER|62|0|1|none|100|100|St Petersburg"

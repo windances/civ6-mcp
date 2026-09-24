@@ -743,7 +743,13 @@ if not isRanged then
     for dy = -1, 1 do for dx = -1, 1 do
         if dx ~= 0 or dy ~= 0 then
             local fx, fy = {target_x} + dx, {target_y} + dy
-            if not (fx == ux and fy == uy) then
+            -- The 3x3 box is not the hex neighbourhood: two of its eight plots sit two tiles
+            -- away, and a unit standing there does not flank. Counting them made the estimate
+            -- report "flank +6" for a pair the game's own preview calls "+4夹击加成" - measured
+            -- live T113 against CombatManager.SimulateAttackVersus (UnitPanel.lua:3352), which
+            -- is the engine's own answer to the same question.
+            if Map.GetPlotDistance({target_x}, {target_y}, fx, fy) == 1
+                and not (fx == ux and fy == uy) then
                 local adjUnits = Map.GetUnitsAt(fx, fy)
                 if adjUnits then
                     for adjU in adjUnits:Units() do
@@ -763,20 +769,22 @@ if not isRanged then
         attModTotal = attModTotal + flankBonus
     end
 end
--- Support: count defender's adjacent friendlies
+-- Support: count defender's adjacent friendlies (same hex-neighbourhood rule as flanking)
 local supportBonus = 0
 if not isRanged then
     local enemyOwner = enemy:GetOwner()
     for dy = -1, 1 do for dx = -1, 1 do
         if dx ~= 0 or dy ~= 0 then
             local sx, sy = {target_x} + dx, {target_y} + dy
-            local adjUnits = Map.GetUnitsAt(sx, sy)
-            if adjUnits then
-                for adjU in adjUnits:Units() do
-                    if adjU:GetOwner() == enemyOwner and adjU ~= enemy then
-                        local adjInfo = GameInfo.Units[adjU:GetType()]
-                        if adjInfo and (adjInfo.Combat or 0) > 0 then
-                            supportBonus = supportBonus + 2
+            if Map.GetPlotDistance({target_x}, {target_y}, sx, sy) == 1 then
+                local adjUnits = Map.GetUnitsAt(sx, sy)
+                if adjUnits then
+                    for adjU in adjUnits:Units() do
+                        if adjU:GetOwner() == enemyOwner and adjU ~= enemy then
+                            local adjInfo = GameInfo.Units[adjU:GetType()]
+                            if adjInfo and (adjInfo.Combat or 0) > 0 then
+                                supportBonus = supportBonus + 2
+                            end
                         end
                     end
                 end

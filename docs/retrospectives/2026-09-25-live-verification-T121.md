@@ -101,6 +101,95 @@ so the nesting guard in the `except RuntimeError` arm came too late. The loop is
 before anything is constructed. A warning on stderr is not cosmetic for an MCP client reading the
 same pipe.
 
+## 5. `supply:C/T` verified against the board, hex by hex
+
+T121 had no enemy city both visible and at war, so the supply arithmetic could not be measured
+there. `AutoSave_0113` (loaded by hand; T113, 6 cities, 19 units, at war with Russia) does have one:
+
+```
+CAPTURE_READY|圣彼得堡|56,43|hp:200|max:200|walls:0/0|owner:1|melee_adjacent:0|melee_within_2:0|supply:2/6|
+```
+
+An independent re-derivation of the same six hexes (`.tools/probes/verify-supply-river.lua`, which
+does not use the adapter's code) agrees exactly:
+
+```
+HEX|55,43|cut-by-zoc:UNIT_HEAVY_CHARIOT@55,42
+HEX|56,42|cut-by-zoc:UNIT_HEAVY_CHARIOT@55,42
+HEX|56,44|OPEN
+HEX|57,42|OPEN
+HEX|57,43|OPEN
+HEX|57,44|OPEN
+SUPPLY|2/6
+```
+
+So the count is right, the ZOC rule is right (the Chariot at (55,42) is *beside* the two cut hexes
+rather than on them), and the city was healing off the four open hexes. This is the lever the
+SIEGE PROGRESS block tells the agent to pull.
+
+## 6. The river `-5`: not observable at T113, and a false alarm of my own making
+
+**Retraction first.** An early probe of mine reported `river:true` for sixteen adjacent pairs,
+including one sixteen tiles away, and I read the estimate's missing `river -5` as a bug. The probe
+was wrong, not the adapter: `local cross, err = pcall(...)` captures pcall's *status* in `cross`,
+so `tostring(cross)` printed `true` for every call that did not error. With the second return value
+read instead, every one of the sixteen pairs at T113 crosses no river - and the estimate's own
+`Modifiers:` line was correct.
+
+No river-crossing melee pair exists on that board, so the modifier itself is still unverified live.
+What *is* now checked is the branch: `river-crossing-truth.lua` asks the plot's own edge flags and
+the crossing call three times each - stable `false`, both directions, and `(54,40)` carries its
+river on the **NW** edge, whose neighbour is not `(53,40)`.
+
+## 7. The engine's own combat preview, and the flanking bug it found
+
+`CombatManager` is available in the InGame state with the functions the game's unit panel itself
+uses (`Base/Assets/UI/Panels/UnitPanel.lua:3352`):
+
+```
+CMFN|CanAttackTarget,GenerateCombatResults,GetBestDefender,GetBestInterceptor,IsAttackChangeWarState,SimulateAttackInto,SimulateAttackVersus,SimulatePriorityAttackInto
+```
+
+`CombatManager.SimulateAttackVersus(attackerComponentID, defenderComponentID, eCombatType)` returns
+the engine's combat solution, indexed by `CombatResultParameters`. For our Heavy Chariot (id
+1310724) in Moscow against the Russian Warrior at (53,40) it says:
+
+```
+RES|ATTACKER.COMBAT_STRENGTH=28        RES|ATTACKER.STRENGTH_MODIFIER=0
+RES|ATTACKER.PREVIEW_TEXT_MODIFIER.1=因难度设置而+2 [ICON_Strength] 战斗力。
+RES|ATTACKER.PREVIEW_TEXT_ASSIST.1=+4夹击加成
+RES|ATTACKER.PREVIEW_TEXT_HEALTH.1=[COLOR_RED]-6[ENDCOLOR] 受损单位
+RES|DEFENDER.COMBAT_STRENGTH=20        RES|DEFENDER.STRENGTH_MODIFIER=-5
+RES|DEFENDER.PREVIEW_TEXT_TERRAIN.1=[COLOR_RED]-2不利地形[ENDCOLOR]
+```
+
+The engine flanks with **+4** (two neighbours). Our estimate said `flank +6`: the flanking loop
+walked a 3x3 box, and two of those eight plots are two tiles away in a hex grid, so a third unit at
+distance two was counted. The support loop had the same defect. Both now filter on
+`Map.GetPlotDistance(...) == 1`, and the same estimate now reads `flank +4` - matching the engine.
+
+This is the engine oracle the adapter was missing. It also shows what the estimate still does *not*
+model: the engine applies a difficulty modifier (+2 here), a damaged-unit penalty (-6 on the
+attacker), and defender-side terrain (`-2`) folded into `DEFENDER.STRENGTH_MODIFIER=-5`. Our
+attacker CS after the fix is 32 where the engine's effective value is 28, and our defender CS is 20
+where the engine has 15 - so the estimate is still optimistic, and `FINAL_DAMAGE_TO` (77 / 79 in
+this dump) still needs decoding before it becomes a regression check.
+
+## 8. Corps and Armies: the API is reachable where we need it
+
+```
+CMD|FORM_CORPS=487801373          CMD|FORM_ARMY=-1373423663
+CMD|ENTER_FORMATION=-913294208    CMD|EXIT_FORMATION=-50443187
+UNITMANAGER|table                 UNITCOMMANDTYPES|table
+CAN|UNIT_ARCHER|FORM_CORPS=487801373|false
+```
+
+`UnitCommandTypes.FORM_CORPS` / `FORM_ARMY` resolve in the **InGame** state, and so does
+`UnitManager.CanStartCommand(unit, commandType, false)` - which is the gate a `form_formation` tool
+should use. Every unit answers `false` at T113, as it must: Nationalism is not researched and no
+two same-type units are stacked. Note `Players[me]:GetCivics()` is **nil** in InGame, so civic
+state must be read in GameCore; the command gate is the better check anyway.
+
 ## How to test these changes
 
 Two ways in. **Launch the game yourself** (desktop or Steam) and the sandbox is not involved at
@@ -167,16 +256,18 @@ otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loya
 
 ## What is still not verified live
 
-- **`supply:C/T` and the capture move.** T121 has no enemy city both visible and at war (the
-  capture scan returned `0 enemy cit(ies) in sight`, the two visible cities are city-states), so
-  the per-city supply arithmetic and `CAPTURE_MOVE` could not be exercised. The query itself ran
-  without error in the InGame context, which is all that proves. To close it: be at war with an
-  enemy whose city is visible, put a melee unit next to that city, then
-  `.tools\verify-live.py --no-load --raw-capture` and read the `supply:C/T` field on the
-  `CITY_READY` line. The capture move itself (`--capture`) **orders a unit** - that is the one
-  check here that changes the game state.
-- **The river `-5`.** No attack across a river existed to measure; the change is a constant with a
-  unit test and an unverified live reading. To close it: `.tools\verify-live.py --no-load
-  --estimate <unit_id> <x> <y>` against a target on the far side of a river and read the
-  `Modifiers:` line for `river -5` (the estimate is read-only and orders nothing).
-- **Corps/Armies.** `UnitCommandTypes.FORM_CORPS` / `FORM_ARMY` still have no probe and no tool.
+- **The capture move itself.** `supply:C/T` is done (§5), but ordering a melee unit onto a 0 HP
+  city tile (`CAPTURE_MOVE` -> `CITY TAKEN`) still needs a board with a city at 0 HP and a melee
+  unit adjacent, and it is the one check that **orders a unit**. To close it:
+  `.tools\verify-live.py --no-load --raw-capture` to confirm the city is at 0 HP with
+  `melee_adjacent >= 1`, then `--capture` (which moves the unit) and re-scan.
+- **The river `-5` branch.** No river-crossing pair existed at T113 or T121 (§6). To close it: a
+  board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
+  `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for
+  `river -5` (the estimate orders nothing).
+- **The estimate against the engine's numbers.** `CombatManager.SimulateAttackVersus` is the oracle
+  (§7) and the flanking count has been reconciled with it; the difficulty, damaged-unit and
+  defender-terrain modifiers, and the meaning of `FINAL_DAMAGE_TO`, are not yet modelled or decoded.
+- **Corps/Armies end to end.** The API and the command gate are reachable in InGame (§8), but
+  forming one needs Nationalism or Mobilization plus two same-type units, which no save here has.
+- **Corps/Armies.** `UnitCommandTypes.FORM_CORPS` / `FORM_ARMY` still have no tool.
