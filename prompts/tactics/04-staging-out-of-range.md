@@ -41,6 +41,16 @@ A staging tile is good when it is:
   turn of it, and nothing arrives alone.
 - Keep every unit inside the reach of the stack. A unit that outruns the others is the one that
   gets attacked (`answer-the-attack`).
+- **Route around enemy units, because their zone of control eats the whole turn.** The manual
+  (`ZONES OF CONTROL`, p.73): "When a unit moves into a tile within an enemy's ZOC it expends **all
+  of its MPs**. Cavalry units are the exception." So stepping into the hex next to an enemy is not
+  a cheap detour - it ends that unit's movement for the turn, even if it never intended to attack.
+  Plan the approach around enemy stacks, not through them, and expect the unit that brushes past an
+  enemy to arrive a turn late.
+- **Our cavalry is the exception too, and that is a tool.** Cavalry ignores enemy ZOC: it can slip
+  past a front line to reach the enemy's siege and ranged units, cut a supply hex, or pillage the
+  tiles the target city depends on. That is the same property that makes enemy cavalry dangerous to
+  us (`counter-the-cavalry`) - use it instead of only defending against it.
 - **Contact outranks the timetable.** The moment a unit discovers an enemy or is attacked, the
   answer is file 2 and file 3 - assess, mass, annihilate - and only then resume the advance. A
   city is patient; a Catapult that walked past an enemy is not.

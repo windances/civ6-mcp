@@ -57,7 +57,12 @@ Each turn in order:
    more are about **attacks you already have**: `use-your-attacks` fires while a
    legal attack is still unused (`skip_remaining_units` now names those units as it discards
    them), and `finish-the-wounded` fires when an enemy within two tiles is at 20 HP or less and
-   nothing attacked — a wounded enemy heals about twenty points a turn and comes back. Once a
+   nothing attacked — a wounded enemy comes back, and **how fast depends on where it stands**: the
+   manual's healing rates are 20 HP/turn in a city, 15 in friendly territory, 10 neutral, 5 in
+   enemy territory (naval 2, friendly only). The one that must not be left alive is the enemy
+   inside a city; the one to compare against is the enemy in the field at 5–10. The same numbers
+   are the reason to rotate **our own** damaged units back across the border: 15/turn at home
+   against 5/turn where they were hit. Once a
    war is on, two more apply: `one-garrison-per-city` (one unit per city, everything else at the
    front) and `answer-the-attack` (a unit that was hit gets a response this turn — fight back,
    screen it, or withdraw and say so). When a unit is hit — or the moment enemy forces come into
@@ -305,7 +310,10 @@ Military Engineers (requires Encampment + Armory): `build_route` builds a railro
 - **Production**: city queue empty — set new production
 - **Research/Civic**: completed — choose next
 - **Governor**: point available — `get_governors` → `appoint_governor` / `assign_governor(governor_type, city_id)` / `promote_governor(governor_type, promotion_type)`
-- **Promotion**: unit has XP — `get_unit_promotions` → `promote_unit`
+- **Promotion**: unit has XP — `get_unit_promotions` → `promote_unit`. **A promotion consumes the
+  unit's whole turn** (manual, `EXPENDING XPS`), so promote after it has attacked, or while it is
+  out of range or healing — never instead of an attack. Match it to the job: melee taking cities
+  want the anti-garrison/damage line, ranged want the ranged-strength line.
 - **Policy Slot**: empty — `get_policies` → `set_policies`
 - **Pantheon/Religion**: faith threshold reached — `get_pantheon_beliefs` → `choose_pantheon`; for founding: `get_religion_beliefs` → `found_religion`
 - **Envoys**: tokens available — `get_city_states` → `send_envoy`

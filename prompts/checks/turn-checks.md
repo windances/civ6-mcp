@@ -105,7 +105,7 @@ message: At least one unit still has movement points and a legal attack it did n
 id: finish-the-wounded
 when: turn() >= 60 and metric(weakest_enemy_hp_within_2) >= 1 and metric(weakest_enemy_hp_within_2) <= 20
 require: metric(attacks_this_turn) >= 1
-message: An enemy within 2 tiles is at 20 HP or less and nothing attacked this turn. A wounded unit heals roughly twenty points a turn inside a city and comes back at full strength - a ranged unit in range kills it for free (ranged attacks take no retaliation), so this is the one attack that is never a bad trade.
+message: An enemy within 2 tiles is at 20 HP or less and nothing attacked this turn. How fast it comes back depends on where it stands (manual, HEALING DAMAGE): 20 HP/turn in a city, 15 in friendly territory, 10 neutral, 5 in enemy territory. Inside a city it heals to full in five turns, so that is the one that must not be left alive; in the field it heals 5-10, which is a tempo decision rather than an emergency - but it still acts first next turn. A ranged unit in range kills it for free (ranged attacks take no retaliation), so this is the attack that is almost never a bad trade.
 -->
 
 ## War footing: one garrison per city, and no unit fights alone

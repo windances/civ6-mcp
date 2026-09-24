@@ -1052,8 +1052,8 @@ def _capture_metrics(readiness: list) -> dict:
     ``capture_ready`` counts enemy cities whose HP pool is empty **and** that have one of our
     melee-class units adjacent: those are the cities that fall this turn if the unit is ordered
     onto the tile. ``downed_enemy_cities`` counts all of them, reachable or not, so a city left
-    standing at 0 HP out of reach is still visible - it heals about twenty points a turn, and
-    "out of reach this turn" is a plan to fix, not a reason to stop looking.
+    standing at 0 HP out of reach is still visible - a supplied city heals about twenty points a
+    turn, and "out of reach this turn" is a plan to fix, not a reason to stop looking.
     """
     metrics = {
         "enemy_cities_seen": len(readiness or []),
@@ -1118,8 +1118,10 @@ def _capture_event(readiness: list, turn: int) -> str | None:
         elif within_2:
             lines.append(
                 f"  {name} {at}: city hp 0/{int(getattr(entry, 'max_hp', 0) or 0)}{walls} - "
-                f"{unit} is within two tiles but not adjacent. It heals about twenty points a turn "
-                f"(leave it and the whole bombardment is undone); close on it now and take it next turn."
+                f"{unit} is within two tiles but not adjacent. A city heals about twenty points a "
+                f"turn **while it has a supply line** - any adjacent hex outside our zone of control. "
+                f"Cover every adjacent hex and the heal stops; otherwise leave it and the whole "
+                f"bombardment is undone. Close on it now and take it next turn."
             )
         else:
             lines.append(

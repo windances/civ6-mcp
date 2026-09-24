@@ -28,11 +28,24 @@ time: that is how a Battering Ram and a Warrior were lost in consecutive turns a
 
 ## 3. Annihilate
 
-Concentrate every attacker on the same target so it reaches 0 HP this turn. A wounded enemy that
-survives heals about twenty points a turn inside a city and comes back at full strength
-(`finish-the-wounded`). Then stay concentrated and finish the rest of the group before returning
-to the original objective - a beaten field force is the only thing that makes the next city
-cheap.
+Concentrate every attacker on the same target so it reaches 0 HP this turn. **What a survivor heals
+depends on where it stands, and the manual gives the numbers** (`HEALING DAMAGE`, p.89): a unit
+heals **20 HP per turn in a city, 15 in friendly territory, 10 in neutral, 5 in enemy territory** —
+and naval units heal only in friendly territory, at 2. So:
+
+- an enemy **inside a city** is the one that must not be left alive: it heals 20 and comes back at
+  full strength (`finish-the-wounded`);
+- an enemy in the **field** heals 5-10, which makes "leave it for next turn" less catastrophic
+  than the city case - but it still gets to attack first, so the decision is about tempo, not HP;
+- **our own damaged units should rotate back across the border.** Healing at 5-10 in enemy
+  territory versus 15 at home is a three-fold difference: a unit that is too hurt to attack is
+  usually better off walking one or two tiles back into our territory, healing at 15, and
+  returning, than sitting in place at 5. A city of ours heals 20 (and a unit inside it heals 20),
+  which is the fastest repair there is - and the reason not to drain the front into those
+  garrisons is `one-garrison-per-city`.
+
+Then stay concentrated and finish the rest of the group before returning to the original
+objective - a beaten field force is the only thing that makes the next city cheap.
 
 ## The cases that need a different answer
 

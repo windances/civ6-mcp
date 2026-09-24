@@ -80,7 +80,24 @@ down (`supply line 4/6 cut - the city is still healing`).
 - **Kill what is killable.** An enemy at 20 HP or less is the one attack that is never a bad
   trade; a garrison that survives heals and comes back.
 - **Do not feed the train in piecemeal.** A wounded attacker heals or withdraws; it does not take
-  one more shot at the wall.
+  one more shot at the wall. Where it heals matters: the manual's rates are **20 HP per turn in a
+  city, 15 in friendly territory, 10 neutral, 5 in enemy territory** (`HEALING DAMAGE`, p.89), so a
+  wounded attacker that steps back across our own border repairs three times faster than one
+  sitting in the field. Rotating a unit home for two turns usually beats leaving it in the line to
+  absorb another hit.
+- **Promote on a turn that is not an attack turn.** A promotion consumes the unit's whole turn
+  (`EXPENDING XPS`, p.89), so the order is: attack first, then promote - or promote while the unit
+  is out of range or healing. Match the promotion to the job it is doing in this assault: melee
+  taking cities want the anti-garrison/damage line (Charge, Battlecry), ranged want the
+  ranged-strength line (Volley, Arrow Storm), siege want anything that speeds a city's walls down.
+  A promotion taken instead of an attack is a turn of damage thrown away, and a promotion taken on
+  the wrong unit is a permanent one.
+- **Keep the Great General with the stack.** A Great General gives **+1 movement and +5 combat
+  strength to land units within 2 tiles** (`GREAT GENERALS`, p.87), it may stack with a combat unit
+  for protection, and it is **destroyed if an enemy unit enters its tile**. +5 strength on every
+  attacker in the assault is larger than most promotions, it is free, and it is lost the moment
+  the general is left behind or caught: walk it with the siege train, and treat it as cargo that
+  must never be exposed.
 - **A second enemy stack arriving is a decision, not a distraction**: either it is killed first
   (files 2 and 3) or the assault breaks off. The siege train is never left between the two.
 

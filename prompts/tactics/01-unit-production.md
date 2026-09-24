@@ -48,6 +48,20 @@ the front (`one-garrison-per-city`).
   plus gold is a new unit without the production queue.
 - Buy when the wait costs more than the gold: a 4-turn ram bought for ~260 gold arrives now, and
   a city that is two turns from falling does not need a 10-turn Trebuchet ordered for it.
+- **The Great General is a unit the army has to keep.** Great Generals are earned mostly from
+  Encampment districts (`GREAT GENERALS`, p.87), and the general itself is worth
+  **+1 movement and +5 combat strength to land units within 2 tiles** - so an Encampment is not
+  only defence, it is the cheapest combat bonus the army can buy. Never activate it for the
+  one-off (see AGENTS.md): walk it with the stack, stack it with a combat unit for protection, and
+  remember it dies if an enemy reaches its tile.
+- **Corps and Armies are the late-game scaling lever, and the adapter cannot form them yet.** From
+  the Industrial Era, `Nationalism` lets two same-type units combine into a **Corps (+10 combat
+  strength)** and `Mobilization` lets three become an **Army (+7 more)**; the highest-experience
+  unit's promotions are kept and the formation cannot be split again
+  (`CORPS AND ARMIES`, p.156). Two Archer Corps at 35 ranged strength solve exactly the matchup
+  problem `match-their-melee` reports. The game exposes it as `UnitCommandTypes.FORM_CORPS` /
+  `FORM_ARMY` (`UnitPanel.lua`), but the MCP has no tool for it - so until one exists, either form
+  them in the game window and say so, or plan the late war without them.
 
 ## Prohibitions
 
