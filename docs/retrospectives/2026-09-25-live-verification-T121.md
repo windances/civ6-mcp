@@ -389,7 +389,47 @@ until it is restarted. Start a fresh session (or restart the MCP) before judging
 otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loyalty line and
 `end_turn` carries the `LOYALTY WARNING`.
 
-## What is still not verified live
+## 12. Playing to Nationalism: 50 turns in, and two more defects found
+
+The human chose to reach Corps by playing rather than deferring, so
+`.tools/grind-to-nationalism.py` was written to advance turns and resolve the blockers the adapter
+names - research (cheapest tech), the civic chain, empty production queues (cheapest option),
+promotions/governors/policies (first choice offered), diplomacy (POSITIVE), incoming deals
+(rejected) - and to **stop and print** anything it does not recognise.
+
+It ran T122 -> T171. The civic chain turned out to have a link the first version missed:
+
+```
+T131 中世纪集市 (Medieval Faires) adopted
+T145 人文主义 (Humanism) adopted
+      -> The Enlightenment needed Humanism *and* 外交部门 (Diplomatic Service); the
+         first-available fallback picked 海军传统 (Naval Tradition) instead, off the path
+T147 外交部门 progressing
+T161 启蒙运动 (The Enlightenment) progressing
+T171 hung here - see below
+```
+
+Two real defects came out of it, both recorded and neither yet fixed:
+
+- **The overview parser can be handed unsolicited tuner output.**
+  `ValueError: Overview response has 1 fields, expected >=14: diplo stmt type=-1061902145` - a
+  stray diplomatic-statement line arrived where the overview response was expected and the parser
+  treated it as the answer. The loop logged it and carried on; a human session would have seen a
+  turn fail for no visible reason.
+- **A full-screen UI the adapter cannot read stops the world.** At ~T171 the screen read
+  `unrecognised (10 text boxes)`, FireTuner stopped listening, and the loop hung inside a call
+  while holding the only connection. The process is still alive and the tuner is still closed, so
+  this is a game-side dialog (World Congress, a leader screen, or an AI-turn hang) rather than a
+  client problem. `game_status` is the tool that says so; `scripts\civ6-clean.ps1` or a click in
+  the window is the way out, and `restart_and_load` refuses while a connection is held - correctly.
+
+**Nationalism was not reached, so Corps is still only verified as far as §8 and this section**:
+the API, the gate, and the exact call shape. The rest is ready to run the moment the game is
+playable again - `.tools/probes/form-corps.lua` (lists `GetCommandTargets` pairs, then forms one
+with `PARAM_UNIT_PLAYER`/`PARAM_UNIT_ID` and reports the formation and the unit count) driven by
+`.tools/try-corps.py` (marches the movable chariot toward Moscow, ending turns until a target
+appears, then forms).
+
 
 - **The capture move itself - DONE (§10).** A Heavy Chariot walked into Moscow at 0/200 and took
   it; `CAPTURE_MOVE`, `cities 6 -> 7`, `KEEP| Москва ... captured`, scan to zero. It also proved
