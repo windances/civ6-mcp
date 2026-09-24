@@ -127,6 +127,22 @@ So the count is right, the ZOC rule is right (the Chariot at (55,42) is *beside*
 rather than on them), and the city was healing off the four open hexes. This is the lever the
 SIEGE PROGRESS block tells the agent to pull.
 
+A second city, a different geometry, `AutoSave_0120` (T120, Moscow as a Free City at (54,40)):
+
+```
+CITY|莫斯科|54,40|owner:62
+  HEX|53,39|OPEN
+  HEX|53,40|OPEN
+  HEX|53,41|cut-by-zoc:UNIT_ARCHER@54,41
+  HEX|54,39|cut-by-zoc:UNIT_HEAVY_CHARIOT@55,40
+  HEX|54,41|cut-by-unit:UNIT_ARCHER
+  HEX|55,40|cut-by-unit:UNIT_HEAVY_CHARIOT
+  SUPPLY|4/6
+```
+
+The adapter's own line for the same city reads `supply:4/6`. Two cities, two shapes - two
+occupied hexes and two ZOC-cut here against two ZOC-cut at St Petersburg - both matching.
+
 ## 6. The river `-5`: not observable at T113, and a false alarm of my own making
 
 **Retraction first.** An early probe of mine reported `river:true` for sixteen adjacent pairs,
@@ -258,9 +274,11 @@ otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loya
 
 - **The capture move itself.** `supply:C/T` is done (§5), but ordering a melee unit onto a 0 HP
   city tile (`CAPTURE_MOVE` -> `CITY TAKEN`) still needs a board with a city at 0 HP and a melee
-  unit adjacent, and it is the one check that **orders a unit**. To close it:
-  `.tools\verify-live.py --no-load --raw-capture` to confirm the city is at 0 HP with
-  `melee_adjacent >= 1`, then `--capture` (which moves the unit) and re-scan.
+  unit adjacent, and it is the one check that **orders a unit**. No save contains that state: the
+  game writes `AutoSave_NNNN` at the *start* of a turn, so the "broken to 0 and left standing"
+  window (T120, hand-played) exists only inside that turn. T113 and T120 both show the besieged
+  city at full 200 HP. Closing it therefore needs one of: playing a city down to 0 and capturing
+  it (a real multi-turn battle), or a disposable sandbox game where the board can be built.
 - **The river `-5` branch.** No river-crossing pair existed at T113 or T121 (§6). To close it: a
   board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
   `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for
