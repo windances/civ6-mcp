@@ -103,8 +103,12 @@ Each turn in order:
    upgrade both clear these rules — trading one-for-one with a better unit does not.
    **Loyalty can take a city back with no battle at all**, so the turn result carries a
    **LOYALTY WARNING** while any of your cities is below 50 loyalty or losing loyalty: each city's
-   pool, its per-turn pressure, the game's own turns-to-conversion estimate, the governor in
-   residence, the garrison on its tile and the game's own advice string. `hold-what-you-take`
+   pool, its per-turn pressure, **which way the game says it is going** and its
+   turns-to-conversion figure — printed together, because that figure is a revolt countdown only
+   while the city is *losing* loyalty and counts turns to a full pool while it gains (the game's
+   own banner reads the two in one breath, `CityBannerManager.lua:2355-2358`) — the next owner
+   while it drains, the governor in residence, the garrison on its tile and the game's own advice
+   string. `hold-what-you-take`
    then fails while a low-loyalty city has **no governor in it and no unit on its tile** — the
    state Moscow was in when it revolted (captured T112, a Free City by T116, retaken T121 at a
    cost of nine attacks). Assign a governor (`assign_governor`) or garrison the tile; if the

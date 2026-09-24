@@ -117,8 +117,10 @@ the front (bring siege, heal, upgrade, reinforce) or change the target; never ne
 - **Then hold it.** A captured city can leave the empire with no enemy involved: live, Moscow was
   taken at T112 (pop 3, no governor, no garrison) and was a Free City by T116, which cost nine
   attacks and four turns to undo. The turn result carries a `LOYALTY WARNING` naming each city's
-  pool, its per-turn pressure, the game's own turns-to-conversion estimate and the game's own
-  advice string; `hold-what-you-take` fails while a city below 50 loyalty has neither a governor
+  pool, its per-turn pressure, which way the game says it is going (gaining/losing) and its
+  turns-to-conversion figure - the two together, because that figure is a revolt countdown only
+  while the city is losing loyalty and counts turns to a full pool while it gains - and the game's
+  own advice string; `hold-what-you-take` fails while a city below 50 loyalty has neither a governor
   nor a unit on its tile. `assign_governor` is the cheapest fix (moving a governor is free), and
   a unit on the tile is the other one.
 - Keep the stack together and move it on the next city; do not let it disperse into garrisons.

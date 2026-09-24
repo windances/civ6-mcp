@@ -357,9 +357,12 @@ is the binding constraint in every assault in this game.
   on its tile will revolt into a Free City and have to be besieged again: live,
   Moscow was captured at T112 and was a Free City by T116 - nine attacks and four
   turns spent retaking our own city, while St Petersburg waited. The turn result
-  carries a `LOYALTY WARNING` with each city's pool, its per-turn pressure, the
-  game's own turns-to-conversion estimate, the governor in residence, the garrison
-  and the game's own advice string; `hold-what-you-take` fails while a city below
+  carries a `LOYALTY WARNING` with each city's pool, its per-turn pressure, which
+  way the game says it is going and its turns-to-conversion figure - a revolt
+  countdown only while the city is losing loyalty, and turns to a full pool while it
+  gains, so the two are printed together - the next owner while it drains, the
+  governor in residence, the garrison and the game's own advice string;
+  `hold-what-you-take` fails while a city below
   50 loyalty has neither a governor nor a unit on its tile. The answer is
   `assign_governor` (moving one is free) or a garrison - and if the governor is
   needed at the front, that is a decision to record, not to skip.
