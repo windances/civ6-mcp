@@ -32,7 +32,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 from civ_mcp import end_turn as et  # noqa: E402
 from civ_mcp import lua as lq  # noqa: E402
 from civ_mcp import turn_checks  # noqa: E402
-from civ_mcp.game_state import _extract_pre_hp  # noqa: E402
+from civ_mcp.game_state import GameState, _extract_pre_hp  # noqa: E402
 from civ_mcp.lua import models as m  # noqa: E402
 
 MOSCOW = "CAPTURE_READY|Moscow|54,40|hp:0|max:200|walls:0/0|owner:1|melee_adjacent:1|melee_within_2:3|UNIT_SPEARMAN"
@@ -192,6 +192,40 @@ class TestTheScan:
 
     def test_a_full_hp_city_is_not_down(self):
         assert not m.CaptureReadiness("X", 1, 1, hp=200, max_hp=200).down
+
+
+class TestCavalryCanCapture:
+    """Live T122: a Heavy Chariot took the Free City of Moscow, and the scan had said it could not.
+
+    The scan counted only MELEE and ANTI_CAVALRY promotion classes, so it reported
+    `melee_adjacent 0` while a chariot stood next to a city at 0/200 and then walked into it:
+
+        CAPTURE_MOVE|54,40|from:55,40|now_at:54,40|(moved dx:-1 dy:+0)
+        KEEP|莫斯科 (pop 2, id:589830, captured)          # cities 6 -> 7
+
+    So the block written to say "move a unit in" was silent in exactly the case it exists for, and
+    the move response never said the city had changed hands.
+    """
+
+    def test_the_scan_counts_cavalry(self):
+        assert 'string.find(pc, "CAVALRY")' in lq.build_capture_check_query()
+
+    def test_the_query_docstring_names_the_classes_that_can_take_a_city(self):
+        doc = lq.build_capture_check_query.__doc__ or ""
+        assert "cavalry" in doc.lower(), "the class rule has to be written down where it is used"
+
+    def test_the_position_query_reports_the_city_under_the_unit(self):
+        lua = lq.build_unit_position_query(5, 54, 40)
+        assert 'print("ONCITY|"' in lua
+        assert "Cities.GetCityInPlot" in lua
+
+    def test_a_capture_move_that_lands_in_our_city_is_read_as_a_capture(self):
+        gs = GameState.__new__(GameState)
+        gs._local_player_id = 0
+        assert gs._city_owner_on_own_tile(["ONCITY|589830|owner:0|莫斯科"]) is True
+        assert gs._city_owner_on_own_tile(["ONCITY|589830|owner:62|莫斯科"]) is False
+        assert gs._city_owner_on_own_tile(["POS|54|40"]) is False
+        assert gs._city_owner_on_own_tile([]) is False
 
 
 class TestTheMetric:

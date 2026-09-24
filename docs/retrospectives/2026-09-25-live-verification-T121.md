@@ -250,7 +250,59 @@ foreground, one turn per command, and never in the background while the human ma
 **Smaller note:** reading the unit list immediately after `end_turn` returns every unit on 0 moves -
 the turn has not finished settling. Re-read before concluding a unit is out of moves.
 
+## 10. The capture, verified end to end - and it was a chariot
 
+Played out on the reloaded T120 (`AutoSave_0120`), ranged fire only, chariots held for the capture
+per the human's instruction. Moscow (a Free City, 200/200, no walls, supply 4/6):
+
+```
+T120  volley, 3 hits landed (1 Trebuchet, 2 Archers)   200 -> 90
+T121  heals +20 (supply 4/6)                           90 -> 110; second volley -> 22
+T122  third volley                                     22 -> 0
+      move 2097157 54 40
+      CAPTURE_MOVE|54,40|from:55,40|now_at:54,40|(moved dx:-1 dy:+0)
+      cities 6 -> 7 ;  resolve_city_capture keep -> KEEP|莫斯科 (pop 2, id:589830, captured)
+      capture scan: 0 enemy cit(ies)
+```
+
+Four things this settles, and two it found.
+
+**The capture move works.** `build_move_unit` puts the ATTACK modifier on a move onto an enemy city
+tile, the game accepts it, and a unit standing in the city it just took is the whole of the capture:
+the end-of-turn scan went to zero enemy cities and the city count went up.
+
+**Cavalry can take cities, and the adapter said it could not.** The unit that walked in was a
+**Heavy Chariot** on 14 HP, while `build_capture_check_query` reported `melee_adjacent 0` - it
+counted MELEE and ANTI_CAVALRY promotion classes and excluded CAVALRY, and the manual-derived
+doctrine repeated that. The TAKE THE CITY block therefore stayed silent next to a city a chariot
+could walk into, which is the exact miss it exists to prevent. Fixed: the scan counts cavalry, and
+`AGENTS.md`, the directive (with its `SKILL.md` copy), `tactics/06`, the `take-the-city` rule text
+and the TAKE THE CITY header all now say melee, anti-cavalry **and cavalry**.
+
+**The move response now says the city was taken.** It used to end at `now_at:54,40` with no word
+for a completed capture; the position read now emits `ONCITY|<id>|owner:<pid>`, and a CAPTURE_MOVE
+that lands on its target in one of our cities reports
+`|CITY TAKEN - resolve keep/raze with city_action`.
+
+**A pending diplomacy session freezes the whole turn.** Unit moves read 0, attacks answer
+`NO_MOVES`, and `end_turn` answers `Cannot end turn: diplomacy encounter pending with 埃及`. Reading
+the session (`get_diplomacy_sessions`) and answering it (`diplomacy_respond(7, "POSITIVE")` ->
+`OK:RESPONDED|POSITIVE|SESSION_CLOSED`) gave every unit its moves back at once. A turn that "has no
+moves" is a turn waiting on a decision, not a turn that has been spent.
+
+Two open items from the same run:
+
+- **The post-turn snapshot can fail after a capture**: `turn checks: no unit list available for T122
+  at all` with `LuaError: ERR:Runtime Error: [string "..."]:65: function expected instead of nil`.
+  `_take_snapshot` reads `build_units_query` in the **GameCore** state (`game_state.py:1591`), so
+  something in that chunk is a GameCore-invisible API, hit as the city changed hands.
+- **The mid-turn World Congress** fired inside `end_turn` and the adapter cast its 2 free votes
+  itself ("option A, first target, 0 favour") so the turn could advance. Those votes were not
+  chosen deliberately - worth remembering before judging a resolution's outcome.
+
+
+
+## How to test these changes
 
 Two ways in. **Launch the game yourself** (desktop or Steam) and the sandbox is not involved at
 all: the game writes its own profile with your own rights, and every command below runs under the
@@ -316,18 +368,20 @@ otherwise the new rules read as `un-evaluable`. Then `get_cities` shows the loya
 
 ## What is still not verified live
 
-- **The capture move itself.** `supply:C/T` is done (§5), but ordering a unit onto a 0 HP city tile
-  (`CAPTURE_MOVE` -> `CITY TAKEN`) still needs a city at 0 HP with a capture unit adjacent, and it
-  is the one check that **orders a unit**. No save contains that state (the game writes
-  `AutoSave_NNNN` at the *start* of a turn), so it has to be played out - and the playing found the
-  reporting bug in §9. The T120 battle reached Moscow at 0/200 by T123; the run that finishes it
-  must (a) fire with ranged units only, (b) keep one chariot for the capture, (c) read the city's
-  own number rather than trusting the per-attack "damage dealt" line, and (d) run in the foreground
-  one turn at a time.
-- **Whether cavalry may capture.** The capture scan counts MELEE and ANTI_CAVALRY promotion classes
-  and excludes CAVALRY (§9). The game let a Heavy Chariot *attack* a city tile; capture is untested.
-  If a chariot takes the city, `build_capture_check_query` needs CAVALRY added and the doctrine text
-  corrected with it.
+- **The capture move itself - DONE (§10).** A Heavy Chariot walked into Moscow at 0/200 and took
+  it; `CAPTURE_MOVE`, `cities 6 -> 7`, `KEEP| Москва ... captured`, scan to zero. It also proved
+  the scan's class filter wrong (cavalry), which is fixed.
+- **The river `-5` branch.** No river-crossing pair existed at T113, T120 or T122 (§6, §9). To
+  close it: a board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
+  `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for
+  `river -5` (the estimate orders nothing).
+- **The estimate against the engine's numbers.** `CombatManager.SimulateAttackVersus` is the oracle
+  (§7) and the flanking count has been reconciled with it; the difficulty, damaged-unit and
+  defender-terrain modifiers, and the meaning of `FINAL_DAMAGE_TO`, are not yet modelled or decoded.
+- **Corps/Armies end to end.** The API and the command gate are reachable in InGame (§8), but
+  forming one needs Nationalism or Mobilization plus two same-type units, which no save here has.
+- **The post-turn snapshot failure after a capture** (§10): `build_units_query` read in GameCore
+  answered `line 65: function expected instead of nil` and the T122 unit list was lost.
 - **The river `-5` branch.** No river-crossing pair existed at T113 or T121 (§6). To close it: a
   board where `.tools\probes\river-pairs.lua` prints `river:true` and `legal:true`, then
   `.tools\verify-live.py --no-load --estimate <unit_id> <x> <y>` and read `Modifiers:` for

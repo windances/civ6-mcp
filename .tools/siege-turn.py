@@ -38,6 +38,14 @@ async def main() -> int:
     ap.add_argument("--move", nargs=3, metavar=("UNIT_ID", "X", "Y"))
     ap.add_argument("--end-turn", action="store_true")
     ap.add_argument("--skip-rest", action="store_true")
+    ap.add_argument("--resolve-capture", metavar="ACTION",
+                    choices=("keep", "raze", "reject", "liberate_founder", "liberate_previous"),
+                    help="resolve a pending city-capture decision")
+    ap.add_argument("--civics", action="store_true", help="list researchable techs and civics")
+    ap.add_argument("--diplomacy", action="store_true", help="read any pending diplomacy session")
+    ap.add_argument("--respond", choices=("positive", "negative"),
+                    help="answer the pending diplomacy session (2-3 rounds)")
+    ap.add_argument("--set-civic", metavar="NAME", help="choose a civic (a turn-start blocker)")
     ap.add_argument("--path", nargs=3, action="append", metavar=("UNIT_ID", "X", "Y"),
                     help="the game's own pathing estimate to a tile (read-only, repeatable)")
     args = ap.parse_args()
@@ -92,6 +100,29 @@ async def main() -> int:
             for unit_id, x, y in ((int(a), int(b), int(c)) for a, b, c in args.attack):
                 print(f"--- attack: {unit_id} -> ({x},{y}) ---")
                 print("  " + (await gs.attack_unit(unit_id, x, y)).replace("\n", "\n  "))
+
+        if args.resolve_capture:
+            print(f"=== resolve_city_capture {args.resolve_capture} ===")
+            print(await gs.resolve_city_capture(args.resolve_capture))
+        if args.diplomacy:
+            print("=== pending diplomacy ===")
+            for session in await gs.get_diplomacy_sessions():
+                print(f"  {session}")
+        if args.respond:
+            sessions = await gs.get_diplomacy_sessions()
+            if not sessions:
+                print("=== respond: no pending session ===")
+            for session in sessions:
+                pid = getattr(session, "other_player_id", None)
+                print(f"=== respond_to_diplomacy {pid} {args.respond.upper()} ===")
+                print(await gs.diplomacy_respond(pid, args.respond.upper()))
+        if args.civics:
+            status = await gs.get_tech_civics()
+            print("=== techs ===")
+            print(status)
+        if args.set_civic:
+            print(f"=== set_civic {args.set_civic} ===")
+            print(await gs.set_civic(args.set_civic))
 
         for unit_id, x, y in ((int(a), int(b), int(c)) for a, b, c in (args.path or [])):
             print(f"=== pathing {unit_id} -> ({x},{y}) ===")

@@ -305,7 +305,22 @@ end)
     return f"""
 local me = Game.GetLocalPlayer()
 local u = Players[me]:GetUnits():FindID({unit_index})
-if u then print("POS|" .. u:GetX() .. "|" .. u:GetY()) else print("POS|GONE") end
+if u then
+    print("POS|" .. u:GetX() .. "|" .. u:GetY())
+    -- Whether the tile we ended on holds a city, and whose it is. A move onto an enemy city at
+    -- 0 HP *is* the capture, and the move response used to end at `now_at:54,40` with no word for
+    -- it: live T122 a Heavy Chariot took Moscow that way and the caller had to infer the capture
+    -- from the city list. One extra line is the difference between "moved" and "took the city".
+    pcall(function()
+        local c = Cities.GetCityInPlot(u:GetX(), u:GetY())
+        if c then
+            print("ONCITY|" .. c:GetID() .. "|owner:" .. c:GetOwner()
+                .. "|" .. Locale.Lookup(c:GetName()):gsub("|", "/"))
+        end
+    end)
+else
+    print("POS|GONE")
+end
 {diag_block}print("{SENTINEL}")
 """
 
@@ -1256,13 +1271,14 @@ def build_capture_check_query() -> str:
     InGame rather than GameCore because an enemy city's districts and their damage pools are an
     InGame-only API (the same reason `build_attack_followup_query` runs there). Read-only.
 
-    An assault has a last step that no damage number shows: a melee-class unit walks onto the
-    city's own tile once its HP pool is empty. Only melee-class units can do it - cavalry, siege
-    and support units cannot (`CAPTURE_MOVE` from a Battering Ram is refused), and neither can a
-    unit standing a tile away. This asks the game for exactly that, per visible enemy city: the
-    city HP pool, the walls, and how many of our capture-capable units are adjacent or one tile
-    out. Live, Moscow sat at 0/200 for four turns with a Spearman two tiles away, healed about
-    twenty points a turn back to 120/200, and the siege had to be fought again from nothing.
+    An assault has a last step that no damage number shows: a capture-capable unit walks onto the
+    city's own tile once its HP pool is empty. Melee, anti-cavalry **and cavalry** can do it -
+    live T122 a Heavy Chariot took Moscow this way; ranged, siege and support cannot (`CAPTURE_MOVE`
+    from a Battering Ram is refused), and neither can a unit standing a tile away. This asks the
+    game for exactly that, per visible enemy city: the city HP pool, the walls, and how many of our
+    capture-capable units are adjacent or one tile out. Live, Moscow sat at 0/200 for four turns
+    with a Spearman two tiles away, healed about twenty points a turn back to 120/200, and the
+    siege had to be fought again from nothing.
     """
     return """
 local me = Game.GetLocalPlayer()
@@ -1275,9 +1291,14 @@ for _, u in Players[me]:GetUnits():Members() do
         local entry = GameInfo.Units[u:GetType()]
         local pc = ""
         pcall(function() pc = entry and entry.PromotionClass or "" end)
-        -- MELEE covers land melee and naval melee; ANTI_CAVALRY can take cities too. SIEGE,
-        -- RANGED, CAVALRY and SUPPORT cannot.
-        if string.find(pc, "MELEE") or string.find(pc, "ANTI_CAVALRY") then
+        -- MELEE covers land melee and naval melee; ANTI_CAVALRY and CAVALRY can take cities too.
+        -- SIEGE, RANGED and SUPPORT cannot. Cavalry used to be excluded here, and live T122 that
+        -- was wrong: a Heavy Chariot walked into the Free City of Moscow at 0/200 and took it
+        -- (our city count went 6 -> 7) while this scan reported `melee_adjacent 0`. The scan
+        -- therefore stayed silent next to a city a chariot could walk into - the same class of
+        -- miss the TAKE THE CITY block exists to prevent.
+        if string.find(pc, "MELEE") or string.find(pc, "ANTI_CAVALRY")
+            or string.find(pc, "CAVALRY") then
             table.insert(melee, {ux, uy, (entry and entry.UnitType or "?")})
         end
     end

@@ -25,13 +25,15 @@ Read once the stack is in contact with the target city and the assault is runnin
    punish it. (Live: the old order of work said "shoot the garrison", and eight turns of fire
    traded blows with a unit that was never losing HP.)
 4. **When the city HP pool reaches 0, the capture move happens that turn.** The turn result
-   carries a `TAKE THE CITY` block naming the tile and the melee unit in reach; the rule
-   `take-the-city` fails while a city at 0 HP is still standing with a melee unit next to it.
-   Only a melee-class unit can do it and only from the city's own tile - a Battering Ram or
-   Siege Tower is refused (`CAPTURE_MOVE` BLOCKED), and cavalry, ranged and siege units cannot
-   capture either. A city with **no garrison unit** in it is still attackable (the adapter
+   carries a `TAKE THE CITY` block naming the tile and the capture-capable unit in reach; the rule
+   `take-the-city` fails while a city at 0 HP is still standing with one next to it.
+   Melee, anti-cavalry **and cavalry** units can do it, and only from the city's own tile - a
+   Battering Ram or Siege Tower is refused (`CAPTURE_MOVE` BLOCKED), and ranged and siege units
+   cannot. Cavalry was listed as unable here until T122, when a Heavy Chariot walked into Moscow
+   at 0/200 and took it; a chariot parked beside a broken city is the capture unit, so do not
+   spend it on attacks. A city with **no garrison unit** in it is still attackable (the adapter
    resolves the city itself through `Cities.GetCityInPlot`): keep firing at the tile, and move
-   the melee unit in - an empty city is not a city that cannot be hit, it is a city that can be
+   the unit in - an empty city is not a city that cannot be hit, it is a city that can be
    entered. Two live failures to avoid: a city left at 0 HP heals about twenty points a turn
    and is back to 120/200 six turns later, and a broken city with nobody to walk into it is
    four turns of fire thrown away.

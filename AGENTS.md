@@ -82,15 +82,18 @@ Each turn in order:
    units' zone of control is a supply line, so standing on (or beside) every adjacent hex stops the
    heal outright, which is cheaper than out-damaging it. Fire that neither cuts the supply nor
    out-damages the healing is fire that never happened: fix the assault or break it off.
-   **A city only changes hands when a melee unit walks onto its tile**, and that last step has no
+   **A city only changes hands when a capture-capable unit walks onto its tile** — melee,
+   anti-cavalry or cavalry; ranged, siege and support units cannot — and that last step has no
    damage number attached to it, so the turn result carries a **TAKE THE CITY** block whenever an
-   enemy city's HP pool is empty: it names the melee unit in reach and the tile to move it to, and
-   `take-the-city` fails while a city at 0 HP is still standing with one of our melee units
-   adjacent. Two things this fixed in the adapter itself: an enemy city with **no garrison unit**
+   enemy city's HP pool is empty: it names the unit in reach and the tile to move it to, and
+   `take-the-city` fails while a city at 0 HP is still standing with one of our capture-capable
+   units adjacent. Cavalry belonged on that list from the start and was not: live T122 a Heavy
+   Chariot took Moscow at 0/200 while the scan reported no capture-capable unit on the tile.
+   Two things this fixed in the adapter itself: an enemy city with **no garrison unit**
    in it used to answer `ERR:NO_ENEMY` to `attack` (so a broken city could not be hit at all and
    healed back while the army watched), and a move onto an enemy city tile went out without the
    ATTACK modifier, so the capture move was refused. `attack` and `move` now both resolve a city
-   at the target tile through `Cities.GetCityInPlot`, and a melee unit ordered onto a 0 HP city
+   at the target tile through `Cities.GetCityInPlot`, and a unit ordered onto a 0 HP city
    takes it and reports `CITY TAKEN` — resolve it with `city_action` keep/raze.
    Two more rules compare what the enemy fields with what you have. **`match-their-melee`** fails
    while enemy melee within three tiles of the army is CS 35 or better and your front line is

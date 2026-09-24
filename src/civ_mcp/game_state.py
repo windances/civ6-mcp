@@ -283,6 +283,14 @@ class GameState:
                                     )
                                     if (now_x, now_y) != (tx, ty):
                                         result += f"|STOPPED_MID_PATH (moves exhausted)"
+                                    elif result.startswith("CAPTURE_MOVE") and (
+                                        self._city_owner_on_own_tile(pos_lines)
+                                    ):
+                                        # A CAPTURE_MOVE that ended on the target tile, with a city
+                                        # there that is now ours, *is* the capture. Live T122 the
+                                        # response stopped at `now_at:54,40` and the caller had to
+                                        # infer the capture from the city list going 6 -> 7.
+                                        result += "|CITY TAKEN - resolve keep/raze with city_action"
                         break
             except Exception:
                 pass
@@ -321,6 +329,23 @@ class GameState:
             except Exception:
                 log.debug("Post-move visibility diff failed", exc_info=True)
         return result
+
+    def _city_owner_on_own_tile(self, pos_lines: list[str]) -> bool:
+        """Did the unit end its move standing in one of *our* cities?
+
+        The position query adds an ``ONCITY|<id>|owner:<pid>|<name>`` line when the tile it landed
+        on holds a city. A CAPTURE_MOVE that ends on its target with our owner on the city tile is
+        a completed capture, so the caller can say so instead of leaving the agent to infer it.
+        """
+        for line in pos_lines or []:
+            if line.startswith("ONCITY|"):
+                for part in line.split("|"):
+                    if part.startswith("owner:"):
+                        try:
+                            return int(part.split(":", 1)[1]) == self._local_player_id
+                        except ValueError:
+                            return False
+        return False
 
     async def attack_unit(self, unit_index: int, target_x: int, target_y: int) -> str:
         # Pre-attack: dismiss any blocking popups that would silently eat the attack

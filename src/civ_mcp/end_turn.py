@@ -1096,7 +1096,8 @@ def _capture_event(readiness: list, turn: int) -> str | None:
     downed = [e for e in (readiness or []) if getattr(e, "down", False)]
     if not downed:
         return None
-    lines = [f"TAKE THE CITY (T{turn}) - city HP pool is empty; only a melee unit can finish it:"]
+    lines = [f"TAKE THE CITY (T{turn}) - city HP pool is empty; only a capture-capable unit "
+             f"(melee, anti-cavalry or cavalry) can finish it:"]
     for entry in downed:
         name = getattr(entry, "city_name", "?") or "?"
         walls = ""

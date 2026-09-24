@@ -160,11 +160,12 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   reads 0, a melee unit must move onto the city's tile **that same turn**: a city
   heals about twenty points a turn, so a broken city left alone is back to 120/200
   six turns later and the whole barrage is undone. The turn result carries a
-  `TAKE THE CITY` block naming the tile and the melee unit in reach, and
-  `take-the-city` fails while a city at 0 HP is still standing with a melee unit
-  adjacent. Only melee-class units can take a city - a Battering Ram or Siege
-  Tower is refused with `CAPTURE_MOVE` BLOCKED, and cavalry, ranged and siege
-  units cannot capture either.
+  `TAKE THE CITY` block naming the tile and the capture-capable unit in reach, and
+  `take-the-city` fails while a city at 0 HP is still standing with one adjacent.
+  Melee, anti-cavalry **and cavalry** units can take a city - a Battering Ram or
+  Siege Tower is refused with `CAPTURE_MOVE` BLOCKED, and ranged and siege units
+  cannot. Cavalry was listed as unable here until T122, when a Heavy Chariot walked
+  into Moscow at 0/200 and took it while the scan called the tile empty.
 - **Cut the supply line instead of out-damaging the heal.** The manual (`HEALING
   DAMAGE TO CITIES`): a city heals "as long as it has a supply line", and a supply
   line is "any hex adjacent to the city that is not within an enemy unit's Zone of
