@@ -116,6 +116,56 @@ def restore_achieved_goals(target: int, apply: bool = True) -> list[str]:
     return restored
 
 
+def unretire_goals_after(target: int, apply: bool = True) -> list[str]:
+    """Forget goals that were retired *after* ``target`` in the persisted goal state.
+
+    Restoring the rule block is only half a rollback. ``end_turn`` decides what to prune with
+    ``turn_checks.sweep_achieved(path, retired, ...)``, where ``retired`` is the **persisted** map in
+    ``.civ6-mcp-data/turn-checks-state.json`` (check_id -> the turn it was achieved) - not this
+    turn's evaluation. So a goal the abandoned branch retired stays retired in that file, and the
+    very next end-turn sweep deletes the block ``restore_achieved_goals`` just put back.
+
+    Measured 2026-09-26: the T132 -> T59 rollback printed
+    ``restored ram-tower-before-civil-engineering (achieved T99, in force again at T59)``, and the
+    first ``end`` at T59 pruned it again (archive ``turn-checks-20260926-012524.md``) because the
+    state file still said T99. Both goals were absent from the rule file for the whole replay, which
+    silently dropped the directive's only hard deadline (the ram/tower window that closes at
+    ``CIVIC_CIVIL_ENGINEERING``) and its wonder goal (zero wonders forfeits Dynastic Cycle).
+
+    Returns one label per entry forgotten. Entries are forgotten for every game in the file: a goal
+    retired on a branch that no longer exists is not retired on the branch being returned to, and the
+    failure mode of forgetting one too many is a rule that nags again, while the failure mode of
+    forgetting none is a rule that silently never fires.
+    """
+    path = ROOT / ".civ6-mcp-data" / "turn-checks-state.json"
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 - an unreadable state file is left alone
+        return []
+    if not isinstance(data, dict):
+        return []
+    forgotten: list[str] = []
+    for game, per_game in list(data.items()):
+        if not isinstance(per_game, dict):
+            continue
+        for check_id, turn in list(per_game.items()):
+            try:
+                when = int(turn)
+            except (TypeError, ValueError):
+                continue
+            if when <= target:
+                continue
+            del per_game[check_id]
+            forgotten.append(f"{check_id} (retired at T{when}, forgotten so T{target} re-checks it)")
+        if not per_game:
+            data.pop(game, None)
+    if forgotten and apply:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    return forgotten
+
+
 def save_turn_from_file(path: Path) -> int | None:
     """The turn a save really holds, read from the file itself.
 
@@ -555,6 +605,13 @@ def main() -> int:
                 print(f"restored      {label}")
         else:
             print(f"nothing       no goal was achieved after T{target}")
+        # ...and the persisted state, or the next end-turn sweep deletes them again.
+        forgotten = unretire_goals_after(target, apply=True)
+        if forgotten:
+            for label in forgotten:
+                print(f"unretired     {label}")
+        else:
+            print(f"nothing       no retired goal was recorded after T{target}")
 
     archive = archive_saves(saves, target, state["turn"], stamp, args.save)
     print(f"\narchived      {archive.relative_to(ROOT)}")
