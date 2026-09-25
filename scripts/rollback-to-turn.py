@@ -1,6 +1,6 @@
-"""Roll the game back to a chosen turn: archive the future, then restart accordingly.
+"""Roll the game back to a chosen turn: archive the future, restore the past, then restart.
 
-A rollback is three jobs, and doing only the first one is how a session ends up confused:
+A rollback is four jobs, and doing only the first one is how a session ends up confused:
 
   1. **Archive the future.** Every autosave after the target turn is copied into a
      timestamped folder with a manifest, so the abandoned branch can be replayed, compared
@@ -9,7 +9,12 @@ A rollback is three jobs, and doing only the first one is how a session ends up 
   2. **Archive the diary.** The diary is keyed per game, so the abandoned branch's rows sit
      in the same file the agent reads as memory. They are split off at the boundary
      (``.tools/archive-branch.py`` does the split; this calls it).
-  3. **Restart the right way for the state the game is actually in.** That is not one
+  3. **Restore the rules the branch retired.** A ``once: true`` goal is *removed* from
+     ``prompts/checks/turn-checks.md`` when it is met, replaced by a comment naming the
+     archived copy. Behind that turn the rule has to come back, or the target position is
+     silently missing a directive it was supposed to be following (2026-09-25: T117 -> T99
+     left the ram/tower goal retired at a T100 that no longer existed).
+  4. **Restart the right way for the state the game is actually in.** That is not one
      command: with a game in progress the main menu is not on screen, so a bare load would
      wait out its timeouts - the launcher's own guard refuses it - while a game already at
      the main menu needs no restart at all, and a game that is not running needs a launch
@@ -29,6 +34,7 @@ import asyncio
 import hashlib
 import importlib.util
 import json
+import re
 import shutil
 import sys
 import time
@@ -49,6 +55,65 @@ for stream in (sys.stdout, sys.stderr):
 from civ_mcp import game_launcher as gl  # noqa: E402
 
 ARCHIVE_ROOT = ROOT / ".civ6-mcp-data" / "branches"
+CHECKS_FILE = ROOT / "prompts" / "checks" / "turn-checks.md"
+
+# What the turn-check sweep leaves behind when a `once: true` goal is met.
+_ACHIEVED = re.compile(
+    r"^<!-- achieved T(\d+): ([\w-]+) \(original in (archive/[^)]+)\) -->$"
+)
+
+
+def check_block(archive: Path, goal_id: str) -> str | None:
+    """The ``<!-- check ... -->`` block for one goal id, as an archived copy holds it."""
+    if not archive.exists():
+        return None
+    text = archive.read_text(encoding="utf-8")
+    start = text.find("<!-- check")
+    while start != -1:
+        end = text.find("-->", start)
+        if end == -1:
+            return None
+        block = text[start : end + 3]
+        if f"id: {goal_id}" in block.splitlines():
+            return block
+        start = text.find("<!-- check", end)
+    return None
+
+
+def restore_achieved_goals(target: int, apply: bool = True) -> list[str]:
+    """Put back the goals the abandoned branch achieved *after* ``target``.
+
+    A ``once: true`` goal is not merely reported when it is met: the sweep removes the rule from
+    ``prompts/checks/turn-checks.md`` and leaves ``<!-- achieved T<turn>: <id> (original in
+    archive/...) -->`` in its place. That is right while the game stands at that turn, and wrong
+    the moment the game is rolled back behind it — the rule that should still be nagging is gone,
+    and no later turn will ever re-check it. Measured 2026-09-25: rolling back from T117 to T99
+    left the file claiming ``ram-tower-before-civil-engineering`` was achieved at T100, which is
+    a turn that no longer exists on this branch.
+
+    The comment names the archived copy the sweep wrote, so the block is recoverable exactly.
+    Returns one label per restored goal, and writes only when there is something to restore.
+    """
+    if not CHECKS_FILE.exists():
+        return []
+    text = CHECKS_FILE.read_text(encoding="utf-8")
+    restored: list[str] = []
+    for line in text.splitlines():
+        match = _ACHIEVED.match(line.strip())
+        if not match:
+            continue
+        turn, goal_id, original = int(match.group(1)), match.group(2), match.group(3)
+        if turn <= target:
+            continue
+        block = check_block(CHECKS_FILE.parent / original, goal_id)
+        if block is None:
+            continue
+        marker = line + "\n" if line + "\n" in text else line
+        text = text.replace(marker, block + "\n", 1)
+        restored.append(f"{goal_id} (achieved T{turn}, in force again at T{target})")
+    if restored and apply:
+        CHECKS_FILE.write_text(text, encoding="utf-8")
+    return restored
 
 
 def save_turn_from_file(path: Path) -> int | None:
@@ -155,6 +220,27 @@ def sha256(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
+def _archive_can_absorb(archive: Path, future: list[dict]) -> bool:
+    """Can this archive take the saves being archived without overwriting any of them?
+
+    Reuse keys on the target turn and the span of turns archived, and two different branches
+    can share both. Measured 2026-09-25: a second rollback to T99 re-used the folder written by
+    the first, and because the same turns had been replayed in between, the live autosaves for
+    T100-T117 had already been rewritten by the new branch — so re-using the folder replaced the
+    copies of the *earlier* branch's same-named saves, which were the only copies left, the live
+    directory having moved on. Size and write time tell the two apart, and when they differ the
+    archive becomes a new folder instead of a clobbered one.
+    """
+    for save in future:
+        destination = archive / "saves" / f"{save['name']}.Civ6Save"
+        if not destination.exists():
+            continue
+        stat = destination.stat()
+        if stat.st_size != save["bytes"] or int(stat.st_mtime) != int(save["mtime"]):
+            return False
+    return True
+
+
 def archive_saves(
     saves: list[dict], target: int, current: int | None, stamp: str, wanted: str | None = None
 ) -> Path:
@@ -171,13 +257,24 @@ def archive_saves(
 
     # Idempotent: an archive for the same target and span is reused rather than duplicated.
     # A second run of this script otherwise copies the whole branch again (127 MB measured),
-    # and running it twice is exactly what a cautious operator does.
+    # and running it twice is exactly what a cautious operator does. Reuse stops, though, at an
+    # archive holding *different* saves of the same names: that is another branch, and
+    # overwriting it is how its only surviving copies disappear (2026-09-25).
     existing = sorted(ARCHIVE_ROOT.glob(f"rollback-to-T{target}-from-{span}-*"))
-    reused = bool(existing)
-    archive = existing[-1] if reused else ARCHIVE_ROOT / f"rollback-to-T{target}-from-{span}-{stamp}"
+    archive = next(
+        (path for path in reversed(existing) if _archive_can_absorb(path, future)), None
+    )
+    reused = archive is not None
+    if archive is None:
+        archive = ARCHIVE_ROOT / f"rollback-to-T{target}-from-{span}-{stamp}"
     (archive / "saves").mkdir(parents=True, exist_ok=True)
     if reused:
-        print(f"reusing archive   {archive.relative_to(ROOT)} (same target and span)")
+        print(f"reusing archive   {archive.relative_to(ROOT)} (same target, span and saves)")
+    elif existing:
+        print(
+            f"new archive       {archive.relative_to(ROOT)} -- {len(existing)} archive(s) "
+            "match this target and span but hold different saves, so neither was touched"
+        )
 
     manifest = {
         "created": datetime.now().isoformat(timespec="seconds"),
@@ -331,6 +428,9 @@ def main() -> int:
     parser.add_argument("--archive-only", action="store_true", help="archive, touch no game")
     parser.add_argument("--force", action="store_true", help="proceed despite another session")
     parser.add_argument("--no-diary", action="store_true", help="skip the diary split")
+    parser.add_argument(
+        "--no-checks", action="store_true", help="skip restoring goals the branch achieved"
+    )
     args = parser.parse_args()
     target = args.turn
 
@@ -408,6 +508,15 @@ def main() -> int:
             print("\n--- diary split ---")
             code = module.archive_boundary(target, dry_run=False)
             print(f"diary split   exit {code}")
+
+    if not args.no_checks:
+        print("\n--- goals the abandoned branch achieved ---")
+        restored = restore_achieved_goals(target, apply=True)
+        if restored:
+            for label in restored:
+                print(f"restored      {label}")
+        else:
+            print(f"nothing       no goal was achieved after T{target}")
 
     archive = archive_saves(saves, target, state["turn"], stamp, args.save)
     print(f"\narchived      {archive.relative_to(ROOT)}")

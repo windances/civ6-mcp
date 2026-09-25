@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from civ_mcp import lua as lq
@@ -443,16 +444,135 @@ async def load_save(conn: GameConnection, save_index: int) -> str:
     return "Load command sent. Wait for game to reload."
 
 
+# The FrontEnd states that answer the save-list query from the main menu, in the order to try.
+# LoadGameMenu is the one that owns the flow (LoadGameMenu.lua:459 asks for the list, :440 loads
+# the file); MainMenu and FrontEnd register on the same shared event and answer the same call.
+_MENU_SAVE_STATES = ("LoadGameMenu", "MainMenu", "FrontEnd")
+
+
+async def _save_list_states(conn: GameConnection) -> list[tuple[int, str]]:
+    """The Lua states to ask for the save list, in order. Empty when none can answer.
+
+    In-game the InGame state owns the UI API. At the main menu there is no InGame state at all
+    — the tuner lists only FrontEnd states — and the game's own load screen answers the same
+    two calls from there. That is what makes a menu load possible without OCR, without
+    clicking, and without the game window in the foreground.
+    """
+    await conn.ensure_connected()
+    if conn.ingame_index is None:
+        # A connection opened at the main menu caches FrontEnd state names only, so a game
+        # loaded since then would be missed. Re-discovery is one handshake, and it is the same
+        # lesson as reading the turn instead of trusting the cached connection state.
+        try:
+            await conn.reconnect()
+        except ConnectionError:
+            pass
+    if conn.ingame_index is not None:
+        return [(conn.ingame_index, "InGame")]
+    by_index = sorted(conn.lua_states.items())
+    return [
+        (index, name)
+        for name in _MENU_SAVE_STATES
+        for index, state in by_index
+        if state == name
+    ]
+
+
+def _save_query_lua(save_name: str) -> str:
+    """Lua: ask the game for its save list and load ``save_name`` when it appears in it.
+
+    Two details are load-bearing, both measured live on 2026-09-25:
+
+    * the names the list carries include the extension — ``s.Name`` is
+      ``AutoSave_0099.Civ6Save`` — so an equality test against ``AutoSave_0099`` never matched,
+      and this whole tier fell through to OCR menu navigation every time;
+    * the list arrives on ``LuaEvents.FileListQueryResults`` (``LoadSaveMenu_Shared.lua:1068``),
+      which is the event the game's own load screen listens on, so a handler registered here
+      from the tuner is called at all.
+    """
+    return (
+        "if not ExposedMembers then ExposedMembers = {} end; "
+        "ExposedMembers.MCPLoadResult = nil; "
+        "ExposedMembers.MCPLoadDone = false; "
+        "local function OnResults(fileList, qid) "
+        "  UI.CloseFileListQuery(qid); "
+        "  LuaEvents.FileListQueryResults.Remove(OnResults); "
+        "  for i, s in ipairs(fileList) do "
+        '    local n = tostring(s.Name):gsub("%.Civ6Save$", ""); '
+        f'    if n == "{save_name}" then '
+        '      ExposedMembers.MCPLoadResult = "FOUND"; '
+        "      ExposedMembers.MCPLoadDone = true; "
+        "      pcall(function() Network.LeaveGame() end); "
+        "      Network.LoadGame(s, ServerType.SERVER_TYPE_NONE); "
+        "      return "
+        "    end "
+        "  end; "
+        '  ExposedMembers.MCPLoadResult = "NOT_FOUND"; '
+        "  ExposedMembers.MCPLoadDone = true; "
+        "end; "
+        "LuaEvents.FileListQueryResults.Add(OnResults); "
+        "local opts = SaveLocationOptions.NORMAL + SaveLocationOptions.AUTOSAVE "
+        "  + SaveLocationOptions.QUICKSAVE + SaveLocationOptions.LOAD_METADATA; "
+        "UI.QuerySaveGameList(SaveLocations.LOCAL_STORAGE, SaveTypes.SINGLE_PLAYER, opts); "
+        'print("QUERY_SENT"); '
+        f'print("{lq.SENTINEL}")'
+    )
+
+
+def _save_poll_lua() -> str:
+    return (
+        "if ExposedMembers.MCPLoadDone then "
+        '  print("RESULT|" .. tostring(ExposedMembers.MCPLoadResult)) '
+        "else print('PENDING') end; "
+        f'print("{lq.SENTINEL}")'
+    )
+
+
+async def _lua_load_in_state(
+    conn: GameConnection, state_index: int, state_name: str, save_name: str
+) -> bool:
+    """Ask one state for the save list and load the save. True when a load was issued.
+
+    ``NOT_FOUND`` leaves the caller free to ask the next state. A state that stops answering
+    right after the query is *success*, not failure: the game blasts the FrontEnd context as
+    the load begins (``LoadGameMenu.lua:112``) and the InGame context goes with it, so the
+    reply to the poll never arrives.
+    """
+    await conn.execute_in_state(state_index, _save_query_lua(save_name))
+    for _ in range(20):
+        await asyncio.sleep(0.25)
+        try:
+            check = await conn.execute_in_state(state_index, _save_poll_lua())
+        except Exception:  # noqa: BLE001 - a dead state is the expected signature here
+            log.info("The %s state stopped answering - the load has begun", state_name)
+            return True
+        for line in check:
+            if line == "RESULT|FOUND":
+                return True
+            if line == "RESULT|NOT_FOUND":
+                return False
+    log.warning("The %s state never answered the save query for '%s'", state_name, save_name)
+    return False
+
+
 async def load_game_save(conn: GameConnection, save_name: str) -> str:
     """Load a save by name — no list_saves() prerequisite.
 
     Two-tier approach:
-    1. Lua: query save list, find by name, load in one async operation.
+    1. Lua: query save list, find by name, load in one async operation, then land the load
+       (leader screen, CONTINUE click, turn read back). The query runs in the InGame state
+       when a game is loaded and in the game's own FrontEnd load-screen states when the main
+       menu is up — the main menu has no InGame state at all, which is why this used to fall
+       through to OCR menu navigation there.
     2. Filesystem: verify file exists, use OCR menu navigation (slow but
        reliable — works for autosaves and quicksaves that Lua can't find).
     """
     import asyncio
     import sys
+
+    # Accept the name either way: the game's own list carries the extension, and a caller
+    # copying a filename out of Explorer has it.
+    save_name = save_name.removesuffix(".Civ6Save")
 
     # On the Aspyr Linux port, Network.LoadGame silently does nothing
     # (same as Network.SaveGame). Skip Lua tier and go straight to OCR
@@ -460,53 +580,20 @@ async def load_game_save(conn: GameConnection, save_name: str) -> str:
     if sys.platform != "linux":
         # Tier 1: Lua query-match-load (Windows/macOS only)
         try:
-            await conn.execute_write(
-                f"if not ExposedMembers then ExposedMembers = {{}} end; "
-                f"ExposedMembers.MCPLoadResult = nil; "
-                f"ExposedMembers.MCPLoadDone = false; "
-                f"local function OnResults(fileList, qid) "
-                f"  UI.CloseFileListQuery(qid); "
-                f"  LuaEvents.FileListQueryResults.Remove(OnResults); "
-                f"  for i, s in ipairs(fileList) do "
-                f'    if s.Name == "{save_name}" then '
-                f'      ExposedMembers.MCPLoadResult = "FOUND"; '
-                f"      ExposedMembers.MCPLoadDone = true; "
-                f"      Network.LeaveGame(); "
-                f"      Network.LoadGame(s, ServerType.SERVER_TYPE_NONE); "
-                f"      return "
-                f"    end "
-                f"  end; "
-                f'  ExposedMembers.MCPLoadResult = "NOT_FOUND"; '
-                f"  ExposedMembers.MCPLoadDone = true; "
-                f"end; "
-                f"LuaEvents.FileListQueryResults.Add(OnResults); "
-                f"local opts = SaveLocationOptions.NORMAL + SaveLocationOptions.AUTOSAVE "
-                f"  + SaveLocationOptions.QUICKSAVE + SaveLocationOptions.LOAD_METADATA; "
-                f"UI.QuerySaveGameList(SaveLocations.LOCAL_STORAGE, SaveTypes.SINGLE_PLAYER, opts); "
-                f'print("QUERY_SENT"); '
-                f'print("{lq.SENTINEL}")'
-            )
-
-            for _ in range(20):
-                await asyncio.sleep(0.25)
-                check = await conn.execute_write(
-                    f"if ExposedMembers.MCPLoadDone then "
-                    f'  print("RESULT|" .. tostring(ExposedMembers.MCPLoadResult)) '
-                    f'else print("PENDING") end; '
-                    f'print("{lq.SENTINEL}")'
-                )
-                for line in check:
-                    if line == "RESULT|FOUND":
-                        return (
-                            f"Loading save: {save_name}. Game will reload — "
-                            f"wait ~10 seconds then call get_game_overview to verify."
-                        )
-                    if line == "RESULT|NOT_FOUND":
-                        break  # fall through to Tier 2
-                else:
+            for state_index, state_name in await _save_list_states(conn):
+                if not await _lua_load_in_state(conn, state_index, state_name, save_name):
                     continue
-                break  # NOT_FOUND — try filesystem
 
+                from . import game_launcher
+
+                landing = await asyncio.to_thread(
+                    game_launcher._finish_load_sync, save_name
+                )
+                log.info("Loaded '%s' via the %s state; %s", save_name, state_name, landing)
+                return (
+                    f"Loading save: {save_name} (issued from the {state_name} Lua state). "
+                    f"{landing}"
+                )
             log.info("Lua query did not find '%s', trying filesystem", save_name)
         except Exception:
             log.debug("Lua load_game_save failed", exc_info=True)

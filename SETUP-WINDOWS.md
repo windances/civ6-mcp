@@ -741,7 +741,7 @@ holds, end the turn - the next turn starts with full moves. Do not restart the g
 ### Rolling back to a chosen turn
 
 `scripts/rollback-to-turn.py TURN` is the whole procedure in one place, because a rollback
-is three jobs and doing only the first is how a session ends up confused:
+is four jobs and doing only the first is how a session ends up confused:
 
 ```
 .venv\Scripts\python.exe scripts\rollback-to-turn.py 59              # plan only, touches nothing
@@ -758,7 +758,14 @@ is three jobs and doing only the first is how a session ends up confused:
    gone - what existed at archive time is what is there.
 2. **Archive the diary.** `.tools/archive-branch.py` splits the per-game diary at the
    boundary, so the abandoned branch's rows stop being read as memory of the current one.
-3. **Restart the way the state calls for.** The script asks the game where it is and picks:
+3. **Un-retire the rules the branch retired.** A `once: true` goal is *removed* from
+   `prompts/checks/turn-checks.md` when it is met, replaced by
+   `<!-- achieved T<turn>: <id> (original in archive/<file>) -->`. Behind that turn the rule
+   has to come back or the target position silently loses a directive it was supposed to be
+   following (`--no-checks` skips it). Measured 2026-09-25: T117 -> T99 left the
+   ram/tower goal retired at a T100 that no longer existed on the branch, and five tests that
+   read the shipped file went red for it.
+4. **Restart the way the state calls for.** The script asks the game where it is and picks:
 
 | state | action | why |
 |---|---|---|
@@ -793,6 +800,53 @@ each; they were byte-identical (81 files, same names and sha256), the duplicate 
 and the reuse fix above is what stops it happening again. Write-path checks live in
 `.tools/verify-rollback-paths.py` (19 checks over archive, sha256, manifest, reuse and the
 diary split on a synthetic fixture, using copies only).
+
+Reuse has one more condition since 2026-09-25: the folder must hold *the same saves*, not merely
+the same turns. A second rollback to T99 re-used the previous folder, and because those turns had
+been replayed in between, the live autosaves for T100-T117 had already been rewritten by the new
+branch - so re-using the folder replaced the copies of the **earlier** branch's same-named saves,
+which were the only copies left. Size and write time now decide (`_archive_can_absorb`), and a
+mismatch writes a new folder instead of overwriting the old one.
+
+### Loading a save from the main menu without OCR (found 2026-09-25)
+
+`load_game_save` used to have exactly one Lua tier, and it ran in the `InGame` state. At the main
+menu there is no `InGame` state - the tuner lists only FrontEnd states (`FrontEnd`, `MainMenu`,
+`LoadGameMenu` x3, `SaveGameMenu`, ...) - so every main-menu load fell through to OCR menu
+navigation, which needs the game window in the foreground and clicks a screen grab of it. That is
+the path that failed three times on this box while rolling back one save: twice with
+`_wait_for_text: 'Autosaves | 自动保存' not found after 12s` (the screen still showing the main
+menu) and once with `Could not find 'Load Game' button` after 6s, with the launcher's splash art
+in the capture, then two game restarts to get a working FireTuner back.
+
+The game's own load screen is one of those FrontEnd states, and it loads files with the two calls
+the fast tier already made:
+
+```
+LoadGameMenu.lua:459   UI.QuerySaveGameList(SaveLocations.LOCAL_STORAGE,
+                                           SaveTypes.SINGLE_PLAYER, options)
+LoadGameMenu.lua:440   Network.LoadGame(save, ServerType.SERVER_TYPE_NONE)
+```
+
+with the list arriving on `LuaEvents.FileListQueryResults`
+(`LoadSaveMenu_Shared.lua:1068`, registered on show at `:1077`). So `_save_list_states` asks the
+`InGame` state when a game is loaded and `LoadGameMenu` -> `MainMenu` -> `FrontEnd` when the main
+menu is up, and `_lua_load_in_state` runs those calls from the tuner. Measured live: the query
+answered with **207 saves**, the load was issued, the FrontEnd context then vanished (expected -
+`LoadGameMenu.lua:112` says the context is blasted as the load begins), and the game came back at
+**turn 99** with no click, no OCR, and no window focus. A probe for the same thing is kept at
+`.tools/load-from-menu-lua.py`, and `.tools/whats-visible.py` shows what a click would actually
+hit (the game window on this box is visible while Chrome holds the foreground on the second
+monitor, which is why "the game is not foreground" and "a click lands on the game" are both true).
+
+Two details that had to be right, both now pinned by tests:
+
+* the names the list carries include the extension - `s.Name` is `AutoSave_0099.Civ6Save`, so the
+  old `s.Name == "AutoSave_0099"` comparison could never match, in any state;
+* a load is not finished when the call is issued. It ends on the leader intro screen, which needs
+  a click, and only then does the tuner answer with a turn. `game_launcher._finish_load_sync` does
+  that half for both paths and reports the turn it read back, because "the port is open" is true
+  at the main menu too.
 
 ### Start-of-turn briefing: is the plan being executed?
 

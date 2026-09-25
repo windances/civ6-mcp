@@ -454,9 +454,15 @@ can work while that one lives. Waiting does not help: stop that process with
 
 **Load by name** (preferred — no `list_saves` needed):
 ```
-load_game_save("0_MCP_0079")  # load specific turn (~5s via Lua, ~90s via menu fallback)
+load_game_save("0_MCP_0079")  # find it in the game's own save list and load it
 get_game_overview              # verify load
 ```
+It works from the main menu as well as in-game: with no game loaded the same two calls run in
+the game's own FrontEnd load-screen state (`LoadGameMenu`), so nothing has to be clicked and no
+window has to be in front. It then lands the load itself — waits for the leader screen, clicks
+CONTINUE, and reads the turn back — so the reply names the turn actually loaded and a wrong one
+comes back as `WARNING: the game reports turn N, but '<save>' holds turn M`. OCR menu navigation
+is the fallback for a save the game's list does not carry.
 
 **When the game hangs** (AI turn loop):
 ```
@@ -467,7 +473,8 @@ get_game_overview                 # verify load
 **Turn regression detection:** If you accidentally load a wrong save (e.g. the T1 scenario save instead of your autosave), `end_turn` will emit a CRITICAL warning with the correct autosave name to reload.
 
 Other tools: `list_saves`, `load_save(index)`, `kill_game`, `launch_game`, `load_save_from_menu(name)`.
-Save names omit extension: `"AutoSave_0221"` not `"AutoSave_0221.Civ6Save"`.
+Save names omit the extension: `"AutoSave_0221"`. Writing `"AutoSave_0221.Civ6Save"` is accepted
+too, and stripped, because the game's own save list carries it.
 
 **One session at a time.** `kill_game` and `restart_and_load` refuse while another session is
 playing (they name the pid holding the FireTuner connection or writing a recent heartbeat), so

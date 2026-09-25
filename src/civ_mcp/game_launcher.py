@@ -3416,6 +3416,65 @@ def _continue_game_sync(expected_name: str) -> str | None:
     )
 
 
+def _finish_load_sync(save_name: str, wait_seconds: float = 150) -> str:
+    """Land a load that has already been **issued**, whatever issued it.
+
+    Loading a save is not one step. The end of it is the leader intro screen, which needs a
+    click before the game is playable, and only then does the tuner answer with a turn. The
+    OCR menu path does all of that itself (``_navigate_to_save_sync``); a load issued over
+    Lua — from the InGame state, or from the game's own FrontEnd load-screen state — used to
+    return the moment the call went out and leave the game parked on the leader screen, where
+    the "wait ~10s then call get_game_overview to verify" the docstring promised could not
+    work. This is that missing half, shared by both.
+
+    The click target is drawn rather than laid out, so its colour is how it is found
+    (``_click_continue_by_colour``); the positional grid is the fallback, and it is only
+    reached once, after the leader screen has had time to appear.
+
+    Returns a status line that always names the turn actually read. A listening FireTuner
+    port is not evidence of a loaded game — it answers at the main menu too (2026-09-20) —
+    while a readable turn is.
+    """
+    deadline = time.time() + wait_seconds
+    clicked = False
+    started = time.time()
+    while time.time() < deadline:
+        turn = _game_turn_number()
+        if turn is not None:
+            expected = _save_turn(save_name)
+            if expected is not None and turn != expected:
+                return (
+                    f"WARNING: the game reports turn {turn}, but '{save_name}' holds turn "
+                    f"{expected} — the load did not take, or a different save opened."
+                )
+            return f"Loaded: the game is at turn {turn}."
+        if not clicked:
+            win = _find_game_window()
+            try:
+                results = _ocr_game_window(win) if win else _ocr_fullscreen()
+            except Exception:  # noqa: BLE001 - OCR failure must not end the wait early
+                results = _ocr_fullscreen()
+            if _leader_screen_detected(results):
+                _bring_to_front()
+                if _click_continue_by_colour():
+                    log.info("Load: clicked CONTINUE by colour on the leader screen")
+                else:
+                    _click_continue_positional()
+                    log.info("Load: leader screen, CONTINUE clicked by position")
+                clicked = True
+            elif time.time() - started > 45:
+                # OCR can miss the screen entirely; the grid is the same last resort the
+                # menu path uses, and it is worth one attempt rather than none.
+                log.warning("Load: no readable leader screen after 45s — positional click")
+                _click_continue_positional()
+                clicked = True
+        time.sleep(3)
+    return (
+        f"FAILED: '{save_name}' was issued, but the game reported no turn within "
+        f"{wait_seconds:.0f}s."
+    )
+
+
 def _navigate_to_save_sync(save_name: str, tab: str | None = "autosaves") -> str:
     """Navigate: Main Menu → Single Player → Load Game → [tab] → select → Load.
 

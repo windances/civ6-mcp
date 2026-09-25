@@ -13,6 +13,8 @@ import importlib.util
 import pathlib
 import sys
 
+import pytest
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -56,6 +58,18 @@ def save(name: str, turn: int | None, directory: str = "mcp", mtime: float = 1.0
 
 
 ENTRY = save("0_MCP_0059", 59)
+
+
+@pytest.fixture()
+def scratch():
+    """A scratch tree under `.tools/`: pytest's temp factory is not writable here."""
+    import shutil
+    import uuid
+
+    root = ROOT / ".tools" / f"_rollback_test_{uuid.uuid4().hex}"
+    root.mkdir(parents=True, exist_ok=True)
+    yield root
+    shutil.rmtree(root, ignore_errors=True)
 
 
 class TestTheDecision:
@@ -138,3 +152,125 @@ class TestCandidateListing:
     def test_the_limit_is_respected(self):
         saves = [save(f"0_MCP_{n:04d}", n) for n in range(50, 70)]
         assert len(rb.candidates(saves, 60, limit=5)) == 5
+
+
+class TestArchiveReuse:
+    """An archive may be reused only when it holds the same saves, not merely the same turns.
+
+    Reuse keys on the target turn and the span archived, and two different branches can share
+    both. Measured 2026-09-25: a second rollback to T99 re-used the previous folder, and because
+    those turns had been replayed in between, the earlier branch's T100-T117 autosaves existed
+    only inside that archive — the live directory had already been rewritten by the new branch.
+    Reusing the folder replaced them.
+    """
+
+    def archived(self, root: pathlib.Path, name: str, size: int, mtime: float) -> pathlib.Path:
+        import os
+
+        saves = root / "rollback-to-T99-from-T100-T117-20260925-111836" / "saves"
+        saves.mkdir(parents=True, exist_ok=True)
+        copied = saves / f"{name}.Civ6Save"
+        copied.write_bytes(b"x" * size)
+        os.utime(copied, (mtime, mtime))
+        return saves.parent
+
+    def test_the_same_saves_may_be_reused(self, scratch):
+        archive = self.archived(scratch, "AutoSave_0100", 1, 100.0)
+        assert rb._archive_can_absorb(archive, [save("AutoSave_0100", 100, mtime=100.0)]) is True
+
+    def test_a_save_of_the_same_name_but_other_content_is_not_absorbed(self, scratch):
+        archive = self.archived(scratch, "AutoSave_0100", 8, 100.0)
+        future = [dict(save("AutoSave_0100", 100, mtime=100.0), bytes=9)]
+        assert rb._archive_can_absorb(archive, future) is False
+
+    def test_the_same_size_written_at_another_time_is_not_absorbed(self, scratch):
+        # A replay produces files that can match in size; the write time is what separates a
+        # replayed turn from the archived copy of the original one.
+        archive = self.archived(scratch, "AutoSave_0100", 1, 100.0)
+        assert rb._archive_can_absorb(archive, [save("AutoSave_0100", 100, mtime=555.0)]) is False
+
+    def test_a_save_the_archive_does_not_have_yet_is_absorbed(self, scratch):
+        archive = self.archived(scratch, "AutoSave_0100", 1, 100.0)
+        assert rb._archive_can_absorb(archive, [save("AutoSave_0101", 101, mtime=1.0)]) is True
+
+    def test_an_empty_future_absorbs(self, scratch):
+        assert rb._archive_can_absorb(scratch, []) is True
+
+
+class TestRestoringRetiredGoals:
+    """A rollback has to un-retire the rules the abandoned branch achieved.
+
+    A ``once: true`` goal is removed from `prompts/checks/turn-checks.md` when it is met, with a
+    comment naming the archived copy. Behind that turn the rule must come back: it is a
+    directive the target position is supposed to be following, and once retired no later turn
+    re-checks it.
+    """
+
+    BLOCK = (
+        "<!-- check\n"
+        "id: ram-tower-before-civil-engineering\n"
+        "when: not researched(CIVIC_CIVIL_ENGINEERING)\n"
+        "require: units(BATTERING_RAM, SIEGE_TOWER) >= 1\n"
+        "message: no ram yet\n"
+        "once: true\n"
+        "-->"
+    )
+
+    @pytest.fixture()
+    def checks(self, scratch, monkeypatch):
+        """A scratch check file with the goal already retired, and its archived original."""
+        checks = scratch / "turn-checks.md"
+        archive = scratch / "archive" / "turn-checks-20260925-145233.md"
+        archive.parent.mkdir(parents=True, exist_ok=True)
+        archive.write_text(
+            "# Rules\n\n" + self.BLOCK + "\n\n## Next\n\nSomething else.\n", encoding="utf-8"
+        )
+        checks.write_text(
+            "# Rules\n\n"
+            "<!-- achieved T100: ram-tower-before-civil-engineering "
+            "(original in archive/turn-checks-20260925-145233.md) -->\n\n"
+            "## Next\n\nSomething else.\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(rb, "CHECKS_FILE", checks)
+        return checks
+
+    def test_a_goal_achieved_after_the_target_comes_back(self, checks):
+        restored = rb.restore_achieved_goals(99)
+        assert restored and "ram-tower-before-civil-engineering" in restored[0]
+        text = checks.read_text(encoding="utf-8")
+        assert "id: ram-tower-before-civil-engineering" in text
+        assert "require: units(BATTERING_RAM, SIEGE_TOWER) >= 1" in text
+        assert "achieved T100" not in text
+
+    def test_nothing_else_in_the_file_moves(self, checks):
+        before = checks.read_text(encoding="utf-8").splitlines()
+        rb.restore_achieved_goals(99)
+        after = checks.read_text(encoding="utf-8").splitlines()
+        assert "# Rules" in after and "## Next" in after and "Something else." in after
+        assert len(after) == len(before) - 1 + len(self.BLOCK.splitlines())
+
+    def test_a_goal_achieved_before_the_target_stays_retired(self, checks):
+        # Rolling back to T100 or later is not rolling back behind the achievement: a rule
+        # retired at T100 is legitimately retired at T100.
+        assert rb.restore_achieved_goals(100) == []
+        assert "achieved T100" in checks.read_text(encoding="utf-8")
+
+    def test_a_dry_run_reports_without_writing(self, checks):
+        restored = rb.restore_achieved_goals(99, apply=False)
+        assert restored
+        assert "achieved T100" in checks.read_text(encoding="utf-8")
+
+    def test_a_missing_archive_leaves_the_file_alone(self, checks):
+        (checks.parent / "archive" / "turn-checks-20260925-145233.md").unlink()
+        assert rb.restore_achieved_goals(99) == []
+        assert "achieved T100" in checks.read_text(encoding="utf-8")
+
+    def test_the_block_is_found_by_id_not_by_position(self, scratch):
+        archive = scratch / "old.md"
+        archive.write_text(
+            "<!-- check\nid: something-else\n-->\n\n" + self.BLOCK + "\n", encoding="utf-8"
+        )
+        block = rb.check_block(archive, "ram-tower-before-civil-engineering")
+        assert block is not None and "id: ram-tower-before-civil-engineering" in block
+        assert "something-else" not in block
