@@ -193,6 +193,43 @@ def attack_refusal(targets: list[tuple[int, int]], unit_at, target) -> str | Non
     )
 
 
+def usable_placements(placements) -> tuple[list, list[str]]:
+    """Split the district advisor's answer into ranked tiles and prose.
+
+    `get_district_advisor` returns placement objects when it has ranked tiles and a plain string when
+    it does not (no legal plot, the city's district slots are full, or an error from the adapter).
+    Measured live on 圣彼得堡 at T120, where the answer was a STRING: the driver iterated it, took the
+    first character as the best tile, and died on `'str' object has no attribute 'x'`. A string is
+    therefore one note, never a sequence of them. Pure, so the split is testable without a game.
+    """
+    if isinstance(placements, str):
+        return [], [placements]
+    spots = [p for p in placements or () if hasattr(p, "x") and hasattr(p, "y")]
+    notes = [str(p) for p in placements or () if isinstance(p, str)]
+    return spots, notes
+
+
+def pick_production(options, item: str):
+    """The production option this name means, or None.
+
+    Exact name first, then a substring match that never mistakes a PROJECT for the thing it
+    enhances: measured live on 圣彼得堡 at T120, `produce 圣彼得堡 DISTRICT_CAMPUS` matched
+    `PROJECT_ENHANCE_DISTRICT_CAMPUS` (the city already had a Campus, so the district itself was not
+    on the list) and queued a 9-turn project instead of reporting that the Campus was already there.
+    Pure, so the precedence is testable without a game.
+    """
+    wanted = item.upper()
+    options = list(options or ())
+    for option in options:
+        if str(option.item_name).upper() == wanted:
+            return option
+    for option in options:
+        name = str(option.item_name).upper()
+        if wanted in name and not (name.startswith("PROJECT_") and not wanted.startswith("PROJECT")):
+            return option
+    return None
+
+
 def end_turn_blocker(unused_attacks: list[str], force: bool) -> str | None:
     """Why the turn must not end yet, or None when it may.
 
@@ -619,7 +656,7 @@ async def main() -> int:
                       + ", ".join(str(c.name) for c in cities))
                 return 1
             options = await gs.list_city_production(city.city_id)
-            match = next((o for o in options if item in str(o.item_name).upper()), None)
+            match = pick_production(options, item)
             if match is None:
                 print(f"{city.name} cannot build {item}; options: "
                       + ", ".join(str(o.item_name) for o in options))
@@ -629,14 +666,23 @@ async def main() -> int:
                 target_x, target_y = (int(v) for v in sys.argv[4].split(","))
             elif "DISTRICT" in str(match.item_name).upper():
                 placements = await gs.get_district_advisor(city.city_id, match.item_name)
-                if placements:
-                    best = placements[0]
+                spots, notes = usable_placements(placements)
+                for note in notes:
+                    print(f"  {city.name}: advisor says {note}")
+                if spots:
+                    best = spots[0]
                     target_x, target_y = best.x, best.y
                     print(f"  {city.name}: district placement from the advisor -> "
                           f"({target_x},{target_y}) adjacency +{best.total_adjacency}; "
                           "alternatives: "
                           + ", ".join(f"({p.x},{p.y}) +{p.total_adjacency}"
-                                      for p in placements[1:5]))
+                                      for p in spots[1:5]))
+                else:
+                    # The advisor answers with prose when it has no ranked tiles to offer - for a
+                    # city with no legal plot, or one whose slots are full. That is not a crash, and
+                    # it is not a placement either: say so and let the caller pass X,Y.
+                    print(f"  {city.name}: the advisor offered no ranked tile for "
+                          f"{match.item_name} - pass an explicit X,Y to place it")
             reply = await gs.set_city_production(
                 city.city_id, match.category, match.item_name, target_x, target_y
             )
@@ -654,6 +700,19 @@ async def main() -> int:
             print(f"improve: [{unit.unit_index}] {unit.unit_type} ({unit.x},{unit.y}) "
                   f"{improvement}")
             print("  " + await gs.improve_tile(unit.unit_index, improvement))
+            return 0
+
+        if verb == "clear":
+            # A resource tile under forest or jungle cannot be improved until the feature is gone,
+            # which is a separate order (and a separate charge) - measured at (59,28), where the
+            # AMBER mine answered 'tile has FEATURE_JUNGLE (use remove_feature first)'.
+            needle = sys.argv[2]
+            unit = find(await gs.get_units(), needle)
+            if unit is None:
+                print(f"no unit matching {needle!r}")
+                return 1
+            print(f"clear: [{unit.unit_index}] {unit.unit_type} ({unit.x},{unit.y})")
+            print("  " + await gs.remove_feature(unit.unit_index))
             return 0
 
         if verb == "posture":

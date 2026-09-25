@@ -257,6 +257,13 @@ class TestContinueGameShortcut:
             return labels == gl._menu_labels("single_player")  # single player only
 
         monkeypatch.setattr(gl, "_click_text", fake_click_text)
+        # `_continue_game_sync` looks first to see whether the Single Player submenu is already
+        # open, and that look is a real OCR of the screen unless it is stubbed. Measured
+        # 2026-09-25: with a game parked on the leader screen (which itself shows 继续游戏) the
+        # un-stubbed look found that text and the function took the "already open" branch, so
+        # only one click happened and this test failed - on a machine where nothing was wrong
+        # with the code under test. The screen is not an input to this test; stub it out.
+        monkeypatch.setattr(gl, "_wait_for_text", lambda *a, **kw: None)
         assert gl._continue_game_sync("AutoSave_0080") is None
         assert len(clicks) == 2
 

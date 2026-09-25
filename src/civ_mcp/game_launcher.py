@@ -832,6 +832,17 @@ def _click_continue_by_colour(max_candidates: int = 4) -> bool:
 
     tried: set[tuple[int, int]] = set()
 
+    # Bring the game forward BEFORE clicking. `_click` injects at screen coordinates with
+    # SendInput, and a click only reaches a fullscreen game that is in front: measured live
+    # 2026-09-25, two loads parked on the leader screen while a browser held the foreground,
+    # the same control clicked fine by hand, and `_click_continue_grid` was the only one of the
+    # three click paths that called `_bring_to_front` at all. The note this flow used to rely on
+    # ("PrintWindow + SetForegroundWindow during the DX12 loading phase can crash the renderer")
+    # is about the loading phase and about PrintWindow; the leader screen is past both, and the
+    # game is already rendered - so focusing here is what a human does, not a new risk.
+    _bring_to_front()
+    time.sleep(0.3)
+
     point = _wait_for_continue_control(win)
     if point is not None:
         tried.add(point)
