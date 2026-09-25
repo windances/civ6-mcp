@@ -7,7 +7,7 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`007-destroy-russia.md`.
+`007-destroy-russia.md`, `008-destroy-missionaries.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -19,8 +19,8 @@ exactly what that file said to do if the ranking came out badly. All six sit in
 against each other** by `tests/test_temp_tasks.py`, so a retirement that is not recorded here goes red
 instead of quietly staying in force.)
 
-Priority: **007 outranks everything else** — it is the only task in force, and the human instruction
-behind it (消灭俄罗斯) is an objective rather than a build order. Its gates are the directive's own
+Priority: **007 outranks everything else** — it is the objective (消灭俄罗斯) rather than a build order.
+Its gates are the directive's own
 checklist: **3 Catapults per city** (一城3投石车 — met at T122), a melee unit above the Warrior tier
 once the iron stockpile passes 20, and a four-number read of **the first target** before any
 declaration — **not of every Russian city** (human instruction 2026-09-26: 不用获取所有城市信息才开战;
@@ -29,6 +29,12 @@ empire already owns joins the assault** (human instruction 2026-09-26: 已经有
 unit beside the melee, where it makes their attacks do full damage against walls; nothing new is built,
 and beside a city read as `walls none` it is dead weight. It is also the **only**
 file that authorizes the declaration of war on Russia; 006 deliberately did not.
+
+**008 rides along with 007, it does not postpone it**: destroying missionaries is lane-clearing, not a
+second war. It has one thing to establish before anything else — the MCP has **no Condemn Heretic
+verb**, and `attack` refuses a unit whose owner we are at peace with (`ERR:NOT_AT_WAR`,
+`src/civ_mcp/lua/units.py:411`), so the first hostile religious unit adjacent to one of ours must be
+attacked as a probe and the exact reply recorded in the diary's `tooling` line, kill or refusal.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
