@@ -2366,7 +2366,6 @@ async def end_turn(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool(annotations={"readOnlyHint": True})
 def _clamp_diary_to_turn(entries: list, live_turn: int | None) -> tuple[list, int]:
     """Drop diary entries from beyond the live turn.
 
@@ -2383,6 +2382,7 @@ def _clamp_diary_to_turn(entries: list, live_turn: int | None) -> tuple[list, in
     return kept, len(entries) - len(kept)
 
 
+@mcp.tool(annotations={"readOnlyHint": True})
 async def get_diary(
     ctx: Context,
     last_n: int = 5,
