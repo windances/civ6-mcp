@@ -9,6 +9,7 @@ needs no restart at all.
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import pathlib
 import sys
@@ -16,6 +17,11 @@ import sys
 import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+
+
+async def _no_sleep(seconds: float) -> None:
+    """Stand-in for asyncio.sleep so a retry test does not wait for real seconds."""
+    return None
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -328,3 +334,57 @@ class TestTheLoadTheRollbackIssues:
         monkeypatch.setattr(rb.gl, "restart_and_load", fake_restart)
         assert asyncio.run(rb.apply_plan("restart-and-load", "AutoSave_0099", 99, True)) == "restarted"
         assert called == [("AutoSave_0099", True)]
+
+    def test_a_reset_handshake_is_retried(self, monkeypatch):
+        # Measured 2026-09-25: the first connection after a launch is reset while the game's
+        # FrontEnd Lua states are still coming up (WinError 64). The run died there, after it
+        # had launched the game, leaving it at the main menu with nothing loaded.
+        from civ_mcp import connection as connection_module
+        from civ_mcp import game_lifecycle as lifecycle
+
+        attempts = {"connect": 0}
+        events: list[str] = []
+
+        class FlakyConnection:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def connect(self):
+                attempts["connect"] += 1
+                if attempts["connect"] < 3:
+                    raise ConnectionResetError(64, "network name is no longer available")
+
+            async def disconnect(self):
+                events.append("disconnected")
+
+        async def fake_load(conn, name):
+            events.append(name)
+            return "Loading save: AutoSave_0099 (issued from the LoadGameMenu Lua state)."
+
+        monkeypatch.setattr(connection_module, "GameConnection", FlakyConnection)
+        monkeypatch.setattr(lifecycle, "load_game_save", fake_load)
+        monkeypatch.setattr(asyncio, "sleep", _no_sleep)
+
+        result = asyncio.run(rb.load_the_save("AutoSave_0099"))
+        assert attempts["connect"] == 3
+        assert "AutoSave_0099" in events and "disconnected" in events
+        assert "LoadGameMenu" in result
+
+    def test_a_tuner_that_never_answers_is_reported(self, monkeypatch):
+        from civ_mcp import connection as connection_module
+
+        class DeadConnection:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def connect(self):
+                raise ConnectionError("Cannot connect to Civ 6 at 127.0.0.1:4318")
+
+            async def disconnect(self):
+                return None
+
+        monkeypatch.setattr(connection_module, "GameConnection", DeadConnection)
+        monkeypatch.setattr(asyncio, "sleep", _no_sleep)
+
+        result = asyncio.run(rb.load_the_save("AutoSave_0099"))
+        assert "FAILED" in result and "FireTuner" in result

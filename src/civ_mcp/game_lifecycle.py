@@ -520,8 +520,19 @@ def _save_query_lua(save_name: str) -> str:
 
 
 def _save_poll_lua() -> str:
+    """Lua: what became of the query this state was asked to run.
+
+    ``LOST`` is the third answer and it is not a failure: the markers the query set are gone,
+    which means this Lua context has been rebuilt - i.e. the game has begun loading. Without it
+    a load that starts *and* finishes inside the poll window looks like a state that never
+    answered, because the fresh context sits there reporting PENDING. Measured 2026-09-25: the
+    tuner came back in about three seconds, all five FrontEnd states read PENDING, the tier
+    concluded "never answered", fell through to OCR navigation, and the game was left parked on
+    the leader screen with nobody to click CONTINUE.
+    """
     return (
-        "if ExposedMembers.MCPLoadDone then "
+        "if ExposedMembers == nil or ExposedMembers.MCPLoadDone == nil then print('LOST') "
+        "elseif ExposedMembers.MCPLoadDone then "
         '  print("RESULT|" .. tostring(ExposedMembers.MCPLoadResult)) '
         "else print('PENDING') end; "
         f'print("{lq.SENTINEL}")'
@@ -530,13 +541,18 @@ def _save_poll_lua() -> str:
 
 async def _lua_load_in_state(
     conn: GameConnection, state_index: int, state_name: str, save_name: str
-) -> bool:
-    """Ask one state for the save list and load the save. True when a load was issued.
+) -> str:
+    """Ask one state for the save list. Returns ``FOUND``, ``NOT_FOUND`` or ``SILENT``.
 
-    ``NOT_FOUND`` leaves the caller free to ask the next state. A state that stops answering
-    right after the query is *success*, not failure: the game blasts the FrontEnd context as
-    the load begins (``LoadGameMenu.lua:112``) and the InGame context goes with it, so the
-    reply to the poll never arrives.
+    ``FOUND`` means the load was issued from here. ``NOT_FOUND`` means this state answered and
+    the name is not in the game's list - the same list every state returns, so there is nothing
+    to gain from asking another. ``SILENT`` means no answer arrived in the window, which is worth
+    one more state.
+
+    A context that *vanishes*, and one that answers ``LOST``, are both ``FOUND``: the game blasts
+    the FrontEnd context as the load begins (``LoadGameMenu.lua:112``) and the InGame context goes
+    with it, so the reply never arrives - and a rebuilt context reporting fresh state is the same
+    event seen a moment later.
     """
     await conn.execute_in_state(state_index, _save_query_lua(save_name))
     for _ in range(20):
@@ -545,14 +561,14 @@ async def _lua_load_in_state(
             check = await conn.execute_in_state(state_index, _save_poll_lua())
         except Exception:  # noqa: BLE001 - a dead state is the expected signature here
             log.info("The %s state stopped answering - the load has begun", state_name)
-            return True
+            return "FOUND"
         for line in check:
-            if line == "RESULT|FOUND":
-                return True
+            if line == "RESULT|FOUND" or line == "LOST":
+                return "FOUND"
             if line == "RESULT|NOT_FOUND":
-                return False
+                return "NOT_FOUND"
     log.warning("The %s state never answered the save query for '%s'", state_name, save_name)
-    return False
+    return "SILENT"
 
 
 async def load_game_save(conn: GameConnection, save_name: str) -> str:
@@ -574,26 +590,51 @@ async def load_game_save(conn: GameConnection, save_name: str) -> str:
     # copying a filename out of Explorer has it.
     save_name = save_name.removesuffix(".Civ6Save")
 
+    from . import game_launcher
+
+    # Sitting on the save that was asked for is not a load. Reading the turn is how the old
+    # tier-2 path decided this, but with tier 1 able to find any save in the game's own list it
+    # would otherwise issue a reload of the position that is already open.
+    wanted_turn = game_launcher._save_turn(save_name)
+    current_turn = await asyncio.to_thread(game_launcher._game_turn_number)
+    if current_turn is not None and wanted_turn == current_turn:
+        return (
+            f"Already loaded: the game is at turn {current_turn}, which is what "
+            f"'{save_name}' holds. Nothing to load - continue with get_game_overview."
+        )
+
     # On the Aspyr Linux port, Network.LoadGame silently does nothing
     # (same as Network.SaveGame). Skip Lua tier and go straight to OCR
     # menu navigation which actually works.
     if sys.platform != "linux":
         # Tier 1: Lua query-match-load (Windows/macOS only)
         try:
+            issued_from: str | None = None
             for state_index, state_name in await _save_list_states(conn):
-                if not await _lua_load_in_state(conn, state_index, state_name, save_name):
-                    continue
+                outcome = await _lua_load_in_state(conn, state_index, state_name, save_name)
+                if outcome == "FOUND":
+                    issued_from = state_name
+                    break
+                if outcome == "NOT_FOUND":
+                    # Every state answers with the same list, so one NOT_FOUND is the answer:
+                    # asking the rest is how a second load gets issued for the same file.
+                    break
 
-                from . import game_launcher
+            if issued_from is None:
+                # No state claimed it. Before navigating a main menu, check whether a game is
+                # open anyway - an earlier load that started inside the poll window, or a click
+                # someone else made, shows up here and just needs landing.
+                turn = await asyncio.to_thread(game_launcher._game_turn_number)
+                if turn is not None:
+                    issued_from = "a load that had already started"
 
+            if issued_from is not None:
                 landing = await asyncio.to_thread(
                     game_launcher._finish_load_sync, save_name
                 )
-                log.info("Loaded '%s' via the %s state; %s", save_name, state_name, landing)
-                return (
-                    f"Loading save: {save_name} (issued from the {state_name} Lua state). "
-                    f"{landing}"
-                )
+                log.info("Loaded '%s' via %s; %s", save_name, issued_from, landing)
+                return f"Loading save: {save_name} (via {issued_from}). {landing}"
+
             log.info("Lua query did not find '%s', trying filesystem", save_name)
         except Exception:
             log.debug("Lua load_game_save failed", exc_info=True)

@@ -413,7 +413,23 @@ async def load_the_save(name: str) -> str:
     from civ_mcp.game_lifecycle import load_game_save
 
     conn = GameConnection()
-    await conn.connect()
+    # The first connection after a launch is routinely reset (WinError 64, "the specified
+    # network name is no longer available"): the game opens the tuner port while its FrontEnd
+    # Lua states are still coming up, so the handshake is dropped. Measured 2026-09-25 - this
+    # killed the whole rollback run *after* it had launched the game, leaving it at the main
+    # menu with nothing loaded. The port answers a moment later, so retry before giving up.
+    last: Exception | None = None
+    for attempt in range(6):
+        try:
+            await conn.connect()
+            break
+        except (ConnectionError, OSError) as exc:
+            last = exc
+            print(f"   tuner not ready (attempt {attempt + 1}/6): {exc}")
+            await asyncio.sleep(3)
+    else:
+        return f"FAILED: FireTuner never accepted a connection for '{name}' ({last})"
+
     try:
         return await load_game_save(conn, name)
     finally:
