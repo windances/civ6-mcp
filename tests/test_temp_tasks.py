@@ -54,9 +54,10 @@ class TestTheProtocolIsAdvertised:
 
 class TestEveryTaskFileIsRetirable:
     def test_there_is_at_least_one_task_in_force(self):
-        # The camp raid is the reason the mechanism exists; if this fails because the task was
-        # legitimately retired, move the assertion, do not delete the test.
-        assert task_files(), "no temporary task in force (expected the camp raid)"
+        # The camp raid lives here; if this fails because every task was legitimately retired, the
+        # assertion is what needs moving, not the test.
+        assert task_files(), "no temporary task in force"
+        assert any("scout" in p.name or "camp" in p.name for p in task_files())
 
     def test_each_task_file_has_the_four_header_lines_and_a_scope(self):
         for path in task_files():
@@ -68,13 +69,15 @@ class TestEveryTaskFileIsRetirable:
 
     def test_each_done_when_is_observable_rather_than_vague(self):
         # A `done when:` an agent has to argue about is a task that never retires. Require it to
-        # name something the game can be queried for: a tile, an improvement, a unit, a turn.
+        # name something the game can be queried for: a tile, an improvement, a unit, a turn, or a
+        # distance/count that the scans can answer.
+        observable = re.compile(
+            r"\(|-?\d+,\d+|turn \d+|no longer|>=|count ==|within \d+ tiles?|no hostile"
+        )
         for path in task_files():
             text = path.read_text(encoding="utf-8")
-            line = next(
-                l for l in text.splitlines() if l.startswith("done when:")
-            )
-            assert re.search(r"\(|-?\d+,\d+|turn \d+|no longer|>=|>= ", line), (
+            line = next(l for l in text.splitlines() if l.startswith("done when:"))
+            assert observable.search(line), (
                 f"{path.name}'s done-when is not observable: {line!r}"
             )
 
