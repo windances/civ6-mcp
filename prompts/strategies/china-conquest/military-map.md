@@ -25,7 +25,7 @@ file rather than improvising from memory:
 | `tactics/04-staging-out-of-range.md` | an assault planned but the stack not yet formed |
 | `tactics/05-formation-and-screening.md` | the stack formed, about to advance on a city |
 | `tactics/06-assault-composition-and-fire.md` | the assault running against a city |
-| `tactics/07-pre-war-analysis.md` | a war is being considered, or a target chosen but not yet committed |
+| `tactics/07-pre-war-analysis.md` | a war is being considered, a target chosen but not yet committed, **or a barbarian camp is visible** |
 
 They use the same vocabulary the turn result prints (`local_superiority`, `siege_exposed`,
 `SIEGE POSTURE`, `BATTLE ASSESSMENT`, the check-rule names), so a proposal can cite a number
@@ -38,6 +38,16 @@ count of usable distance-2 tiles, (3) a capture-capable unit adjacent and unspen
 pool empties, (4) the walls answer, (5) the approach and what would trigger the declaration. Each
 line carries the number that passes or fails it. A target recommendation without those five lines is
 not a pre-war analysis, however sound the reasoning behind it.
+
+**If the snapshot shows a barbarian camp, that is a target of the same file and it has its own six
+gates** — answer `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD` (plus `CONVERT` and `GO`) from its camp
+block, not the city gates. A camp has no HP and no walls: one military unit **moving onto its tile**
+destroys it, so the analysis is entirely about the guard around it — how many barbarians are within two
+tiles and of what class, which two of our units attack and which one walks in unspent, what the last
+step costs in movement, what the camp has been spawning next to our cities, and which city gives up its
+garrison while the raid runs. Ranged plus a melee walk-in against barbarian Spearmen (anti-cavalry);
+never cavalry into spears, never a Scout or a Builder at a camp. A build/production proposal that
+ignores a camp spawning two tiles from a Builder is not answering the file.
 
 **When `tactics/04-staging-out-of-range.md` is the file in the brief, answer its steps the same way**
 — where the rally point is and what it is three or more tiles from, **how many turns the slowest unit

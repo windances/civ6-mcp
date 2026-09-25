@@ -9,7 +9,7 @@ procedure in seven steps**, and every step names the query that answers it:
 
 | Step | Question | Answered by |
 |---|---|---|
-| 0 | Is there a target to analyse at all? | `get_deal_options`, `get_strategic_map` |
+| 0 | Is there a target to analyse at all? | `get_deal_options`, `get_strategic_map`, the map around our cities |
 | 1 | What is the target, in four numbers? | the city probe (hp / walls / **garrison** / ring) |
 | 2 | Do the **five gates** pass? | the arithmetic below, per gate |
 | 3 | How long, and what will it cost? | the formula below, plus the loss asymmetry |
@@ -17,6 +17,12 @@ procedure in seven steps**, and every step names the query that answers it:
 | 5 | Where do we assemble, and when do we declare? | `get_pathing_estimate`, the ring walk |
 | 6 | Does anyone come to its rescue? | `get_units` on the enemy, `get_diplomacy` |
 | 7 | Can we hold what we take? | loyalty pressure, governor, garrison |
+
+**Step 0 has two doors.** Steps 1–7 below are for the first: an enemy **city**, which is a *war*
+decision with a declaration attached. The second is a **barbarian camp**, which is a *raid* — no
+declaration, no walls, no HP pool, and its own gates, in "The other target" after Step 0. A camp that
+is spawning units next to one of our cities is a target this file is responsible for, and the human
+asked for it in as many words on 2026-09-26.
 
 ---
 
@@ -43,6 +49,68 @@ capital), Moscow (3) and Astrakhan (1) — that they have 37 iron against our no
 economy runs at minus three gold a turn. That satisfied Step 0 and answered a logistics question the
 army would otherwise have hit after declaring war: the Swordsman and Knight upgrades need iron we do
 not have.
+
+## The other target: a barbarian camp — a raid, not a war
+
+**A camp is a target of this analysis too** (human instruction, 2026-09-26; it supersedes the earlier
+directive line "do NOT clear barbarian camps", which valued a camp only as a pool of units for the
+Three-Six Stratagems conversion). A camp beside our cities spawns era-appropriate units, and the cost
+of leaving it is measured in Builders and trade routes, not in battles: live T65 the camp at (60,30)
+had produced the 枪兵 Spearman at (60,29) that stood two tiles from a Builder at (58,29) and forced a
+**160-gold Warrior purchase** to cover it.
+
+What a camp is **not** is a city. It has no HP pool, no walls and no garrison bonus — **one military
+unit moving onto the camp tile destroys it**. That is the same walk-in mechanic as a capture (Step 2
+gate 3, file 06), so the question is never whether the camp *can* be destroyed. It is whether the
+walk-in survives the guard, and whether the raid costs more than it buys.
+
+| Gate | Question | Answered by |
+|---|---|---|
+| C1 guard | how many barbarian units are within 2 tiles, of what class, at what HP | `get_map_area` around the camp, `get_units` |
+| C2 ground | terrain and feature of the camp tile, and what the last step costs | the raw tile record (`scripts/probe-tile.py`) |
+| C3 force | two attackers with the counter unit, and the one that steps in | the counter table (file 02) |
+| C4 approach | a tile we already hold, one move from the camp | `get_pathing_estimate`, hex distance |
+| C5 worth | gold, era score, the inspiration, and what it has been spawning | civic boost status, the map |
+| C6 hold | what stays behind, and which unit walks home | `get_cities` garrisons |
+
+**C1 — the guard is the enemy, not the camp.** A camp with nothing around it is a free walk-in. The
+dangerous shape is the one measured at T65–T67: a camp that had been spawning Spearmen with one of
+them parked two tiles away, in reach of a civilian. Count **every** barbarian within two tiles of the
+camp and record class, CS and HP, because the class decides the counter in C3.
+
+**C2 — the ground decides the last step.** A camp on hills, or in forest/jungle, is 2 MP and gives the
+defender terrain defence; a marsh is 2 MP; a river between the approach tile and the camp spends the
+crossing; a camp in a mountain pocket has one lane. Movement is per tile, not per distance (the
+T103–T130 war lost five turns to one-tile moves that cost two points), so the walk-in must start from
+a tile **adjacent to the camp, held since the turn before**.
+
+**C3 — two attackers, and the right ones.** `mass-on-contact` applies to a raid exactly as to a war:
+one attacker trades. Barbarian Spearmen are `PROMOTION_CLASS_ANTI_CAVALRY`, so **cavalry is the wrong
+unit against them** — ranged fire (which takes no retaliation) plus a melee unit to step onto the tile
+is the cheap pair, and the walk-in must arrive **unspent**, because the camp tile is one move and it
+must be that move. Never send a Scout, a Builder or a Trader: a civilian cannot take the tile and will
+be captured instead.
+
+**C4 — the approach.** The same rule as a city: choose a rally tile about two tiles out, outside the
+guard's reach, reachable in one turn, and hold it the turn before. A camp four or more tiles from the
+nearest city with no unit nearby is a job for a unit that is already out there, not a march — say so
+rather than moving the army.
+
+**C5 — what it is worth.** A cleared camp pays gold, a little era score, and — if `CIVIC_MILITARY_TRADITION`
+is not yet inspired — **the inspiration that halves that civic** (its boost is "clear a barbarian
+camp"; it read `boosted=True` at T59 in this branch, so here that part is already banked). The real
+payoff is what clearing stops: a live camp keeps producing era-appropriate units next to our cities,
+and the unit it produced is what the 160 gold at T65 was spent on. Compare that with the raid's cost:
+the units pulled off the development plan, and the garrison a city gives up while they are away.
+
+**C6 — hold, and the ability the old rule was protecting.** A camp is also the only source of units for
+三十六计 Three-Six Stratagems, which the adapter cannot trigger — the human plays it from the game UI
+and it consumes the melee unit. So **before the raid, report any barbarian standing adjacent to one of
+our melee units whose type is worth converting**, so the human can convert first if they want it. Then
+clear the camp anyway: the ability is an opportunity, not a reason to leave a spawner beside 北京. And
+name which city loses its garrison while the raid runs.
+
+---
 
 ## Step 1 — read the target: four numbers, in this order
 
@@ -239,6 +307,14 @@ queue of sieges, and every city kept eats a unit.
 - Never spend the gold on new units before checking what a policy card would do to upgrade prices.
 - Never merge ranged or siege units into a Corps.
 - Never fight a two-front war that the home garrison cannot cover.
+- **Never walk a military unit onto a camp tile that a barbarian unit can reach first** — the walk-in
+  unit is the raid, and losing it turns a raid into a barbarian unit parked next to a city.
+- **Never send a civilian at a camp** (Scout, Builder, Trader). A civilian cannot take the tile and is
+  captured on the way, which is the raid's cost with none of its payoff.
+- **Never leave a camp alive because its units might be worth converting later.** Report the
+  convertible unit, then clear the camp; the spawner does not wait for the human.
+- Never clear a camp with one attacker when a second is within reach, and never with cavalry against
+  barbarian Spearmen.
 
 ## What to report
 
@@ -256,6 +332,19 @@ ADD    <the two or three purchases that shorten it most, with their cost>
 RELIEF field units within 8 tiles: n (their strength vs ours) -> intercept: yes/no
 HOLD   loyalty pressure, governor available, garrison needed, units left for the next city
 WIN    is it an original capital; how many remain; any rival close to another victory
+```
+
+For a **camp**, one block per camp, every line one of the camp gates:
+
+```
+CAMP    (x,y) <terrain / feature> — distance to the nearest of our cities n, to our nearest unit n
+GUARD   n barbarian units within 2 tiles: <type CS n hp n at (x,y)>; camp tile occupied: yes/no
+FORCE   ranged: <unit> at (x,y) | walk-in: <unit> at (x,y), HP n, unspent: yes/no
+GROUND  the last step costs n MP from (x,y); river / mountain on the approach: yes/no
+WORTH   gold n, era score n, 军事传统 inspired: yes/no, spawned so far: <units seen>
+HOLD    city left without a garrison: <name or none>; the unit that walks home: <name>
+CONVERT any barbarian adjacent to our melee worth converting: <type or none>
+GO      clear it this turn: yes/no — <the one thing missing>
 ```
 
 ## Target selection

@@ -213,7 +213,7 @@ matching one before improvising:
 | `tactics/04-staging-out-of-range.md` | 攻城前在敌射程外集结 — rally point choice, contact on the march, when to advance |
 | `tactics/05-formation-and-screening.md` | 攻城前站位 — screen in front, siege behind at range 2 |
 | `tactics/06-assault-composition-and-fire.md` | 开打后的搭配与火力 — order of work, concentration, when to break off |
-| `tactics/07-pre-war-analysis.md` | 战前分析 — 能不能打、打谁、几回合、损失多大、打完守不守得住 |
+| `tactics/07-pre-war-analysis.md` | 战前分析 — 能不能打、打谁、几回合、损失多大、打完守不守得住；**蛮族营地也是它的目标**（camp gates：CAMP/GUARD/FORCE/GROUND/WORTH/HOLD/GO） |
 | `tactics/08-war-and-the-home-front.md` | 战时内政 — one war city, everything else compounds; gold/turn against the +10 floor |
 
 **Before a war, file 7 comes first, and its own first step is reconnaissance** — Gate 0 is "a
@@ -264,6 +264,10 @@ Check rival military strength in `get_diplomacy` periodically. A neighbor at 2x+
 
 ### Barbarian Camps
 Camps upgrade with the era — an Ancient-era camp spawns Warriors; the same camp in the Medieval era spawns Man-at-Arms. Clearing a camp within a few turns of finding it is almost always easier than fighting the units it produces over many turns.
+
+**A camp is a `tactics/07` target, and it is destroyed by force** (human instruction, 2026-09-26; this replaces the earlier "do not clear camps" rule, under which a camp was valued only as a pool of units for the leader ability). A camp has **no HP, no walls and no garrison bonus** — one military unit **moving onto its tile** destroys it — so the analysis is about the guard, not the camp: count every barbarian within two tiles with its class and HP, read the camp tile's terrain and what the last step costs in movement, pick **two** attackers with the counter unit plus an unspent unit to walk in, confirm the walk-in starts from a tile we already hold, weigh gold/era score/the `CIVIC_MILITARY_TRADITION` inspiration (its boost is "clear a barbarian camp") against the units pulled off the plan, and say which city gives up its garrison. Barbarian **Spearmen are anti-cavalry** — ranged fire plus a melee walk-in, never cavalry into spears; a Scout, Builder or Trader sent at a camp is captured instead. Report `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD / CONVERT / GO`.
+
+The leader ability 三十六计 Three-Six Stratagems converts an adjacent barbarian, but only from the game UI. So report any barbarian standing next to one of our melee units whose type is worth converting **before** the raid — then clear the camp anyway.
 
 ### Religion
 Religious victory is the easiest win condition to miss because it produces no notifications and unfolds slowly. `get_religion_spread` shows the picture. If a rival religion reaches majority in most civs, the window for a response narrows quickly. Religious units bought from a city carry **that city's majority religion** — buy them from cities where your own religion is majority, not a converted city.

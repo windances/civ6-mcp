@@ -41,11 +41,26 @@ defensive line and of any city assault.
 convert an adjacent barbarian unit to your side, at the cost of the melee unit.
 The MCP interface exposes no action for this, so the agent cannot trigger it.
 
-- Do NOT clear barbarian camps near your territory. Barbarian units upgrade with
-  the era, so a camp left alive is a source of era-appropriate units.
-- Suppress camp units with ranged fire rather than clearing the camp, and report
-  any barbarian whose type would be worth converting so the human player can
-  perform the conversion from the game UI.
+- **A barbarian camp is a target, and it is destroyed by force.** (Human instruction, 2026-09-26: this
+  replaces the earlier "do NOT clear barbarian camps" rule, which valued a camp only as a pool of
+  convertible units.) A camp has no HP, no walls and no garrison bonus - **one military unit moving onto
+  its tile destroys it** - so the question is never whether it can be killed, but whether the walk-in
+  survives the guard. Run `prompts/tactics/07-pre-war-analysis.md`'s **camp gates** first: count every
+  barbarian within two tiles with its class and HP (C1), read the camp tile's terrain and what the last
+  step costs (C2), pick **two** attackers with the counter unit and an unspent unit to walk in (C3),
+  confirm the walk-in starts from a tile we already hold (C4), weigh gold/era score/the
+  `CIVIC_MILITARY_TRADITION` inspiration against the units pulled off the plan (C5), and say which city
+  gives up its garrison (C6). Against barbarian **Spearmen** (anti-cavalry) that means ranged fire plus
+  a melee walk-in - never cavalry into spears, never a Scout/Builder/Trader at a camp.
+- Barbarian units upgrade with the era, so an uncleared camp keeps producing era-appropriate units next
+  to our cities. That spawning is the reason to clear it, and it is measured: the camp at (60,30)
+  produced the Spearman at (60,29) that forced a 160-gold Warrior purchase at T65. Do not walk past a
+  camp that is within three tiles of a city or of a Builder's work.
+- The leader ability 三十六计 Three-Six Stratagems converts an adjacent barbarian, but only from the
+  game UI - the adapter exposes no action. So **before destroying a camp, report any barbarian standing
+  next to one of our melee units whose type is worth converting**, so the human can play the conversion
+  first. Do not let that delay the raid, and do not keep a camp alive as a conversion farm: the human's
+  instruction is to destroy it.
 - Treat any converted unit that appears as a free reinforcement: it cost no Iron
   and no production.
 
