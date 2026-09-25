@@ -38,6 +38,12 @@ Two guards exist because each one cost units before it existed (Moscow, T105-T12
   attacking — because the only units this driver moves are the ones the caller names.
 
 `--force` overrides the first guard; say why in the diary when you use it.
+
+Before the skip list, `end` also prints every ranged unit that still has movement and is within five
+tiles of an enemy city. That warning exists because the skip list is twelve lines long and "the
+Archers have not moved for four turns" does not stand out in it: measured T113-T117, three Archers
+sat 4-6 tiles from 圣彼得堡 with a legal firing tile two turns away while the city was ground down by
+two Catapults and free melee attacks, and the siege took a turn longer than it had to.
 """
 
 from __future__ import annotations
@@ -205,6 +211,82 @@ def format_skipped(units) -> list[str]:
         f"   [{unit.unit_index:>2}] {unit.unit_type:<24} ({unit.x},{unit.y}) mv{unit.moves_remaining}"
         for unit in units
     ]
+
+
+# A unit with no order is fortified and does nothing, and the list of those units is twelve lines
+# long by mid-game - so "forgot to move the Archers" is invisible in it. Measured, T113-T117: three
+# Archers sat at distance 4-6 from 圣彼得堡 with a legal firing tile two turns away while the city
+# was ground down by two Catapults and free melee attacks, and the siege finished a turn later than
+# it had to. This query asks the game the one question that catches it: which of our ranged units
+# still have movement AND are close enough to an enemy city to matter.
+IDLE_RANGED_LUA = (
+    "local me = Game.GetLocalPlayer() "
+    "local diplo = Players[me]:GetDiplomacy() "
+    "for _, u in Players[me]:GetUnits():Members() do "
+    "  local x, y = u:GetX(), u:GetY() "
+    "  if x ~= -9999 and u:GetMovesRemaining() > 0 then "
+    "    local ui = GameInfo.Units[u:GetType()] "
+    "    local shoots = ui and (((ui.RangedCombat or 0) > 0) or ((ui.Bombard or 0) > 0)) "
+    "    if shoots then "
+    "      local best, bname = 99, '' "
+    "      for i = 0, 63 do "
+    "        local q = Players[i] "
+    "        if q and i ~= me and q:IsAlive() and not q:IsBarbarian() then "
+    "          local war = false "
+    "          pcall(function() war = diplo:IsAtWarWith(i) end) "
+    "          if war then "
+    "            for _, c in q:GetCities():Members() do "
+    "              local d = Map.GetPlotDistance(x, y, c:GetX(), c:GetY()) "
+    "              if d < best then best = d; bname = Locale.Lookup(c:GetName()) end "
+    "            end "
+    "          end "
+    "        end "
+    "      end "
+    "      if best <= 5 then "
+    "        print('IDLE_RANGED|' .. (ui and ui.UnitType or '?') .. '|' .. x .. ',' .. y "
+    "          .. '|' .. best .. '|' .. bname) "
+    "      end "
+    "    end "
+    "  end "
+    "end; "
+    f'print("{SENTINEL}")'
+)
+
+
+def parse_idle_ranged(lines: list[str]) -> list[dict]:
+    """Rows of `IDLE_RANGED|<type>|<x>,<y>|<distance>|<city>` as dicts."""
+    out = []
+    for line in lines or ():
+        if not isinstance(line, str) or not line.startswith("IDLE_RANGED|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 5:
+            continue
+        ux, uy = (int(v) for v in parts[2].split(","))
+        out.append(
+            {"unit": parts[1], "unit_at": (ux, uy), "distance": int(parts[3]), "city": parts[4]}
+        )
+    return out
+
+
+def idle_ranged_warning(rows: list[dict]) -> list[str]:
+    """One line per ranged unit with unspent movement that is near a city it cannot hit yet.
+
+    Pure, so the rule can be tested without a game. A unit with a legal attack is already covered by
+    the unused-attack guard; this is about the ones that are close enough to matter and far enough
+    that nothing complains - the state three Archers were in for four turns at 圣彼得堡.
+    """
+    return [
+        f"   IDLE {row['unit']} at {row['unit_at']} is {row['distance']} from {row['city']} "
+        "with movement unspent - move it into range or say why it stays"
+        for row in sorted(rows, key=lambda r: r["distance"])
+    ]
+
+
+async def query_idle_ranged(gs) -> list[dict]:
+    """The same question, asked of the live game (InGame: Cities and Locale both live there)."""
+    lines = await gs.conn.execute_write(IDLE_RANGED_LUA)
+    return parse_idle_ranged(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +476,14 @@ async def main() -> int:
                     f"  [{u.unit_index:>2}] {u.unit_type:<24} ({u.x},{u.y}) "
                     f"hp{u.health} mv{u.moves_remaining} {' '.join(kinds)}"
                 )
+            # The same question `end` asks, asked where it can still be acted on: this list is the
+            # first read of a turn, and a ranged unit standing near a city it cannot yet hit is the
+            # one kind of idle that produces no complaint anywhere else.
+            idle = idle_ranged_warning(await query_idle_ranged(gs))
+            if idle:
+                print("ranged units near an enemy city and not in range yet:")
+                for line in idle:
+                    print(line)
             return 0
 
         if verb == "move":
@@ -461,6 +551,12 @@ async def main() -> int:
                 return 1
 
             pending = [u for u in await gs.get_units() if u.moves_remaining > 0]
+            idle = idle_ranged_warning(await query_idle_ranged(gs))
+            if idle:
+                print("ranged units with movement left near an enemy city (they will be fortified "
+                      "and idle if nothing is ordered):")
+                for line in idle:
+                    print(line)
             if pending:
                 print(f"skipping {len(pending)} unit(s) with unspent moves:")
                 for line in format_skipped(pending):

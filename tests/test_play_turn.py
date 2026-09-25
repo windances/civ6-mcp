@@ -87,6 +87,39 @@ class TestTheNamedSkip:
         assert "[ 4]" in play.format_skipped([UNITS[2]])[0]
 
 
+class TestTheIdleRangedWarning:
+    """A ranged unit that is close enough to matter and too far to fire is the one idle nobody
+    reports: it has no legal attack (so the unused-attack guard is silent) and it is one of a dozen
+    lines in the skip list. Measured T113-T117 at 圣彼得堡: three Archers sat 4-6 tiles out while the
+    city was ground down by two Catapults, and the siege took a turn longer than it had to.
+    """
+
+    LINE = "IDLE_RANGED|UNIT_ARCHER|53,38|3|阿斯特拉罕"
+
+    def test_a_row_parses_into_unit_place_distance_and_city(self):
+        assert play.parse_idle_ranged([self.LINE, "garbage", "NO_MOVES"]) == [
+            {"unit": "UNIT_ARCHER", "unit_at": (53, 38), "distance": 3, "city": "阿斯特拉罕"}
+        ]
+
+    def test_the_warning_names_the_unit_where_it_stands_and_the_city(self):
+        rows = play.parse_idle_ranged([self.LINE])
+        lines = play.idle_ranged_warning(rows)
+        assert len(lines) == 1
+        assert "UNIT_ARCHER" in lines[0]
+        assert "(53, 38)" in lines[0]
+        assert "3 from 阿斯特拉罕" in lines[0]
+
+    def test_nearest_first_so_the_most_actionable_unit_is_on_top(self):
+        rows = play.parse_idle_ranged(
+            ["IDLE_RANGED|UNIT_CATAPULT|60,60|5|X", self.LINE]
+        )
+        lines = play.idle_ranged_warning(rows)
+        assert "UNIT_ARCHER" in lines[0]
+
+    def test_nothing_near_means_nothing_printed(self):
+        assert play.idle_ranged_warning([]) == []
+
+
 class TestRole:
     def test_the_classes_the_formation_is_built_on(self):
         assert play.role("UNIT_WARRIOR") == "screen"
