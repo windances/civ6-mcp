@@ -48,12 +48,12 @@ from civ_mcp.game_state import GameState  # noqa: E402
 REFLECTION_FIELDS = ("tactical", "strategic", "tooling", "planning", "hypothesis")
 
 
-def require_reflections(path: pathlib.Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
+def require_reflections(data: dict) -> dict:
+    """Validate one reflections object: the five contract fields, all non-empty."""
     missing = [f for f in REFLECTION_FIELDS if not str(data.get(f, "")).strip()]
     if missing:
         raise SystemExit(
-            f"refused: {path} is missing {', '.join(missing)}; the diary contract wants all of "
+            f"refused: missing {', '.join(missing)}; the diary contract wants all of "
             f"{', '.join(REFLECTION_FIELDS)} non-empty"
         )
     return {f: str(data[f]).strip() for f in REFLECTION_FIELDS}
@@ -81,6 +81,11 @@ async def main() -> int:
     parser.add_argument("--reflections", type=pathlib.Path, help="JSON with the five fields")
     parser.add_argument("--show", action="store_true", help="print the tail of the diary and exit")
     parser.add_argument("--tail", type=int, default=1, help="rows to print with --show")
+    parser.add_argument(
+        "--retro",
+        type=pathlib.Path,
+        help="JSON list of {turn, reflections} written as retrospective rows (reflection-only)",
+    )
     args = parser.parse_args()
 
     conn = GameConnection()
@@ -94,11 +99,41 @@ async def main() -> int:
         if args.show:
             return show(path, cities, args.tail)
 
-        if not args.reflections:
-            print("nothing to do: pass --reflections or --show")
+        if args.retro:
+            # Retrospective rows for turns played before this tool existed: reflection-only, marked
+            # `retro`, with no live stats - the snapshot is today's, not that turn's, and putting
+            # today's numbers on a past turn would be worse than leaving them out. Sixteen turns of
+            # the Moscow campaign had no row at all, which is the memory the doctrine is read from.
+            entries = json.loads(args.retro.read_text(encoding="utf-8"))
+            pid_line = await gs.execute_lua("print(Game.GetLocalPlayer())", "gamecore")
+            local_pid = int(pid_line.strip().splitlines()[-1])
+            stamp = datetime.now(timezone.utc).isoformat()
+            rows = []
+            for entry in entries:
+                rows.append(
+                    {
+                        "pid": local_pid,
+                        "is_agent": True,
+                        "turn": int(entry["turn"]),
+                        "game": f"{civ}_{seed}",
+                        "timestamp": stamp,
+                        "v": 1,
+                        "retro": True,
+                        "reflections": require_reflections(entry["reflections"]),
+                    }
+                )
+            append_rows(path, rows)
+            print(f"wrote {len(rows)} retrospective row(s): {[r['turn'] for r in rows]}")
+            print(f"  {path}")
             return 0
 
-        reflections = require_reflections(args.reflections)
+        if not args.reflections:
+            print("nothing to do: pass --reflections, --retro or --show")
+            return 0
+
+        reflections = require_reflections(
+            json.loads(args.reflections.read_text(encoding="utf-8"))
+        )
         overview = await gs.get_game_overview()
         snapshot = await gs.get_diary_snapshot()
         pid_line = await gs.execute_lua("print(Game.GetLocalPlayer())", "gamecore")
