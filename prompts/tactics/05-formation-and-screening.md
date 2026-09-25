@@ -65,6 +65,23 @@ None of it was a rules problem - it was geometry, and it is measurable.
   beside the ranged line - it helps melee only.
 - Never advance into range 2 of a second enemy city while the first one is unscreened.
 - Never let the formation break to chase a scout or a civilian.
+- **Never leave a wounded unit inside an enemy's reach.** A unit at 60 HP or less within two tiles
+  of an enemy is a unit you have already lost: it attacks for proportionally less (manual p.88) and
+  dies to one blow. All three losses of the T103–T130 war were exactly this - a Barbarian Horseman
+  at 9 HP ordered onto a 0/200 city, a Warrior at 23 HP left adjacent to a CS 35 Swordsman, and an
+  Archer at 35 HP one tile from the same unit. Withdraw it to a city (20 HP/turn) or friendly
+  territory (15) - never leave it where it is because the attack is convenient.
+- **Keep one approach lane free.** The formation is not only about who screens whom: our own stack
+  is the most common obstacle to our own ring and to the capture move. At 阿斯特拉罕 the shooters
+  occupied both adjacent ring tiles and the melee could not reach the city at all. Melee on the
+  ring, shooters one tile behind, and at least one ring tile left empty.
+
+## The end-of-turn warning that enforces the first of those
+
+`scripts/play-turn.py end` prints a **WOUNDED IN REACH** block before it discards any unit's turn,
+naming every unit at 60 HP or less that is within two tiles of an enemy. It is the same test
+`posture` already computed (`formation_violations`), moved to the moment the decision is made,
+because the rule above was in the doctrine throughout the war and was still broken three times.
 
 ## What to report
 

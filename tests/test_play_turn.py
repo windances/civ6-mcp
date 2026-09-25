@@ -75,6 +75,36 @@ class TestTheUnusedAttackGuard:
         assert play.end_turn_blocker(["anything"], True) is None
 
 
+class TestTheWoundedInReachWarning:
+    """All three losses of the T103-T130 Russian war were a wounded unit left inside an enemy's
+    reach; the rule was in the doctrine the whole time and nothing printed it at the moment the turn
+    was closed.
+    """
+
+    def test_a_wounded_unit_two_tiles_from_an_enemy_is_named(self):
+        pairs = [
+            {"unit": "UNIT_ARCHER", "unit_at": (51, 36), "unit_hp": 35,
+             "enemy": "UNIT_SWORDSMAN", "enemy_at": (50, 37), "distance": 1},
+        ]
+        lines = play.wounded_in_reach(pairs)
+        assert len(lines) == 1
+        assert "UNIT_ARCHER" in lines[0] and "35 HP" in lines[0]
+
+    def test_a_healthy_unit_is_not_named(self):
+        pairs = [
+            {"unit": "UNIT_ARCHER", "unit_at": (51, 36), "unit_hp": 100,
+             "enemy": "UNIT_SWORDSMAN", "enemy_at": (50, 37), "distance": 1},
+        ]
+        assert play.wounded_in_reach(pairs) == []
+
+    def test_a_wounded_unit_out_of_reach_is_not_named(self):
+        pairs = [
+            {"unit": "UNIT_ARCHER", "unit_at": (51, 36), "unit_hp": 30,
+             "enemy": "UNIT_SWORDSMAN", "enemy_at": (50, 40), "distance": 4},
+        ]
+        assert play.wounded_in_reach(pairs) == []
+
+
 class TestStaleUnusedAttacks:
     """The adapter's Lua state lags inside a turn frame, so a unit that has just acted is still
     reported as holding a legal attack - measured live 2026-09-25 at 阿斯特拉罕, where the driver
@@ -179,6 +209,14 @@ class TestTheScreenRule:
     def test_a_screen_exactly_as_close_fails(self):
         # "As close as the siege unit" is a second target, not cover.
         assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 2, 2)) is not None
+
+    def test_an_enemy_beyond_two_tiles_is_not_this_turn_s_problem(self):
+        # The rule is "within two tiles of an enemy"; flagged at six it can never be acted on, and a
+        # warning nobody can act on trains the operator to ignore the whole block. Measured T132.
+        assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 6, 6)) is None
+
+    def test_a_missing_screen_inside_reach_still_fails(self):
+        assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 2, None)) is not None
 
     def test_no_screen_at_all_fails(self):
         assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 2, None)) is not None

@@ -1,6 +1,6 @@
 # Game Reports
 
-12 full games played by LLM agents via civ6-mcp. Each report is a detailed turn-by-turn devlog with strategic analysis.
+13 games played by LLM agents via civ6-mcp. Each report is a detailed turn-by-turn devlog with strategic analysis.
 
 | # | Civ / Leader | Turns | Outcome | Key Lesson |
 |---|-------------|-------|---------|------------|
@@ -16,7 +16,9 @@
 | [10](game_010_india_chandragupta.md) | India / Chandragupta | 431 | Defeated (diplomatic) | Longest game — tech lead for 400+ turns, lost to WC mismanagement |
 | [11](game_011_mali_mansa_musa.md) | Mali / Mansa Musa | 271 | **Won** (science) | First victory — gold-purchase synergy bypassed -30% production penalty |
 | [12](game_012_korea_seondeok.md) | Korea / Seondeok | 216 | Conceded | Hallucination of competence — narrative overwriting game state |
+| [13](game_013_china_qin.md) | China / Qin (Unifier) | 131+ | Ongoing (war won) | The garrison, not the walls, decides a siege — and a wounded unit in reach is already lost |
 
-**Record: 1 win, 7 defeats, 4 concessions** (Games 1–11: Claude, Game 12: Gemini 2.5 Pro)
+**Record: 1 win, 7 defeats, 4 concessions, 1 ongoing** (Games 1–11: Claude, Game 12: Gemini 2.5 Pro, Game 13: DeepSeek V4 via DSH)
 
 See [Cross-Game Analysis](../cross-game-analysis.md) for recurring failure patterns identified across games 1–4.
+

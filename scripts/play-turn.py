@@ -284,6 +284,17 @@ def end_turn_blocker(unused_attacks: list[str], force: bool) -> str | None:
     return None
 
 
+def wounded_in_reach(pairs: list[dict]) -> list[str]:
+    """The BAIT lines from the geometry: a wounded unit inside an enemy's two-tile reach.
+
+    Pure, so the rule can be tested without a game. All three losses of the T103-T130 Russian war
+    were this shape - a Barbarian Horseman at 9 HP ordered onto a 0/200 city, a Warrior at 23 HP and
+    an Archer at 35 HP left adjacent to a CS 35 Swordsman - and the rule was in the doctrine the
+    whole time. Printing it at the end of the turn is the mechanical version of the rule.
+    """
+    return [line for line in formation_violations(pairs) if line.startswith("BAIT")]
+
+
 def format_skipped(units) -> list[str]:
     """One line per unit whose turn is about to be discarded, so nothing vanishes silently."""
     return [
@@ -432,7 +443,16 @@ def screen_rule_failure(posture) -> str | None:
 
     `screen_enemy_distance >= enemy_distance` is the failure `screen-the-siege` reports; a screen
     that is exactly as close as the siege unit is a second target, not cover.
+
+    The rule only applies **inside an enemy's reach**: `screen-the-siege` itself is written as "a
+    siege unit is within two tiles of an enemy with nothing in front of it", and the adapter's
+    metric uses the same bound. Measured live 2026-09-25 (T132, at peace, staging with two Catapults
+    six tiles from the nearest Nalanda unit): the driver flagged both Catapults `FAIL ... the enemy
+    is 6 away`, which is a warning that can never be acted on and therefore trains the operator to
+    ignore the block. Anything further than two tiles away is a future problem, not this turn's.
     """
+    if posture.enemy_distance is not None and posture.enemy_distance > 2:
+        return None
     if posture.enemy_distance is None or posture.screen_enemy_distance is None:
         return f"{posture.unit_type}: no screen within reach of the nearest enemy"
     if posture.screen_enemy_distance >= posture.enemy_distance:
@@ -645,6 +665,12 @@ async def main() -> int:
                       "and idle if nothing is ordered):")
                 for line in idle:
                     print(line)
+            bait = wounded_in_reach(parse_pairs(await conn.execute_write(PAIR_SCAN_LUA)))
+            if bait:
+                print("WOUNDED IN REACH (a unit at 60 HP or less inside an enemy's two-tile reach "
+                      "- withdraw it or it dies):")
+                for line in bait:
+                    print("  ", line)
             if pending:
                 print(f"skipping {len(pending)} unit(s) with unspent moves:")
                 for line in format_skipped(pending):

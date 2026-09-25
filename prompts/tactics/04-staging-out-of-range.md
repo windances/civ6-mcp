@@ -8,6 +8,31 @@ Read when an assault is being planned and the stack is not yet formed.
 **two tiles**, and so does a Catapult - the difference is that the city can absorb the answer and
 the Catapult cannot. A column that arrives one unit at a time is defeated one unit at a time.
 
+## Walk the ring before you declare / 宣战前先走一遍"射击圈"
+
+A siege fires as many shots as the **firing ring** allows, not as many as the army has units: a
+shooter only fires on a turn it can reach a tile two tiles from the city *with movement left over*,
+and ranged attacks need movement (`NO_MOVES|Ranged attacks require movement`). So before the
+declaration, and again on the turn the stack forms up:
+
+1. **List every tile at distance ≤ 2 from the city** and mark which are passable. Mountains are not:
+   measured T113, two of 圣彼得堡's ring tiles ((57,41), (54,42)) answered
+   `BLOCKED (impassable mountain)`, and at 阿斯特拉罕 the whole east side was mountains, so for most
+   of that siege only three shooters could fire at once while six stood idle. Moscow's ring had six
+   usable tiles and the siege went twice as fast.
+2. **Test line of sight per tile, per unit.** LOS is not distance: (53,35)→(52,37) was refused
+   `NO_LOS` while (52,36)→(53,37) at the same range went through, and a Catapult refused (54,40)
+   from (55,38) yet fired from (52,38) (T107). A tile is only a firing position once a shot from it
+   has been *ordered* and not refused.
+3. **Count the points of the last move.** A one-tile move can cost **two** movement points (river,
+   hill, marsh). Five siege turns were lost to this in the T103–T130 war, twice as
+   `NO_MOVES` on a Catapult that had moved one tile that turn. A unit that wants to fire this turn
+   must start the turn able to *step into* the ring with one point and still have one to fire with.
+4. **Keep the lanes clear.** Our own stack is the most common obstacle to our own ring: at
+   阿斯特拉罕 the shooters occupied the only two adjacent ring tiles and the melee could not reach
+   the city at all. Put the **melee on the ring and the shooters one tile behind it**, never the
+   reverse, and leave at least one approach tile free for the capture move.
+
 ## Choosing the rally point
 
 A staging tile is good when it is:

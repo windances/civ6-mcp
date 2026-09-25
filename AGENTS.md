@@ -95,6 +95,20 @@ Each turn in order:
    ATTACK modifier, so the capture move was refused. `attack` and `move` now both resolve a city
    at the target tile through `Cities.GetCityInPlot`, and a unit ordered onto a 0 HP city
    takes it and reports `CITY TAKEN` — resolve it with `city_action` keep/raze.
+   **The numbers behind that step, measured over the T103–T130 Russian war (game 13):** the
+   capturing unit must **move** (attacking spends all remaining movement — T110 Moscow fell because
+   the Chariot was ordered to move), it must be **adjacent at the start of the turn** (T129: a
+   four-tile order with four movement points reached three tiles and the zone of control refused the
+   last step; T117: a Warrior walked away from the capital for the same reason), and it must have
+   **health** (T115: a 9 HP Horseman died taking a 0/200 city). A city at 0 HP heals ~20 a turn
+   while it has a supply line, so a failed capture is a re-siege, not a delay. The same war's fire
+   arithmetic, which decides how long a siege takes: an Archer does **9–11** against a city holding
+   a CS 35 garrison and **35** against the same city ungarrisoned, while a **Catapult does 45–52
+   either way** — so a garrisoned city is a Catapult job, and the cheapest way to remove the
+   garrison bonus is to invite the sortie (T109: it left Moscow, and four shooters went from ~11 a
+   shot to 95 in one turn). An ungarrisoned, wall-less city does **not retaliate against melee**
+   (36 and 44 damage measured, 0 taken), and a siege fires only as many shots as its ring of
+   distance-2 tiles allows, which mountains and `NO_LOS` reduce per tile.
    Two more rules compare what the enemy fields with what you have. **`match-their-melee`** fails
    while enemy melee within three tiles of the army is CS 35 or better and your front line is
    still Warrior/Spearman tier — an unupgraded line loses every trade with a Swordsman (35) or a
@@ -451,6 +465,26 @@ can work while that one lives. Waiting does not help: stop that process with
 `scripts\civ6-clean.ps1`, or keep playing in its session.
 
 **MCP autosaves:** `end_turn` automatically saves every turn as `0_MCP_NNNN` (last 5 kept). These are your primary recovery points.
+
+**Two recovery traps, both measured on 2026-09-25 (five crashes/hangs in one session):**
+
+1. **`0_MCP_NNNN` names collide across rolled-back branches, and a rollback does not delete the
+   abandoned branch's files.** Loading `0_MCP_0122` by name silently loaded the *other* branch's
+   position — same turn number, different board (18 units, two Trebuchets, no Moscow), so the turn
+   check passed and only reading the units back caught it. **After any rollback, recover with the
+   game's own per-session autosave, `AutoSave_NNNN`** (in `Saves/Single/auto`, OneDrive-redirected
+   on Windows: `C:/Users/<user>/OneDrive/文档/My Games/Sid Meier's Civilization VI/Saves/Single/`),
+   choosing the newest one at or before the lost turn by modification time. The save-list Lua probe
+   (`.tools/probes/save-list.lua`) prints names, paths and times so the two can be told apart.
+2. **A turn that will not advance is not necessarily a hang.** Twice it was the game waiting for a
+   mouse: once parked on the leader screen after a load (the CONTINUE click was landing on the
+   browser, because `_click` injects at screen coordinates and a fullscreen game must be in front —
+   fixed by focusing first, `_bring_to_front`), and once behind a natural-disaster popup plus twenty
+   `InvitePopup`s. **Read the screen (`.tools/whats-on-screen.py`) before restarting**, and try
+   `dismiss_popup` before relaunching.
+
+Launching from a shell may need full filesystem access: the game writes `%LOCALAPPDATA%\Firaxis
+Games` and its OneDrive save directory on start, and a confined launch produces no process at all.
 
 **Load by name** (preferred — no `list_saves` needed):
 ```

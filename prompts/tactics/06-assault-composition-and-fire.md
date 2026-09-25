@@ -12,6 +12,53 @@ Read once the stack is in contact with the target city and the assault is runnin
 | Ranged | 4 | Take the **city's HP** down (and kill anything that comes out to relieve it). Range 2, no retaliation. Never aim at a garrison that is inside - it takes no damage there. |
 | Cavalry | 1 | Hunt survivors and reach the enemy's ranged and siege units. Never the unit holding the front tile. |
 
+## Read the defender before you build the fire plan / 先读守军，再排火力
+
+Every city's HP pool is the same 200 and heals the same ~20 a turn, so the pool is not what decides
+how long a siege takes. **The garrison is.** A CS 35 unit inside a city adds a share of its strength
+to the city's defence, and the same shooters do roughly a third as much:
+
+| Shooter | Against a city with a CS 35 garrison | Against the same city ungarrisoned |
+|---|---|---|
+| Archer (RS 25) | **9–11** | **35** |
+| Catapult (Bombard 35) | **45–52** | **45–52** |
+
+Measured, T107–T130: Moscow (garrisoned Warrior/Swordsman) took seven turns of fire; 圣彼得堡 (no
+garrison) went from first contact to ours in five turns *including the march*, and its pool fell 44
+a turn to free melee alone; 阿斯特拉罕 (pop 3, garrisoned Swordsman) took six.
+
+Three consequences, in the order they matter:
+
+1. **Read the garrison before anything else** (`garrison:` on the city line, and what the unit is -
+   a Great Writer is not a defender). A city with no garrison and no walls is not a siege, it is an
+   attack; a city with a CS 35 garrison is a job for Catapults.
+2. **Archer fire is negative against a garrisoned city**: two Archers at 9–11 are 18–22 gross
+   against a 20/turn heal. Do not open a siege with archers on a garrisoned city and call the stall
+   bad luck - either bring the Catapults (which are barely affected) or take the garrison away.
+3. **The cheapest way to take the garrison away is to invite the sortie.** A garrison that attacks
+   out loses the city its garrison bonus for that turn, and that is the turn to fire everything.
+   T109: the Swordsman left Moscow to hit an Archer, and the same four shooters went from ~11 a shot
+   to 95 in one turn. Stand a healthy melee unit next to the city - it is also the capture unit, and
+   one movement point from the tile.
+
+## The capture is a combat action, with three requirements / 占领是战斗动作，有三个硬条件
+
+The last step has no damage number attached to it, and every one of these was violated once in the
+T103–T130 war:
+
+1. **The capturing unit MOVES onto the tile - it must not attack that turn.** Attacking consumes all
+   remaining movement. T110: Moscow fell because the Chariot was ordered to move and not to attack.
+2. **It must be ADJACENT at the start of the turn.** T129: a 4-tile order with four movement points
+   reached only three tiles, and the last step was refused by the city's zone of control
+   (`tile is enemy territory but movement still blocked`). T117: a Warrior ordered onto the capital
+   from three tiles away walked in the wrong direction and spent its turn.
+3. **It must have health.** T115: a 9 HP Barbarian Horseman died executing the capture of a 0/200
+   city and the city stayed Russian. Use a unit above ~40 HP, and keep the wrecked one for garrison
+   duty or healing.
+
+A city at 0 HP heals ~20 a turn while it has a supply line, so a failed capture is not a delay, it is
+a re-siege. Both failures above cost a full turn each.
+
 ## Order of work, every turn
 
 1. **Siege knocks the walls to 0.**

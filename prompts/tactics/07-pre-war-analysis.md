@@ -24,6 +24,31 @@ something the adapter can already query.
 8. **Afterwards** - loyalty, governor, garrison, and what is left for the next city.
 9. **Is it the right war** - original capitals, rival victory progress, and the stop line.
 
+## The two numbers the gates are missing / 前两条必须补上的数字
+
+The measured war of T103–T130 (game 13) says the gate list above is incomplete in two specific ways,
+and both are cheap to answer before declaring:
+
+1. **Read the GARRISON, not just the walls.** A CS 35 unit inside a city cuts archer damage from 35
+   to 9–11 per shot, which is *negative* against the ~20/turn heal — so "net fire > 0" is false for
+   an archer-only train and true the moment the Catapults (45–52, barely affected by a garrison)
+   are counted. Moscow and 阿斯特拉罕 took seven and six turns of fire because of a garrison;
+   圣彼得堡, with none, took five turns *including the march*. Before declaring, answer: **what unit
+   is on the city tile, and does the fire plan still clear the heal with it there?**
+2. **Count the usable ring tiles.** A siege fires as many shots as the ring allows, not as many as
+   the army has shooters: mountains and `NO_LOS` are per-tile facts (圣彼得堡 lost two of its six
+   ring tiles to mountains; 阿斯特拉罕's east side was mountains, so only three shooters could ever
+   fire). Before declaring, answer: **how many tiles at distance ≤ 2 can actually be occupied and
+   fired from, and is that at least the number of shooters the plan assumes?** If it is fewer, the
+   siege is longer than the arithmetic on paper says, by exactly that ratio.
+
+A third question belongs here because it decides whether the war starts on your schedule at all:
+**massing on a border is what triggers the declaration.** In game 13 Peter's border complaint
+arrived on the turn the column closed on his frontier, the refusal was taken as the answer, and
+Russia declared at T103 with our army two turns short of its staging row — the plan assumed T105.
+Stage where the army can already fight, and treat the enemy declaring first as the expected case,
+not the surprise.
+
 ## Target selection
 
 - **Original capitals first.** Domination means owning every rival's original capital, and a capital
