@@ -279,6 +279,15 @@ class TestTheLandingStep:
         gl._finish_load_sync(SAVE)
         assert clicks == []
 
+    def test_a_load_that_lands_after_the_window_is_not_reported_as_failed(self, monkeypatch):
+        # Measured 2026-09-25 during the rollback to T99: this answered "FAILED ... no turn within
+        # 150s" and the caller's own verify read turn 99 seconds later. The deadline must not decide
+        # on its own - one last read does.
+        monkeypatch.setattr(gl, "_game_turn_number", lambda timeout=5.0: 99)
+        monkeypatch.setattr(gl, "_save_turn", lambda name: 99)
+        report = gl._finish_load_sync(SAVE, wait_seconds=0)
+        assert "FAILED" not in report and "turn 99" in report
+
     def test_the_continue_click_is_not_gated_on_the_ocr_signature(self, monkeypatch):
         # The control is drawn, not laid out, so the colour search is both the detector and the
         # click. It used to run only when `_leader_screen_detected` matched an OCR signature that

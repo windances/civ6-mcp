@@ -3416,7 +3416,7 @@ def _continue_game_sync(expected_name: str) -> str | None:
     )
 
 
-def _finish_load_sync(save_name: str, wait_seconds: float = 150) -> str:
+def _finish_load_sync(save_name: str, wait_seconds: float = 240) -> str:
     """Land a load that has already been **issued**, whatever issued it.
 
     Loading a save is not one step. The end of it is the leader intro screen, which needs a
@@ -3464,6 +3464,22 @@ def _finish_load_sync(save_name: str, wait_seconds: float = 150) -> str:
             _click_continue_positional()
             positional_done = True
         time.sleep(3)
+
+    # One last read before calling it a failure. A load can land just after the window, and the
+    # caller checks again immediately: measured 2026-09-25 during the rollback to T99, this answered
+    # `FAILED: ... no turn within 150s` and the rollback's own verify read turn 99 seconds later. A
+    # failure report that the next call contradicts is worse than a longer wait, so the deadline does
+    # not decide by itself - the game does.
+    turn = _game_turn_number()
+    if turn is not None:
+        expected = _save_turn(save_name)
+        if expected is not None and turn != expected:
+            return (
+                f"WARNING: the game reports turn {turn}, but '{save_name}' holds turn "
+                f"{expected} — the load did not take, or a different save opened."
+            )
+        return f"Loaded: the game is at turn {turn}."
+
     return (
         f"FAILED: '{save_name}' was issued, but the game reported no turn within "
         f"{wait_seconds:.0f}s."
