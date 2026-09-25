@@ -604,11 +604,16 @@ class GameState:
     async def unused_attacks(self) -> list[str]:
         """Units that still have moves and a legal attack they have not used.
 
-        Read-only. Same legality test as the `>> CAN ATTACK` hints in `get_units`, so the two
-        can never disagree - this is the same fact, asked for at the moment it matters.
+        Read-only, but run in the **InGame** context: the legality test is built on
+        `UnitManager.CanStartOperation`, which does not exist in GameCore (measured live
+        2026-09-25: sent through `execute_read` the query died on
+        `function expected instead of nil` at that call, and because this method swallows the
+        exception by design the answer was silently an empty list). Same context as the
+        `>> CAN ATTACK` hints in `get_units`, whose legality test this mirrors exactly - so the
+        two can never disagree.
         """
         try:
-            lines = await self.conn.execute_read(lq.build_unused_attack_query())
+            lines = await self.conn.execute_write(lq.build_unused_attack_query())
         except Exception as e:
             log.debug("Unused-attack scan failed: %s", e)
             return []

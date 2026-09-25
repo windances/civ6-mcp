@@ -1111,12 +1111,20 @@ local me = Game.GetLocalPlayer()
 local out = {}
 for _, unit in Players[me]:GetUnits():Members() do
     local x = unit:GetX()
+    local y = unit:GetY()
     if x ~= -9999 and unit:GetMovesRemaining() > 0 then
         local entry = GameInfo.Units[unit:GetType()]
         local cs = entry and entry.Combat or 0
         local rs = entry and entry.RangedCombat or 0
-        if cs > 0 or rs > 0 then
-            local rng = (rs > 0) and (entry and entry.Range or 1) or 1
+        -- Siege units carry their ranged strength in `Bombard`, not `RangedCombat`
+        -- (UNIT_CATAPULT is Combat 25 / RangedCombat 0 / Bombard 35 / Range 2), so a test that
+        -- only looks at RangedCombat declares a Catapult a range-1 melee unit and reports no
+        -- legal targets at the two tiles it actually bombards. Measured live 2026-09-25: a
+        -- Catapult standing at distance 2 from Moscow came back with an empty target list.
+        local bomb = entry and entry.Bombard or 0
+        local shoots = (rs > 0) or (bomb > 0)
+        if cs > 0 or shoots then
+            local rng = shoots and (entry and entry.Range or 1) or 1
             local hits = {}
             for dy = -rng, rng do
                 for dx = -rng, rng do
@@ -1129,7 +1137,7 @@ for _, unit in Players[me]:GetUnits():Members() do
                                 local otherOwner = other:GetOwner()
                                 if otherOwner ~= me and (otherOwner == 63 or Players[me]:GetDiplomacy():IsAtWarWith(otherOwner)) then
                                     local losOK = true
-                                    if rs > 0 and d > 1 then
+                                    if shoots and d > 1 then
                                         local lp = {}
                                         lp[UnitOperationTypes.PARAM_X] = tx
                                         lp[UnitOperationTypes.PARAM_Y] = ty

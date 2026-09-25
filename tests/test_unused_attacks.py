@@ -1,4 +1,4 @@
-﻿"""Unused attacks are reported where they are thrown away, and checked where they are counted.
+"""Unused attacks are reported where they are thrown away, and checked where they are counted.
 
 The failure this exists for (live T109-T116): a Heavy Chariot stood on (53,36) with two
 movement points for seven turns, twice with a Russian Swordsman on the adjacent tile at 53 hp
@@ -51,6 +51,33 @@ class TestParsing:
         assert "CanStartOperation(unit, UnitOperationTypes.RANGE_ATTACK" in query
         assert "IsAtWarWith(otherOwner)" in query
         assert "{SENTINEL}" not in query, "the marker must be substituted"
+
+    def test_the_neighbourhood_scan_has_both_coordinates(self):
+        """`y` was never read, so the whole scan died on `y + dy` and reported nothing.
+
+        Measured live 2026-09-25: the InGame Lua state answered
+        `ERR:Runtime Error: ...:15: operator + is not supported for nil + number`, and because
+        `GameState.unused_attacks` swallows the exception (by design - a failed scan is not a
+        failed turn) the effect was silent: the driver's own `use-your-attacks` guard and the
+        turn-check metric both read zero unused attacks on turns when units were standing next to
+        enemies with a legal attack left. One missing `local y = unit:GetY()` disabled the check
+        that exists to stop exactly that, so it gets its own test rather than riding on the
+        structural one above.
+        """
+        query = lq.build_unused_attack_query()
+        assert "local y = unit:GetY()" in query
+        assert query.index("local y = unit:GetY()") < query.index("x + dx, y + dy")
+
+    def test_a_siege_unit_is_scanned_at_its_bombard_range(self):
+        """A Catapult is Combat 25 / RangedCombat 0 / Bombard 35 / Range 2.
+
+        A range test that only reads `RangedCombat` gives it range 1 and reports no legal target
+        two tiles away - measured live 2026-09-25, a Catapult at distance 2 from Moscow answered
+        `REFUSING: no legal attack ... Legal targets from here: none` from the driver's guard.
+        """
+        query = lq.build_unused_attack_query()
+        assert "entry.Bombard" in query
+        assert "shoots" in query
 
 
 class FakeGS:

@@ -10,7 +10,18 @@ scan. This is that, deliberately small:
   play-turn.py attack <type-or-index> <x> <y> attack a tile (a city tile resolves as the city)
   play-turn.py diplo | respond <pid> <POSITIVE|NEGATIVE>
   play-turn.py scan <x> <y> [radius]          enemy cities in reach + the narrated map
+  play-turn.py civic <CIVIC>                  start a civic (the end-of-turn blocker)
+  play-turn.py produce <city> <ITEM> [X,Y]    set a city's production, category resolved for you
+  play-turn.py improve <type-or-index> <IMPROVEMENT>
   play-turn.py end [--force]                  end the turn, with two guards (below)
+
+`civic`, `produce` and `improve` exist because those three are end-turn **blockers** — the game
+refuses to advance without them — and resolving a blocker through a one-off script each time is how
+the same three decisions get re-derived every turn. Each prints what the game answered, and
+`produce` resolves the category (UNIT/BUILDING/DISTRICT/PROJECT) from the city's own option list so
+the caller only has to name the item. A district additionally needs a tile: with no `X,Y` it asks
+`get_district_advisor` and uses the top-ranked placement, printing the rest so the choice is visible
+rather than silent.
 
 `move` prints the *actual* position read back after the order, because moves are asynchronous: the
 reply to a move names the destination tile, not the arrival, and a blocked move looks the same as a
@@ -61,6 +72,119 @@ def find(units, needle: str):
     needle = needle.upper().replace("UNIT_", "")
     matches = [u for u in units if needle in str(u.unit_type).upper()]
     return matches[0] if matches else None
+
+
+def preflight_message(sessions: list, deals: list) -> str | None:
+    """Why the turn must not be *skipped* yet, or None when it may.
+
+    Pure, so the ordering rule can be tested without a game. `skip_remaining_units` fortifies every
+    unit holding moves and cannot be undone, so anything that will make `end_turn` refuse has to be
+    found before it runs. `execute_end_turn` checks both of these at its own top
+    (`end_turn.py:2129-2150`); this is the same check, moved to where it is still cheap.
+    """
+    if sessions:
+        names = ", ".join(
+            f"{getattr(s, 'other_civ_name', '?')} ({getattr(s, 'other_leader_name', '?')})"
+            for s in sessions
+        )
+        return (
+            f"Cannot end turn: diplomacy encounter pending with {names}.\n"
+            "  answer it: `play-turn.py diplo`, then `play-turn.py respond <pid> "
+            "<POSITIVE|NEGATIVE>`"
+        )
+    if deals:
+        return f"Cannot end turn: {len(deals)} incoming trade deal(s) pending (respond_to_trade)."
+    return None
+
+
+async def preflight_blocker(gs) -> str | None:
+    """The same question, asked of the live game."""
+    sessions = await gs.get_diplomacy_sessions()
+    try:
+        deals = await gs.get_pending_deals()
+    except Exception:  # noqa: BLE001 - a missing deals API must not block the turn
+        deals = []
+    return preflight_message(sessions, deals)
+
+
+def parse_legal_targets(lines: list[str], unit_id: int) -> list[tuple[int, int]]:
+    """The tiles a unit may legally attack, from the engine's own unused-attack scan.
+
+    Rows are `UNUSED_ATTACK|<type>|<unitID>|<x>,<y>|<TYPE>@<tx>,<ty>(<hp>);...`, so the answer is
+    the engine's own legality test (adjacency for melee, `CanStartOperation` LOS for ranged) rather
+    than a re-derivation of it here.
+    """
+    for line in lines or ():
+        if not isinstance(line, str) or not line.startswith("UNUSED_ATTACK|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 5 or parts[2] != str(unit_id):
+            continue
+        out: list[tuple[int, int]] = []
+        for hit in parts[4].split(";"):
+            tile = hit.split("@")[-1].split("(")[0]
+            try:
+                tx, ty = (int(v) for v in tile.split(","))
+            except ValueError:
+                continue
+            out.append((tx, ty))
+        return out
+    return []
+
+
+# An enemy CITY is attackable even when nothing stands on its tile, and the unused-attack scan
+# only ever reports units - so a city that has just lost its garrison reads as "no legal target"
+# and the guard would refuse the shot that takes it. Measured live 2026-09-25: Moscow at 198/200
+# with `garrison: none` was refused from both Catapults for exactly this reason.
+CITY_AT_LUA = (
+    "local me = Game.GetLocalPlayer() "
+    "local c = Cities.GetCityInPlot({x}, {y}) "
+    "if not c then print('CITY|none') else "
+    "  local owner = c:GetOwner() "
+    "  local war = (owner == 63) "
+    "  if not war then pcall(function() war = Players[me]:GetDiplomacy():IsAtWarWith(owner) end) end "
+    "  local nm = '?' "
+    "  pcall(function() nm = Locale.Lookup(c:GetName()) end) "
+    "  print('CITY|' .. tostring(owner) .. '|' .. tostring(war) .. '|' .. nm) "
+    "end "
+    'print("{sentinel}")'
+)
+
+
+async def enemy_city_at(gs, x: int, y: int) -> str | None:
+    """The name of the enemy city on this tile, or None when there is not one.
+
+    Read-only, and the same `Cities.GetCityInPlot` path `attack_unit` uses to resolve a city
+    target - so the guard and the order agree on what is shootable.
+    """
+    from civ_mcp.lua._helpers import SENTINEL
+
+    lua = CITY_AT_LUA.format(x=x, y=y, sentinel=SENTINEL)
+    lines = await gs.conn.execute_write(lua)
+    for line in lines or ():
+        if isinstance(line, str) and line.startswith("CITY|"):
+            parts = line.split("|")
+            if len(parts) >= 3 and parts[2] == "true":
+                return parts[3] if len(parts) > 3 else "city"
+    return None
+
+
+def attack_refusal(targets: list[tuple[int, int]], unit_at, target) -> str | None:
+    """Why this attack must not be ordered, or None when the engine says it is legal.
+
+    Pure, so the rule can be tested without a game. An illegal attack is not refused by the
+    adapter: `attack_unit` walks the unit toward the target, runs it out of movement and answers
+    `STOPPED_SHORT`, which costs the unit its whole turn. That happened twice in one session -
+    measured 2026-09-25, the same Archer lost a turn to it at (54,36)->(52,38) and again at
+    (53,35)->(52,37) - so the driver refuses before ordering, and names the tiles that would work.
+    """
+    if target in targets:
+        return None
+    legal = ", ".join(f"({x},{y})" for x, y in targets) or "none"
+    return (
+        f"REFUSING: no legal attack on {target} from {unit_at} - the engine would walk the unit "
+        f"toward it and burn its turn (STOPPED_SHORT). Legal targets from here: {legal}"
+    )
 
 
 def end_turn_blocker(unused_attacks: list[str], force: bool) -> str | None:
@@ -311,8 +435,21 @@ async def main() -> int:
             # The library-level end of turn: it runs the turn checks, the empire warnings, the
             # siege/capture/loyalty blocks and the 10-turn review, which is everything the MCP's
             # end_turn tool prints apart from the diary row (scripts/record-turn.py writes that).
-            # Units still holding moves are skipped first, or the turn stops on a blocker.
+            #
+            # Pre-flight FIRST, skip second. `skip_remaining_units` fortifies every unit with
+            # moves, and it is irreversible - so a blocker discovered *after* the skip costs the
+            # whole army its turn. Measured 2026-09-25: `end` skipped nine units and then hit
+            # "Cannot end turn: diplomacy encounter pending with 俄罗斯", and every one of those
+            # nine had its movement discarded for a turn that never advanced. `execute_end_turn`
+            # checks diplomacy and deals at its own top (end_turn.py:2129-2150); this mirrors that
+            # order instead of inverting it.
             from civ_mcp import end_turn as end_turn_module
+
+            blocker = await preflight_blocker(gs)
+            if blocker:
+                print(blocker)
+                print("  no unit's turn has been discarded; answer it, then end again")
+                return 1
 
             leftover = await gs.unused_attacks()
             blocker = end_turn_blocker(leftover, force="--force" in sys.argv)
@@ -339,6 +476,18 @@ async def main() -> int:
             if unit is None:
                 print(f"no unit matching {needle!r}")
                 return 1
+            from civ_mcp.lua import units as lq_units
+
+            scan = await gs.conn.execute_write(lq_units.build_unused_attack_query())
+            targets = parse_legal_targets(scan, unit.unit_id)
+            refusal = attack_refusal(targets, (unit.x, unit.y), (x, y))
+            if refusal:
+                city = await enemy_city_at(gs, x, y)
+                if city is None:
+                    print(refusal)
+                    return 1
+                print(f"note: {city} is an enemy city with no unit on its tile - "
+                      "attacking the city itself")
             print(f"attack: [{unit.unit_index}] {unit.unit_type} ({unit.x},{unit.y}) -> ({x},{y})")
             print("  " + await gs.attack_unit(unit.unit_index, x, y))
             return 0
@@ -359,6 +508,56 @@ async def main() -> int:
         if verb == "respond":
             pid, response = int(sys.argv[2]), sys.argv[3].upper()
             print(await gs.diplomacy_respond(pid, response))
+            return 0
+
+        if verb == "civic":
+            print(await gs.set_civic(sys.argv[2]))
+            return 0
+
+        if verb == "produce":
+            city_name, item = sys.argv[2], sys.argv[3].upper()
+            cities, _ = await gs.get_cities()
+            city = next((c for c in cities if city_name in str(c.name)), None)
+            if city is None:
+                print(f"no city matching {city_name!r}; have: "
+                      + ", ".join(str(c.name) for c in cities))
+                return 1
+            options = await gs.list_city_production(city.city_id)
+            match = next((o for o in options if item in str(o.item_name).upper()), None)
+            if match is None:
+                print(f"{city.name} cannot build {item}; options: "
+                      + ", ".join(str(o.item_name) for o in options))
+                return 1
+            target_x = target_y = None
+            if len(sys.argv) > 4:
+                target_x, target_y = (int(v) for v in sys.argv[4].split(","))
+            elif "DISTRICT" in str(match.item_name).upper():
+                placements = await gs.get_district_advisor(city.city_id, match.item_name)
+                if placements:
+                    best = placements[0]
+                    target_x, target_y = best.x, best.y
+                    print(f"  {city.name}: district placement from the advisor -> "
+                          f"({target_x},{target_y}) adjacency +{best.total_adjacency}; "
+                          "alternatives: "
+                          + ", ".join(f"({p.x},{p.y}) +{p.total_adjacency}"
+                                      for p in placements[1:5]))
+            reply = await gs.set_city_production(
+                city.city_id, match.category, match.item_name, target_x, target_y
+            )
+            print(f"{city.name}: {match.category} {match.item_name} ({match.turns}t) -> {reply}")
+            return 0
+
+        if verb == "improve":
+            needle, improvement = sys.argv[2], sys.argv[3].upper()
+            if not improvement.startswith("IMPROVEMENT_"):
+                improvement = "IMPROVEMENT_" + improvement
+            unit = find(await gs.get_units(), needle)
+            if unit is None:
+                print(f"no unit matching {needle!r}")
+                return 1
+            print(f"improve: [{unit.unit_index}] {unit.unit_type} ({unit.x},{unit.y}) "
+                  f"{improvement}")
+            print("  " + await gs.improve_tile(unit.unit_index, improvement))
             return 0
 
         if verb == "posture":
