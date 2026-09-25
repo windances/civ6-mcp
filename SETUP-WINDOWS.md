@@ -253,6 +253,31 @@ failing command before being fixed.
 | `scripts/qualify-mcp.py` | Reader thread + `queue.Queue` instead of `select()`, and `Popen(..., encoding="utf-8", errors="replace")` + `PYTHONUTF8=1` for the child | (a) `select()` cannot poll a pipe on Windows → `OSError: [WinError 10093] WSAStartup`. (b) With `text=True` alone the child's JSON-RPC output was decoded with the locale codec → `UnicodeDecodeError: 'gbk' codec can't decode byte 0x94`, so `npm run qualify:mcp` failed on this machine |
 | `dsh/civ6.cordis.yml` | Added `PYTHONUTF8: '1'` to the `mcp-civ6` env | Belt-and-braces against any remaining locale-encoded text I/O inside the adapter |
 
+### A strategic resource bought in a trade is paid for and never delivered (found 2026-09-25)
+
+`propose_trade` can report a completed deal and leave the resource in the seller's hands. Measured
+live, T119-T121: 100 gold plus one duplicate Cocoa were offered to Egypt (a declared friend) for
+20 iron, `test_trade` answered `ACCEPTABLE — this deal would be accepted as-is`, `propose_trade`
+answered `ACCEPTED|Trade accepted with 埃及 ... They give: 20x 铁 (30t)` - and the iron never
+arrived. Both sides were checked, because the result line is not evidence:
+
+| | before | after |
+|---|---|---|
+| our gold | 193 | 93 (we paid) |
+| our Cocoa | x3 | x2 (we paid) |
+| Egypt's iron | 20 | gone from their list (they paid) |
+| our stockpile | `HORSES 50` | `HORSES 50` — and `IRON amount=0, per_turn=0, imported=0` |
+
+The `imported=0` is what rules out the generous reading: a strategic-resource deal is not a
+per-turn trickle that would show up later, there is no import at all. Two turns later the stockpile
+still read 0. So a trade for a **strategic resource** cannot be trusted in either direction: read
+the stockpile back (`get_empire_resources` shows `imported` per resource) rather than the result
+line, and prefer a source of your own.
+
+That is usually available: the same `get_empire_resources` call that exposed the empty import listed
+two unclaimed iron tiles within four tiles of our cities (`(57,42)` near Moscow, `(60,32)` near
+北京). A settler, or border growth, gets the resource without the diplomacy path at all.
+
 ### The missing `launcher-windows` extra broke every hang recovery (found 2026-09-20)
 
 `game_launcher.restart_and_load()` / `load_save_from_menu()` drive the main menu
