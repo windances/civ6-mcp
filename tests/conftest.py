@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import pathlib
+import re
 import shutil
 import uuid
 
@@ -46,13 +47,23 @@ def _shipped_checks_untouched():
 
 @pytest.fixture(autouse=True)
 def isolated_check_files(monkeypatch):
-    """A per-test check file (a copy of the shipped one) and a per-test data directory."""
+    """A per-test check file (the shipped one with retired goals restored) and a data directory.
+
+    The shipped file is a moving target: a `once: true` goal leaves it the moment the game achieves
+    it, and these tests are about the check machinery, not about which goals this playthrough has
+    retired. Live, the ram/tower goal retired at T100 and turned five of them red twice on
+    2026-09-25, for a game that was playing correctly.
+    """
+    from civ_mcp.turn_checks import restore_achieved
+
     root = REPO / ".tools" / f"_checks_env_{uuid.uuid4().hex}"
     checks = root / "turn-checks.md"
     data = root / "data"
     try:
         data.mkdir(parents=True)
-        shutil.copyfile(SHIPPED_CHECKS, checks)
+        checks.write_text(
+            restore_achieved(SHIPPED_CHECKS.read_text(encoding="utf-8")), encoding="utf-8"
+        )
     except OSError:  # pragma: no cover - the copy is best effort, the paths still isolate
         root.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("CIV_MCP_TURN_CHECKS", str(checks))

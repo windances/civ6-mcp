@@ -28,11 +28,18 @@ import argparse
 import asyncio
 import dataclasses
 import json
+import os
 import pathlib
 import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+# The directory is read from CIV_MCP_DATA_DIR at *import* time. Default it to the workspace copy
+# the DSH overlay uses, so a script-driven session cannot silently write the diary to ~/.civ6-mcp
+# (denied by the sandbox) or, worse, read nothing there and report rules as un-evaluable.
+os.environ.setdefault(
+    "CIV_MCP_DATA_DIR", str(pathlib.Path(__file__).resolve().parents[1] / ".civ6-mcp-data")
+)
 
 from civ_mcp import diary as diary_module  # noqa: E402
 from civ_mcp.connection import GameConnection  # noqa: E402

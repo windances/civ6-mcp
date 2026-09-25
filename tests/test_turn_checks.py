@@ -173,7 +173,8 @@ class TestTheRealFile:
 
     def test_the_ram_tower_deadline_fires_on_the_live_position(self):
         # T121 of the live game: no ram or tower, civil engineering not yet adopted.
-        text = CHECKS.read_text(encoding="utf-8")
+        # The baseline, not the live file: the goal leaves the shipped file once it is met.
+        text = turn_checks.restore_achieved(CHECKS.read_text(encoding="utf-8"))
         units = {
             1: unit(1, "UNIT_ARCHER"),
             2: unit(2, "UNIT_MAN_AT_ARMS"),
@@ -196,7 +197,7 @@ class TestTheRealFile:
         assert "no-idle-trade-route" not in {c.check_id for c in turn_checks.parse_checks(text)}
 
     def test_the_ram_tower_check_goes_quiet_once_the_civic_lands(self):
-        text = CHECKS.read_text(encoding="utf-8")
+        text = turn_checks.restore_achieved(CHECKS.read_text(encoding="utf-8"))
         ctx = turn_checks.CheckContext(
             turn=121,
             units={},

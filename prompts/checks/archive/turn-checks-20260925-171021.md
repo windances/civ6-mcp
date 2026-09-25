@@ -46,7 +46,13 @@ closes, so once that is true it retires. Keeping a ram alive afterwards is a dif
 concern, and the every-10-turns review's assault list ("ram/tower 0/1 - MISSING") is what
 watches that.
 
-<!-- achieved T100: ram-tower-before-civil-engineering (original in archive/turn-checks-20260925-171021.md) -->
+<!-- check
+id: ram-tower-before-civil-engineering
+when: not researched(CIVIC_CIVIL_ENGINEERING)
+once: true
+require: units(BATTERING_RAM, SIEGE_TOWER) >= 1
+message: No Battering Ram or Siege Tower exists and CIVIC_CIVIL_ENGINEERING is not yet adopted - the window is still open and closes for good. Build one (Ram 65, Tower 100) and give it to the melee; it helps melee only and must stand on the tile adjacent to the target city.
+-->
 
 ## Contact on the march (engage what is in the way)
 

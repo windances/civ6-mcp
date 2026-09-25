@@ -384,6 +384,56 @@ def archive_path(path: Path, stamp: str) -> Path:
     return path.parent / "archive" / f"{path.stem}-{stamp}{path.suffix}"
 
 
+_ACHIEVED_TRACE = re.compile(
+    r"^<!-- achieved T(\d+): ([\w-]+) \(original in (archive/[^)]+)\) -->$"
+)
+
+
+def archived_goal_block(archive: Path, goal_id: str) -> str | None:
+    """The ``<!-- check ... -->`` block for one goal, as an archived copy holds it."""
+    try:
+        text = archive.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    start = text.find("<!-- check")
+    while start != -1:
+        end = text.find("-->", start)
+        if end == -1:
+            return None
+        block = text[start : end + 3]
+        if f"id: {goal_id}" in block.splitlines():
+            return block
+        start = text.find("<!-- check", end)
+    return None
+
+
+def restore_achieved(text: str, archive_dir: Path | None = None) -> str:
+    """The inverse of :func:`remove_achieved`: put every retired goal back into ``text``.
+
+    The trace line names the archived copy the sweep wrote, so the block is recoverable exactly.
+    The live file is a moving target - a `once: true` goal leaves it the moment the game achieves
+    it - and two callers need the rule set as it was *before* that happened: the test suite, whose
+    fixtures must not depend on which goals this playthrough has retired, and a rollback, which
+    lands the game behind the achievement. Measured 2026-09-25: the ram/tower goal retired at T100
+    on one branch, went back in for a rollback to T99, and retired again at T100 of the replay; the
+    five tests that read the shipped file went red both times.
+    """
+    if archive_dir is None:
+        archive_dir = Path(__file__).resolve().parents[2] / "prompts" / "checks"
+    out = text
+    for line in text.splitlines():
+        match = _ACHIEVED_TRACE.match(line.strip())
+        if not match:
+            continue
+        original = archive_dir / "archive" / Path(match.group(3)).name
+        block = archived_goal_block(original, match.group(2))
+        if block is None:
+            continue
+        marker = line + "\n" if line + "\n" in out else line
+        out = out.replace(marker, block + "\n", 1)
+    return out
+
+
 def sweep_achieved(
     path: Path, achieved: dict[str, int], stamp: str
 ) -> tuple[list[str], Path | None]:
