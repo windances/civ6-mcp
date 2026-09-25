@@ -214,6 +214,11 @@ is only safe *because* the war has not started is not a rally point.
 - Do not begin the approach from inside the city's strike range; stage first, then move.
 - Do not stage where the stack is split by a river or a mountain on the final approach.
 - Do not stage adjacent to a barbarian camp or in reach of a second enemy city.
+- Do not put two **military** units on one rally tile: the adapter refuses it with
+  `STACKING_CONFLICT|... Cannot stack same formation class` (measured T132 — the Man-at-Arms was
+  refused onto (55,36) because a Catapult stood there). Melee and siege each need their own tile;
+  only a **support** unit (the ram) may share a tile with a military one, and that is how it is
+  meant to work. When the rally row is written down, give every military unit its own hex.
 - Do not stage with the siege train in front or unscreened, even at a safe distance — the
   formation is file 5.
 - Do not drag the ram toward a city read as `walls none`: it only helps melee against walls, so it
