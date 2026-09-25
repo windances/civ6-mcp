@@ -178,16 +178,23 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   or siege unit attacking beside them gets nothing, so a tower sitting next to
   your Crossbowmen is doing no work at all. **Both go obsolete at
   `CIVIC_CIVIL_ENGINEERING`**, and **we build neither** (human instruction
-  2026-09-26: 不用锤，用投石车): a siege unit bypasses walls at any era, which is why
-  the Catapult is the answer here and the ram is not.
+  2026-09-26: 不用锤，用投石车) — but **the ram we already own comes along**: it is a
+  support unit, so it travels with the melee and stands on the tile adjacent to
+  the target city, where it makes their attacks do full damage against walls
+  (human instruction 2026-09-26: 已经有攻城锤，就参战). An owned asset is used, a second
+  one is not bought and no tower is built. It is worth carrying only where there
+  are walls to break: read the target's `walls` first (the city line prints
+  `walls none` or the pool), because on the abandoned branch every Russian city
+  read `walls 0/0` and seventeen turns of dragging the ram did nothing.
 - If the war has already started and you have no siege train: do not grind a
-  walled city down with ranged attacks, and do not substitute a ram. Order the
-  siege unit and accept the wait - check the production estimate first, and do not
-  order a 10-turn Trebuchet for a city you will take in two. **This army has no
-  Battering Ram** (human instruction 2026-09-26: 不用锤，用投石车), so waiting for
-  the Catapult is the only route.
+  walled city down with ranged attacks, and do not treat the ram as a substitute
+  for one. Order the siege unit and accept the wait - check the production
+  estimate first, and do not order a 10-turn Trebuchet for a city you will take in
+  two. The ram we own helps **melee against walls and nothing else**, so waiting
+  for the Catapult is still the route.
 - Order of work each turn: siege knocks the walls to 0, melee (following the
-  Catapult fire) takes the city, **ranged shoots the city's HP**. Do not spend
+  Catapult fire, with the ram beside it when the city has walls) takes the city,
+  **ranged shoots the city's HP**. Do not spend
   ranged attacks on walls you have siege for. **Ranged attacks can never capture a
   city** - once the walls are at 0 the city only falls to a melee unit walking in,
   so a turn spent firing at a 0-wall city from range is a turn not spent finishing
@@ -230,9 +237,10 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   garrisoned or not, where an Archer does 9-11 into a CS 35 garrison, and the melee
   walks in after the walls are down. Three of them fired together measured **~260 a
   turn** against a city (Moscow T123: two Catapults did 174 in one turn), which is what
-  keeps a siege bounded against a city that heals about twenty a turn. The one ram we
-  already own is a garrison unit,
-  not part of this establishment, and no tower is to be built. Every Crouching
+  keeps a siege bounded against a city that heals about twenty a turn. The ram we
+  already own **joins the assault** (human instruction 2026-09-26: 已经有攻城锤，就参战)
+  as a support unit for the melee when the target has walls; it is not a
+  requirement, a second one is never built, and no tower is built. Every Crouching
   Tiger needs a melee unit holding the tile in front of it.
 - Judge an assault by the city's own numbers: `city hp: N/200` and
   `walls: N/100` (or `none`) on the result line, never by the damage estimate -

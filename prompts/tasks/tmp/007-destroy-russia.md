@@ -38,7 +38,7 @@ convert this file to a goal with `metric(<rival cities>) == 0`.
 | ranged | **3 Crossbowmen** (CS 30 / RS 40), one Archer left | the fourth upgrade is 125 gold |
 | melee | **1 Man-at-Arms (CS 45)**; Apprenticeship skipped the Swordsman tier | a second Warrior upgrade is 125 gold; `match-their-melee` is answered by the 45, not by a Swordsman |
 | cavalry | 1 Horseman | satisfied; Stirrups (in research at T123) would make it a Knight |
-| ram / tower | none, and none wanted | human instruction 2026-09-26: 不用锤，用投石车 |
+| ram / tower | **the 1 Battering Ram we already own joins the assault** — a support unit, on the tile adjacent to the target city, working for the melee | human instruction 2026-09-26: 不用锤，用投石车 (nothing new is bought) **and** 已经有攻城锤，就参战 (the owned one is used). It only helps against walls, so read the target's `walls` first |
 | iron | **22/50 at +2/t** (was 6 at T114); NITER also revealed at T123 | the melee upgrades are gold-gated now, not iron-gated |
 | the target | **four** cities at T119: 阿斯特拉罕 pop 5 (54,40), 沃罗涅什 pop 2 (50,37), **two in fog** (three at T110 — it grows) | see the read below |
 
@@ -76,7 +76,11 @@ re-read from the map rather than trusted from an old diary (T65 said (60,30); T8
 4. **Take the cities with the doctrine, not with improvisation**: stage outside enemy range
    (`tactics/04`), melee in front and siege behind at range 2 (`tactics/05`), siege knocks the walls,
    ranged shoots the pool, a capture-capable unit **moves** onto a 0 HP city the same turn (`tactics/06`,
-   `take-the-city`). Three Catapults do ~260 a turn against a city that heals ~20.
+   `take-the-city`). Three Catapults do ~260 a turn against a city that heals ~20. **The ram we own
+   marches with the melee** (human instruction 2026-09-26: 已经有攻城锤，就参战) and stands on the tile
+   adjacent to the target, where it makes the melee's attacks do full damage against walls — it is the
+   only support unit in the column, nothing new is built, and against a city read as `walls none` it is
+   dead weight rather than a reason to delay.
 5. **Hold what you take, on the turn you take it**: assign a governor or garrison the tile before the
    next turn (`hold-what-you-take`). In the abandoned branch Moscow was captured at T112 and was a Free
    City by T116 — retaking it cost nine attacks.

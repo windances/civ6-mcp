@@ -24,7 +24,10 @@ behind it (消灭俄罗斯) is an objective rather than a build order. Its gates
 checklist: **3 Catapults per city** (一城3投石车 — met at T122), a melee unit above the Warrior tier
 once the iron stockpile passes 20, and a four-number read of **the first target** before any
 declaration — **not of every Russian city** (human instruction 2026-09-26: 不用获取所有城市信息才开战;
-the rest are read as the army reaches them, and scouting them is not a gate). It is also the **only**
+the rest are read as the army reaches them, and scouting them is not a gate). **The Battering Ram the
+empire already owns joins the assault** (human instruction 2026-09-26: 已经有攻城锤，就参战) — a support
+unit beside the melee, where it makes their attacks do full damage against walls; nothing new is built,
+and beside a city read as `walls none` it is dead weight. It is also the **only**
 file that authorizes the declaration of war on Russia; 006 deliberately did not.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid

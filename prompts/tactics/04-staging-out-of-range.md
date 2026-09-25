@@ -216,8 +216,10 @@ is only safe *because* the war has not started is not a rally point.
 - Do not stage adjacent to a barbarian camp or in reach of a second enemy city.
 - Do not stage with the siege train in front or unscreened, even at a safe distance — the
   formation is file 5.
-- Do not drag a ram or tower anywhere: this army does not field either (human instruction
-  2026-09-26: 不用锤，用投石车), so the only wall-breaker in the column is the siege train.
+- Do not drag the ram toward a city read as `walls none`: it only helps melee against walls, so it
+  earns its place beside a walled target and stays behind otherwise. The ram we own **does** come on
+  the march (human instruction 2026-09-26: 已经有攻城锤，就参战), but no tower and no second ram is
+  built (same day: 不用锤，用投石车).
 - Do not order a unit to fire on the turn it must spend two points to enter the ring: it arrives with
   nothing left, and the attack is refused.
 - Do not keep the army parked at the rally point once the formation is complete: an assembled

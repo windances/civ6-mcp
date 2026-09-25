@@ -29,8 +29,10 @@ the front (`one-garrison-per-city`).
 1. **Anything the assault is missing, first.** Siege outranks everything that
    is merely nice: the whole point of the train is that it exists *before* the war, not during
    it. A campaign in this game built zero siege units and took ten turns per city. **No ram and
-   no tower** (human instruction 2026-09-26: 不用锤，用投石车) — the Catapult is the wall-breaker,
-   and a support unit that only helps melee beside a city is production the siege could have had.
+   no tower is bought** (human instruction 2026-09-26: 不用锤，用投石车) — the Catapult is the
+   wall-breaker, and a support unit that only helps melee beside a city is production the siege
+   could have had. The ram the empire already owns is the exception: it **does** join the assault
+   (same day: 已经有攻城锤，就参战).
 2. **Then the screens**: melee to hold the front tile, ranged to fire from range 2.
 3. **Then the economy buildings** the empire is short of (food first where a city is stalled).
 4. **Wonders only after the war machine is complete.** For China a wonder is a research
