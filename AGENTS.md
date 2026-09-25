@@ -200,6 +200,10 @@ advisor (its prompt names which to read when). Read the matching one before impr
 | `tactics/06-assault-composition-and-fire.md` | 开打后的搭配与火力 — order of work, concentration, when to break off |
 | `tactics/07-pre-war-analysis.md` | 战前分析 — 能不能打、打谁、几回合、损失多大、打完守不守得住 |
 
+**Before a war, file 7 comes first, and its own first step is reconnaissance** — Gate 0 is "a
+candidate city is actually visible". An army in the right shape with every enemy city still in fog
+has no pre-war analysis to make; send the scout and the fastest cavalry, then run the gates.
+
 ## Strategic Patterns
 
 ### Moving Civilians

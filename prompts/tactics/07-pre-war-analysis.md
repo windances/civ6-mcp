@@ -10,8 +10,9 @@ something the adapter can already query.
 ## The nine questions, in order
 
 1. **Who** - which civilization, and which of its cities first (see Target selection).
-2. **Can we** - the three gates: net fire > 0, a capture-capable unit able to stand on the tile the
-   turn the pool empties, and a siege answer if the city has walls.
+2. **Can we** - Gate 0 first (is a candidate city actually visible), then the three gates: net fire
+   > 0, a capture-capable unit able to stand on the tile the turn the pool empties, and a siege
+   answer if the city has walls.
 3. **How long** - turns to break, and turns to assemble, and the larger of the two is the answer.
 4. **What will it cost** - losses, which are near zero for ranged and mostly come from the field
    army, not the city.
@@ -37,6 +38,20 @@ something the adapter can already query.
   does not.
 - **Who else is watching**: defensive pacts turn one war into three (`get_diplomacy`), and a second
   front has to be affordable with the units left at home (`one-garrison-per-city`).
+
+## Gate 0: a visible target, or none of this can start
+
+**No visible candidate city, no analysis.** Everything below - the gates, the time, the losses, the
+rally point, the relief question - is measured against a named city, so the first pre-war task is
+often reconnaissance, not arithmetic. Send the scout and the fastest cavalry toward the likely
+neighbour, check `get_strategic_map` and `get_pathing_estimate`, and consider an embassy or a spy
+for the capital. Only when a city is on the map does the rest of this file apply.
+
+Live T99: five cities, gold 173 at +34.8 a turn, and an army already in the doctrine's shape (two
+Catapults, four Archers, two Warriors, one Heavy Chariot) - with **no enemy city visible at all**,
+only a city-state. Every item below was unevaluable, and the reports that could still be produced
+were about our own army and the barbarian navy two tiles off the coast. The gate is not a
+formality: an army that is ready and a target that is not in sight is a war that has not started.
 
 ## The three gates
 
