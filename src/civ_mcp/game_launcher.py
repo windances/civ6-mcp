@@ -1232,21 +1232,48 @@ def _find_game_window_win32() -> WindowInfo | None:
     if old_ctx:
         user32.SetThreadDpiAwarenessContext(ctypes.c_ssize_t(old_ctx))
 
-    if results:
-        w = results[0]
-        log.info(
-            "Window found: hwnd=%s pos=(%d,%d) size=%dx%d pid=%d",
-            w.window_id,
-            w.x,
-            w.y,
-            w.w,
-            w.h,
-            w.pid,
-        )
-    else:
+    if not results:
         log.info("No game window found")
+        return None
 
-    return results[0] if results else None
+    # Prefer the window owned by the *game* process. The 2K launcher's title also contains
+    # "Civilization", and on 2026-09-25 EnumWindows returned the launcher first - so every OCR
+    # read and every click went to the launcher window while the game's main menu sat behind it,
+    # and the automated load failed with "Could not find 'Load Game' button" for a save that was
+    # on screen. Two filters, either of which is enough on its own: the owning pid must be the
+    # game process (the launcher is LaunchPad.exe), and among the survivors the largest client
+    # area wins (the game is fullscreen, the launcher is a splash).
+    game_pids = set(_running_game_pids())
+    owned = [c for c in results if c.pid in game_pids] if game_pids else []
+    if owned:
+        if len(owned) != len(results):
+            log.info(
+                "Ignoring %d window(s) not owned by the game process (%s): %s",
+                len(results) - len(owned),
+                sorted(game_pids),
+                [(c.window_id, c.pid) for c in results if c.pid not in game_pids],
+            )
+        w = max(owned, key=lambda c: c.w * c.h)
+    else:
+        w = max(results, key=lambda c: c.w * c.h)
+        if len(results) > 1:
+            log.info(
+                "No window owned by a known game process (%s); taking the largest of %d: %s",
+                sorted(game_pids),
+                len(results),
+                [(c.window_id, c.pid, c.w, c.h) for c in results],
+            )
+
+    log.info(
+        "Window found: hwnd=%s pos=(%d,%d) size=%dx%d pid=%d",
+        w.window_id,
+        w.x,
+        w.y,
+        w.w,
+        w.h,
+        w.pid,
+    )
+    return w
 
 
 def _get_frame_extents(wid: int) -> tuple[int, int, int, int]:
@@ -3735,6 +3762,18 @@ async def load_save_from_menu(save_name: str | None = None) -> str:
 
     Requires the game to be at the main menu (launched but no game loaded).
     """
+    # Raise the game window before reading anything. Measured 2026-09-25: with the 2K launcher
+    # window on top of the game, the capture came back as the launcher's content ("SID MEIER'S /
+    # CIVILIZATION VI / GATHERING STORM / EARTHRISE / DISCORD") and the menu labels the OCR waits
+    # for were simply not in the image, so every automated load ended in
+    # "Could not find 'Load Game' button" while the menu was on screen behind it. Raising it first
+    # is the whole difference between the OCR reading the launcher and reading the menu.
+    try:
+        _bring_to_front()
+        time.sleep(1.5)
+    except Exception:
+        log.debug("Could not raise the game window before menu navigation", exc_info=True)
+
     if save_name is None:
         save_name = get_latest_autosave()
         if save_name is None:
