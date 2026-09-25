@@ -177,16 +177,17 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   Walls and hit the city directly. Both abilities help **melee only** - a ranged
   or siege unit attacking beside them gets nothing, so a tower sitting next to
   your Crossbowmen is doing no work at all. **Both go obsolete at
-  `CIVIC_CIVIL_ENGINEERING`** - build one before that civic lands, because
-  afterwards nothing bypasses walls except siege units.
+  `CIVIC_CIVIL_ENGINEERING`**, and **we build neither** (human instruction
+  2026-09-26: 不用锤，用投石车): a siege unit bypasses walls at any era, which is why
+  the Catapult is the answer here and the ram is not.
 - If the war has already started and you have no siege train: do not grind a
-  walled city down with ranged attacks. Either order the siege unit and accept
-  the wait - check the production estimate first, and do not order a 10-turn
-  Trebuchet for a city you will take in two - or, if a ram or tower is already at
-  the front, put your **melee** next to it and take the city that way. Check
-  `get_units` for where the melee actually is before assuming this is available.
-- Order of work each turn: siege knocks the walls to 0, melee (with the ram or
-  tower adjacent) takes the city, **ranged shoots the city's HP**. Do not spend
+  walled city down with ranged attacks, and do not substitute a ram. Order the
+  siege unit and accept the wait - check the production estimate first, and do not
+  order a 10-turn Trebuchet for a city you will take in two. **This army has no
+  Battering Ram** (human instruction 2026-09-26: 不用锤，用投石车), so waiting for
+  the Catapult is the only route.
+- Order of work each turn: siege knocks the walls to 0, melee (following the
+  Catapult fire) takes the city, **ranged shoots the city's HP**. Do not spend
   ranged attacks on walls you have siege for. **Ranged attacks can never capture a
   city** - once the walls are at 0 the city only falls to a melee unit walking in,
   so a turn spent firing at a 0-wall city from range is a turn not spent finishing
@@ -221,10 +222,14 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
 - An enemy city with **no garrison unit** in it is still a legal target: attack
   the tile as normal (the adapter resolves the city itself). An empty city is not
   a city that cannot be hit - it is a city that can be entered.
-- What one city needs: about 2 siege, 2 melee, 1 ram or tower, 4 ranged
+- What one city needs: about 2 siege, 2 melee, 4 ranged
   (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry for
-  survivors. Every Crouching Tiger needs a melee unit holding the tile in front
-  of it.
+  survivors. **No Battering Ram and no Siege Tower** (human instruction 2026-09-26:
+  不用锤，用投石车) - the Catapult is the wall-breaker: it does 45-52 against a city,
+  garrisoned or not, where an Archer does 9-11 into a CS 35 garrison, and the melee
+  walks in after the walls are down. The one ram we already own is a garrison unit,
+  not part of this establishment, and no tower is to be built. Every Crouching
+  Tiger needs a melee unit holding the tile in front of it.
 - Judge an assault by the city's own numbers: `city hp: N/200` and
   `walls: N/100` (or `none`) on the result line, never by the damage estimate -
   on a city tile that estimate describes the unit standing there, and a
@@ -337,8 +342,9 @@ rather than a turn number:
 
 1. A named target whose walls and garrison can be broken in a bounded number of
    turns.
-2. The siege train already staged adjacent to it - about 2 siege, 2 melee, 1 ram or
-   tower, 4 ranged, 1 cavalry - **before** the declaration, not queued after it.
+2. The siege train already staged adjacent to it - about 2 siege, 2 melee, 4 ranged,
+   1 cavalry, **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车)
+   - **before** the declaration, not queued after it.
 3. Amenities positive. War weariness decays 50 per turn at war against 200 at
    peace, and 400 points cost an amenity, so a long war suppresses the very
    production that pays for it.
@@ -352,7 +358,8 @@ the whole game** (the 170-turn empire finished at T174 with 0); Great Wall segme
 cost Builder charges rather than city production, which weakens the "I need a big
 army to feel safe" argument; and units and districts leave the same queue, so every
 unit is a district not built. `CIVIC_CIVIL_ENGINEERING` obsoleting the ram and the
-tower is a **deadline for the siege toolkit, not a reason to start early**.
+tower is a **deadline for a toolkit we do not carry** - the siege train is the answer
+at every era, and no ram or tower is built (human instruction 2026-09-26: 不用锤，用投石车).
 
 What development bought on that same empire: improvements 2 -> 25 and science 7.8
 -> 28.1 between T59 and T120, with gold per turn never below +17. Protect that

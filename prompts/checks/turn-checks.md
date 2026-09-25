@@ -41,10 +41,9 @@ Expressions are parsed with `ast` against a whitelist — a check file is data, 
 Both support units go obsolete the moment `CIVIC_CIVIL_ENGINEERING` is adopted: after that
 nothing except a siege unit bypasses walls. It is the only prerequisite with a cliff edge.
 
-This rule is a **goal** (`once: true`): the point is to have built one before the window
-closes, so once that is true it retires. Keeping a ram alive afterwards is a different
-concern, and the every-10-turns review's assault list ("ram/tower 0/1 - MISSING") is what
-watches that.
+This rule was a **goal** (`once: true`) and it retired at T99. **The ram is no longer part of
+the plan at all** (human instruction 2026-09-26: 不用锤，用投石车): the Catapult breaks the
+walls, and the assault train is siege / melee / ranged / cavalry.
 
 <!-- achieved T99: ram-tower-before-civil-engineering (original in archive/turn-checks-20260926-012524.md) -->
 
@@ -182,8 +181,9 @@ capture cannot.
 
 ## The assault train (before any declaration of war)
 
-The directive's list for one city: about 2 siege, 2 melee, 1 ram or tower, 4 ranged, 1
-cavalry. Only checked once a war is plausible (turn 90+), because early game it is noise.
+The directive's list for one city: about 2 siege, 2 melee, 4 ranged, 1
+cavalry — **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车). Only checked once a
+war is plausible (turn 90+), because early game it is noise.
 
 <!-- check
 id: siege-train

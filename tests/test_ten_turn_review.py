@@ -65,7 +65,10 @@ class TestWarTrainStatus:
         train, missing = _war_train_status(units)
         assert "siege 1/2" in train
         assert "ranged 1/4" in train
-        assert "1 siege" in missing and "1 ram/tower" in missing
+        assert "1 siege" in missing
+        assert not any("ram" in item for item in missing), (
+            "the train still asks for a ram or tower; human instruction 2026-09-26 is 不用锤，用投石车"
+        )
 
     def test_a_complete_train_reports_none_missing(self):
         units = {
@@ -83,9 +86,15 @@ class TestWarTrainStatus:
         _, missing = _war_train_status(units)
         assert missing == []
 
+    def test_a_battering_ram_is_not_a_role(self):
+        # It is in the roster and it counts for nothing: the Catapult is the wall-breaker.
+        train, missing = _war_train_status({1: unit(1, "UNIT_BATTERING_RAM")})
+        assert "ram" not in train
+        assert len(missing) == 4
+
     def test_no_units_is_not_a_crash(self):
         train, missing = _war_train_status({})
-        assert "siege 0/2" in train and len(missing) == 5
+        assert "siege 0/2" in train and len(missing) == 4
 
 
 class TestReviewText:

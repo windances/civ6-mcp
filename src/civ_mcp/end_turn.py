@@ -579,12 +579,12 @@ async def _check_empire_warnings(
 
 
 # What the conquest directive says one city assault needs, and the unit types that count
-# as each. The directive's own words: "about 2 siege, 2 melee, 1 ram or tower, 4 ranged
-# (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry".
+# as each. The directive's own words: "about 2 siege, 2 melee, 4 ranged (2 Crossbowman at
+# range 2 and 2 Crouching Tiger at range 1) and 1 cavalry" - with no ram or tower, because
+# a battering ram is not part of this army (human instruction 2026-09-26: 不用锤，用投石车).
 _WAR_TRAIN: tuple[tuple[str, int, tuple[str, ...]], ...] = (
     ("siege", 2, ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY")),
     ("melee", 2, ("WARRIOR", "SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY", "PIKEMAN", "SPEARMAN")),
-    ("ram/tower", 1, ("BATTERING_RAM", "SIEGE_TOWER")),
     ("ranged", 4, ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER")),
     ("cavalry", 1, ("HORSEMAN", "KNIGHT", "COURSER", "CUIRASSIER", "CAVALRY", "TANK")),
 )

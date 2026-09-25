@@ -2,8 +2,9 @@
 
 added:     2026-09-26 (human instruction: 为攻打俄罗斯做准备)
 expires:   turn 110 — the preparation has a longer clock than the raid tasks; retire it by then
-done when: the assault establishment exists — **siege >= 2, ranged >= 4, melee >= 2, ram/tower >= 1,
-           cavalry >= 1** — **and** Russia's nearest city has been read in four numbers (hp / walls /
+done when: the assault establishment exists — **siege >= 2, ranged >= 4, melee >= 2,
+           cavalry >= 1** (no ram or tower — human instruction 2026-09-26: 不用锤，用投石车)
+           — **and** Russia's nearest city has been read in four numbers (hp / walls /
            garrison / ring), **and** gold per turn is still about `+10` with the army counted
 overrides: the per-city build lists and the Campus/Builder plan: siege units, and the units still
            missing from the establishment list, may be inserted ahead of them in the war city until
@@ -18,8 +19,8 @@ The directive's rule is that the decision to declare is the only decision that m
 trigger is a checklist rather than a turn number:
 
 1. **a named target** whose walls and garrison can be broken in a bounded number of turns;
-2. the **assault establishment already in place** — about 2 siege, 2 melee, 1 ram or tower, 4 ranged,
-   1 cavalry — **before** the declaration, not queued after it;
+2. the **assault establishment already in place** — about 2 siege, 2 melee, 4 ranged,
+   1 cavalry, and **no ram or tower** — **before** the declaration, not queued after it;
 3. **amenities positive** (war weariness decays 50/turn at war against 200 at peace, and 400 points
    cost an amenity, so a long war suppresses the production that pays for it);
 4. **gold per turn about +10 or better** with the army counted.
@@ -31,7 +32,7 @@ trigger is a checklist rather than a turn number:
 | siege | **0** | `siege-train` (fires from T90) | **2 needed — the binding gap** |
 | ranged | 4 Archers | `ranged-mass` | satisfied; keep alive, upgrade to Crossbowmen at Machinery |
 | melee | 3 Warriors + 1 Spearman | `melee-screen` | satisfied; Swordsmen need **iron** |
-| ram / tower | 1 Battering Ram | — | read the walls before building anything else |
+| ram / tower | **not part of this army** | — | human instruction 2026-09-26: 不用锤，用投石车 — the 1 Battering Ram we own is a garrison unit, and no tower is built |
 | cavalry | **0** | — | 1 Horseman (Horseback Riding; horses 32/50) |
 | iron | **0/50** | — | task 004's city, then mine (60,32) |
 | gold | 159.6, **+28.4/t** | `carrying-capacity` | the army can roughly double before the gate is at risk |
@@ -61,11 +62,13 @@ now, and `siege-train` is failing because of it.
    what walks into a city, so the siege train without it breaks cities it cannot take.
 4. **One Horseman** for survivors and for enemy ranged and siege units: it needs Horseback Riding, and
    the horse stockpile is 32/50 with +2/t.
-5. **Read the walls before building a ram or a tower.** Measured on the abandoned branch of this map:
+5. **The Catapults are the wall-breakers, not a ram.** Measured on the abandoned branch of this map:
    **every Russian city read `walls 0/0` from first contact to the last**, so the Battering Ram — 65
-   hammers dragged across the map — did nothing for seventeen turns. One probe of the target before the
-   decision; if the answer is "no walls", the ram is dead weight and the Catapults are damage dealers
-   rather than wall-breakers.
+   hammers dragged across the map — did nothing for seventeen turns. The human instruction of
+   2026-09-26 (不用锤，用投石车) settles it: **no ram and no tower**, the Catapult does 45–52 against a
+   city whether or not it is garrisoned, and the melee walks in after the walls are down. Still read
+   the target's walls before the declaration — the number decides how many siege shots the city needs,
+   not which unit to build.
 6. **Do not mass on the border to "be ready".** Measured T103 on the abandoned branch: massing is what
    started the war — Russia declared while our army was two turns short of its rally row. The staging
    discipline (`tactics/04`) puts the rally point where the army can already fight from, and file 7's
@@ -84,7 +87,7 @@ barbarian camp as a substitute. Task 002 covers scouts; 003 covers exploration; 
 When the establishment list is complete, Russia's nearest city has been read in four numbers, and
 gold/turn is still about `+10`, move this file to
 `../tmp/done/006-prepare-russia-done-T<turn>.md` and record in the diary's `tooling` line: the counts
-(siege / ranged / melee / ram / cavalry), the target city with its hp, walls, garrison and ring, the
+(siege / ranged / melee / cavalry — no ram), the target city with its hp, walls, garrison and ring, the
 iron stockpile, and gold per turn. Then the war decision belongs to `tactics/07` — not to this file.
 At **turn 110** retire it regardless, as `006-prepare-russia-expired-T110.md`, and say which piece of
 the establishment is still missing and why.

@@ -38,7 +38,7 @@ A staging tile is good when it is:
   and waited. Check `get_map_area` for whose units are parked in the corridor;
 - **defensible**: hills, forest or across a river, so the stack can absorb a counterattack while
   it forms;
-- **on roads** where roads exist, so reinforcements and the ram/tower arrive with movement left;
+- **on roads** where roads exist, so reinforcements and the siege train arrive with movement left;
 - close enough that wounded units can still reach it after healing.
 
 ## Step 2 — time the assembly; it is usually the longer pole
@@ -70,12 +70,13 @@ Two consequences that decide whether the assembly finishes on schedule:
 
 ## Step 3 — what must be true before the column moves
 
-1. **The assault list is complete** first: 2 siege, 2 melee, 1 ram/tower, 4 ranged, 1 cavalry
-   (`siege-train`, `ranged-mass`, `melee-screen`, `ram-tower-before-civil-engineering`). Staging
+1. **The assault list is complete** first: 2 siege, 2 melee, 4 ranged, 1 cavalry
+   (`siege-train`, `ranged-mass`, `melee-screen`) — **no ram and no tower** (human instruction
+   2026-09-26: 不用锤，用投石车). Staging
    with a missing role is how a war starts that cannot be finished.
-2. **The composition is justified by THIS target.** The ram and tower exist for walls: every Russian
+2. **The composition is justified by THIS target.** Every Russian
    city in the T103–T130 war read `walls 0/0` from first contact to the last, so the Battering Ram —
-   65 production, dragged across the map — did nothing for seventeen turns, and the Catapults became a
+   65 production, dragged across the map — did nothing for seventeen turns, and the Catapult is a
    damage tool rather than a wall-breaker. Read the walls (file 7, gate 4) before deciding what to
    bring; leave the ram at home when the answer is "no walls".
 3. **Reinforcements already in motion.** The declaration waits for the formation, not the other way
@@ -214,7 +215,8 @@ is only safe *because* the war has not started is not a rally point.
 - Do not stage adjacent to a barbarian camp or in reach of a second enemy city.
 - Do not stage with the siege train in front or unscreened, even at a safe distance — the
   formation is file 5.
-- Do not drag a ram or tower toward a city whose walls have been read as `none`.
+- Do not drag a ram or tower anywhere: this army does not field either (human instruction
+  2026-09-26: 不用锤，用投石车), so the only wall-breaker in the column is the siege train.
 - Do not order a unit to fire on the turn it must spend two points to enter the ring: it arrives with
   nothing left, and the attack is refused.
 - Do not keep the army parked at the rally point once the formation is complete: an assembled

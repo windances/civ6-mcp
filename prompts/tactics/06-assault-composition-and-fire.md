@@ -62,7 +62,7 @@ a re-siege. Both failures above cost a full turn each.
 ## Order of work, every turn
 
 1. **Siege knocks the walls to 0.**
-2. **Melee (with the ram or tower adjacent) takes the city** - and until then it is **also a
+2. **Melee (following the Catapult fire) takes the city** - and until then it is **also a
    damage dealer, not a place-holder**. A melee unit attacks the city's HP pool from the tile
    adjacent to it: it takes retaliation, and it is the only class that does, which is exactly why
    it is the one that should be standing there. Two rules and one warning:
@@ -171,7 +171,7 @@ down (`supply line 4/6 cut - the city is still healing`).
 
 If the walls have not moved in about three turns - the turn result says `SIEGE STALLED` - or the
 garrison is being replaced faster than it is killed, stop and say why: no siege in position, siege
-unscreened and dying, too few attackers to out-damage the healing, or the ram/tower lost. A stalled
+unscreened and dying, too few attackers to out-damage the healing, or the siege train dead. A stalled
 assault is pure cost - war weariness suppresses production while the enemy keeps every city. Fix
 the front (bring siege, heal, upgrade, reinforce) or change the target; never negotiate it away
 (the directive forbids peace).

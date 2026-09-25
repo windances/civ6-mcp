@@ -143,7 +143,9 @@ if (-not (Test-Path $directivePath)) {
         # Script-block replacement so that a '$' inside the directive is never
         # interpreted as a regex substitution token.
         $skill = [regex]::Replace($skill, $marker, { param($m) $block })
-        [IO.File]::WriteAllText($skillPath, $skill)
+        # Write with a BOM: `WriteAllText` without an encoding emits plain UTF-8, which strips the
+        # BOM this file needs to stay readable in a zh-CN editor (see scripts/fix-text-encoding.py).
+        [IO.File]::WriteAllText($skillPath, $skill, (New-Object System.Text.UTF8Encoding($true)))
         Write-Host "Strategy directive injected into SKILL.md."
     }
 }

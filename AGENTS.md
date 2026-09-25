@@ -7,21 +7,27 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`004-city-near-iron.md`, `005-city-near-copper.md`, `006-prepare-for-russia.md`.
-(`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93 and `002-focus-fire-scouts`
-expired at T95 — all three sit in `prompts/tasks/tmp/done/` with the turn in their name.
+`005-city-near-copper.md`.
+(`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
+expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
+(60,32) inside its first ring — and `006-prepare-for-russia` was retired at **T110**: its assault
+establishment was complete on paper (siege 2, melee 4, ranged 4, cavalry 1 — the ram it also held was
+never part of the requirement: human instruction 2026-09-26, 不用锤，用投石车) but the iron was
+still `0/50` and the target city was never read in its four numbers, so the declaration gate did NOT
+open and no war was started. All five sit in `prompts/tasks/tmp/done/` with the turn in their name.
 **This list and that directory are checked against each other** by `tests/test_temp_tasks.py`, so a
 retirement that is not recorded here goes red instead of quietly staying in force.)
 
-Priority when they compete for the same queues: **006 (the assault establishment — two Catapults
-first: `siege-train` is failing and Engineering has just unlocked them)**, then **004** (iron is what
-the melee line is gated on), then **005** last (copper is a bonus tile worth about +2 gold, and it
-runs only after the iron city).
+Priority: **005 is now the only live task and it is the lowest-value one** (copper is a bonus tile
+worth about +2 gold). The real outstanding work is the **iron mine at (60,32)** — a Builder is
+standing on the tile as this is written and the stockpile still reads `IRON 0/50` — because without
+iron there is no Swordsman and no Man-at-Arms, and the whole melee line stays unbuildable.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
-session reported it. 004 is now T105, 005 T115, 006 T110. When writing a task whose finish line needs
-production, **count the turns from the queue, not from the calendar of the other tasks**.
+session reported it. 004 was extended to T105 and was in fact **completed at T101**; 005 is T115 and 006
+is T110. When writing a task whose finish line needs production, **count the turns from the queue, not
+from the calendar of the other tasks**.
 
 **This list is the mechanism, not decoration.** A file added to `prompts/tasks/tmp/` while a session is
 already playing reaches it only when that session re-lists the directory; the paragraph below says to do

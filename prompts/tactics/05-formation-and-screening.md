@@ -39,8 +39,8 @@ unit is**:
 
 1. **Screen first**: the melee moves to the tile adjacent to the city (or to the enemy stack).
 2. **Then the ranged and siege** move to their range-2 tiles behind it.
-3. **The ram or tower moves with the melee** it is supporting - support units only work from the
-   tile adjacent to the city and only for melee.
+3. **There is no ram or tower to move** (human instruction 2026-09-26: 不用锤，用投石车): the
+   column is melee, ranged and siege, and the siege units fire from their range-2 tiles.
 4. **The cavalry stays mobile** behind the line: its job is survivors and enemy ranged/siege
    units, not holding ground.
 5. If the screen cannot get in front of the siege this turn, the siege stays back. Arriving one
