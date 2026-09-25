@@ -6,10 +6,19 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-A temporary instruction is **a file, not a paragraph in this reference**. One is in force right now;
-drop another into `prompts/tasks/tmp/` and it is picked up on the next turn, and a task is finished
-when its own `done when:` line holds, at which point the file is moved into
-`prompts/tasks/tmp/done/` with the turn number in its name.
+**IN FORCE NOW — read each of these files before planning the turn:**
+`002-focus-fire-scouts.md`, `003-two-scouts-explore.md`, `004-city-near-iron.md`.
+
+**This list is the mechanism, not decoration.** A file added to `prompts/tasks/tmp/` while a session is
+already playing reaches it only when that session re-lists the directory; the paragraph below says to do
+that every turn, but nothing enforces it, and a task can sit unread for turns (measured: 002 was picked
+up within a turn, while 003 and 004 went unnoticed for five turns until this list named them). Changing
+this section re-injects it into the running session, so **update the list in the same commit that adds or
+retires a task** — the reminder is what carries the news; the files carry the instructions.
+
+A temporary instruction is **a file, not a paragraph in this reference**. A task is finished when its own
+`done when:` line holds, at which point the file is moved into `prompts/tasks/tmp/done/` with the turn
+number in its name, and the list above is updated to match.
 
 - **Read every `*.md` in `prompts/tasks/tmp/` as part of the turn's first step** — `get_game_overview`
   and then that directory — and again whenever the turn takes a decision a task touches. Not
