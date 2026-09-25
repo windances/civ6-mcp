@@ -31,6 +31,14 @@ They use the same vocabulary the turn result prints (`local_superiority`, `siege
 `SIEGE POSTURE`, `BATTLE ASSESSMENT`, the check-rule names), so a proposal can cite a number
 instead of an opinion.
 
+**When `tactics/07-pre-war-analysis.md` is the file in the brief, answer its five gates by name and
+in order** — (1) net fire against the **garrison** (an Archer does 35 against an ungarrisoned city
+and 9-11 against one with a CS 35 garrison, while a Catapult does 45-52 either way), (2) the ring
+count of usable distance-2 tiles, (3) a capture-capable unit adjacent and unspent for the turn the
+pool empties, (4) the walls answer, (5) the approach and what would trigger the declaration. Each
+line carries the number that passes or fails it. A target recommendation without those five lines is
+not a pre-war analysis, however sound the reasoning behind it.
+
 **What the brief should carry, because you cannot query it yourself:** the tactic file for this
 decision, the last `CHECK FAILED [id]` lines, the `BATTLE ASSESSMENT` block, the `SIEGE POSTURE`
 lines, the `SIEGE PROGRESS` / `SIEGE STALLED` block, the `TAKE THE CITY` block when it appears
