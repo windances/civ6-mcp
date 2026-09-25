@@ -195,11 +195,14 @@ async def main() -> int:
             if i % 5 == 1:
                 from civ_mcp import game_launcher as gl
 
-                status = await asyncio.to_thread(gl.game_status)
-                if "unrecognised" in status or "FireTuner   : not listening" in status:
-                    say("STOPPING: the game is not in a readable state - clear the screen on the "
-                        "machine (or restart_and_load) and run this again; progress is kept.")
-                    say("  " + "\n  ".join(status.splitlines()[:6]))
+                # Only "the tuner is gone" stops this: an unrecognised *screen* is normal while a
+                # diplomacy encounter or the world congress is on screen, and stopping for that
+                # made the loop quit in the middle of a normal session (T173).
+                screen_status = await asyncio.to_thread(gl.game_status)
+                if "FireTuner   : not listening" in screen_status:
+                    say("STOPPING: FireTuner is not listening - clear the screen on the machine "
+                        "(or restart_and_load) and run this again; progress is kept.")
+                    say("  " + "\n  ".join(screen_status.splitlines()[:6]))
                     break
 
             text = await asyncio.wait_for(gs.end_turn(), timeout=240)
