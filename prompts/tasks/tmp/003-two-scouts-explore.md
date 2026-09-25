@@ -2,9 +2,9 @@
 
 added:     2026-09-26 (human instruction: 派出两个侦察兵，探索地图，找到更多文明)
 expires:   turn 95 — retire this file by then whatever happens
-done when: two SCOUTs are alive and under exploration orders, and the met-major-civilization count in
-           `get_diplomacy` is >= 2 (it was 1 when this file was added — Egypt) — or turn 95, whichever
-           comes first
+done when: two SCOUTs are alive and under exploration orders, and >= 2 major civilizations are met
+           (the `has_met` count in `get_diplomacy` — it was **1** when this file was added, Egypt) —
+           or turn 95, whichever comes first
 overrides: whatever per-city build list is running: a **Scout (30 hammers)** may be inserted ahead of
            the next Builder or Campus in **one** city, and the existing Scout may not be disbanded,
            garrisoned or used as a sentry. Nothing else in the plan changes.
