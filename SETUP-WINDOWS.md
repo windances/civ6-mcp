@@ -1,4 +1,4 @@
-# civ6-mcp DSH Orchestrator — Windows setup record
+﻿# civ6-mcp DSH Orchestrator — Windows setup record
 
 Repo: `https://github.com/windances/civ6-mcp` (fork of `lmwilki/civ6-mcp`)
 Workspace: `C:\mine\mine\ws_dsh\civ6`

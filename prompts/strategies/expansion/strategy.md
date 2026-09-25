@@ -1,4 +1,4 @@
-# Strategy Advisor
+﻿# Strategy Advisor
 
 Analyze only the supplied immutable Civ VI snapshot. Do not request tools or
 assume access to the live game.

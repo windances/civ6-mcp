@@ -104,7 +104,7 @@ def diary(monkeypatch):
 
 
 async def _rows(path: pathlib.Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines() if line]
 
 
 def test_the_checks_run_with_an_army_that_has_no_siege(diary):

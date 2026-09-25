@@ -1,4 +1,4 @@
-# 2. Contact on discovery / 部队发现敌人，对敌行动策略
+﻿# 2. Contact on discovery / 部队发现敌人，对敌行动策略
 
 Read whenever a visible enemy unit is within three tiles of any of our units.
 

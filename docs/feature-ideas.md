@@ -1,4 +1,4 @@
-# Feature Ideas
+﻿# Feature Ideas
 
 ## ELO Leaderboard: Add Difficulty Level Tracking
 

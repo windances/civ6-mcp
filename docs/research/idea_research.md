@@ -1,4 +1,4 @@
-# Civ 6 MCP Agent: Technical Architecture
+﻿# Civ 6 MCP Agent: Technical Architecture
 
 > **Status: Archived** — Pre-implementation research (2025). The system as built is documented in [architecture-diagrams.md](../architecture-diagrams.md).
 

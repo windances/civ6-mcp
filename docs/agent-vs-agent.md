@@ -1,4 +1,4 @@
-# Agent vs Agent: Multi-Agent Play via Single-Player Puppeteering
+﻿# Agent vs Agent: Multi-Agent Play via Single-Player Puppeteering
 
 > **Status: Proposal** — Design document. Not yet implemented.
 

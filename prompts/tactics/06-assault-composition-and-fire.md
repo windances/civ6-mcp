@@ -1,4 +1,4 @@
-# 6. Assault composition and fire discipline / 攻城开始后，部队搭配和攻击策略
+﻿# 6. Assault composition and fire discipline / 攻城开始后，部队搭配和攻击策略
 
 Read once the stack is in contact with the target city and the assault is running.
 

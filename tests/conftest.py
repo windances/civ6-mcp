@@ -62,7 +62,7 @@ def isolated_check_files(monkeypatch):
     try:
         data.mkdir(parents=True)
         checks.write_text(
-            restore_achieved(SHIPPED_CHECKS.read_text(encoding="utf-8")), encoding="utf-8"
+            restore_achieved(SHIPPED_CHECKS.read_text(encoding="utf-8-sig")), encoding="utf-8"
         )
     except OSError:  # pragma: no cover - the copy is best effort, the paths still isolate
         root.mkdir(parents=True, exist_ok=True)

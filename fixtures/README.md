@@ -1,4 +1,4 @@
-# Fixture Data
+﻿# Fixture Data
 
 Sample game data for local development and testing. Contains 4 completed games (with ELO data) and 1 in-progress game, enough to populate the dashboard, leaderboard, and diary views.
 

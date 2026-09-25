@@ -57,6 +57,11 @@ from civ_mcp import game_launcher as gl  # noqa: E402
 ARCHIVE_ROOT = ROOT / ".civ6-mcp-data" / "branches"
 CHECKS_FILE = ROOT / "prompts" / "checks" / "turn-checks.md"
 
+# The rule file is read by a human as well as by the sweep, so it carries a UTF-8 BOM: read it as
+# ``utf-8-sig`` and write it back the same way, or a restore here would drop the BOM the MCP's own
+# prune keeps (``turn_checks._TEXT_ENCODING``).
+_CHECKS_ENCODING = "utf-8-sig"
+
 # What the turn-check sweep leaves behind when a `once: true` goal is met.
 _ACHIEVED = re.compile(
     r"^<!-- achieved T(\d+): ([\w-]+) \(original in (archive/[^)]+)\) -->$"
@@ -67,7 +72,7 @@ def check_block(archive: Path, goal_id: str) -> str | None:
     """The ``<!-- check ... -->`` block for one goal id, as an archived copy holds it."""
     if not archive.exists():
         return None
-    text = archive.read_text(encoding="utf-8")
+    text = archive.read_text(encoding=_CHECKS_ENCODING)
     start = text.find("<!-- check")
     while start != -1:
         end = text.find("-->", start)
@@ -96,7 +101,7 @@ def restore_achieved_goals(target: int, apply: bool = True) -> list[str]:
     """
     if not CHECKS_FILE.exists():
         return []
-    text = CHECKS_FILE.read_text(encoding="utf-8")
+    text = CHECKS_FILE.read_text(encoding=_CHECKS_ENCODING)
     restored: list[str] = []
     for line in text.splitlines():
         match = _ACHIEVED.match(line.strip())
@@ -112,7 +117,7 @@ def restore_achieved_goals(target: int, apply: bool = True) -> list[str]:
         text = text.replace(marker, block + "\n", 1)
         restored.append(f"{goal_id} (achieved T{turn}, in force again at T{target})")
     if restored and apply:
-        CHECKS_FILE.write_text(text, encoding="utf-8")
+        CHECKS_FILE.write_text(text, encoding=_CHECKS_ENCODING)
     return restored
 
 

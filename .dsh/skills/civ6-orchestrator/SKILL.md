@@ -1,4 +1,4 @@
----
+﻿---
 name: civ6-orchestrator
 description: Safely play Civilization VI through civ6-mcp using one sole-writer orchestrator and read-only specialist advisors.
 ---

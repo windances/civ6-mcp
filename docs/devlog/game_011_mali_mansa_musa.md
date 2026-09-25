@@ -1,4 +1,4 @@
-# Game 11 — Mali (Mansa Musa) — Devlog
+﻿# Game 11 — Mali (Mansa Musa) — Devlog
 
 **Result: Science Victory at T271**
 **Final Score: Mali 877 (#6) vs Gran Colombia 1151 (#1), Greece 1100, India 1085, Ottomans 982, Georgia 905**

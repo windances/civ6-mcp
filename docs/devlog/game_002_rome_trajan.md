@@ -1,4 +1,4 @@
-# Civ 6 MCP — Game 2 Development Log
+﻿# Civ 6 MCP — Game 2 Development Log
 
 Previous game log archived in `DEVLOG-game1.md` (3525 lines, 323 turns as Poland, conceded at T323).
 

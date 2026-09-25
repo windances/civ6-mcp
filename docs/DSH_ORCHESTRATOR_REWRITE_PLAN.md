@@ -1,4 +1,4 @@
-# Civ6 MCP Rewrite with DeepSeek Harness
+﻿# Civ6 MCP Rewrite with DeepSeek Harness
 
 ## Orchestrator–Worker Implementation and Qualification Plan
 

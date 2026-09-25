@@ -1,4 +1,4 @@
-# 1. Unit production strategy / 部队的生产策略
+﻿# 1. Unit production strategy / 部队的生产策略
 
 Read when proposing production, a purchase or an upgrade.
 

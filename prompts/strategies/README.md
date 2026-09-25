@@ -1,4 +1,4 @@
-# Strategy presets
+﻿# Strategy presets
 
 Advisor prompt presets for the civ6-orchestrator. Each preset is a complete set
 of the four worker prompts; applying one copies it over `prompts/workers/`, which

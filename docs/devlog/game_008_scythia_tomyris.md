@@ -1,4 +1,4 @@
-# Game 8 — Scythia (Tomyris) — Post-Mortem
+﻿# Game 8 — Scythia (Tomyris) — Post-Mortem
 
 **Civ**: Scythia (Tomyris) | **Result**: Defeat T228 (Babylon Culture Victory) | **Map**: Standard, 4 players (Scythia, Scotland, Babylon, Khmer)
 

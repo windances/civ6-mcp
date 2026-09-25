@@ -1,4 +1,4 @@
-# Bypassing the Aspyr Launcher for Civilization VI on macOS
+﻿# Bypassing the Aspyr Launcher for Civilization VI on macOS
 
 ## Problem
 The Aspyr launcher for Civilization VI adds friction to automated workflows. When launching the game via Steam, a GUI launcher appears requiring manual "PLAY" button click before the game starts.

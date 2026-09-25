@@ -1,4 +1,4 @@
-Pursue a **science** victory.
+﻿Pursue a **science** victory.
 
 - Campus adjacency first: mountains, reefs, and geothermal vents decide where the
   next Campus goes. Then Library, University, Research Lab.

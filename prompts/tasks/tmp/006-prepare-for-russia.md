@@ -1,4 +1,4 @@
-# TEMP TASK 006 — prepare to attack Russia
+﻿# TEMP TASK 006 — prepare to attack Russia
 
 added:     2026-09-26 (human instruction: 为攻打俄罗斯做准备)
 expires:   turn 110 — the preparation has a longer clock than the raid tasks; retire it by then

@@ -1,4 +1,4 @@
-# 8. The war and the home front / 战时内政，其他城市和单位的发展策略
+﻿# 8. The war and the home front / 战时内政，其他城市和单位的发展策略
 
 Read from the declaration of war to the last city, and whenever a `10-TURN REVIEW` arrives inside
 one. For the `economy-cities` advisor: the other seven files answer "what does the army do this

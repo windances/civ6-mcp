@@ -1,4 +1,4 @@
-# TEMP TASK 004 — found a city on the iron
+﻿# TEMP TASK 004 — found a city on the iron
 
 added:     2026-09-26 (human instruction: 在铁矿附近建城)
 expires:   turn 105 — extended from T95 on 2026-09-26: the Settler line alone runs to ~T95, so a T95

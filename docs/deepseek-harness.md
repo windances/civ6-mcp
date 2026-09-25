@@ -1,4 +1,4 @@
-# Civ6 DeepSeek Harness Orchestrator
+﻿# Civ6 DeepSeek Harness Orchestrator
 
 This workspace runs the existing `civ6-mcp` FireTuner adapter under DeepSeek
 Harness (DSH) and adds a safe orchestrator–worker operating model.

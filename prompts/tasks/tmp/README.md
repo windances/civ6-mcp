@@ -1,4 +1,4 @@
-# Temporary tasks — one file each, read by the agent, retired by moving the file
+﻿# Temporary tasks — one file each, read by the agent, retired by moving the file
 
 This directory is how a **temporary instruction** reaches a session that is already playing, without
 editing the strategy directive and without waiting for a restart.

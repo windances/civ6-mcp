@@ -1,4 +1,4 @@
-# 7. Pre-war analysis / 战前分析：能不能打、打谁、几回合、损失多大、打完守不守得住（含蛮族营地）
+﻿# 7. Pre-war analysis / 战前分析：能不能打、打谁、几回合、损失多大、打完守不守得住（含蛮族营地）
 
 Read before a war is declared, and again whenever a target changes — **and whenever a barbarian camp
 is visible near our cities or our Builders.** Files 1-6 are about fighting a war; this one decides

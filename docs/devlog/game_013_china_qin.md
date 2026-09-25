@@ -1,4 +1,4 @@
-# Game 13 — China / Qin (Unifier), the Russian war T103–T130
+﻿# Game 13 — China / Qin (Unifier), the Russian war T103–T130
 
 Played through `civ6-mcp` by a DSH-orchestrated agent driving `GameState` directly through
 `scripts/play-turn.py` (no MCP tool surface in the loop). This report covers the whole war, from

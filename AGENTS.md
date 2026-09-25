@@ -1,4 +1,4 @@
-# Civ 6 MCP — Agent Reference
+﻿# Civ 6 MCP — Agent Reference
 
 An MCP server connecting to a live Civilization VI game via FireTuner. You can read full game state and issue commands. All commands respect game rules.
 
@@ -7,16 +7,16 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`002-focus-fire-scouts.md`, `004-city-near-iron.md`, `005-city-near-copper.md`,
-`006-prepare-for-russia.md`.
-(`001-clear-the-camp` was retired at T84 and `003-two-scouts-explore` at T93 — both sit in
-`prompts/tasks/tmp/done/` with the turn in their name.)
+`004-city-near-iron.md`, `005-city-near-copper.md`, `006-prepare-for-russia.md`.
+(`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93 and `002-focus-fire-scouts`
+expired at T95 — all three sit in `prompts/tasks/tmp/done/` with the turn in their name.
+**This list and that directory are checked against each other** by `tests/test_temp_tasks.py`, so a
+retirement that is not recorded here goes red instead of quietly staying in force.)
 
 Priority when they compete for the same queues: **006 (the assault establishment — two Catapults
 first: `siege-train` is failing and Engineering has just unlocked them)**, then **004** (iron is what
-the melee line is gated on), then **002** (instant, costs no production — a scout in reach is shot
-this turn), and **005** last (copper is a bonus tile worth about +2 gold, and it runs only after the
-iron city).
+the melee line is gated on), then **005** last (copper is a bonus tile worth about +2 gold, and it
+runs only after the iron city).
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
@@ -52,6 +52,27 @@ number in its name, and the list above is updated to match.
   can express.
 
 `end_turn` now runs **empire warnings** automatically — alerts for loyalty crises, idle trade routes, gold deficits, resource caps, scoreboard position, and military imbalance. These compensate for the most common blind spots, but don't replace periodic deep checks (victory progress, religion spread, diplomacy).
+
+## File encoding: a document with Chinese in it carries a UTF-8 BOM
+
+On a zh-CN machine an editor that cannot see a BOM decodes the file as codepage 936 (GBK), so
+`游戏应当已经在运行` is shown as `娓告垙搴斿綋宸茬粡鍦ㄨ繍琛` — the bytes are valid UTF-8 and nothing is
+corrupt, the viewer guessed wrong. The rule: **a document holding a non-ASCII byte carries a BOM; an
+English `.en.` file is pure ASCII and carries none; a Chinese `.zh.` file always carries one.**
+
+**The agent's own `write`/`edit` tools emit plain UTF-8 and silently strip the BOM** (measured on
+`prompts/tasks/continue-current.zh.txt` and on `AGENTS.md`). So after editing `AGENTS.md`, a tactics
+file or a temporary task file, run:
+
+```
+python scripts/fix-text-encoding.py            # put the BOM back
+python scripts/fix-text-encoding.py --check     # report only; exit 1 when one is missing
+```
+
+`tests/test_text_encoding.py` checks the same rule, so the suite goes red until it is run — the
+repair is one command, not a promise. The MCP reads these files as `utf-8-sig`
+(`turn_checks.py`, `knowledge.py`, `strategy_directive.py`), so a BOM never reaches a prompt or a
+parsed rule.
 
 ## Coordinate System
 

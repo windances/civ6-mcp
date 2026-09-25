@@ -1,4 +1,4 @@
-# 3. Under attack / 部队被攻击时，对敌人行动策略
+﻿# 3. Under attack / 部队被攻击时，对敌人行动策略
 
 Read whenever one of our units lost HP during the AI turn (`damaged_this_turn >= 1`), or when an
 enemy attacked a city or a civilian.

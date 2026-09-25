@@ -1,4 +1,4 @@
-# 4. Staging outside enemy range / 攻城前，城外攻击范围外的集结策略
+﻿# 4. Staging outside enemy range / 攻城前，城外攻击范围外的集结策略
 
 Read when an assault is being planned and the stack is not yet formed.
 

@@ -116,7 +116,7 @@ def diary(monkeypatch):
 
 
 async def _rows(path: pathlib.Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines() if line]
 
 
 def test_the_briefing_names_the_rules_and_their_streak(diary):
@@ -155,7 +155,7 @@ def test_achieving_a_goal_is_reported_as_achieved(monkeypatch, diary):
     # The ram rule is a goal (`once: true`), so satisfying it retires the rule and the
     # briefing says so - rather than reporting it as merely "cleared".
     path = diary
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines()]
     rows[-1]["unit_composition"] = {"ARCHER": 1, "BATTERING_RAM": 1}
     path.write_text(
         "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in rows), encoding="utf-8"
@@ -171,7 +171,7 @@ def test_a_standing_rule_that_is_fixed_shows_as_cleared(monkeypatch, diary):
     # retirement. Both ends of the comparison must be inside the rule's gate (turn >= 60),
     # which is why this looks at T60 -> T61 rather than T59 -> T60.
     path = diary
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines()]
     rows[-2]["districts"], rows[-2]["pop"] = 2, 12  # T59 - below the gate, not evaluated
     rows[-1]["districts"], rows[-1]["pop"] = 2, 12  # T60 - failing
     last = dict(rows[-1])
@@ -190,7 +190,7 @@ def test_a_standing_rule_that_is_fixed_shows_as_cleared(monkeypatch, diary):
 def test_losing_an_army_is_not_progress(monkeypatch, diary):
     # A turn that lost 38 military and built nothing is not "the plan moving".
     path = diary
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines()]
     rows[-1]["military"] = rows[-2]["military"] - 38
     rows[-1]["science"] = rows[-2]["science"] + 0.1
     path.write_text(
@@ -205,7 +205,7 @@ def test_losing_an_army_is_not_progress(monkeypatch, diary):
 def test_a_plan_recorded_for_this_turn_is_quoted_too(diary):
     # A resumed or re-planned turn: the newer statement of intent is the current row's.
     path = diary
-    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8-sig").splitlines()]
     rows[-1]["reflections"] = {"planning": "T60 revised: buy a builder with the 320 gold"}
     path.write_text(
         "".join(json.dumps(r, separators=(",", ":")) + "\n" for r in rows), encoding="utf-8"

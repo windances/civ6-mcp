@@ -1,4 +1,4 @@
-# Game 3 — Alexander of Macedon (King Difficulty)
+﻿# Game 3 — Alexander of Macedon (King Difficulty)
 
 ## Strategy
 

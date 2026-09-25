@@ -1,4 +1,4 @@
-# Cross-Game Strategic Analysis (Games 1-4)
+﻿# Cross-Game Strategic Analysis (Games 1-4)
 
 > **Note:** Covers games 1–4 only (of 12 played). See the [devlog index](devlog/) for the full game list and individual post-mortems.
 

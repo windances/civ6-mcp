@@ -1,4 +1,4 @@
-Pursue a **domination** victory: own every rival's original capital.
+﻿Pursue a **domination** victory: own every rival's original capital.
 
 **First, finish the opening.** While the empire still holds fewer than five or six
 cities, or an Ancestral Hall is already under construction, finish that work before

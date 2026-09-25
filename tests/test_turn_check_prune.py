@@ -149,8 +149,8 @@ class TestSweep:
 
         assert removed == ["build-a-ram"]
         assert backup == scratch / "archive" / "turn-checks-20260921-101500.md"
-        assert backup.read_text(encoding="utf-8") == GOAL_FILE, "the copy is pre-edit"
-        assert "units(BATTERING_RAM)" not in path.read_text(encoding="utf-8")
+        assert backup.read_text(encoding="utf-8-sig") == GOAL_FILE, "the copy is pre-edit"
+        assert "units(BATTERING_RAM)" not in path.read_text(encoding="utf-8-sig")
 
     def test_the_edit_is_atomic_and_leaves_no_temp_file(self, scratch):
         path = scratch / "turn-checks.md"
@@ -162,13 +162,13 @@ class TestSweep:
         path = scratch / "turn-checks.md"
         path.write_text(GOAL_FILE, encoding="utf-8")
         turn_checks.sweep_achieved(path, {"build-a-ram": 61}, "stamp")
-        after_first = path.read_text(encoding="utf-8")
+        after_first = path.read_text(encoding="utf-8-sig")
 
         removed, backup = turn_checks.sweep_achieved(path, {"build-a-ram": 61}, "later-stamp")
 
         assert removed == []
         assert backup is None, "no second backup for a file that changed nothing"
-        assert path.read_text(encoding="utf-8") == after_first
+        assert path.read_text(encoding="utf-8-sig") == after_first
 
     def test_only_the_first_sweep_writes_a_backup(self, scratch):
         path = scratch / "turn-checks.md"
@@ -184,7 +184,7 @@ class TestSweep:
         path.write_text(GOAL_FILE, encoding="utf-8")
         removed, backup = turn_checks.sweep_achieved(path, {}, "stamp")
         assert (removed, backup) == ([], None)
-        assert path.read_text(encoding="utf-8") == GOAL_FILE
+        assert path.read_text(encoding="utf-8-sig") == GOAL_FILE
         assert not (scratch / "archive").exists()
 
     def test_a_missing_file_is_not_an_error(self, scratch):
@@ -201,7 +201,7 @@ class TestSweep:
         )
 
         assert sorted(removed) == ["build-a-ram", "fill-slots"]
-        left = path.read_text(encoding="utf-8")
+        left = path.read_text(encoding="utf-8-sig")
         assert turn_checks.parse_checks(left) == []
         assert "Prose that explains the rules" in left
 
@@ -243,7 +243,7 @@ class TestTheHookSweeps:
 
         monkeypatch.setattr(et, "_agent_diary_rows", lambda gs: _no_rows())
         # end_turn imports turn_checks inside the function, so patch the module itself.
-        monkeypatch.setattr(turn_checks, "load_checks", lambda p=None: (path.read_text(encoding="utf-8"), path))
+        monkeypatch.setattr(turn_checks, "load_checks", lambda p=None: (path.read_text(encoding="utf-8-sig"), path))
         return et
 
     def test_the_turn_that_achieves_a_goal_prunes_it_and_says_so(self, scratch, monkeypatch):
@@ -265,7 +265,7 @@ class TestTheHookSweeps:
         assert "build-a-ram" in pruned and "archive" in pruned
         assert turn_checks.load_retired("china_-1894041591") == {"build-a-ram": 61}
 
-        left = path.read_text(encoding="utf-8")
+        left = path.read_text(encoding="utf-8-sig")
         assert "units(BATTERING_RAM)" not in left
         assert "keep-slots-filled" in left, "the rule that still fails is still in the file"
         assert list((scratch / "archive").glob("turn-checks-*.md"))

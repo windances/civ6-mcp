@@ -363,7 +363,7 @@ class TestTheRules:
         return turn_checks.CheckContext(turn=115, units={}, metrics=base, researched=frozenset())
 
     def failing(self, **metrics) -> set[str]:
-        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8"), self.context(**metrics))
+        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), self.context(**metrics))
         return run.failing_ids
 
     def test_two_units_in_one_city_while_at_war_fails(self):
@@ -423,6 +423,6 @@ class TestTheRules:
         }
         context = et._context_from_row(row)
         assert context.metrics["at_war"] == 1
-        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8"), context)
+        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), context)
         assert not [c for c, reason in run.failures if "un-evaluable" in reason]
         assert "one-garrison-per-city" not in run.failing_ids, "no city data in a stored row"

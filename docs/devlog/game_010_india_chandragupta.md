@@ -1,4 +1,4 @@
-# Game 10 — India (Chandragupta) — Devlog
+﻿# Game 10 — India (Chandragupta) — Devlog
 
 **Result: Defeat at T431 — Vietnam Diplomatic Victory (20/20 DVP)**
 **Final Score: India 825 (#2) vs Vietnam 1403 (#1), Egypt 780, Persia 730, Ottomans 587, Maya 489**

@@ -1,4 +1,4 @@
-Reach four to six productive cities and keep every one of them growing **before**
+﻿Reach four to six productive cities and keep every one of them growing **before**
 committing to a victory path.
 
 - Until four cities exist, a Settler is the highest-priority item in any city

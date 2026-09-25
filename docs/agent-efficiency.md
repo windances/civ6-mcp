@@ -1,4 +1,4 @@
-# Agent decision and execution efficiency
+﻿# Agent decision and execution efficiency
 
 > **Local addition**, not part of upstream `civ6-mcp`. Produced by measuring the
 > orchestrator's own telemetry on a live game; re-run the tool to refresh it.

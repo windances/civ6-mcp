@@ -1,4 +1,4 @@
-# Civ 6 MCP — Development Log
+﻿# Civ 6 MCP — Development Log
 
 ## 2025-02-08: Research Spike — FireTuner Protocol
 

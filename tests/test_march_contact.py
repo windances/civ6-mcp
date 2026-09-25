@@ -213,7 +213,7 @@ class TestTheRules:
         return turn_checks.CheckContext(turn=100, units={}, metrics=base, researched=frozenset())
 
     def failing(self, **metrics) -> set[str]:
-        text = self.FILE.read_text(encoding="utf-8")
+        text = self.FILE.read_text(encoding="utf-8-sig")
         run = turn_checks.run_checks(text, self.context(**metrics))
         return run.failing_ids
 
@@ -222,7 +222,7 @@ class TestTheRules:
         # Catapults shelling a city satisfied it while a 7 HP enemy stood one tile away. The
         # replay of the T101-T116 siege is why it was retired; `use-your-attacks` asks the
         # question that actually discriminates.
-        text = self.FILE.read_text(encoding="utf-8")
+        text = self.FILE.read_text(encoding="utf-8-sig")
         assert "engage-the-screen" not in {c.check_id for c in turn_checks.parse_checks(text)}
 
     def test_an_enemy_in_the_way_and_no_legal_attack_used_is_quiet_for_the_mass_rule(self):
@@ -244,7 +244,7 @@ class TestTheRules:
         assert "counter-the-cavalry" not in ids
 
     def test_an_anti_cavalry_unit_clears_it(self):
-        text = self.FILE.read_text(encoding="utf-8")
+        text = self.FILE.read_text(encoding="utf-8-sig")
         context = self.context(
             enemies_cavalry_within_2=1, enemies_within_2=1, attacks_this_turn=0
         )
@@ -267,7 +267,7 @@ class TestTheRules:
         }
         context = et._context_from_row(row)
         assert context.metrics["enemies_within_2"] == 0
-        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8"), context)
+        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), context)
         assert "engage-the-screen" not in run.failing_ids
         assert "counter-the-cavalry" not in run.failing_ids
         assert not [

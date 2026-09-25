@@ -186,7 +186,7 @@ def build(
     try:
         for file in iter_files(sources):
             try:
-                text = file.read_text(encoding="utf-8", errors="replace")
+                text = file.read_text(encoding="utf-8-sig", errors="replace")
             except OSError:
                 continue
             if not text.strip() or len(text) > _MAX_TEXT_CHARS:

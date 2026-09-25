@@ -1,4 +1,4 @@
-# Game MCP Design Research Report
+﻿# Game MCP Design Research Report
 
 Synthesized from three parallel research threads: existing game MCP servers, academic Civ/strategy LLM agents, and MCP design best practices.
 

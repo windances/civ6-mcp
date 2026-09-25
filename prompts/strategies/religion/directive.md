@@ -1,4 +1,4 @@
-Pursue a **religious** victory: your religion must become the majority in every
+﻿Pursue a **religious** victory: your religion must become the majority in every
 civilisation.
 
 - The Great Prophet pool fills early, at roughly half the major civilisations.

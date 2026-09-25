@@ -108,7 +108,7 @@ class TestIndexAndSearch:
         lowered = top.snippet.lower()
         assert "supply" in lowered and "line" in lowered
         source = fix.root / "manual.txt"
-        lines = source.read_text(encoding="utf-8").splitlines()
+        lines = source.read_text(encoding="utf-8-sig").splitlines()
         extracted = "\n".join(lines[top.start_line - 1 : top.end_line])
         assert "heals a small amount" in extracted, "the cited range must contain the passage"
 

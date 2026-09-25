@@ -1,4 +1,4 @@
-# Game 7 — Portugal (Jo\u00e3o III) — Devlog
+﻿# Game 7 — Portugal (Jo\u00e3o III) — Devlog
 
 **Result: Defeat at T318 — France Diplomatic Victory (20/20 DVP)**
 **Final Score: Portugal 1186 (#1) vs France 1186, Korea 847, China 659**

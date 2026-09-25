@@ -1,4 +1,4 @@
-# Publishing the civ6-mcp benchmark to Hugging Face
+﻿# Publishing the civ6-mcp benchmark to Hugging Face
 
 End-to-end pipeline for taking the Azure-hosted telemetry corpus and publishing it as a Hugging Face dataset with a Croissant 1.1 metadata file.
 

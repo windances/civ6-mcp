@@ -1,4 +1,4 @@
-# Retrospective — the Russian conquest, T105–T121 (hand-played, no MCP telemetry)
+﻿# Retrospective — the Russian conquest, T105–T121 (hand-played, no MCP telemetry)
 
 Reviewed 2026-09-22. This run was played in the game window: `.civ6-mcp-data` has no log, diary
 row or heartbeat for T100–T121, so the entire record comes from Civ VI's own logs

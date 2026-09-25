@@ -1,4 +1,4 @@
-# Game Reports
+﻿# Game Reports
 
 13 games played by LLM agents via civ6-mcp. Each report is a detailed turn-by-turn devlog with strategic analysis.
 

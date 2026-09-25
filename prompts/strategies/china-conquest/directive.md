@@ -1,4 +1,4 @@
-China, Qin (Unifier). Play the two abilities this leader actually has, not a
+﻿China, Qin (Unifier). Play the two abilities this leader actually has, not a
 generic domination plan.
 
 **Dynastic Cycle (civilisation ability).** Eurekas and Inspirations are worth 60%

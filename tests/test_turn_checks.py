@@ -166,7 +166,7 @@ class TestTheRealFile:
     """The shipped check file has to parse and evaluate, not just exist."""
 
     def test_it_parses(self):
-        text = CHECKS.read_text(encoding="utf-8")
+        text = CHECKS.read_text(encoding="utf-8-sig")
         checks = turn_checks.parse_checks(text)
         assert len(checks) >= 5
         assert len({c.check_id for c in checks}) == len(checks), "duplicate ids"
@@ -174,7 +174,7 @@ class TestTheRealFile:
     def test_the_ram_tower_deadline_fires_on_the_live_position(self):
         # T121 of the live game: no ram or tower, civil engineering not yet adopted.
         # The baseline, not the live file: the goal leaves the shipped file once it is met.
-        text = turn_checks.restore_achieved(CHECKS.read_text(encoding="utf-8"))
+        text = turn_checks.restore_achieved(CHECKS.read_text(encoding="utf-8-sig"))
         units = {
             1: unit(1, "UNIT_ARCHER"),
             2: unit(2, "UNIT_MAN_AT_ARMS"),
@@ -197,7 +197,7 @@ class TestTheRealFile:
         assert "no-idle-trade-route" not in {c.check_id for c in turn_checks.parse_checks(text)}
 
     def test_the_ram_tower_check_goes_quiet_once_the_civic_lands(self):
-        text = turn_checks.restore_achieved(CHECKS.read_text(encoding="utf-8"))
+        text = turn_checks.restore_achieved(CHECKS.read_text(encoding="utf-8-sig"))
         ctx = turn_checks.CheckContext(
             turn=121,
             units={},

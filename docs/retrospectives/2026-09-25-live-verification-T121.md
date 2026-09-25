@@ -1,4 +1,4 @@
-# Live verification, 2026-09-25 — the T121 save, and two bugs the adapter had shipped
+﻿# Live verification, 2026-09-25 — the T121 save, and two bugs the adapter had shipped
 
 Everything below was measured against the running game, not reasoned about: Civ VI (DX12, pid
 24460), FireTuner on 4318, the hand-played save `秦始皇（大一统） 121 公元125年` loaded through

@@ -158,7 +158,7 @@ class TestTheSnapshotReadsUnitsInGame:
     """
 
     def test_the_units_query_is_read_in_game(self):
-        src = pathlib.Path("src/civ_mcp/game_state.py").read_text(encoding="utf-8")
+        src = pathlib.Path("src/civ_mcp/game_state.py").read_text(encoding="utf-8-sig")
         assert "unit_lines = await self.conn.execute_write(lq.build_units_query())" in src, (
             "build_units_query is an InGame query; GameCore has no UnitManager.CanStartOperation"
         )

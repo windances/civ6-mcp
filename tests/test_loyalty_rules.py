@@ -300,7 +300,7 @@ class TestTheRule:
         return turn_checks.CheckContext(turn=112, units={}, metrics=base, researched=frozenset())
 
     def failing(self, **metrics) -> set[str]:
-        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8"), self.context(**metrics))
+        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), self.context(**metrics))
         return run.failing_ids
 
     def test_a_low_city_with_nothing_holding_it_fails(self):
@@ -325,6 +325,6 @@ class TestTheRule:
             "pop": 30, "districts": 30, "wonders": 1, "cities": 5, "improvements": 90,
             "gold_per_turn": 30, "gold": 400,
         }
-        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8"), et._context_from_row(row))
+        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), et._context_from_row(row))
         assert "hold-what-you-take" not in run.failing_ids
         assert not [c for c, reason in run.failures if "un-evaluable" in reason]

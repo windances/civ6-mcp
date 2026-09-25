@@ -40,7 +40,7 @@ def skill_path() -> Path:
 def read_directive() -> str | None:
     """Return the current directive body, or None when it cannot be read."""
     try:
-        text = skill_path().read_text(encoding="utf-8")
+        text = skill_path().read_text(encoding="utf-8-sig")
     except OSError:
         return None
     match = _BLOCK.search(text)

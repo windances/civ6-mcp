@@ -1,4 +1,4 @@
-# CivBench System Architecture
+﻿# CivBench System Architecture
 
 This document explains how an LLM agent plays Civilization VI through the civ6-mcp server. It covers the full stack from tool call to game engine and back, the two Lua execution contexts inside the game, and the hardest engineering problems: turn advancement, popup management, and asynchronous operations.
 

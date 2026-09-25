@@ -40,6 +40,12 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 DEFAULT_CHECKS_PATH = Path("prompts/checks/turn-checks.md")
+
+# The rule file and its archive copies are read and written as ``utf-8-sig``: the file is meant to be
+# opened by a human, so it carries a UTF-8 BOM, and a plain ``utf-8`` read would leave that BOM in the
+# parsed text while a plain ``utf-8`` write would silently drop it on the next prune. ``utf-8-sig``
+# reads a BOM-less file exactly like ``utf-8`` and writes the BOM every time, so either state settles.
+_TEXT_ENCODING = "utf-8-sig"
 _BLOCK = re.compile(r"<!--\s*check\b(.*?)-->", re.DOTALL | re.IGNORECASE)
 _KEY = re.compile(r"^([a-z_]+)\s*:\s*(.*)$")
 
@@ -392,7 +398,7 @@ _ACHIEVED_TRACE = re.compile(
 def archived_goal_block(archive: Path, goal_id: str) -> str | None:
     """The ``<!-- check ... -->`` block for one goal, as an archived copy holds it."""
     try:
-        text = archive.read_text(encoding="utf-8")
+        text = archive.read_text(encoding=_TEXT_ENCODING)
     except OSError:
         return None
     start = text.find("<!-- check")
@@ -444,10 +450,11 @@ def sweep_achieved(
     doing. A second call finds nothing to remove and writes nothing.
     """
     try:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding=_TEXT_ENCODING)
     except OSError:
         log.debug("no check file to prune at %s", path)
         return [], None
+
     if not achieved:
         return [], None
 
@@ -464,9 +471,9 @@ def sweep_achieved(
 
     try:
         # Copy first, then edit: the file is never left in a state its backup cannot explain.
-        backup.write_text(text, encoding="utf-8")
+        backup.write_text(text, encoding=_TEXT_ENCODING)
         tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(pruned, encoding="utf-8")
+        tmp.write_text(pruned, encoding=_TEXT_ENCODING)
         tmp.replace(path)
     except OSError:
         log.warning("could not prune %s (backup at %s)", path, backup, exc_info=True)
@@ -480,6 +487,6 @@ def load_checks(path: Path | None = None) -> tuple[str | None, Path]:
 
     target = path or Path(os.environ.get("CIV_MCP_TURN_CHECKS") or DEFAULT_CHECKS_PATH)
     try:
-        return target.read_text(encoding="utf-8"), target
+        return target.read_text(encoding=_TEXT_ENCODING), target
     except OSError:
         return None, target

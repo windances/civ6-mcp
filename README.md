@@ -1,4 +1,4 @@
-# civ6-mcp
+﻿# civ6-mcp
 
 An MCP server that lets LLM agents play full games of Civilization VI.
 

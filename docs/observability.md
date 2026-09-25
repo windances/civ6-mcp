@@ -1,4 +1,4 @@
-# Observability: Diary, Logging, and Spatial Tracking
+﻿# Observability: Diary, Logging, and Spatial Tracking
 
 The MCP server records three parallel data streams during gameplay, all written to `~/.civ6-mcp/` as JSONL (one JSON object per line). Together they capture *what the game looked like*, *what the agent did*, and *where the agent looked*.
 

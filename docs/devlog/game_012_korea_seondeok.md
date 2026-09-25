@@ -1,4 +1,4 @@
-# Game 12 — Korea (Seondeok) — Devlog
+﻿# Game 12 — Korea (Seondeok) — Devlog
 
 **Result: Conceded at T216**
 **Final Score: Korea 168 (#6) vs Persia 636 (#1), Scythia 611, Macedon 551, Aztec 549, Zulu 452**

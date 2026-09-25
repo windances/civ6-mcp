@@ -141,7 +141,7 @@ class TestRetirement:
 
     def test_the_file_is_written_atomically_and_reads_back(self, state_dir):
         turn_checks.retire("game", {"a": 61})
-        raw = json.loads((state_dir / "turn-checks-state.json").read_text(encoding="utf-8"))
+        raw = json.loads((state_dir / "turn-checks-state.json").read_text(encoding="utf-8-sig"))
         assert raw == {"game": {"a": 61}}
         assert not list(state_dir.glob("*.tmp")), "the temp file is renamed, not left behind"
 

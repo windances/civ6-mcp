@@ -1,4 +1,4 @@
-# CivBench Save Files
+﻿# CivBench Save Files
 
 This directory holds Civilization VI save files (`.Civ6Save`) used as starting positions for benchmark scenarios. Save files are **gitignored** due to size (~500KB each).
 

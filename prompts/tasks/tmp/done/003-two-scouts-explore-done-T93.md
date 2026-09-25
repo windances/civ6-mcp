@@ -1,4 +1,4 @@
-# TEMP TASK 003 — two scouts out, and find more civilizations
+﻿# TEMP TASK 003 — two scouts out, and find more civilizations
 
 added:     2026-09-26 (human instruction: 派出两个侦察兵，探索地图，找到更多文明)
 expires:   turn 95 — retire this file by then whatever happens

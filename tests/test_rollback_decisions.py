@@ -244,15 +244,15 @@ class TestRestoringRetiredGoals:
     def test_a_goal_achieved_after_the_target_comes_back(self, checks):
         restored = rb.restore_achieved_goals(99)
         assert restored and "ram-tower-before-civil-engineering" in restored[0]
-        text = checks.read_text(encoding="utf-8")
+        text = checks.read_text(encoding="utf-8-sig")
         assert "id: ram-tower-before-civil-engineering" in text
         assert "require: units(BATTERING_RAM, SIEGE_TOWER) >= 1" in text
         assert "achieved T100" not in text
 
     def test_nothing_else_in_the_file_moves(self, checks):
-        before = checks.read_text(encoding="utf-8").splitlines()
+        before = checks.read_text(encoding="utf-8-sig").splitlines()
         rb.restore_achieved_goals(99)
-        after = checks.read_text(encoding="utf-8").splitlines()
+        after = checks.read_text(encoding="utf-8-sig").splitlines()
         assert "# Rules" in after and "## Next" in after and "Something else." in after
         assert len(after) == len(before) - 1 + len(self.BLOCK.splitlines())
 
@@ -260,17 +260,17 @@ class TestRestoringRetiredGoals:
         # Rolling back to T100 or later is not rolling back behind the achievement: a rule
         # retired at T100 is legitimately retired at T100.
         assert rb.restore_achieved_goals(100) == []
-        assert "achieved T100" in checks.read_text(encoding="utf-8")
+        assert "achieved T100" in checks.read_text(encoding="utf-8-sig")
 
     def test_a_dry_run_reports_without_writing(self, checks):
         restored = rb.restore_achieved_goals(99, apply=False)
         assert restored
-        assert "achieved T100" in checks.read_text(encoding="utf-8")
+        assert "achieved T100" in checks.read_text(encoding="utf-8-sig")
 
     def test_a_missing_archive_leaves_the_file_alone(self, checks):
         (checks.parent / "archive" / "turn-checks-20260925-145233.md").unlink()
         assert rb.restore_achieved_goals(99) == []
-        assert "achieved T100" in checks.read_text(encoding="utf-8")
+        assert "achieved T100" in checks.read_text(encoding="utf-8-sig")
 
     def test_the_block_is_found_by_id_not_by_position(self, scratch):
         archive = scratch / "old.md"

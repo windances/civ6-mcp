@@ -1,4 +1,4 @@
-# TEMP TASK 002 — focus fire on enemy scouts
+﻿# TEMP TASK 002 — focus fire on enemy scouts
 
 added:     2026-09-26 (human instruction: 集火敌人侦察兵)
 expires:   turn 95 — retire this file by then whatever happens

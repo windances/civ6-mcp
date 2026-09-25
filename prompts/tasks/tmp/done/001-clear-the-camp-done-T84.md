@@ -1,4 +1,4 @@
-# TEMP TASK 001 — clear the barbarian camp beside 北京
+﻿# TEMP TASK 001 — clear the barbarian camp beside 北京
 
 added:     2026-09-26 (human instruction; "make the camp a pre-war analysis target and destroy it")
 expires:   turn 95 — retire this file by then whatever happens

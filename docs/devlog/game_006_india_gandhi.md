@@ -1,4 +1,4 @@
-# Game 6 — India (Gandhi) — Devlog
+﻿# Game 6 — India (Gandhi) — Devlog
 
 **Result: Defeat at T245 — France Religious Victory**
 **Final Score: 408 (4th) vs France 821, China 611, Babylon 507**

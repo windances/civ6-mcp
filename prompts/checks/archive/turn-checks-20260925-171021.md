@@ -1,4 +1,4 @@
-# Turn checks — read and evaluated by `end_turn` on **every** turn
+﻿# Turn checks — read and evaluated by `end_turn` on **every** turn
 
 They are also evaluated at the **start** of every turn, by `get_game_overview`: the failing
 rules with a per-rule streak ("failing for 40 turn(s)"), what the last turn actually bought,

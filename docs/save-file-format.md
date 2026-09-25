@@ -1,4 +1,4 @@
-# Civ 6 Save File Format
+﻿# Civ 6 Save File Format
 
 Reverse-engineered from `CHANDRAGUPTA 215 1520 AD.Civ6Save` (1,799,939 bytes).
 Based on community tools ([pydt/civ6-save-parser](https://github.com/pydt/civ6-save-parser), [lucienmaloney/civ6save-editing](https://github.com/lucienmaloney/civ6save-editing)) plus original analysis.

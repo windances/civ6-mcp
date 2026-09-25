@@ -1,4 +1,4 @@
-# Tactics for the war / 战术手册
+﻿# Tactics for the war / 战术手册
 
 Eight files, one per decision the human asked to have separated. The `military-map` and
 `economy-cities` workers are read-only and see only the immutable snapshot, so each file is written

@@ -1,4 +1,4 @@
-# TEMP TASK 005 — found a city on the copper
+﻿# TEMP TASK 005 — found a city on the copper
 
 added:     2026-09-26 (human instruction: 在铜矿附近建城)
 expires:   turn 115 — extended from T95 on 2026-09-26: this one runs only *after* the iron city, whose
