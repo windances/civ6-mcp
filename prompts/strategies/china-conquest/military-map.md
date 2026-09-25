@@ -39,6 +39,14 @@ pool empties, (4) the walls answer, (5) the approach and what would trigger the 
 line carries the number that passes or fails it. A target recommendation without those five lines is
 not a pre-war analysis, however sound the reasoning behind it.
 
+**When `tactics/04-staging-out-of-range.md` is the file in the brief, answer its steps the same way**
+— where the rally point is and what it is three or more tiles from, **how many turns the slowest unit
+needs to reach its ring tile** (path cost, not straight line; this is usually the longer pole than
+breaking the city), which lanes are free of foreign units, whether the assault list is complete and
+justified by the target's walls, who is wounded and where they heal, and the one thing missing if the
+advance should not happen this turn. "The stack is forming" is not an answer; "the last Archer
+arrives in two turns at (53,37), three ring tiles are free, the advance goes in the turn after" is.
+
 **What the brief should carry, because you cannot query it yourself:** the tactic file for this
 decision, the last `CHECK FAILED [id]` lines, the `BATTLE ASSESSMENT` block, the `SIEGE POSTURE`
 lines, the `SIEGE PROGRESS` / `SIEGE STALLED` block, the `TAKE THE CITY` block when it appears

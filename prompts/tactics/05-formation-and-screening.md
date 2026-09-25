@@ -72,9 +72,11 @@ None of it was a rules problem - it was geometry, and it is measurable.
   Archer at 35 HP one tile from the same unit. Withdraw it to a city (20 HP/turn) or friendly
   territory (15) - never leave it where it is because the attack is convenient.
 - **Keep one approach lane free.** The formation is not only about who screens whom: our own stack
-  is the most common obstacle to our own ring and to the capture move. At 阿斯特拉罕 the shooters
-  occupied both adjacent ring tiles and the melee could not reach the city at all. Melee on the
-  ring, shooters one tile behind, and at least one ring tile left empty.
+  is the most common obstacle to our own ring and to the capture move. Two distances are easy to
+  confuse here — melee belongs **adjacent** to the city (distance 1, where it attacks and where the
+  capture happens), shooters belong **on the ring** at distance 2. At 阿斯特拉罕 the shooters sat on
+  both adjacent tiles, which are the only ones the melee could have used, and the assault had no unit
+  able to reach the city until they moved. Leave at least one adjacent tile free.
 
 ## The end-of-turn warning that enforces the first of those
 
