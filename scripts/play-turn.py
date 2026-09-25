@@ -230,6 +230,48 @@ def pick_production(options, item: str):
     return None
 
 
+def parse_unused_places(lines: list[str]) -> list[tuple[str, tuple[int, int]]]:
+    """`(unit_type, (x, y))` for each unused-attack line, which reads `UNIT_X@3,4 -> target`."""
+    out = []
+    for line in lines or ():
+        if not isinstance(line, str) or "@" not in line:
+            continue
+        head = line.split("->")[0].strip()
+        name, _, tile = head.partition("@")
+        try:
+            x, y = (int(v) for v in tile.strip().split(","))
+        except ValueError:
+            continue
+        out.append((name.strip(), (x, y)))
+    return out
+
+
+def drop_stale_unused(lines: list[str], units) -> list[str]:
+    """Unused-attack lines whose unit has no movement left, i.e. entries from before it acted.
+
+    The adapter's Lua state lags inside a turn frame, so a unit that has just attacked is still
+    reported as holding a legal attack. Measured live 2026-09-25 in the 阿斯特拉罕 siege: the
+    driver attacked with the unit the guard named, called `end` again, and was refused with the
+    SAME line - a loop that cannot be exited except with `--force`. The live unit list is the
+    authority on whether the attack is still available, so a line is kept only when a unit of that
+    type is standing on that tile with movement left: spent, moved away or dead are all turns that
+    have already happened. A line that cannot be parsed is kept, because swallowing a real unused
+    attack is worse than one extra refusal. Pure, so the rule is testable without a game.
+    """
+    live = {(str(u.unit_type), u.x, u.y): u.moves_remaining for u in units}
+    kept = []
+    for line in lines or ():
+        places = parse_unused_places([line])
+        if not places:
+            kept.append(line)  # unreadable: never swallow something that might be real
+            continue
+        name, (x, y) = places[0]
+        moves = live.get((name, x, y))
+        if moves is not None and moves > 0:
+            kept.append(line)
+    return kept
+
+
 def end_turn_blocker(unused_attacks: list[str], force: bool) -> str | None:
     """Why the turn must not end yet, or None when it may.
 
@@ -579,6 +621,15 @@ async def main() -> int:
                 return 1
 
             leftover = await gs.unused_attacks()
+            if leftover:
+                # Drop entries the live board disagrees with before refusing: the adapter's Lua
+                # state lags inside a turn frame, so a unit that has just attacked still appears
+                # here and the refusal would repeat forever.
+                current = await gs.get_units()
+                stale = [line for line in leftover if line not in drop_stale_unused(leftover, current)]
+                leftover = drop_stale_unused(leftover, current)
+                for line in stale:
+                    print(f"stale (unit has no moves left): {line}")
             blocker = end_turn_blocker(leftover, force="--force" in sys.argv)
             if blocker:
                 print(blocker)

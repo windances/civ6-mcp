@@ -75,6 +75,33 @@ class TestTheUnusedAttackGuard:
         assert play.end_turn_blocker(["anything"], True) is None
 
 
+class TestStaleUnusedAttacks:
+    """The adapter's Lua state lags inside a turn frame, so a unit that has just acted is still
+    reported as holding a legal attack - measured live 2026-09-25 at 阿斯特拉罕, where the driver
+    used the attack it was told about, called `end` again, and was refused with the same line.
+    """
+
+    LINE = "UNIT_ARCHER@51,36 -> UNIT_SWORDSMAN@50,37(87hp)"
+
+    def _unit(self, type_name, x, y, moves):
+        return FakeUnit(99, type_name, x, y, moves)
+
+    def test_a_spent_unit_is_dropped(self):
+        units = [self._unit("UNIT_ARCHER", 51, 36, 0)]
+        assert play.drop_stale_unused([self.LINE], units) == []
+
+    def test_a_unit_that_still_has_moves_is_kept(self):
+        units = [self._unit("UNIT_ARCHER", 51, 36, 2)]
+        assert play.drop_stale_unused([self.LINE], units) == [self.LINE]
+
+    def test_a_unit_that_has_moved_away_is_dropped(self):
+        units = [self._unit("UNIT_ARCHER", 52, 36, 2)]
+        assert play.drop_stale_unused([self.LINE], units) == []
+
+    def test_an_unparseable_line_is_kept_so_it_is_never_swallowed(self):
+        assert play.drop_stale_unused(["garbage"], []) == ["garbage"]
+
+
 class TestTheNamedSkip:
     def test_every_discarded_unit_is_named_with_where_it_stands(self):
         lines = play.format_skipped(UNITS)
