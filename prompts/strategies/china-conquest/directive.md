@@ -72,6 +72,18 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
     unit is nearly helpless against units - never let it hold the front tile.
   - Do not spend a ranged attack on a full-health unit you cannot kill while a
     wounded one is in range.
+- **During the assembly the contact has a cost beyond the fight, so give it to the
+  right unit.** The enemy declares on the column, not after it: T103 Russia
+  declared while our army was two turns short of its rally row, and T104-T106 went
+  on clearing the field in contact - a 那烂陀 Warrior walked onto a launch pad and
+  took three turns and four attackers to remove - so the first volley on Moscow
+  moved from T105 to **T107**. What that means in practice: **the screen (melee,
+  anti-cavalry, cavalry) answers the contact; a shooter fires from the tile it is
+  already standing on, with LOS, and never walks to a firing position on a contact
+  turn** (T105 lost a 12 HP kill that way - the ordered shot answered `NO_LOS` and
+  the retry walked the unit instead); and **a ring tile in the enemy's hands is
+  retaken, not routed around** - a column can be re-routed, a firing ring cannot.
+  The full procedure is `prompts/tactics/04-staging-out-of-range.md` step 5.
 - The exception, and it must be written down: a lone scout or a barbarian unit
   we are deliberately keeping alive to convert with Thirty-Six Stratagems may be
   ignored - say so in the diary's tactical line so the skipped attack is a

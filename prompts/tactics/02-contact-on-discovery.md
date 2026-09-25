@@ -51,6 +51,20 @@ Two reading rules for the snapshot itself, both learned from live snapshots:
    left behind it, that enemy attacks the siege train from behind while the city's ranged strike
    hits it from the front. Clear the path first, or leave a covering force and say which.
 
+## If the contact happens while the army is still assembling
+
+This file's five answers above are about the fight. They are not sufficient when the stack is still
+forming, because there the cost of the fight is **the assembly itself**, and the questions that have
+to be answered first are different ones: does the contact invalidate the rally point, can the units
+already forward kill it without spending a ring tile, and does the timetable now belong to the enemy.
+That procedure is `tactics/04-staging-out-of-range.md` **step 5** — read it whenever an assault is
+planned and the stack is not yet formed, and report its `CONTACT` line, not just the target list.
+
+The one sentence version, measured T103–T106: **clear the field first, then fill the pads and fire.**
+The contact turn is a kill turn; the volley it costs is real (T104's contact slid Moscow's first
+volley from T105 to T107), and the unit that answers it must be the screen, never the archer that is
+one tile from its ring pad.
+
 ## Prefer the counter unit
 
 The game's own `PROMOTION_CLASS_*` is the rock-paper-scissors axis:

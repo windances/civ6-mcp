@@ -31,6 +31,28 @@ They use the same vocabulary the turn result prints (`local_superiority`, `siege
 `SIEGE POSTURE`, `BATTLE ASSESSMENT`, the check-rule names), so a proposal can cite a number
 instead of an opinion.
 
+**When `tactics/07-pre-war-analysis.md` is the file in the brief, answer its five gates by name and
+in order** — (1) net fire against the **garrison** (an Archer does 35 against an ungarrisoned city
+and 9-11 against one with a CS 35 garrison, while a Catapult does 45-52 either way), (2) the ring
+count of usable distance-2 tiles, (3) a capture-capable unit adjacent and unspent for the turn the
+pool empties, (4) the walls answer, (5) the approach and what would trigger the declaration. Each
+line carries the number that passes or fails it. A target recommendation without those five lines is
+not a pre-war analysis, however sound the reasoning behind it.
+
+**When `tactics/04-staging-out-of-range.md` is the file in the brief, answer its steps the same way**
+— where the rally point is and what it is three or more tiles from, **how many turns the slowest unit
+needs to reach its ring tile** (path cost, not straight line; this is usually the longer pole than
+breaking the city), which lanes are free of foreign units, whether the assault list is complete and
+justified by the target's walls, who is wounded and where they heal, and the one thing missing if the
+advance should not happen this turn. **If any enemy is in contact while the stack is still forming,
+answer step 5 as well, by name**: is the rally point still valid against that enemy (a rally point is
+chosen against the units that were *visible*, and recon keeps finding the field army afterwards),
+which of our units kills it and what that costs the timetable, whether the enemy is now holding one of
+our ring tiles, and whether the field clearance or the advance comes first. The measured cost of
+skipping that answer is T104–T106: three turns of shooting spent on the field force, and the first
+volley on the city moved from T105 to T107. "The stack is forming" is not an answer; "the last Archer
+arrives in two turns at (53,37), three ring tiles are free, the advance goes in the turn after" is.
+
 **What the brief should carry, because you cannot query it yourself:** the tactic file for this
 decision, the last `CHECK FAILED [id]` lines, the `BATTLE ASSESSMENT` block, the `SIEGE POSTURE`
 lines, the `SIEGE PROGRESS` / `SIEGE STALLED` block, the `TAKE THE CITY` block when it appears

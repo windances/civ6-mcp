@@ -8,7 +8,7 @@ Read when an assault is being planned and the stack is not yet formed.
 **two tiles**, and so does a Catapult — the difference is that the city can absorb the answer and the
 Catapult cannot. A column that arrives one unit at a time is defeated one unit at a time.
 
-It is **one procedure in six steps**, and the binding constraint is almost never the siege — it is
+It is **one procedure in seven steps**, and the binding constraint is almost never the siege — it is
 getting the siege there:
 
 | Step | Question | Answered by |
@@ -17,8 +17,9 @@ getting the siege there:
 | 2 | **How long does the assembly take?** | `get_pathing_estimate`, per unit, slowest wins |
 | 3 | What must be true before the column moves? | the completeness list below |
 | 4 | How does the column move? | the march discipline below |
-| 5 | Does the ring exist when we arrive? | the ring walk below |
-| 6 | When do we go in? | the go/no-go below, and the declaration trigger |
+| 5 | **What if the column meets something before it is complete?** | the contact procedure below |
+| 6 | Does the ring exist when we arrive? | the ring walk below |
+| 7 | When do we go in? | the go/no-go below, and the declaration trigger |
 
 ## Step 1 — the rally point
 
@@ -102,13 +103,73 @@ Two consequences that decide whether the assembly finishes on schedule:
   past a front line to reach the enemy's siege and ranged units, cut a supply hex, or pillage the
   tiles the target city depends on. That is the same property that makes enemy cavalry dangerous to
   us (`counter-the-cavalry`) — use it instead of only defending against it.
-- **Contact outranks the timetable.** The moment a unit discovers an enemy or is attacked, the
-  answer is file 2 and file 3 — assess, mass, annihilate — and only then resume the advance. A
-  city is patient; a Catapult that walked past an enemy is not.
+- **Contact outranks the timetable, and during an assembly it has its own procedure: step 5.** The
+  moment a unit discovers an enemy or is attacked, the answer is step 5 first and the march second.
+  A city is patient; a Catapult that walked past an enemy is not.
 - Re-check on arrival: if the enemy has reinforced the city or moved a field army into the
   approach, the rally point is a decision point again, not a formality.
 
-## Step 5 — the ring walk, on arrival and before the advance
+## Step 5 — contact before the stack is complete
+
+The march discipline above describes the **last** turn, when everything arrives together. During the
+assembly it cannot: units arrive one at a time — that is what an assembly is — so the column has a
+front and a tail, and the enemy decides which of them it touches. Three answers, in this order. The
+measured sequence T103–T106 is what it costs when they are not asked.
+
+**1. Does the contact invalidate the rally point?** The rally point was chosen against the enemies we
+had *seen*, and reconnaissance keeps finding the field army after the choice was made. T99 chose the
+row (53,37)/(54,37)/(55,37) at three-plus tiles from Moscow; T100 found the Russian Archer at (52,38)
+reaching (53,37) at distance 2 and a CS 35 Swordsman at (53,40) that could move 2 and strike — half
+the row was inside an enemy's reach on the turn the plan named it. So re-run step 1 against the
+**field army**, not only the city, every turn the snapshot changes, and move the rally point while
+moving it is still free. A row that is safe only because the enemy is not currently looking at it is
+not a rally point.
+
+**2. Can the units already forward kill it without spending a ring tile?** This is a kill, not a
+detour, and the price is paid in volleys. T104: a 那烂陀 Warrior walked onto our launch pad at
+(53,37); two Archers shot it (28 from (53,35), 22 from (52,36) — it survived both) while a third put
+52 into the Russian Archer at (52,38), and the first volley on Moscow slid from T105 to **T107**.
+Three rules keep that bill small:
+
+- **The screen takes the contact; the shooters shoot; the siege does not.** Melee, anti-cavalry and
+  cavalry answer. A siege unit is nearly helpless against a unit and never holds a front tile.
+- **A shooter fires from the tile it is already standing on, with LOS — it does not walk to a firing
+  position on a contact turn.** T105: the finishing shot at a 12 HP Archer was ordered from (53,35),
+  answered `NO_LOS`, and the retry **walked the unit instead of firing**, so the Archer survived,
+  healed, and got its own turn. Order one shot and read the refusal; never discover LOS by walking.
+- **An attack is the unit's whole turn** — the manual (p.81): "Most units use up all of their
+  movement when attacking". Answering contact therefore suspends that unit's march, so the *wrong*
+  unit answering costs a turn of the timetable, not merely a turn of HP. Give the contact to the
+  unit whose arrival the assembly can most afford to lose; that is the screen, not the siege or the
+  archer that is one tile from its ring pad.
+
+**3. Does the timetable now belong to the enemy?** Yes, from the moment they declare — and they
+declare **on the assembly**, not after it. T103: Peter's border complaint arrived, the refusal was
+taken as the answer, and Russia declared with our army two turns short of its row. From that turn the
+procedure is files 02 and 03 and the assembly continues **under fire**; what changes is the order of
+work — **clear the field first, then fill the pads and fire.** T106 killed the last two enemy units
+in contact (a 33 HP Archer killed a wounded Russian Archer and took nothing; a Warrior finished the
+那烂陀 Warrior) and T107 was the first volley on the city. Arriving together is no longer available
+once contact starts, so arrive in the order that is still useful: pads go to whoever is nearest, and
+shooters fire from where they stand.
+
+Two more shapes of contact belong here, because they are different decisions:
+
+- **The enemy has taken a rally tile.** The sharpest form of contact in an assembly, and it is a kill
+  rather than a re-route: **you can move a column, you cannot move a ring.** A usable distance-2 tile
+  of the target in the enemy's hands is worth two attackers' turns to take back, every time.
+- **A foreign unit is standing in the lane, at peace.** That is contact too, and it cannot be
+  attacked. T101: a Russian Missionary at (57,32) and an Egyptian Scout at (58,32) closed the x=57
+  lane outright — a military unit may not enter a tile held by a foreign unit at peace — which left a
+  Catapult the choice between waiting and the western route at 21 MP against 13. Re-route, count it
+  in the LANES line, and do not declare a war over a missionary.
+
+**The bypassed enemy is this rule, not a separate one.** "Clear the path first" is not advice about a
+later turn: the unit you walked past moves at your speed, the siege train is at the tail, and the
+Battering Ram and a Warrior were lost on consecutive turns (T109–T111) while the column was still
+not formed.
+
+## Step 6 — the ring walk, on arrival and before the advance
 
 A siege fires as many shots as the **firing ring** allows, not as many as the army has units. Walk it
 before the declaration and again the turn the stack forms:
@@ -130,14 +191,14 @@ before the declaration and again the turn the stack forms:
 4. **Write the order of arrival down** — which unit takes which tile on which turn — because the
    move-cost arithmetic above decides whether the ring fills in one turn or three.
 
-## Step 6 — the go/no-go
+## Step 7 — the go/no-go
 
 Advance when all of these are true in the same turn:
 
 - the shooters are on ring tiles **with movement left**, or one point from them;
 - a capture-capable unit is adjacent (or one point from adjacent) and unspent;
 - the walls answer is in position, if the target has walls;
-- the field army in contact is dealt with (files 2 and 3).
+- the field army in contact is dealt with (step 5, and files 2 and 3).
 
 **The declaration trigger, measured T103:** massing on a border is what starts the war. Peter's
 border complaint arrived the turn the column closed on his frontier, the refusal was taken as the
@@ -158,6 +219,17 @@ is only safe *because* the war has not started is not a rally point.
   nothing left, and the attack is refused.
 - Do not keep the army parked at the rally point once the formation is complete: an assembled
   army that does not advance is paying maintenance for nothing.
+- **Do not answer contact during the assembly with the unit whose arrival the assembly needs most.**
+  The screen fights; a shooter that walks to a firing position on a contact turn loses both the shot
+  and the pad it was standing on. T105 traded a 12 HP Archer kill for a wasted Archer turn.
+- **Do not abandon a rally tile the enemy has walked onto.** Take it back — a distance-2 tile of the
+  target is not replaceable the way a march route is.
+- **Do not let a contact turn consume a ring tile.** Every shooter that steps off the ring to chase
+  something costs a shot on every following turn of the siege, not one shot.
+- **Do not declare war on a foreign unit parked in a lane.** At peace it cannot be attacked anyway;
+  re-route and add it to the LANES line.
+- Do not treat a stalled assembly as a march problem when it is a contact problem: if units that
+  should be walking are not, read the snapshot for an enemy that is standing where they are going.
 
 ## What to report
 
@@ -169,6 +241,8 @@ READY  assault list: siege n/2, melee n/2, ram n/1, ranged n/4, cavalry n/1
        composition justified: walls <n/max or none> -> ram needed: yes/no
 HEALTH units below full: <list with HP and where they heal>
 RING   n usable tiles at distance 2 of m checked; assigned: <unit -> tile>; free tiles: n
+CONTACT whoever is in contact, what killing it costs (which units, how many turns off the
+       timetable), whether the rally point still holds, and which comes first: clearance or advance
 GO     advance this turn: yes/no — <the one thing missing, if no>
 ```
 

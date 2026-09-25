@@ -44,7 +44,13 @@ not a pre-war analysis, however sound the reasoning behind it.
 needs to reach its ring tile** (path cost, not straight line; this is usually the longer pole than
 breaking the city), which lanes are free of foreign units, whether the assault list is complete and
 justified by the target's walls, who is wounded and where they heal, and the one thing missing if the
-advance should not happen this turn. "The stack is forming" is not an answer; "the last Archer
+advance should not happen this turn. **If any enemy is in contact while the stack is still forming,
+answer step 5 as well, by name**: is the rally point still valid against that enemy (a rally point is
+chosen against the units that were *visible*, and recon keeps finding the field army afterwards),
+which of our units kills it and what that costs the timetable, whether the enemy is now holding one of
+our ring tiles, and whether the field clearance or the advance comes first. The measured cost of
+skipping that answer is T104–T106: three turns of shooting spent on the field force, and the first
+volley on the city moved from T105 to T107. "The stack is forming" is not an answer; "the last Archer
 arrives in two turns at (53,37), three ring tiles are free, the advance goes in the turn after" is.
 
 **What the brief should carry, because you cannot query it yourself:** the tactic file for this

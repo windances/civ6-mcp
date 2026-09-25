@@ -61,6 +61,13 @@ objective - a beaten field force is the only thing that makes the next city chea
     Moscow's doorstep the next turn grinding a city that had no walls. Pull back the siege and the
     ranged, and leave the melee holding the ring tiles between the enemy and the city - a screen
     that does not fight is still doing its job when it is the thing the enemy has to attack first.
+- **We are mid-assembly when it happens.** A hit taken on the march is a different problem from a
+  hit taken at the wall: the army is strung out, the tail is the siege train, and the answer that
+  matters is whether the wounded unit can still reach its ring tile and whether the contact has
+  invalidated the rally point. Run `tactics/04-staging-out-of-range.md` **step 5** first, then this
+  file's mass-and-annihilate. The measured shape of it: T103 Russia declared on the assembly, the
+  next three turns went on clearing the field in contact (T104–T106), and the first volley on the
+  city waited until T107.
 - **We are mid-assault when it happens.** Decide explicitly: finish the city (if the walls are
   down and a melee unit can walk in this turn) or break off the assault and deal with the field
   force first. What is never acceptable is leaving the siege train between the two.
