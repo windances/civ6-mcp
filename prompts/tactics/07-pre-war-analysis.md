@@ -53,6 +53,17 @@ only a city-state. Every item below was unevaluable, and the reports that could 
 were about our own army and the barbarian navy two tiles off the coast. The gate is not a
 formality: an army that is ready and a target that is not in sight is a war that has not started.
 
+**The cheapest reconnaissance is the trade screen.** `get_deal_options(other_player_id)` hands over a
+met civilization's city list with populations, which of those cities is its original capital, its
+strategic and luxury stockpiles, and its gold and gold-per-turn - with no open borders, no scout
+reaching anything, and no war. Live T99: the scout was stopped dead at the Russian border
+(`BLOCKED (foreign territory (俄罗斯) - need Open Borders via propose_trade)`) and the same turn
+`get_deal_options(1)` answered that Russia holds three cities - St Petersburg (population 8, its
+capital), Moscow (3) and Astrakhan (1) - that they have 37 iron against our none, and that their
+economy runs at minus three gold a turn. Gate 0 was satisfied from the diplomacy screen, and it
+answered a logistics question the army would otherwise have hit after declaring war: the
+Swordsman and Knight upgrades need iron we do not have.
+
 ## The three gates
 
 1. **Net fire > 0.** `sum(ranged and siege damage that can reach the city) - healing`, where healing
