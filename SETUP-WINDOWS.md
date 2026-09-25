@@ -879,6 +879,24 @@ copy of the shipped file (`CIV_MCP_TURN_CHECKS`) and a scratch data directory
 (`CIV_MCP_DATA_DIR`), and a session-scoped fixture re-hashes the shipped file at teardown so a
 future test that writes to it fails the suite instead of quietly shipping a pruned directive.
 
+**Playing a real game prunes the shipped file, and five tests then fail - that is not a
+regression.** Measured three times on 2026-09-25: `end_turn` in a live game achieved
+`ram-tower-before-civil-engineering`, wrote a timestamped copy to `prompts/checks/archive/`, and
+removed it from `prompts/checks/turn-checks.md`. Five tests assert against the shipped file
+(`test_turn_checks.py`, `test_turn_check_hook.py`, `test_turn_start_briefing.py`) and go red on
+the next run, because the rule they name is gone. Read the failure as "this session achieved a
+goal", not as a broken build:
+
+```powershell
+git status --short prompts/checks/       # the pruned file and a new archive entry
+git checkout -- prompts/checks/turn-checks.md
+Remove-Item prompts/checks/archive/turn-checks-<timestamp>.md   # if the prune is being undone
+```
+
+Restore the rule when the achievement belongs to a throwaway branch (a verification reload, a
+test session) and keep it when the goal really is retired for that game. The archive entry is the
+record either way.
+
 ### Contact on the march: "engage what is in the way, prefer the counter unit"
 
 The human's rule - while the army is assembling, an enemy in the way is attacked first, with

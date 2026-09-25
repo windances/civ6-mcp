@@ -483,13 +483,19 @@ def parse_gameover_response(lines: list[str]) -> GameOverStatus | None:
 
 
 def parse_overview_response(lines: list[str]) -> GameOverview:
-    if not lines:
-        raise ValueError("Empty overview response")
-    parts = lines[0].split("|")
-    if len(parts) < 14:
+    # The tuner can hand us unsolicited output alongside the reply. Live T168 a diplomatic
+    # statement arrived as the first line and this parse died with "Overview response has 1
+    # fields, expected >=14: diplo stmt type=-1061902145" - which reads as a broken tool rather
+    # than as one stray line, and cost that turn's overview. Take the first line that actually
+    # looks like the record (>= 14 pipe-separated fields), and say what was seen if none is.
+    record = next((line for line in lines if line.count("|") >= 13), None)
+    if record is None:
+        if not lines:
+            raise ValueError("No overview record: empty response")
         raise ValueError(
-            f"Overview response has {len(parts)} fields, expected >=14: {lines[0]}"
+            f"No overview record among {len(lines)} line(s); first was {lines[0]!r}"
         )
+    parts = record.split("|")
     rankings: list[ScoreEntry] = []
     explored_land = 0
     total_land = 0

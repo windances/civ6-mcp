@@ -188,7 +188,21 @@ async def main() -> int:
                 note += " | research: " + str(await pick_research(gs))
                 status = await gs.get_tech_civics()
 
-            text = await gs.end_turn()
+            # A full-screen UI the adapter cannot read left FireTuner closed and hung this loop at
+            # ~T171 while it held the only connection (screen "unrecognised (10 text boxes)").
+            # Check every few turns, and bound the end_turn call so a hang is reported rather than
+            # waited on forever.
+            if i % 5 == 1:
+                from civ_mcp import game_launcher as gl
+
+                status = await asyncio.to_thread(gl.game_status)
+                if "unrecognised" in status or "FireTuner   : not listening" in status:
+                    say("STOPPING: the game is not in a readable state - clear the screen on the "
+                        "machine (or restart_and_load) and run this again; progress is kept.")
+                    say("  " + "\n  ".join(status.splitlines()[:6]))
+                    break
+
+            text = await asyncio.wait_for(gs.end_turn(), timeout=240)
             m = re.search(r"Turn (\d+) -> (\d+)", text or "")
             if m:
                 advanced += 1

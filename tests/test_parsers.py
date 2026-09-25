@@ -114,12 +114,24 @@ class TestParseOverview:
         assert result.total_land == 1000
 
     def test_empty_raises(self):
-        with pytest.raises(ValueError, match="Empty overview response"):
+        with pytest.raises(ValueError, match="No overview record"):
             parse_overview_response([])
 
     def test_too_few_fields_raises(self):
-        with pytest.raises(ValueError, match="expected >=14"):
+        with pytest.raises(ValueError, match="No overview record"):
             parse_overview_response(["1|2|3"])
+
+    def test_a_stray_tuner_line_before_the_record_is_skipped(self):
+        # Live T168 the tuner handed a diplomatic statement to the overview parse:
+        #   ValueError: Overview response has 1 fields, expected >=14: diplo stmt type=-1061902145
+        # One unsolicited line cost that turn's overview and read as a broken tool.
+        lines = ["diplo stmt type=-1061902145", self.MAIN_LINE]
+        result = parse_overview_response(lines)
+        assert result.turn == 42
+
+    def test_a_stray_line_after_the_record_is_skipped(self):
+        lines = [self.MAIN_LINE, "diplo stmt type=-1061902145"]
+        assert parse_overview_response(lines).turn == 42
 
 
 # ---------------------------------------------------------------------------
