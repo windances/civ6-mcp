@@ -423,12 +423,50 @@ Two real defects came out of it, both recorded and neither yet fixed:
   client problem. `game_status` is the tool that says so; `scripts\civ6-clean.ps1` or a click in
   the window is the way out, and `restart_and_load` refuses while a connection is held - correctly.
 
-**Nationalism was not reached, so Corps is still only verified as far as §8 and this section**:
-the API, the gate, and the exact call shape. The rest is ready to run the moment the game is
-playable again - `.tools/probes/form-corps.lua` (lists `GetCommandTargets` pairs, then forms one
-with `PARAM_UNIT_PLAYER`/`PARAM_UNIT_ID` and reports the formation and the unit count) driven by
-`.tools/try-corps.py` (marches the movable chariot toward Moscow, ending turns until a target
-appears, then forms).
+**Corps is verified end to end (§13), 22 turns after Nationalism was put in research.** The rest of
+this section is the API work that got it there - `.tools/probes/form-corps.lua` (lists
+`GetCommandTargets` pairs, then forms one with `PARAM_UNIT_PLAYER`/`PARAM_UNIT_ID` and reports the
+formation and the unit count) driven by `.tools/try-corps.py` (marches the movable chariot toward
+Moscow, ending turns until a target appears, then forms).
+
+## 13. Corps, formed and verified - and the target records are not unit objects
+
+Nationalism came in at **T196** (`.tools/grind-to-nationalism.py` from T171: The Enlightenment was
+six turns out, Nationalism itself took about twenty more). Then `.tools/try-corps.py` ran:
+
+```
+TARGET|UNIT_TREBUCHET#2293764@55,42 <- UNIT_TREBUCHET#2228240@55,41
+TARGET|UNIT_ARCHER#1638412@57,42    <- UNIT_ARCHER#1900559@57,43
+PAIR|UNIT_TREBUCHET#2293764@55,42 hp100/100 cs35 formation:0 <- UNIT_TREBUCHET#2228240@55,41 ...
+CAN|true
+FORM|issued
+
+UNIT|UNIT_TREBUCHET#2293764@55,42|formation:1|base_cs:35
+TOTAL|14|in_formation:1
+```
+
+Four things that had to be right, three of them learned the hard way:
+
+- **The gate is `CanStartCommand(unit, FORM_CORPS, params)` and it flipped from `false` to `true`
+  the moment Nationalism was adopted** - the same call that answered `false` for every unit at T113.
+- **The partners come from `GetCommandTargets`, and they are component-ID *records*, not unit
+  objects**: calling `record:GetType()` died with "function expected instead of nil". The game
+  resolves them itself - `Players[player]:GetUnits():FindID(record.id)` (`WorldInput.lua:2907`) -
+  and that is what the probe does now.
+- **The command needs the parameter table** built from the partner
+  (`PARAM_UNIT_PLAYER` / `PARAM_UNIT_ID`), not the bare `RequestCommand(unit, FORM_CORPS)` the
+  first reading of `UnitPanel.lua:2513` suggested; that line is the *interface-mode* branch, and
+  `UnitCommands.xml:44` sets `InterfaceMode="INTERFACEMODE_FORM_CORPS"` precisely so the engine can
+  collect the partner.
+- **The result is asynchronous.** Immediately after `RequestCommand` the unit list still read 15
+  units and every formation `0`; a fresh read shows **14 units and one `formation:1`**. The same
+  trap as a move order - do not judge a command by the read that follows it.
+
+Also confirmed by the game's own data rather than by inference: `UnitCommands.xml:44` carries
+`PrereqCivic="CIVIC_NATIONALISM"`, so a `form_formation` tool can name the missing civic from
+`GameInfo.UnitCommands[FORM_CORPS].PrereqCivic` instead of guessing. And the merge is
+**irreversible** - the partner unit is gone from the list, which is what the manual says.
+
 
 
 - **The capture move itself - DONE (§10).** A Heavy Chariot walked into Moscow at 0/200 and took

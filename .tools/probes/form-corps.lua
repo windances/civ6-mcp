@@ -44,9 +44,21 @@ for _, u in ipairs(ours) do
     end)
     local targets = ok and res and res[UnitCommandResults.UNITS] or nil
     if targets and #targets > 0 then
-        for _, t in ipairs(targets) do
-            print("TARGET|" .. describe(u) .. " <- " .. describe(t))
-            if not pair then pair = { u, t } end
+        for _, rec in ipairs(targets) do
+            -- These are *component ID records*, not unit objects: the game resolves them itself
+            -- (`WorldInput.lua:2907` - `Players[player]:GetUnits():FindID(unitComponentID.id)`),
+            -- and calling a unit method on the record is what produced
+            -- "function expected instead of nil" at line 21 of the first version.
+            local id = rec.id or (rec.ID and rec.ID.id)
+            local owner = rec.player or (rec.ID and rec.ID.player) or me
+            local t = nil
+            pcall(function() t = Players[owner]:GetUnits():FindID(id) end)
+            if t then
+                print("TARGET|" .. describe(u) .. " <- " .. describe(t))
+                if not pair then pair = { u, t } end
+            else
+                print("TARGET|" .. describe(u) .. " <- unresolved record id=" .. tostring(id))
+            end
         end
     end
 end
