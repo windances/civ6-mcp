@@ -4,30 +4,29 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 
 **You only know what you explicitly query.** A human player passively absorbs the score ticker, religion lens, unit health bars — you have none of that. Information you don't ask for simply doesn't enter your world model. The patterns below exist to compensate for this.
 
-## TEMPORARY TASK — clear the barbarian camp (delete this whole section when it is done)
+## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**Added 2026-09-26 by the human, for the session running right now; it expires on its own terms.**
-This section **overrides** the strategy directive's "Do NOT clear barbarian camps" line, which is
-superseded. It is not a change of plan: the development line (research, civics, districts, builder
-tasks, the Temple of Artemis) carries on untouched.
+A temporary instruction is **a file, not a paragraph in this reference**. One is in force right now;
+drop another into `prompts/tasks/tmp/` and it is picked up on the next turn, and a task is finished
+when its own `done when:` line holds, at which point the file is moved into
+`prompts/tasks/tmp/done/` with the turn number in its name.
 
-- **What:** destroy the nearest barbarian camp, using the war strategy. Answer
-  `prompts/tactics/07-pre-war-analysis.md`'s camp gates **by name** in the diary —
-  `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD / CONVERT / GO`.
-- **How, in one line:** a camp has no HP and no walls, so one military unit **MOVING** onto its tile
-  clears it — the analysis is the guard within two tiles, and the walk-in must arrive unspent from a
-  tile we already held. Barbarian **Spearmen are anti-cavalry**: ranged fire plus a melee walk-in,
-  never cavalry into spears, never a Scout/Builder/Trader.
-- **First move this turn:** read the camp's neighbourhood (`get_map_area` around (60,30), the camp
-  that has been producing Spearmen beside 北京) and write the `GUARD` line — how many barbarians are
-  within two tiles, their class, CS and HP. That is the fact the raid is planned from, and the one
-  thing still missing.
-- **Report before the raid:** any barbarian standing next to one of our melee units whose type is
-  worth the human's 三十六计 conversion, so the human can play it from the game UI.
-- **Done when:** the camp tile no longer holds a camp (its improvement is gone) — then **delete this
-  entire section from AGENTS.md**, say so in the diary's tooling line with the turn number, and
-  resume the normal turn loop. If the camp is somehow still standing after turn 95, delete the
-  section anyway and report why.
+- **Read every `*.md` in `prompts/tasks/tmp/` as part of the turn's first step** — `get_game_overview`
+  and then that directory — and again whenever the turn takes a decision a task touches. Not
+  `README.md`, and not `done/`. **Nothing else in the loop knows those files exist:** they are not
+  checkable rules, they carry no metric, and the MCP cannot see the filesystem, so a task file is
+  executed only because the turn loop looked there. An empty directory is the normal state.
+- Each file states its own scope (`scope:`), what it outranks (`overrides:`), its observable end
+  (`done when:`) and a hard stop (`expires:`). A task that contradicts the standing directive is
+  settled by its `overrides:` line — that is what the line is for, so nothing has to be guessed.
+- **A file present is an instruction in force; a file absent is a task that no longer exists.** Do not
+  leave a finished or expired task in the directory: move it to `done/`, rename it
+  `…-done-T<turn>.md` or `…-expired-T<turn>.md`, and record it in the diary's `tooling` line with
+  that turn number. An expired task left behind is an instruction that never retires.
+- For a task that **is** mechanically checkable, prefer a `once: true` goal in
+  `prompts/checks/turn-checks.md` instead: the engine retires that one itself the turn it is
+  satisfied (it prints `CHECK ACHIEVED … retired` and deletes the block). A file is for what no metric
+  can express.
 
 `end_turn` now runs **empire warnings** automatically — alerts for loyalty crises, idle trade routes, gold deficits, resource caps, scoreboard position, and military imbalance. These compensate for the most common blind spots, but don't replace periodic deep checks (victory progress, religion spread, diplomacy).
 
@@ -55,6 +54,9 @@ Each turn in order:
    that are failing, how many turns each has been failing, what the last turn actually bought,
    your own plan quoted back, and a verdict. Read it **before** planning — if it says the plan
    is not being executed, change one thing this turn and say in the diary which turn it lands.
+   **Then read the temporary tasks: every `*.md` in `prompts/tasks/tmp/`** (not `README.md`, not
+   `done/`) — those files are instructions in force, nothing else in the loop knows they exist, and
+   each one carries its own `done when:` and `expires:` so you can retire it and say so.
    If resuming after context compaction, call `get_diary` first.
 2. `get_units` — positions, HP, moves, charges, nearby threats
 3. `get_map_area` around cities/units — terrain, resources, enemy units
