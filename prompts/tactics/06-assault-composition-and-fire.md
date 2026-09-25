@@ -15,7 +15,24 @@ Read once the stack is in contact with the target city and the assault is runnin
 ## Order of work, every turn
 
 1. **Siege knocks the walls to 0.**
-2. **Melee (with the ram or tower adjacent) takes the city.**
+2. **Melee (with the ram or tower adjacent) takes the city** - and until then it is **also a
+   damage dealer, not a place-holder**. A melee unit attacks the city's HP pool from the tile
+   adjacent to it: it takes retaliation, and it is the only class that does, which is exactly why
+   it is the one that should be standing there. Two rules and one warning:
+   - **Healthy melee attacks every turn.** It adds its combat strength to the pool every turn
+     *and* it absorbs the city's ranged strike that would otherwise land on the Archers behind it.
+     A screen that never attacks is a unit the city has no reason to shoot at and the pool no
+     reason to fear.
+   - **Wounded melee does not attack a city** - it rotates home and heals (20 a turn inside a
+     city of ours, 15 in friendly territory, against 5 in enemy territory). This is the doctrine's
+     own warning and it is specific to wounded units: a 9 HP Heavy Chariot attacking a 110 HP city
+     was destroyed outright, because a city defends at full strength no matter how much of its HP
+     pool is gone.
+   - **Live failure, T105-T110 (Moscow)**: three Warriors and a Horseman were assembled for the
+     assault and never attacked anything, because the order of work read as "melee = the capture
+     move". The pool came down on ranged fire alone - four volleys for 200 HP - and the melee sat
+     *behind* the Archers while an enemy Swordsman killed two of them. The same units, attacking
+     from the adjacent tile, would have shortened the siege and been the target the city shot at.
 3. **Ranged shoots the city's HP** - not the garrison, and not the walls you already have siege
    for. The manual (`GARRISON UNITS IN CITIES`) is explicit: a garrisoned unit's combat strength
    is partly *added to the city's*, and **the garrison takes no damage while the city is
