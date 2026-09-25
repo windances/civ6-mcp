@@ -145,6 +145,31 @@ the front (bring siege, heal, upgrade, reinforce) or change the target; never ne
 - Keep the stack together and move it on the next city; do not let it disperse into garrisons.
 - Report the captured city's loyalty and whether a governor is needed.
 
+## Defending the city you just took - and why the siege rules stop applying to it
+
+The moment the capture move lands, the city is **yours**, and everything above is about a city that
+is not. Two consequences, both measured on Moscow at T110-T120, and both easy to get wrong because
+the checks keep talking about the assault:
+
+- **The siege formation rules no longer apply around that city.** `screen-the-siege` fires while a
+  siege unit is within two tiles of an enemy with nothing in front of it, which is correct while
+  advancing on a target and meaningless while defending one: a Catapult has `RangedCombat 0` and
+  cannot attack a unit at all, so in a defence it is a liability with no job. Pull it back out of
+  the enemy's reach - do not keep chasing the check by screening it on the ring.
+- **A newly captured city has no walls, so it has no ranged strike.** `city_action(attack)` answers
+  `NO_WALLS|City has no walls - build Ancient Walls first`, while the city *does* retaliate when it
+  is attacked (Moscow took 37 HP off a Russian Horseman that came for it). Ancient Walls are
+  therefore the first build the city is given (80 production; 320 gold to buy), and until they exist
+  the defence is the garrison, the melee in the ring, and the ranged units within range of the ring.
+- **Expect the counterattack, and expect it to be cavalry.** Taking the city cuts their territory
+  and their field army comes back for it: Moscow drew a Horseman, a Swordsman and a city-state
+  Warrior within a few turns of the capture. Without an anti-cavalry unit the Horseman walks past
+  the ring to the Catapults (`counter-the-cavalry`), so the defence's order of work is: the melee on
+  the ring tiles, the ranged behind them at range 2 - note that a ranged unit at y=35 cannot reach a
+  target at y=40, the firing positions *are* the ring tiles - and the cavalry as the mobile answer,
+  never the siege train.
+
+
 ## What to report
 
 The target city; for each role, which units are assigned and where they stand; the wall/garrison

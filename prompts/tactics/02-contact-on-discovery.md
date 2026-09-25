@@ -69,6 +69,18 @@ fire is penalised and our **cavalry is not** - the Swordsman that killed our ram
 T109 read CS 42 against Catapults but CS 35 against a chariot. One estimate settles the matchup;
 do not generalise one unit's bad result into "the army cannot engage this".
 
+**And measure the whole army, not one exchange, before deciding to mass.** Massing is the answer to
+a target one or two attackers fall short of; it is not an answer to a target the entire army cannot
+hurt. Measured live on a Battlecry Swordsman standing on forest (effective CS 45) at Moscow T113:
+all twelve of our units together dealt **75 against its 81 HP**, each melee attacker paid 60-164
+retaliation for 4-10 damage, and the two Archers nominally in range could not fire at all - one was
+three tiles away and the other had line of sight blocked by a hill. Four Warriors would have died to
+finish it. The honest answers in that matchup are: make the free ranged shots that cost nothing,
+keep the melee **in front of** the archers so the swordsman attacks something it cannot kill in one
+blow, and change the material (the Crossbowman's +15 ranged strength turns a 10-point shot into
+20-25) instead of feeding units to it. `match-their-melee` asks for an attack, not a corpse; a
+stated disengagement is a legitimate answer when the arithmetic says massing cannot work.
+
 ## Prohibitions
 
 - Never attack with a single unit in range when more are within reach.

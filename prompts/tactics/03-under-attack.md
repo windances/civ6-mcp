@@ -55,6 +55,12 @@ objective - a beaten field force is the only thing that makes the next city chea
   the hit unit to a city, hills or forest, keep the stack together, and counterattack when the
   numbers exist. Record that withdrawal as the decision - the rule fires on the fact that a unit
   was hit, and a stated withdrawal is the accepted answer.
+  - **Withdraw the shooters, not the screen.** A disengagement that pulls the *whole* line back
+    empties the front, and the enemy walks into it: live T114, the stack was pulled north out of a
+    Battlecry Swordsman's reach, the melee came with it, and a Russian Horseman was standing on
+    Moscow's doorstep the next turn grinding a city that had no walls. Pull back the siege and the
+    ranged, and leave the melee holding the ring tiles between the enemy and the city - a screen
+    that does not fight is still doing its job when it is the thing the enemy has to attack first.
 - **We are mid-assault when it happens.** Decide explicitly: finish the city (if the walls are
   down and a melee unit can walk in this turn) or break off the assault and deal with the field
   force first. What is never acceptable is leaving the siege train between the two.
