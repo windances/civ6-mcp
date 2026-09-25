@@ -25,6 +25,7 @@ _CONTACT_METRIC_KEYS = (
     "attacks_this_turn",
     "unused_attacks",
     "damaged_this_turn",
+    "camps_within_3",
     "local_superiority",
     "enemies_massed_on",
     "siege_units",
@@ -1497,6 +1498,40 @@ def _at_war_from_row(row: dict | None) -> int:
     return 0
 
 
+async def _camps_within_3(gs) -> int:
+    """How many barbarian camps stand within three tiles of one of our cities.
+
+    A camp is not a unit, so none of the contact metrics can see it, and for eighteen turns of the
+    T59 replay nothing printed it either: the only camp detector in the adapter is the post-move
+    visibility probe (it announces a camp on the turn a unit first *reveals* the tile), so a camp
+    that was discovered early and never written into the plan spawned units unmentioned until one of
+    them cost a 160-gold Warrior at T65. The human's instruction is that a camp is a `tactics/07`
+    target, and a target nothing can see is not a target.
+
+    The scan rides on `get_map_area`, which already reports each tile's `improvement`, so this needs
+    no new Lua: one radius-3 read per city. Distance is *not* computed here - hex distance in this
+    repo is `Map.GetPlotDistance` and hand arithmetic was wrong four times in one war - the radius
+    of the query is the gate. Any failure yields 0, which switches the rule off rather than firing it
+    blind, the same contract every other metric here has.
+    """
+    try:
+        cities, _ = await gs.get_cities()
+    except Exception:  # noqa: BLE001 - no cities read means no camp claim
+        return 0
+    found: set[tuple[int, int]] = set()
+    for city in cities or []:
+        try:
+            area = await gs.get_map_area(city.x, city.y, radius=3)
+        except Exception:  # noqa: BLE001 - one unreadable city must not hide the others
+            continue
+        tiles = getattr(area, "tiles", area) or []
+        for tile in tiles:
+            improvement = str(getattr(tile, "improvement", "") or "")
+            if improvement == "IMPROVEMENT_BARBARIAN_CAMP":
+                found.add((getattr(tile, "x", -1), getattr(tile, "y", -1)))
+    return len(found)
+
+
 async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
     """How much enemy contact the army is in, and whether it acted on it.
 
@@ -1538,6 +1573,8 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         **_capture_metrics(await _capture_for_checks(gs, turn)),
         **_siege_upgrade_metrics(units),
         **_loyalty_metrics(await _loyalty_for_checks(gs, turn)),
+        # A camp beside a city is a target the turn result used to be silent about.
+        "camps_within_3": await _camps_within_3(gs),
     }
     threats = await _threats_for_checks(gs, turn)
     metrics.update(_matchup_metrics(threats, units))

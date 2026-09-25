@@ -1,0 +1,45 @@
+Using the civ6-orchestrator skill and the strategy directive inside it, run one **raid**: treat the
+nearest barbarian camp as a pre-war analysis target and destroy it, following our war strategy.
+
+0. Call get_game_status first; do not guess.
+   - in_game (it names the turn): continue. Do not launch the game and do not load any save.
+   - not_running: launch_game and wait for it, then check again.
+   - main_menu / leader_screen: list_saves, take the newest (do not filter on the 0_MCP_ prefix - the
+     game's own AutoSave_ files are often newer), load_game_save it, and verify the turn number.
+   - tuner_busy: FireTuner allows exactly one connection and another process holds it (it names the
+     pid). **Stop and report**; do not start a second game and do not retry in a loop.
+
+1. This is a **raid**, not a war: declare nothing, attack nothing that is not the camp's guard, and do
+   not let it change the development plan (research, civics, districts and builder tasks carry on).
+
+2. Run the full pre-war analysis with the **camp gates** in
+   `prompts/tactics/07-pre-war-analysis.md`, and answer all six by name in the diary:
+   `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD / CONVERT / GO`. The essentials:
+   - **A camp has no HP and no walls**: one military unit **moving** onto its tile clears it (the same
+     walk-in as a capture, not an attack). Attacking spends the unit's movement, so the last act is a
+     MOVE.
+   - **The guard is the enemy**: count every barbarian within two tiles with class, CS and HP; report
+     missing data rather than guessing.
+   - **Two attackers with the counter unit**: barbarian **Spearmen are anti-cavalry, so cavalry is the
+     wrong unit**; ranged fire first (it takes no retaliation), then an **unspent** melee unit walks
+     in. Never send a Scout, Builder or Trader at a camp - a civilian is captured instead.
+   - **The last tile**: the walk-in must start from a tile we already held on the previous turn (zone
+     of control and 2-move terrain each eat a whole turn).
+   - **Before the raid**, report any barbarian standing next to one of our melee units whose type is
+     worth the human's Three-Six Stratagems conversion, so the human can play it from the game UI -
+     then clear the camp anyway; never keep a camp alive as a conversion farm.
+   - Record what the camp has already produced (worth) and which city gives up its garrison (hold).
+
+3. Buy what the raid needs, per the directive: ranged units first (with the Agoge card if slotted) and
+   gold spent when it is above ~300 with no named purchase - but never pull the siege train off its own
+   preparation for this.
+
+4. Play turn by turn: `get_game_overview`, resolve every `end_turn` blocker, give **every** unit an
+   order, set city production, `end_turn`. Fight by `tactics/02` (contact), `03` (under attack),
+   `05` (formation) and `06` (fire discipline); never feed one attacker at a time
+   (`mass-on-contact` wants two or three on the same target).
+
+5. When the camp is cleared, resume the development line, and report: which camp (coordinates), the
+   turn it fell, which units were committed, what it cost (HP, gold, delayed production), which known
+   camps remain, the diary's actual answers to the six gates, and every obstacle with its turn number
+   (tool errors, blockers, recoveries).

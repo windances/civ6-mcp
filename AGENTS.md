@@ -269,6 +269,10 @@ Camps upgrade with the era — an Ancient-era camp spawns Warriors; the same cam
 
 The leader ability 三十六计 Three-Six Stratagems converts an adjacent barbarian, but only from the game UI. So report any barbarian standing next to one of our melee units whose type is worth converting **before** the raid — then clear the camp anyway.
 
+**The raid has a one-command entry point:** `scripts\run-dsh-headless.ps1 -TaskFile prompts\tasks\clear-the-camp.zh.txt` (English: `clear-the-camp.en.txt`). It plays one raid end to end — status check, the six camp gates, the force, the walk-in, the report — without declaring war or changing the development plan.
+
+**A camp is now visible to the rules, and the rule for it ships staged.** `end_turn` computes `camps_within_3` (via `_camps_within_3`, two lines of Python over the existing `get_map_area` — a camp is a tile improvement, `IMPROVEMENT_BARBARIAN_CAMP`, so no new Lua was needed), and the rule `answer-the-camp` lives in `prompts/checks/pending/answer-the-camp.md`, **not** in the live file. That is deliberate: the rule file is re-read every turn but the *metric set* lives in the running MCP server's memory, and `turn_checks.evaluate` raises on an unknown metric — so a live rule naming a metric an older server does not compute reports itself `un-evaluable` every turn, unfixable until that process restarts. Cut the staged block into `turn-checks.md` when the MCP server next starts. (The evaluator also evaluates both sides of `and` eagerly, so no gate ordering can short-circuit around a missing key.)
+
 ### Religion
 Religious victory is the easiest win condition to miss because it produces no notifications and unfolds slowly. `get_religion_spread` shows the picture. If a rival religion reaches majority in most civs, the window for a response narrows quickly. Religious units bought from a city carry **that city's majority religion** — buy them from cities where your own religion is majority, not a converted city.
 
