@@ -124,10 +124,15 @@ name which city loses its garrison while the raid runs.
 
 | # | Number | Where | Why it is this order |
 |---|---|---|---|
-| 1 | **Garrison** — the unit on the city tile, and what it is | the city probe's `garrison:` field | It decides the fire arithmetic more than walls do (Step 2, gate 1) |
-| 2 | **Walls** (`walls n/max` or `none`) | the same line | Decides whether a siege unit is mandatory (gate 4) |
-| 3 | **HP pool** | the same line | Always 200 for a city; it is the denominator, not the question |
-| 4 | **The ring** — every tile at distance ≤ 2, and which are passable | `Map.GetPlotDistance` per tile | It is the ceiling on how many shots a turn you can fire (gate 2) |
+| 1 | **Garrison** — the unit on the city tile, and what it is | `get_map_area` on the city tile lists the units standing there; the city's own strength is the `def N` on `get_diplomacy`'s city line | It decides the fire arithmetic more than walls do (Step 2, gate 1) |
+| 2 | **Walls** — `walls none`, or the wall pool's maximum | the same city line: `walls none` / `walls 100` | Decides whether a siege unit is mandatory (gate 4) |
+| 3 | **HP pool** | not reported at peace | Always 200 for a city; it is the denominator, not the question |
+| 4 | **The ring** — every tile at distance ≤ 2, and which are passable | `get_map_area` radius 2 around the city | It is the ceiling on how many shots a turn you can fire (gate 2) |
+
+**All four are readable at peace**, from `get_diplomacy`'s city line plus one `get_map_area` — and
+**`walls none` is a number, not a missing one**: the line prints the wall pool, so silence would mean
+the read failed while `walls none` means the city has no outer defences. Reading the absence of a wall
+flag as "the tools cannot tell me" is what kept `task 006`'s declaration gate shut from T94 to T115.
 
 A civilian is not a defender (a Great Writer inside 圣彼得堡 did not slow archer fire at all), and a
 garrison that is a CS 35 Swordsman roughly **triples** the city's effective defence. Both were

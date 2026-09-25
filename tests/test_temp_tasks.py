@@ -39,17 +39,18 @@ def in_force_list() -> set[str]:
 
     The list is prose, so the shape is fixed instead: the names are backticked `*.md` on the lines
     directly below the header, the parenthetical note that follows them starts a line with `(`, and
-    an empty list is the literal `(none)`.
+    an empty list is written as `none` (however it is emphasised - `(none)`, `*none.*`), which is the
+    state a fully retired directory is in. `README.md` is never a task.
     """
     lines = AGENTS.read_text(encoding="utf-8-sig").splitlines()
     start = next(i for i, line in enumerate(lines) if "IN FORCE NOW" in line)
     names: set[str] = set()
     for line in lines[start + 1 :]:
-        if line.strip() == "(none)":
+        if line.strip().strip("*_` ").lower().startswith("none"):
             return set()
         if not line.strip() or line.startswith("("):
             break
-        found = set(re.findall(r"`([^`]+\.md)`", line))
+        found = {n for n in re.findall(r"`([^`]+\.md)`", line) if n != "README.md"}
         if not found:
             break
         names |= found

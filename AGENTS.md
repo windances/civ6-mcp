@@ -7,21 +7,21 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`005-city-near-copper.md`.
+*none.* As of T115 the directory holds only `README.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
-(60,32) inside its first ring — and `006-prepare-for-russia` was retired at **T110**: its assault
-establishment was complete on paper (siege 2, melee 4, ranged 4, cavalry 1 — the ram it also held was
-never part of the requirement: human instruction 2026-09-26, 不用锤，用投石车) but the iron was
-still `0/50` and the target city was never read in its four numbers, so the declaration gate did NOT
-open and no war was started. All five sit in `prompts/tasks/tmp/done/` with the turn in their name.
-**This list and that directory are checked against each other** by `tests/test_temp_tasks.py`, so a
-retirement that is not recorded here goes red instead of quietly staying in force.)
+(60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
+establishment complete on paper but the iron still `0/50` and the target city never read in its four
+numbers, and `005-city-near-copper` was retired **EXPIRED at T115** with no copper city founded: the
+site at (50,33) was a bonus tile worth about +2 gold and never justified a sixth city, which is
+exactly what that file said to do if the ranking came out badly. All five sit in
+`prompts/tasks/tmp/done/` with the turn in their name. **This list and that directory are checked
+against each other** by `tests/test_temp_tasks.py`, so a retirement that is not recorded here goes red
+instead of quietly staying in force.)
 
-Priority: **005 is now the only live task and it is the lowest-value one** (copper is a bonus tile
-worth about +2 gold). The real outstanding work is the **iron mine at (60,32)** — a Builder is
-standing on the tile as this is written and the stockpile still reads `IRON 0/50` — because without
-iron there is no Swordsman and no Man-at-Arms, and the whole melee line stays unbuildable.
+An empty list is the normal state. What is outstanding after T115 is not a task file: it is the
+directive's own checklist — **3 Catapults per city** (一城3投石车), a Swordsman once the iron
+stockpile passes 20, and a target city read in its four numbers before any declaration.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the

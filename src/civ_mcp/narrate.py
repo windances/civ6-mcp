@@ -796,9 +796,17 @@ def narrate_diplomacy(civs: list[lq.CivInfo]) -> str:
                         loy_warn = (
                             f" !! loy {vc.loyalty:.0f} ({vc.loyalty_per_turn:+.1f}/t)"
                         )
-                    walls_str = " [walls]" if vc.has_walls else ""
+                    # The pre-war target read: `walls none` says the city has no outer defenses
+                    # (the ECITY line carries the wall pool's maximum, 0 when there are none), and
+                    # printing the number rather than a flag is what makes that readable - the old
+                    # "[walls]" flag rendered "no walls" and "unknown" identically. `def` is the
+                    # city's own strength, which includes the garrison bonus gate 1 of
+                    # tactics/07 is computed against.
+                    walls_str = f" walls {vc.wall_max}" if vc.has_walls else " walls none"
+                    defense_str = f" def {vc.defense_strength}" if vc.defense_strength else ""
                     city_parts.append(
-                        f"{vc.name} pop {vc.population} ({vc.x},{vc.y}){walls_str}{loy_warn}"
+                        f"{vc.name} pop {vc.population} ({vc.x},{vc.y}){walls_str}"
+                        f"{defense_str}{loy_warn}"
                     )
                 hidden = c.num_cities - len(c.visible_cities)
                 fog_str = f" + {hidden} in fog" if hidden > 0 else ""

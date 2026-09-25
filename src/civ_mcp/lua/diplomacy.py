@@ -1147,6 +1147,7 @@ def parse_diplomacy_response(lines: list[str]) -> list[CivInfo]:
                             loyalty=float(parts[5]),
                             loyalty_per_turn=float(parts[6]),
                             has_walls=int(parts[7]) > 0,
+                            wall_max=int(parts[7]),
                             defense_strength=int(parts[8]),
                         )
                         civs[pid].visible_cities.append(vc)

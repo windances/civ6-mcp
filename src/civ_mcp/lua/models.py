@@ -359,6 +359,7 @@ class VisibleCity:
     loyalty: float = 100.0
     loyalty_per_turn: float = 0.0
     has_walls: bool = False
+    wall_max: int = 0
     defense_strength: int = 0
 
 
