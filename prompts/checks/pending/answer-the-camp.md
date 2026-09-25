@@ -1,4 +1,4 @@
-# Staged check: `answer-the-camp` — activate on the next MCP restart
+﻿# Staged check: `answer-the-camp` — activate on the next MCP restart
 
 This rule is **not** in `../turn-checks.md`, and that is deliberate. It reads
 `metric(camps_within_3)`, a metric that did not exist before 2026-09-26; the file is re-read by
@@ -33,6 +33,6 @@ is what makes that mechanical rather than aspirational.
 id: answer-the-camp
 when: metric(camps_within_3) >= 1
 require: metric(attacks_this_turn) >= 1
-message: A barbarian camp stands within three tiles of one of our cities and nothing attacked this turn. A camp is a tactics/07 target (human instruction 2026-09-26), and it is destroyed by force - one military unit MOVING onto its tile clears it. Run the camp gates and answer them in the diary: CAMP (x,y) terrain; GUARD (every barbarian within two tiles, class/CS/HP); FORCE (two attackers with the counter unit plus the unspent unit that walks in - barbarian Spearmen are anti-cavalry, so ranged plus melee, never cavalry into spears, never a Scout/Builder/Trader); GROUND (what the last step costs, from a tile we already hold); WORTH (gold, era score, the CIVIC_MILITARY_TRADITION inspiration, and what it has been spawning); HOLD (which city gives up its garrison); CONVERT (any barbarian next to our melee worth the human's Three-Six Stratagems play). A camp left alone keeps producing era-appropriate units beside that city - the camp at (60,30) produced the Spearman that cost 160 gold at T65 - so either this turn's attack is on its guard, or the diary says what the raid is waiting for.
+message: A barbarian camp stands within three tiles of one of our cities and nothing attacked this turn. A camp is a tactics/07 target (human instruction 2026-09-26), and it is destroyed by force - one military unit MOVING onto its tile clears it. Run the camp gates and answer them in the diary: CAMP (x,y) terrain; GUARD (every barbarian within two tiles, class/CS/HP); FORCE (two attackers with the counter unit plus the unspent unit that walks in - barbarian Spearmen are anti-cavalry, so ranged plus melee, never cavalry into spears, never a Scout/Builder/Trader); GROUND (what the last step costs, from a tile we already hold); WORTH (gold, era score, the CIVIC_MILITARY_TRADITION inspiration, and what it has been spawning); HOLD (which city gives up its garrison); CONVERT (any barbarian next to our melee worth the human's Three-Six Stratagems play). A camp left alone keeps producing era-appropriate units beside that city - the camp beside 北京 (T83 map read: (60,29); an earlier note said (60,30)) produced the Spearman that cost 160 gold at T65 - so either this turn's attack is on its guard, or the diary says what the raid is waiting for.
 -->
 ```

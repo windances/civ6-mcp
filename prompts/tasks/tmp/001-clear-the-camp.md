@@ -17,10 +17,16 @@ Destroy the nearest barbarian camp using the war strategy, and answer
 
 ## First move, this turn
 
-Read the camp's neighbourhood (`get_map_area` around **(60,30)** — the camp that has been producing
-Spearmen beside 北京) and write the `GUARD` line: how many barbarians stand within two tiles, with
-their class, combat strength and HP. That is the one fact the raid is planned from and the only thing
-still missing. Do not move anything onto the camp tile before that line exists.
+**Locate the camp from the map; do not trust a coordinate written in this file.** Read
+`get_map_area` around 北京 (57,29) at radius 3–4 and take the tile whose improvement is
+`IMPROVEMENT_BARBARIAN_CAMP`. Then write the `GUARD` line: every barbarian within two tiles of that
+tile, with class, combat strength and HP. That is the one fact the raid is planned from.
+
+Known state, T83 (read live by the session that opened this file — trust the map over this line):
+the camp is at **(60,29)**, GRASS_HILLS, and its guard within two tiles was a single Barbarian
+**Archer** at (60,28), 100/100 HP, CS 15 / RS 25; the Barbarian Warrior that had been at (58,29) at 16
+HP is gone. An earlier note from T65 said the camp was at (60,30) — that coordinate is wrong; the map
+read wins, and a camp can also be cleared and respawn nearby, so locate it fresh every turn.
 
 ## The rules the raid runs on
 
