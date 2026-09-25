@@ -3428,16 +3428,17 @@ def _finish_load_sync(save_name: str, wait_seconds: float = 150) -> str:
     work. This is that missing half, shared by both.
 
     The click target is drawn rather than laid out, so its colour is how it is found
-    (``_click_continue_by_colour``); the positional grid is the fallback, and it is only
-    reached once, after the leader screen has had time to appear.
+    (``_click_continue_by_colour``, which also refuses to click while a game is in progress);
+    the positional grid is the fallback, and it is only reached once, after the leader screen
+    has had time to appear.
 
     Returns a status line that always names the turn actually read. A listening FireTuner
     port is not evidence of a loaded game — it answers at the main menu too (2026-09-20) —
     while a readable turn is.
     """
     deadline = time.time() + wait_seconds
-    clicked = False
     started = time.time()
+    positional_done = False
     while time.time() < deadline:
         turn = _game_turn_number()
         if turn is not None:
@@ -3448,26 +3449,20 @@ def _finish_load_sync(save_name: str, wait_seconds: float = 150) -> str:
                     f"{expected} — the load did not take, or a different save opened."
                 )
             return f"Loaded: the game is at turn {turn}."
-        if not clicked:
-            win = _find_game_window()
-            try:
-                results = _ocr_game_window(win) if win else _ocr_fullscreen()
-            except Exception:  # noqa: BLE001 - OCR failure must not end the wait early
-                results = _ocr_fullscreen()
-            if _leader_screen_detected(results):
-                _bring_to_front()
-                if _click_continue_by_colour():
-                    log.info("Load: clicked CONTINUE by colour on the leader screen")
-                else:
-                    _click_continue_positional()
-                    log.info("Load: leader screen, CONTINUE clicked by position")
-                clicked = True
-            elif time.time() - started > 45:
-                # OCR can miss the screen entirely; the grid is the same last resort the
-                # menu path uses, and it is worth one attempt rather than none.
-                log.warning("Load: no readable leader screen after 45s — positional click")
-                _click_continue_positional()
-                clicked = True
+        # The control is *drawn*, not laid out, and the colour search is both the detector and
+        # the click - it also refuses to click while a game is in progress, so trying it on
+        # every pass is safe. It used to be gated behind an OCR signature for the leader screen,
+        # which does not survive on this screen: the one thing that works was never tried, and
+        # two runs on 2026-09-25 ended with the game parked on CONTINUE waiting for a human
+        # (the manual click by colour then succeeded on the first attempt, both times).
+        if _click_continue_by_colour():
+            log.info("Load: clicked CONTINUE by colour")
+        elif not positional_done and time.time() - started > 45:
+            # OCR can miss the screen entirely; the grid is the same last resort the menu path
+            # uses, and it is worth one attempt rather than none.
+            log.warning("Load: no continue control by colour after 45s - positional click")
+            _click_continue_positional()
+            positional_done = True
         time.sleep(3)
     return (
         f"FAILED: '{save_name}' was issued, but the game reported no turn within "

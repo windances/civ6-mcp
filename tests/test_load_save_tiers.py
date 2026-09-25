@@ -235,6 +235,16 @@ class TestLoadGameSave:
         assert f'if n == "{SAVE}" then' in conn.sent[0][1]
         assert f"{SAVE}.Civ6Save" not in result
 
+    def test_a_silent_front_end_is_asked_again(self, at_the_menu, monkeypatch):
+        # 47s after a launch every FrontEnd state can be silent, because the front end is not
+        # ready - not because the save is missing. Measured 2026-09-25: the same query answered
+        # 207 saves a minute later, and the run in between had already fallen back to OCR.
+        monkeypatch.setattr(gl, "load_save_from_menu", _async_menu_nav)
+        conn = FakeConnection(states={5: "LoadGameMenu", 24: "MainMenu"})
+        run(lf.load_game_save(conn, SAVE))
+        asked = [index for index, lua in conn.sent if "QuerySaveGameList" in lua]
+        assert asked == [5, 24, 5, 24, 5, 24], "two states, three rounds, in order"
+
     def test_a_name_nothing_has_is_reported_not_clicked_through(self, at_the_menu):
         # No state has it and no file has it: say so, rather than navigate a menu for it.
         conn = FakeConnection(states={5: "LoadGameMenu"}, answers={5: ["RESULT|NOT_FOUND"]})
@@ -268,3 +278,21 @@ class TestTheLandingStep:
         monkeypatch.setattr(gl, "_click_continue_by_colour", lambda *a, **k: clicks.append("colour"))
         gl._finish_load_sync(SAVE)
         assert clicks == []
+
+    def test_the_continue_click_is_not_gated_on_the_ocr_signature(self, monkeypatch):
+        # The control is drawn, not laid out, so the colour search is both the detector and the
+        # click. It used to run only when `_leader_screen_detected` matched an OCR signature that
+        # does not survive on that screen, so the one working method was never tried and two runs
+        # on 2026-09-25 ended with the game parked on CONTINUE waiting for a human to click it.
+        turns = iter([None, None, 99])
+        clicks = []
+        monkeypatch.setattr(gl, "_game_turn_number", lambda timeout=5.0: next(turns, 99))
+        monkeypatch.setattr(gl, "_save_turn", lambda name: 99)
+        monkeypatch.setattr(gl, "_leader_screen_detected", lambda results: False)
+        monkeypatch.setattr(gl.time, "sleep", lambda seconds: None)
+        monkeypatch.setattr(
+            gl, "_click_continue_by_colour", lambda *a, **k: bool(clicks.append("colour")) or True
+        )
+        report = gl._finish_load_sync(SAVE)
+        assert clicks, "the colour search must be attempted without the OCR signature"
+        assert "turn 99" in report

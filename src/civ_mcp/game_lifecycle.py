@@ -610,15 +610,31 @@ async def load_game_save(conn: GameConnection, save_name: str) -> str:
         # Tier 1: Lua query-match-load (Windows/macOS only)
         try:
             issued_from: str | None = None
-            for state_index, state_name in await _save_list_states(conn):
-                outcome = await _lua_load_in_state(conn, state_index, state_name, save_name)
-                if outcome == "FOUND":
-                    issued_from = state_name
+            answered = False
+            for attempt in range(3):
+                # A round that answers nothing at all is the front end not being ready, not a
+                # missing save: measured 2026-09-25, 47s after a launch all five FrontEnd states
+                # were silent, the tier fell through to OCR navigation, and the same query
+                # answered 207 saves a minute later. Wait and ask again before giving up.
+                for state_index, state_name in await _save_list_states(conn):
+                    outcome = await _lua_load_in_state(conn, state_index, state_name, save_name)
+                    if outcome == "FOUND":
+                        issued_from = state_name
+                        break
+                    if outcome == "NOT_FOUND":
+                        # Every state answers with the same list, so one NOT_FOUND is the
+                        # answer: asking the rest is how a second load goes out for the same
+                        # file.
+                        answered = True
+                        break
+                if issued_from is not None or answered:
                     break
-                if outcome == "NOT_FOUND":
-                    # Every state answers with the same list, so one NOT_FOUND is the answer:
-                    # asking the rest is how a second load gets issued for the same file.
-                    break
+                log.info(
+                    "No Lua state answered the save query (attempt %d/3) - waiting for the "
+                    "front end",
+                    attempt + 1,
+                )
+                await asyncio.sleep(10)
 
             if issued_from is None:
                 # No state claimed it. Before navigating a main menu, check whether a game is
