@@ -1,14 +1,16 @@
 ﻿# TEMP TASK 007 — destroy Russia
 
 added:     2026-09-26 (human instruction: 消灭俄罗斯)
-expires:   turn 160 — the third Catapult is the gate (一城3投石车) and it lands ~T125, the iron
-           stockpile reaches a Swordsman ~T122 and the war is three or more cities at 4-8 turns each
-           plus the march; count from the queue, not the calendar. Retire it early if Russia is gone,
-           or as `007-destroy-russia-expired-T160.md` with a report of which cities stand and why.
+expires:   turn 160 — the third Catapult is the gate (一城3投石车) and it lands ~T124, the iron
+           stockpile passes 20 ~T121 and the war is four cities at T119 (two of them still in fog)
+           at 4-8 turns each plus the march; count from the queue, not the calendar. Retire it early
+           if Russia is gone, or as `007-destroy-russia-expired-T160.md` with a report of which
+           cities stand and why.
 done when: **Russia is eliminated** — `get_diplomacy` **no longer** lists a Russian city, every city
            we took has been resolved with `city_action` keep/raze, and no Russian unit is left inside
-           our territory. Report the count of Russian cities taken (>= 3 expected: 阿斯特拉罕 (54,40),
-           沃罗涅什 (50,37) and the one still in fog).
+           our territory. Report the count of Russian cities taken, counted from the map at the
+           declaration (Russia held **four** at T119 — 阿斯特拉罕 pop 5 (54,40), 沃罗涅什 pop 2
+           (50,37) and two in fog — not the three this file first recorded).
 overrides: the per-city build lists, the Campus/Builder plan and the last temporary task's copper line:
            anything the assault establishment is missing comes first, and **this task authorizes a
            declaration of war on Russia** once `tactics/07`'s gates pass — 006 deliberately did not,
@@ -28,7 +30,7 @@ instruction lives here, and the checkable *parts* of it are already rules: `sieg
 `hold-what-you-take`, `use-your-attacks`, `mass-on-contact`. If a rival-city-count metric ever lands,
 convert this file to a goal with `metric(<rival cities>) == 0`.
 
-## What is already true, and what is missing (measured at T115)
+## What is already true, and what is missing (measured at T115, target row re-read at T119)
 
 | Piece | Have | Gate it is for |
 |---|---|---|
@@ -37,18 +39,26 @@ convert this file to a goal with `metric(<rival cities>) == 0`.
 | melee | 4 (Warrior/Spearman tier) | **iron is 6/50 at +2/t**: a Swordsman is buildable past 20 (~T122), and the front line is Warrior-tier until then (`match-their-melee`) |
 | cavalry | 1 Horseman | satisfied |
 | ram / tower | none, and none wanted | human instruction 2026-09-26: 不用锤，用投石车 |
-| the target | 阿斯特拉罕 (54,40) pop 3, 沃罗涅什 (50,37) pop 1, **one city still in fog** | see the read below |
+| the target | **four** cities at T119: 阿斯特拉罕 pop 5 (54,40), 沃罗涅什 pop 2 (50,37), **two in fog** (three at T110 — it grows) | see the read below |
 
 **The pre-war read is no longer blocked.** `get_diplomacy`'s city line prints `walls none` /
 `walls 100` and `def N` (the wall pool and the city's strength, garrison included), and
 `get_map_area` radius 2 gives the ring and any unit standing on the city tile. The four numbers of
 `tactics/07` step 1 are all obtainable at peace — `walls none` is a reading, not a missing one.
 
+**The target list is a snapshot, not a constant.** Russia stood at three cities when this file was
+written and at **four** by T119, two of them in fog, and the session caught the drift on the turn it
+read the file. Re-read `get_diplomacy` and count the cities from the map before the declaration — the
+same lesson as a camp coordinate copied from an old diary (T65 said (60,30); the T83 map read put it
+at (60,29)). Entry to Russian ground is refused even while Russia is FRIENDLY and Open Borders is
+signed (measured T96 and again T119: an order straight to (50,37) came back `BLOCKED (foreign ...)`),
+so the search for the fogged cities runs **around** the border with the Horseman and the Scout.
+
 ## The order of work
 
 1. **Read every Russian city in four numbers** (garrison / walls / HP / ring) — 阿斯特拉罕 first, it is
-   two tiles from the watch post at (54,38). **Find the third city**: Russia holds three and only two
-   are visible, so a scout or the fastest cavalry goes looking before the plan is called complete. The
+   two tiles from the watch post at (54,38). **Find the fogged cities**: four are known and only two
+   are visible, so the Horseman and the Scout keep looking before the plan is called complete. The
    abandoned branch of this map found Moscow at (54,40) and 圣彼得堡 at (56,43) — a search direction,
    not a fact, and this branch has 阿斯特拉罕 on that tile instead.
 2. **Finish the establishment** (file 7's checklist, directive): the **third Catapult**, a Swordsman
