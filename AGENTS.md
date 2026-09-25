@@ -7,7 +7,9 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`002-focus-fire-scouts.md`, `003-two-scouts-explore.md`, `004-city-near-iron.md`.
+`002-focus-fire-scouts.md`, `003-two-scouts-explore.md`, `004-city-near-iron.md`,
+`005-city-near-copper.md` (the iron city outranks the copper one: iron is strategic and the empire has
+none, copper is a bonus tile worth about +2 gold — and six cities is the directive's ceiling).
 
 **This list is the mechanism, not decoration.** A file added to `prompts/tasks/tmp/` while a session is
 already playing reaches it only when that session re-lists the directory; the paragraph below says to do
