@@ -1090,7 +1090,7 @@ Battlcry's +7 against melee and ranged) instead of adjectives.
 Wiring, all of it checked by `scripts/qualify-static.mjs`:
 
 - `prompts/workers/military-map.md` (the file the orchestrator reads in Phase 2) carries the
-  trigger table: which file to read for which situation. The gate fails if any of the six files
+  trigger table: which file to read for which situation. The gate fails if any of the seven files
   is missing, is suspiciously short, or is no longer named by that prompt.
 - `prompts/strategies/china-conquest/military-map.md` keeps the same table, because
   `scripts/use-strategy.ps1` overwrites `prompts/workers/` from the preset - the gate checks that

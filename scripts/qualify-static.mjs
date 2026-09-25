@@ -104,6 +104,7 @@ const tacticFiles = [
   '04-staging-out-of-range.md',
   '05-formation-and-screening.md',
   '06-assault-composition-and-fire.md',
+  '07-pre-war-analysis.md',
 ]
 const militaryPrompt = read('prompts/workers/military-map.md')
 for (const file of tacticFiles) {

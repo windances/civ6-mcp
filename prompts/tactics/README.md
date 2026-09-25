@@ -13,6 +13,7 @@ snapshot calls for; they are meant to be consulted one or two at a time, not all
 | 4 | `04-staging-out-of-range.md` | 攻城前，城外攻击范围外的集结策略 | an assault is being planned but the stack is not formed |
 | 5 | `05-formation-and-screening.md` | 攻城前，部队站位策略 | the stack is formed and about to advance |
 | 6 | `06-assault-composition-and-fire.md` | 攻城开始后，部队搭配和攻击策略 | the stack is in contact with the target city |
+| 7 | `07-pre-war-analysis.md` | 战前分析：能不能打、打谁、几回合、损失、打完守不守得住 | a war is being considered, or a target chosen but not yet committed |
 
 ## Shared vocabulary
 

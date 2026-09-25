@@ -187,7 +187,7 @@ Periodic checks worth doing regularly. The game doesn't surface most of this pro
 
 ## Military tactics, by decision
 
-`prompts/tactics/` holds six files, one per military decision, written for the `military-map`
+`prompts/tactics/` holds seven files, one per military decision, written for the `military-map`
 advisor (its prompt names which to read when). Read the matching one before improvising:
 
 | File | 主题 |
@@ -198,6 +198,7 @@ advisor (its prompt names which to read when). Read the matching one before impr
 | `tactics/04-staging-out-of-range.md` | 攻城前在敌射程外集结 — rally point choice, when to advance |
 | `tactics/05-formation-and-screening.md` | 攻城前站位 — screen in front, siege behind at range 2 |
 | `tactics/06-assault-composition-and-fire.md` | 开打后的搭配与火力 — order of work, concentration, when to break off |
+| `tactics/07-pre-war-analysis.md` | 战前分析 — 能不能打、打谁、几回合、损失多大、打完守不守得住 |
 
 ## Strategic Patterns
 

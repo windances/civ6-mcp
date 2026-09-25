@@ -25,6 +25,7 @@ file rather than improvising from memory:
 | `tactics/04-staging-out-of-range.md` | an assault planned but the stack not yet formed |
 | `tactics/05-formation-and-screening.md` | the stack formed, about to advance on a city |
 | `tactics/06-assault-composition-and-fire.md` | the assault running against a city |
+| `tactics/07-pre-war-analysis.md` | a war is being considered, or a target chosen but not yet committed |
 
 They use the same vocabulary the turn result prints (`local_superiority`, `siege_exposed`,
 `SIEGE POSTURE`, `BATTLE ASSESSMENT`, the check-rule names), so a proposal can cite a number
