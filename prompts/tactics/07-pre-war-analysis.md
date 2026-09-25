@@ -1,25 +1,33 @@
-# 7. Pre-war analysis / 战前分析：能不能打、打谁、几回合、损失多大、打完守不守得住
+# 7. Pre-war analysis / 战前分析：能不能打、打谁、几回合、损失多大、打完守不守得住（含蛮族营地）
 
-Read before a war is declared, and again whenever a target changes. Files 1-6 are about fighting a
-war; this one decides whether to start it.
+Read before a war is declared, and again whenever a target changes — **and whenever a barbarian camp
+is visible near our cities or our Builders.** Files 1-6 are about fighting a war; this one decides
+whether to start it, and the same analysis answers whether a camp is worth a raid.
+
+**This file has two target classes, and both are pre-war analysis objects.** An enemy **city** is a
+*war*: it has walls, a garrison and an HP pool, and the decision is whether to declare. A **barbarian
+camp** is a *raid*: no HP, no walls, no declaration — and the human made it a standing target on
+2026-09-26 ("make the barbarian camp a pre-war analysis target and destroy it"), after the camp beside
+北京 produced the Spearman that cost 160 gold at T65. A camp is not a footnote to the city procedure;
+it is the second object that procedure is run on.
 
 The directive's gate is "declare only when the army in place can take the cities". That is a
 judgement, and this file is how to make it from numbers rather than from hope. It is **one
 procedure in seven steps**, and every step names the query that answers it:
 
-| Step | Question | Answered by |
-|---|---|---|
-| 0 | Is there a target to analyse at all? | `get_deal_options`, `get_strategic_map`, the map around our cities |
-| 1 | What is the target, in four numbers? | the city probe (hp / walls / **garrison** / ring) |
-| 2 | Do the **five gates** pass? | the arithmetic below, per gate |
-| 3 | How long, and what will it cost? | the formula below, plus the loss asymmetry |
-| 4 | What can be bought first? | `get_policies`, `purchase_item`, `upgrade_unit` |
-| 5 | Where do we assemble, and when do we declare? | `get_pathing_estimate`, the ring walk |
-| 6 | Does anyone come to its rescue? | `get_units` on the enemy, `get_diplomacy` |
-| 7 | Can we hold what we take? | loyalty pressure, governor, garrison |
+| Step | Question | For a city (the war branch) | For a camp (the raid branch) |
+|---|---|---|---|
+| 0 | Is there a target to analyse at all? | `get_deal_options`, `get_strategic_map`, the map around our cities | the map around our cities: a tile whose improvement is `IMPROVEMENT_BARBARIAN_CAMP` |
+| 1 | What is the target, in numbers? | the city probe (hp / walls / **garrison** / ring) | the camp tile's terrain, and **the guard within two tiles** (camp gate C1) |
+| 2 | Do the gates pass? | the **five gates** below | the **six camp gates** below (C1–C6) |
+| 3 | How long, and what will it cost? | the formula below, plus the loss asymmetry | the walk-in's movement, plus the units pulled off the plan |
+| 4 | What can be bought first? | `get_policies`, `purchase_item`, `upgrade_unit` | the same — a ranged unit is usually the cheapest answer to a guard |
+| 5 | Where do we assemble, and when do we move? | `get_pathing_estimate`, the ring walk; the declaration trigger | `get_pathing_estimate`: a tile we hold, one move from the camp |
+| 6 | Does anyone come to its rescue? | `get_units` on the enemy, `get_diplomacy` | **yes — the guard itself**, plus what the camp keeps spawning |
+| 7 | Can we hold what we take? | loyalty pressure, governor, garrison | the ground we clear, and which city gives up its garrison meanwhile |
 
-**Step 0 has two doors.** Steps 1–7 below are for the first: an enemy **city**, which is a *war*
-decision with a declaration attached. The second is a **barbarian camp**, which is a *raid* — no
+**Step 0 has two doors.** Steps 1–7 below are written out for the first: an enemy **city**, which is a
+*war* decision with a declaration attached. The second is a **barbarian camp**, which is a *raid* — no
 declaration, no walls, no HP pool, and its own gates, in "The other target" after Step 0. A camp that
 is spawning units next to one of our cities is a target this file is responsible for, and the human
 asked for it in as many words on 2026-09-26.
@@ -349,6 +357,11 @@ GO      clear it this turn: yes/no — <the one thing missing>
 
 ## Target selection
 
+**Two kinds of target go through this section**, and the same three questions decide both: *what does
+it cost to take*, *what does taking it buy*, and *what does leaving it cost*.
+
+For a **city**:
+
 - **Original capitals first.** Domination means owning every rival's original capital, and a capital
   can be captured but never destroyed. A border city that leads nowhere delays the win. (T99–T130:
   Moscow was the road, 圣彼得堡 was the objective, 阿斯特拉罕 was the formality — in that order, and
@@ -359,3 +372,22 @@ GO      clear it this turn: yes/no — <the one thing missing>
 - **Loyalty pressure**: distance to the nearest *enemy* city and its population.
 - **The approach**: chokepoints, river crossings, and whether siege units have line of sight at all.
 - **Who else is watching**: see gate 5.
+
+For a **camp**, the ordering is by what the camp is doing to us, not by geography:
+
+- **What it is next to.** A camp within three tiles of a city, a Builder's work, a road or a trade
+  route outranks one in empty ground: it is the one that produces the unit that costs gold or a
+  civilian. Measured T65 — the (60,30) camp's Spearman forced a 160-gold Warrior.
+- **What it is spawning, and how fast.** Camps upgrade with the era (Warriors → Spearmen → Man-at-Arms),
+  so a camp left for twenty turns is not the same raid as a camp taken now. That is the cost of
+  *leaving* it, and it grows.
+- **How cheap the walk-in is.** A camp with no guard on a tile we can reach in one move is nearly free;
+  a camp behind a river in a mountain pocket with two Spearmen around it is a small siege, and the
+  same gates apply.
+- **What it is worth**: gold, era score, the `CIVIC_MILITARY_TRADITION` inspiration if it is still
+  unbanked, and the spawns it stops.
+- **What it costs elsewhere**: the units pulled off the development plan, and the garrison a city
+  gives up while they are away — say which, and that it comes back.
+- **The one thing the old rule protected**: the only source of units for 三十六计 Three-Six
+  Stratagems is an adjacent barbarian, converted by the human from the game UI. Report any barbarian
+  worth converting **before** the raid (camp gate C6), then clear the camp anyway.

@@ -7,6 +7,11 @@ current snapshot calls for; they are meant to be consulted one or two at a time,
 Files 1–7 belong to `military-map`; **file 8 belongs to `economy-cities`** and goes in its brief
 whenever a war is on.
 
+**File 7 covers two target classes** — an enemy **city** (a war: walls, garrison, HP pool, and a
+declaration) and a **barbarian camp** (a raid: no HP, no walls, no declaration) — because the human
+made the camp a pre-war analysis target on 2026-09-26. The same seven steps run on both; the gates
+differ (five for a city, six camp gates for a raid).
+
 | # | File | 主题 | Read it when |
 |---|---|---|---|
 | 1 | `01-unit-production.md` | 部队的生产策略 | proposing production, purchases or upgrades |
@@ -15,7 +20,7 @@ whenever a war is on.
 | 4 | `04-staging-out-of-range.md` | 攻城前，城外攻击范围外的集结策略 | an assault is being planned but the stack is not formed |
 | 5 | `05-formation-and-screening.md` | 攻城前，部队站位策略 | the stack is formed and about to advance |
 | 6 | `06-assault-composition-and-fire.md` | 攻城开始后，部队搭配和攻击策略 | the stack is in contact with the target city |
-| 7 | `07-pre-war-analysis.md` | 战前分析：能不能打、打谁、几回合、损失、打完守不守得住；**以及蛮族营地**（六道 camp gates） | a war is being considered, a target chosen but not yet committed, **or a barbarian camp is visible** |
+| 7 | `07-pre-war-analysis.md` | 战前分析：能不能打、打谁、几回合、损失、打完守不守得住；**两类目标——敌方城市（战争）与蛮族营地（清剿）**，营地有六道 camp gates | a war is being considered, a target chosen but not yet committed, **or a barbarian camp is visible** |
 | 8 | `08-war-and-the-home-front.md` | 战时内政，其他城市和单位的发展策略 | a war is on, or a `10-TURN REVIEW` arrives during one |
 
 ## Shared vocabulary

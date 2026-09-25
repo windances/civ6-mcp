@@ -245,7 +245,9 @@ matching one before improvising:
 
 **Before a war, file 7 comes first, and its own first step is reconnaissance** — Gate 0 is "a
 candidate city is actually visible". An army in the right shape with every enemy city still in fog
-has no pre-war analysis to make; send the scout and the fastest cavalry, then run the gates.
+has no pre-war analysis to make; send the scout and the fastest cavalry, then run the gates. **File 7
+has two target classes**: an enemy city (a war) and a barbarian camp (a raid — the camp is a target of
+that same analysis, with six camp gates instead of the city's five).
 
 ## Strategic Patterns
 
