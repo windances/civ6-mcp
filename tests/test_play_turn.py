@@ -85,3 +85,96 @@ class TestTheNamedSkip:
 
     def test_the_index_is_in_the_line_so_it_can_be_ordered_next_turn(self):
         assert "[ 4]" in play.format_skipped([UNITS[2]])[0]
+
+
+class TestRole:
+    def test_the_classes_the_formation_is_built_on(self):
+        assert play.role("UNIT_WARRIOR") == "screen"
+        assert play.role("UNIT_SPEARMAN") == "screen"
+        assert play.role("UNIT_HEAVY_CHARIOT") == "screen"
+        assert play.role("UNIT_ARCHER") == "ranged"
+        assert play.role("UNIT_CATAPULT") == "siege"
+        assert play.role("UNIT_BATTERING_RAM") == "support"
+        assert play.role("UNIT_BUILDER") == "civilian"
+
+    def test_the_unit_prefix_is_optional(self):
+        assert play.role("ARCHER") == "ranged"
+
+
+class Posture:
+    """The fields `screen_rule_failure` reads, as the adapter reports them."""
+
+    def __init__(self, unit_type, enemy_distance, screen_enemy_distance, x=0, y=0):
+        self.unit_type = unit_type
+        self.enemy_distance = enemy_distance
+        self.screen_enemy_distance = screen_enemy_distance
+        self.x = x
+        self.y = y
+
+
+class TestTheScreenRule:
+    def test_a_closer_screen_passes(self):
+        assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 2, 1)) is None
+
+    def test_a_screen_exactly_as_close_fails(self):
+        # "As close as the siege unit" is a second target, not cover.
+        assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 2, 2)) is not None
+
+    def test_no_screen_at_all_fails(self):
+        assert play.screen_rule_failure(Posture("UNIT_CATAPULT", 2, None)) is not None
+
+
+class TestFormationViolations:
+    pair = staticmethod(
+        lambda unit, uat, hp, enemy, eat, distance: {
+            "unit": unit,
+            "unit_at": uat,
+            "unit_hp": hp,
+            "enemy": enemy,
+            "enemy_at": eat,
+            "distance": distance,
+        }
+    )
+
+    def test_shooters_in_front_of_every_screen_is_inverted(self):
+        pairs = [
+            self.pair("UNIT_ARCHER", (53, 39), 100, "UNIT_SWORDSMAN", (52, 39), 1),
+            self.pair("UNIT_WARRIOR", (55, 38), 100, "UNIT_SWORDSMAN", (52, 39), 3),
+        ]
+        problems = play.formation_violations(pairs)
+        assert any(p.startswith("INVERTED") for p in problems)
+
+    def test_a_screen_strictly_in_front_is_not_inverted(self):
+        pairs = [
+            self.pair("UNIT_ARCHER", (54, 38), 100, "UNIT_SWORDSMAN", (52, 39), 2),
+            self.pair("UNIT_WARRIOR", (53, 38), 100, "UNIT_SWORDSMAN", (52, 39), 1),
+        ]
+        assert play.formation_violations(pairs) == []
+
+    def test_a_wounded_unit_in_melee_reach_is_bait(self):
+        # The Archer at 10 HP beside a Russian Scout: five of our units were within two tiles and
+        # the Scout died to a single shot.
+        pairs = [self.pair("UNIT_ARCHER", (54, 38), 10, "UNIT_SCOUT", (54, 36), 2)]
+        assert any(p.startswith("BAIT") for p in play.formation_violations(pairs))
+
+    def test_a_wounded_unit_out_of_reach_is_not_flagged(self):
+        pairs = [self.pair("UNIT_ARCHER", (54, 38), 10, "UNIT_SCOUT", (54, 36), 4)]
+        assert play.formation_violations(pairs) == []
+
+    def test_no_contact_is_no_violation(self):
+        assert play.formation_violations([]) == []
+
+
+class TestPairParsing:
+    def test_a_pair_line_becomes_a_row(self):
+        rows = play.parse_pairs(
+            ["PAIR|123|UNIT_ARCHER|54,38|10|UNIT_SCOUT|54,36|2", "noise"]
+        )
+        assert len(rows) == 1
+        assert rows[0]["unit"] == "UNIT_ARCHER"
+        assert rows[0]["unit_at"] == (54, 38)
+        assert rows[0]["unit_hp"] == 10
+        assert rows[0]["distance"] == 2
+
+    def test_junk_is_ignored(self):
+        assert play.parse_pairs(["", "PAIR|short", None]) == []

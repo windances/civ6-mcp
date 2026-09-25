@@ -49,6 +49,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
+from civ_mcp.lua._helpers import SENTINEL  # noqa: E402
 from civ_mcp.narrate import narrate_map  # noqa: E402
 
 
@@ -80,6 +81,141 @@ def format_skipped(units) -> list[str]:
         f"   [{unit.unit_index:>2}] {unit.unit_type:<24} ({unit.x},{unit.y}) mv{unit.moves_remaining}"
         for unit in units
     ]
+
+
+# ---------------------------------------------------------------------------
+# Posture: the formation, checked instead of remembered
+#
+# Five times in one campaign a unit stood in the wrong place because "who screens whom" was carried
+# in the operator's head: two Archers died with the melee *behind* them, a Battering Ram was killed
+# without ever attacking, a disengagement pulled the screen back and left a city's doorstep empty.
+# The distances here come from `Map.GetPlotDistance` inside the game - hand-computed hex distances
+# were wrong repeatedly - and the rules are pure functions below.
+# ---------------------------------------------------------------------------
+
+PAIR_SCAN_LUA = (
+    "local me = Game.GetLocalPlayer() "
+    "local diplo = Players[me]:GetDiplomacy() "
+    "for _, u in Players[me]:GetUnits():Members() do "
+    "  local ui = GameInfo.Units[u:GetType()] "
+    "  if ui and ((ui.Combat or 0) > 0 or (ui.RangedCombat or 0) > 0 or (ui.Bombard or 0) > 0) then "
+    "    for i = 0, 63 do "
+    "      local q = Players[i] "
+    "      if q and i ~= me and q:IsAlive() and diplo:IsAtWarWith(i) then "
+    "        for _, e in q:GetUnits():Members() do "
+    "          local d = Map.GetPlotDistance(u:GetX(), u:GetY(), e:GetX(), e:GetY()) "
+    "          if d <= 4 then "
+    "            local ei = GameInfo.Units[e:GetType()] "
+    "            print('PAIR|' .. u:GetID() .. '|' .. ui.UnitType .. '|' .. u:GetX() .. ',' .. u:GetY() "
+    "              .. '|' .. (u:GetMaxDamage() - u:GetDamage()) "
+    "              .. '|' .. (ei and ei.UnitType or '?') .. '|' .. e:GetX() .. ',' .. e:GetY() "
+    "              .. '|' .. d) "
+    "          end "
+    "        end "
+    "      end "
+    "    end "
+    "  end "
+    "end; "
+    f'print("{SENTINEL}")'
+)
+
+_SCREEN = (
+    "WARRIOR", "SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY", "SPEARMAN", "PIKEMAN",
+    "AT_CREW", "HEAVY_CHARIOT", "KNIGHT", "HORSEMAN", "TANK", "MECHANICAL_INFANTRY", "CUIRASSIER",
+)
+_RANGED = ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER")
+_SIEGE = ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY", "ROCKET_ARTILLERY")
+_SUPPORT = ("BATTERING_RAM", "SIEGE_TOWER", "MILITARY_ENGINEER", "MEDIC")
+
+
+def role(unit_type: str) -> str:
+    """screen / ranged / siege / support / civilian - the class decides what a unit may do."""
+    name = str(unit_type).upper().replace("UNIT_", "")
+    if any(token in name for token in _SIEGE):
+        return "siege"
+    if any(token in name for token in _RANGED):
+        return "ranged"
+    if any(token in name for token in _SUPPORT):
+        return "support"
+    if any(token in name for token in _SCREEN):
+        return "screen"
+    return "civilian"
+
+
+def screen_rule_failure(posture) -> str | None:
+    """The doctrine's test on one siege unit: is something strictly closer to that enemy?
+
+    `screen_enemy_distance >= enemy_distance` is the failure `screen-the-siege` reports; a screen
+    that is exactly as close as the siege unit is a second target, not cover.
+    """
+    if posture.enemy_distance is None or posture.screen_enemy_distance is None:
+        return f"{posture.unit_type}: no screen within reach of the nearest enemy"
+    if posture.screen_enemy_distance >= posture.enemy_distance:
+        return (
+            f"{posture.unit_type} at ({posture.x},{posture.y}): the enemy is {posture.enemy_distance} "
+            f"away and the nearest screen is no closer ({posture.screen_enemy_distance})"
+        )
+    return None
+
+
+def parse_pairs(lines: list[str]) -> list[dict]:
+    """Rows of `PAIR|unitID|type|x,y|hp|enemyType|ex,ey|distance` as dicts."""
+    out = []
+    for line in lines or ():
+        if not isinstance(line, str) or not line.startswith("PAIR|"):
+            continue
+        parts = line.split("|")
+        if len(parts) < 8:
+            continue
+        ux, uy = (int(v) for v in parts[3].split(","))
+        ex, ey = (int(v) for v in parts[6].split(","))
+        out.append(
+            {
+                "unit": parts[2],
+                "unit_at": (ux, uy),
+                "unit_hp": int(parts[4]),
+                "enemy": parts[5],
+                "enemy_at": (ex, ey),
+                "distance": int(parts[7]),
+            }
+        )
+    return out
+
+
+def formation_violations(pairs: list[dict]) -> list[str]:
+    """What the geometry says is wrong, in the doctrine's own terms.
+
+    * **inverted**: every ranged or siege unit is at least as close to an enemy as every screen
+      unit - the shooters are the front line, which is how two Archers were picked off while the
+      melee stood behind them.
+    * **bait**: a wounded unit (60 HP or less) inside a melee attacker's two-tile reach. A damaged
+      unit attacks for less (manual, p.88) and dies to one blow from something stronger.
+    """
+    if not pairs:
+        return []
+    closest = {}
+    for row in pairs:
+        key = row["unit_at"]
+        closest[key] = min(closest.get(key, 99), row["distance"])
+    screens = [row for row in pairs if role(row["unit"]) == "screen"]
+    shooters = [row for row in pairs if role(row["unit"]) in ("ranged", "siege")]
+    violations = []
+    if screens and shooters:
+        nearest_screen = min(row["distance"] for row in screens)
+        nearest_shooter = min(row["distance"] for row in shooters)
+        if nearest_shooter <= nearest_screen:
+            shooters_at = [f"{row['unit']}{row['unit_at']}" for row in shooters if row["distance"] == nearest_shooter]
+            violations.append(
+                f"INVERTED: {', '.join(sorted(set(shooters_at)))} at {nearest_shooter} from an enemy, "
+                f"while the nearest screen ({screens[0]['unit']}) is {nearest_screen} - the shooters are the front line"
+            )
+    for row in pairs:
+        if row["unit_hp"] <= 60 and row["distance"] <= 2:
+            violations.append(
+                f"BAIT: {row['unit']} at {row['unit_at']} has {row['unit_hp']} HP and "
+                f"{row['enemy']} is {row['distance']} away - withdraw it or screen it"
+            )
+    return sorted(set(violations))
 
 
 async def march(gs: GameState, orders: list[tuple[str, int, int]]) -> None:
@@ -224,6 +360,42 @@ async def main() -> int:
             pid, response = int(sys.argv[2]), sys.argv[3].upper()
             print(await gs.diplomacy_respond(pid, response))
             return 0
+
+        if verb == "posture":
+            # Everything the formation decision needs, in one place, before anything is ordered.
+            pairs = parse_pairs(await conn.execute_write(PAIR_SCAN_LUA))
+            postures = await gs.siege_posture()
+            unused = await gs.unused_attacks()
+
+            print("=== our line by role (front first) ===")
+            for unit in sorted(await gs.get_units(), key=lambda u: (role(u.unit_type), -(u.combat_strength or 0))):
+                kind = role(unit.unit_type)
+                if kind in ("civilian", "support"):
+                    continue
+                at = (unit.x, unit.y)
+                nearest = min((row["distance"] for row in pairs if row["unit_at"] == at), default=None)
+                print(
+                    f"  {kind:<7} [{unit.unit_index:>2}] {unit.unit_type:<24} ({unit.x},{unit.y}) "
+                    f"hp{unit.health:<4} mv{unit.moves_remaining}"
+                    + (f" nearest enemy {nearest}" if nearest is not None else "")
+                )
+
+            print("=== siege rule (something must be strictly closer than the siege unit) ===")
+            if not postures:
+                print("  no siege unit in the field")
+            for posture in postures:
+                failure = screen_rule_failure(posture)
+                print(f"  {'FAIL' if failure else 'ok  '} {failure or f'{posture.unit_type} at ({posture.x},{posture.y}) is screened'}")
+
+            print("=== formation violations ===")
+            problems = formation_violations(pairs) + [f for f in (screen_rule_failure(p) for p in postures) if f]
+            for problem in problems or ["  none"]:
+                print(f"  {problem}")
+
+            print("=== attacks still unused ===")
+            for line in unused or ["  none"]:
+                print(f"  {line}")
+            return 0 if not problems else 1
 
         if verb == "scan":
             x, y = int(sys.argv[2]), int(sys.argv[3])
