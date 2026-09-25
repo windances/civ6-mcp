@@ -4,6 +4,31 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 
 **You only know what you explicitly query.** A human player passively absorbs the score ticker, religion lens, unit health bars — you have none of that. Information you don't ask for simply doesn't enter your world model. The patterns below exist to compensate for this.
 
+## TEMPORARY TASK — clear the barbarian camp (delete this whole section when it is done)
+
+**Added 2026-09-26 by the human, for the session running right now; it expires on its own terms.**
+This section **overrides** the strategy directive's "Do NOT clear barbarian camps" line, which is
+superseded. It is not a change of plan: the development line (research, civics, districts, builder
+tasks, the Temple of Artemis) carries on untouched.
+
+- **What:** destroy the nearest barbarian camp, using the war strategy. Answer
+  `prompts/tactics/07-pre-war-analysis.md`'s camp gates **by name** in the diary —
+  `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD / CONVERT / GO`.
+- **How, in one line:** a camp has no HP and no walls, so one military unit **MOVING** onto its tile
+  clears it — the analysis is the guard within two tiles, and the walk-in must arrive unspent from a
+  tile we already held. Barbarian **Spearmen are anti-cavalry**: ranged fire plus a melee walk-in,
+  never cavalry into spears, never a Scout/Builder/Trader.
+- **First move this turn:** read the camp's neighbourhood (`get_map_area` around (60,30), the camp
+  that has been producing Spearmen beside 北京) and write the `GUARD` line — how many barbarians are
+  within two tiles, their class, CS and HP. That is the fact the raid is planned from, and the one
+  thing still missing.
+- **Report before the raid:** any barbarian standing next to one of our melee units whose type is
+  worth the human's 三十六计 conversion, so the human can play it from the game UI.
+- **Done when:** the camp tile no longer holds a camp (its improvement is gone) — then **delete this
+  entire section from AGENTS.md**, say so in the diary's tooling line with the turn number, and
+  resume the normal turn loop. If the camp is somehow still standing after turn 95, delete the
+  section anyway and report why.
+
 `end_turn` now runs **empire warnings** automatically — alerts for loyalty crises, idle trade routes, gold deficits, resource caps, scoreboard position, and military imbalance. These compensate for the most common blind spots, but don't replace periodic deep checks (victory progress, religion spread, diplomacy).
 
 ## Coordinate System
