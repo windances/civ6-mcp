@@ -7,14 +7,21 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`002-focus-fire-scouts.md`, `003-two-scouts-explore.md`, `004-city-near-iron.md`,
-`005-city-near-copper.md`, `006-prepare-for-russia.md`.
+`002-focus-fire-scouts.md`, `004-city-near-iron.md`, `005-city-near-copper.md`,
+`006-prepare-for-russia.md`.
+(`001-clear-the-camp` was retired at T84 and `003-two-scouts-explore` at T93 — both sit in
+`prompts/tasks/tmp/done/` with the turn in their name.)
 
 Priority when they compete for the same queues: **006 (the assault establishment — two Catapults
 first: `siege-train` is failing and Engineering has just unlocked them)**, then **004** (iron is what
-the melee line is gated on), then **003** (two scouts, cheap), then **002** (instant, costs no
-production — a scout in reach is shot this turn), and **005** last (copper is a bonus tile worth about
-+2 gold).
+the melee line is gated on), then **002** (instant, costs no production — a scout in reach is shot
+this turn), and **005** last (copper is a bonus tile worth about +2 gold, and it runs only after the
+iron city).
+
+**Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
+tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
+session reported it. 004 is now T105, 005 T115, 006 T110. When writing a task whose finish line needs
+production, **count the turns from the queue, not from the calendar of the other tasks**.
 
 **This list is the mechanism, not decoration.** A file added to `prompts/tasks/tmp/` while a session is
 already playing reaches it only when that session re-lists the directory; the paragraph below says to do
@@ -269,6 +276,10 @@ that same analysis, with six camp gates instead of the city's five).
 
 ### Moving Civilians
 Before moving a builder, settler, or trader to a new tile, `get_map_area` (radius 2) around the destination is worth the query. Civilians have zero combat strength — a single barbarian scout captures them. The cost of losing a builder (5-7 turns of production + charges) is almost always worse than taking one extra turn to check or escort.
+
+**Water is a wall until `CIVIC`-era tech, and city-state land is a wall even when we are its suzerain.** Two measured movement refusals from the T92–T93 turns of the live replay, both of which look like tool failures and are not:
+- **A land unit cannot embark without `TECH_SHIPBUILDING`** — the adapter answers "water tile - land units need Shipbuilding tech to embark", and it blocked five scout orders in two turns. A strait is impassable, an island is unreachable, and a "dark map" may simply be ocean: route scouts along the coast, and do not read the refusal as a hang or a bug.
+- **A tile owned by a city-state refused our scout with "need suzerainty or Open Borders" while `get_city_states` listed us as Suzerain with 5 envoys.** Whatever the cause, the practical rule is the same as for a foreign unit parked in a lane: route around it and say so, rather than assuming suzerainty grants passage.
 
 Hills cost 2 movement, forests/jungles cost 2, and they stack (forest-hills = 3+). A settler or builder with 2 base moves arriving on forest-hills uses all movement and can't act until next turn. Route through flat terrain when possible, or plan to arrive one turn early.
 

@@ -1,7 +1,9 @@
 # TEMP TASK 004 — found a city on the iron
 
 added:     2026-09-26 (human instruction: 在铁矿附近建城)
-expires:   turn 95 — retire this file by then whatever happens
+expires:   turn 105 — extended from T95 on 2026-09-26: the Settler line alone runs to ~T95, so a T95
+           expiry made the task impossible by design (the session running it reported exactly that).
+           Retire this file by T105 whatever happens.
 done when: a **5th city of ours exists and its radius-3 map read contains an IRON tile** (count >= 1,
            read with `get_cities` plus `get_map_area` around the new city). The mine is the follow-up,
            not the completion test.

@@ -1,7 +1,9 @@
 # TEMP TASK 005 — found a city on the copper
 
 added:     2026-09-26 (human instruction: 在铜矿附近建城)
-expires:   turn 95 — retire this file by then whatever happens
+expires:   turn 115 — extended from T95 on 2026-09-26: this one runs only *after* the iron city, whose
+           Settler alone completes at ~T95, so a T95 expiry made the copper city impossible by design.
+           Retire this file by T115 whatever happens.
 done when: a **6th city of ours exists and its radius-3 map read contains a COPPER tile** (count >= 1,
            read with `get_cities` plus `get_map_area` around the new city)
 overrides: whatever per-city build list is running: a **second Settler (80 hammers)** may be inserted
