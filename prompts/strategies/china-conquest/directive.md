@@ -205,12 +205,16 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
 - An enemy city with **no garrison unit** in it is still a legal target: attack
   the tile as normal (the adapter resolves the city itself). An empty city is not
   a city that cannot be hit - it is a city that can be entered.
-- What one city needs: about 2 siege, 2 melee, 4 ranged
+- What one city needs: **3 Catapults (一城3投石车, human instruction 2026-09-26)**, 2 melee,
+  4 ranged
   (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry for
-  survivors. **No Battering Ram and no Siege Tower** (human instruction 2026-09-26:
-  不用锤，用投石车) - the Catapult is the wall-breaker: it does 45-52 against a city,
+  survivors. **No Battering Ram and no Siege Tower** (same instruction: 不用锤，用投石车) -
+  the Catapult is the wall-breaker: it does 45-52 against a city,
   garrisoned or not, where an Archer does 9-11 into a CS 35 garrison, and the melee
-  walks in after the walls are down. The one ram we already own is a garrison unit,
+  walks in after the walls are down. Three of them fired together measured **~260 a
+  turn** against a city (Moscow T123: two Catapults did 174 in one turn), which is what
+  keeps a siege bounded against a city that heals about twenty a turn. The one ram we
+  already own is a garrison unit,
   not part of this establishment, and no tower is to be built. Every Crouching
   Tiger needs a melee unit holding the tile in front of it.
 - Judge an assault by the city's own numbers: `city hp: N/200` and
@@ -325,8 +329,8 @@ rather than a turn number:
 
 1. A named target whose walls and garrison can be broken in a bounded number of
    turns.
-2. The siege train already staged adjacent to it - about 2 siege, 2 melee, 4 ranged,
-   1 cavalry, **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车)
+2. The siege train already staged adjacent to it - **3 Catapults per city**, 2 melee, 4 ranged,
+   1 cavalry, **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车, 一城3投石车)
    - **before** the declaration, not queued after it.
 3. Amenities positive. War weariness decays 50 per turn at war against 200 at
    peace, and 400 points cost an amenity, so a long war suppresses the very

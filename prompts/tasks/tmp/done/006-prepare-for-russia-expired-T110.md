@@ -2,8 +2,10 @@
 
 added:     2026-09-26 (human instruction: 为攻打俄罗斯做准备)
 expires:   turn 110 — the preparation has a longer clock than the raid tasks; retire it by then
-done when: the assault establishment exists — **siege >= 2, ranged >= 4, melee >= 2,
-           cavalry >= 1** (no ram or tower — human instruction 2026-09-26: 不用锤，用投石车)
+done when: the assault establishment exists — **siege >= 3, ranged >= 4, melee >= 2,
+           cavalry >= 1** (no ram or tower — human instruction 2026-09-26: 不用锤，用投石车;
+           the siege figure was 2 when this task expired at T110 and the human instruction
+           of the same day, 一城3投石车, raised it to 3)
            — **and** Russia's nearest city has been read in four numbers (hp / walls /
            garrison / ring), **and** gold per turn is still about `+10` with the army counted
 overrides: the per-city build lists and the Campus/Builder plan: siege units, and the units still
@@ -19,7 +21,7 @@ The directive's rule is that the decision to declare is the only decision that m
 trigger is a checklist rather than a turn number:
 
 1. **a named target** whose walls and garrison can be broken in a bounded number of turns;
-2. the **assault establishment already in place** — about 2 siege, 2 melee, 4 ranged,
+2. the **assault establishment already in place** — **3 siege per city** (一城3投石车), 2 melee, 4 ranged,
    1 cavalry, and **no ram or tower** — **before** the declaration, not queued after it;
 3. **amenities positive** (war weariness decays 50/turn at war against 200 at peace, and 400 points
    cost an amenity, so a long war suppresses the production that pays for it);
@@ -29,7 +31,7 @@ trigger is a checklist rather than a turn number:
 
 | Piece | Have | Check rule | Gap |
 |---|---|---|---|
-| siege | **0** | `siege-train` (fires from T90) | **2 needed — the binding gap** |
+| siege | **0** | `siege-train` (fires from T90) | **3 needed (一城3投石车) — the binding gap** |
 | ranged | 4 Archers | `ranged-mass` | satisfied; keep alive, upgrade to Crossbowmen at Machinery |
 | melee | 3 Warriors + 1 Spearman | `melee-screen` | satisfied; Swordsmen need **iron** |
 | ram / tower | **not part of this army** | — | human instruction 2026-09-26: 不用锤，用投石车 — the 1 Battering Ram we own is a garrison unit, and no tower is built |

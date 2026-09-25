@@ -63,28 +63,36 @@ class TestWarTrainStatus:
             3: unit(3, "UNIT_CATAPULT"),
         }
         train, missing = _war_train_status(units)
-        assert "siege 1/2" in train
+        assert "siege 1/3" in train
         assert "ranged 1/4" in train
-        assert "1 siege" in missing
+        assert "2 siege" in missing
         assert not any("ram" in item for item in missing), (
             "the train still asks for a ram or tower; human instruction 2026-09-26 is 不用锤，用投石车"
         )
 
     def test_a_complete_train_reports_none_missing(self):
+        # Three siege units for one city (一城3投石车), not two.
         units = {
             1: unit(1, "UNIT_CATAPULT"),
             2: unit(2, "UNIT_TREBUCHET"),
-            3: unit(3, "UNIT_WARRIOR"),
-            4: unit(4, "UNIT_MAN_AT_ARMS"),
-            5: unit(5, "UNIT_BATTERING_RAM"),
-            6: unit(6, "UNIT_ARCHER"),
+            3: unit(3, "UNIT_CATAPULT"),
+            4: unit(4, "UNIT_WARRIOR"),
+            5: unit(5, "UNIT_MAN_AT_ARMS"),
+            6: unit(6, "UNIT_BATTERING_RAM"),
             7: unit(7, "UNIT_ARCHER"),
-            8: unit(8, "UNIT_CROUCHING_TIGER"),
+            8: unit(8, "UNIT_ARCHER"),
             9: unit(9, "UNIT_CROUCHING_TIGER"),
-            10: unit(10, "UNIT_HORSEMAN"),
+            10: unit(10, "UNIT_CROUCHING_TIGER"),
+            11: unit(11, "UNIT_HORSEMAN"),
         }
         _, missing = _war_train_status(units)
         assert missing == []
+
+    def test_two_siege_units_are_not_enough_for_one_city(self):
+        # The gap that matters: what the empire had at T110 (2 Catapults) is one short.
+        train, missing = _war_train_status({1: unit(1, "UNIT_CATAPULT"), 2: unit(2, "UNIT_CATAPULT")})
+        assert "siege 2/3" in train
+        assert "1 siege" in missing
 
     def test_a_battering_ram_is_not_a_role(self):
         # It is in the roster and it counts for nothing: the Catapult is the wall-breaker.
@@ -94,7 +102,7 @@ class TestWarTrainStatus:
 
     def test_no_units_is_not_a_crash(self):
         train, missing = _war_train_status({})
-        assert "siege 0/2" in train and len(missing) == 4
+        assert "siege 0/3" in train and len(missing) == 4
 
 
 class TestReviewText:

@@ -70,7 +70,8 @@ Two consequences that decide whether the assembly finishes on schedule:
 
 ## Step 3 — what must be true before the column moves
 
-1. **The assault list is complete** first: 2 siege, 2 melee, 4 ranged, 1 cavalry
+1. **The assault list is complete** first: **3 siege per city** (一城3投石车), 2 melee, 4 ranged,
+   1 cavalry
    (`siege-train`, `ranged-mass`, `melee-screen`) — **no ram and no tower** (human instruction
    2026-09-26: 不用锤，用投石车). Staging
    with a missing role is how a war starts that cannot be finished.

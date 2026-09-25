@@ -181,15 +181,15 @@ capture cannot.
 
 ## The assault train (before any declaration of war)
 
-The directive's list for one city: about 2 siege, 2 melee, 4 ranged, 1
-cavalry — **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车). Only checked once a
+The directive's list for one city: about 3 siege, 2 melee, 4 ranged, 1
+cavalry — **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车, 一城3投石车). Only checked once a
 war is plausible (turn 90+), because early game it is noise.
 
 <!-- check
 id: siege-train
 when: turn() >= 90
-require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 2
-message: Fewer than 2 siege units. Ranged fire is not a substitute for siege - a Trebuchet breaks walls far faster than any Crossbowman. This is the gap that turned a 170-turn campaign into cities that took ten turns each.
+require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 3
+message: Fewer than 3 siege units for one city. Ranged fire is not a substitute for siege - a Trebuchet breaks walls far faster than any Crossbowman, and three Catapults (~260 a turn measured) out-damage a city's ~20/turn heal many times over, which is what keeps a siege bounded. This is the gap that turned a 170-turn campaign into cities that took ten turns each.
 -->
 
 <!-- check

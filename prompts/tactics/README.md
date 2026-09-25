@@ -36,11 +36,13 @@ instead of arguing from feeling:
   `siege_city_distance_min` (from the `SIEGE POSTURE` scan: distance from each siege unit to
   the nearest enemy unit, from that enemy to the unit screening it, and to the nearest city).
 - **Check rules** the orchestrator is held to, which a proposal can cite:
-  `siege-train`, `ranged-mass`, `melee-screen`, `ram-tower-before-civil-engineering`,
+  `siege-train`, `ranged-mass`, `melee-screen`,
   `counter-the-cavalry`, `use-your-attacks`, `finish-the-wounded`,
   `mass-on-contact`, `screen-the-siege`, `one-garrison-per-city`, `answer-the-attack`.
   (`engage-the-screen` was retired after the T101-T116 siege replay: "did you attack anything"
-  passed while a 7 HP enemy stood one tile away. `use-your-attacks` replaced it.)
+  passed while a 7 HP enemy stood one tile away. `use-your-attacks` replaced it;
+  `ram-tower-before-civil-engineering` was retired at T99 and the ram is no longer part of the
+  establishment at all — human instruction 2026-09-26, 不用锤，用投石车.)
 - **Blocks in the turn result**: `BATTLE ASSESSMENT` (enemy in contact, what is killable, how
   many of our units are in range) and `SIEGE POSTURE` (the formation geometry).
 

@@ -1,18 +1,17 @@
 """Turn checks: rules written in a markdown file, evaluated by end_turn every turn.
 
-The strategy directive states rules that are objectively checkable - "build a ram or tower
-before `CIVIC_CIVIL_ENGINEERING` lands", "the assault needs 2 siege, 2 melee, 1 ram/tower,
-4 ranged, 1 cavalry", "districts <= floor(pop/3)", "gold/turn stays about +10 with the army
-counted". Prose in a prompt relies on the agent remembering at the right moment; the same
-rules in a file the MCP evaluates every turn do not.
+The strategy directive states rules that are objectively checkable - "the assault needs 3 siege
+(one city: 一城3投石车), 2 melee, 4 ranged, 1 cavalry", "districts <= floor(pop/3)", "gold/turn
+stays about +10 with the army counted". Prose in a prompt relies on the agent remembering at the
+right moment; the same rules in a file the MCP evaluates every turn do not.
 
 The file is markdown: prose for a human reader, plus machine-checked blocks::
 
     <!-- check
-    id: ram-tower-deadline
-    when: not researched(CIVIC_CIVIL_ENGINEERING)
-    require: units(BATTERING_RAM, SIEGE_TOWER) >= 1
-    message: Both go obsolete at CIVIC_CIVIL_ENGINEERING ...
+    id: siege-train
+    when: turn() >= 90
+    require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 3
+    message: Fewer than 3 siege units for one city ...
     -->
 
 Expressions are parsed with ``ast`` and evaluated against a whitelist of node types and
