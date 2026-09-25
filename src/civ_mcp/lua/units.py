@@ -2412,6 +2412,19 @@ def build_builder_tasks_query() -> str:
     """
     return """
 local me = Game.GetLocalPlayer()
+local pTech = Players[me]:GetTechs()
+-- A strategic resource the player has not unlocked yet is still returned by
+-- `Plot:GetResourceType()`, and this scan used to emit an URGENT task for it - measured live T60,
+-- where 北京's row carried an unimproved NITER at (58,30), a Builder was sent there, and the MINE
+-- was refused ("tile has FEATURE_FLOODPLAINS_GRASSLAND ... can build here: IMPROVEMENT_FARM")
+-- because Niter needs Gunpowder, a Renaissance tech: the tile's resource was invisible to the map
+-- query the whole time. An unbuildable URGENT task is worse than no task, because it moves a
+-- Builder. Same predicate the map/settle queries use (`_helpers.resVisible`).
+local function resVisible(resEntry)
+    if not resEntry.PrereqTech then return true end
+    local t = GameInfo.Technologies[resEntry.PrereqTech]
+    return t and pTech:HasTech(t.Index)
+end
 local pCities = Players[me]:GetCities()
 
 -- Gather all builders with charges
@@ -2499,7 +2512,7 @@ for _, city in pCities:Members() do
                     -- Check for unimproved resource tiles
                     elseif resIdx >= 0 and impIdx < 0 then
                         local resInfo = GameInfo.Resources[resIdx]
-                        if resInfo then
+                        if resInfo and resVisible(resInfo) then
                             local resClass = resInfo.ResourceClassType or ""
                             local resName = resInfo.ResourceType:gsub("RESOURCE_", "")
                             local priority = "normal"

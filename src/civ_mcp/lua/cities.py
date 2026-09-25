@@ -196,6 +196,20 @@ def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
 def build_cities_query() -> str:
     return """
 local me = Game.GetLocalPlayer()
+local pTech = Players[me]:GetTechs()
+-- A strategic resource the player has not unlocked yet is still reported by
+-- `Plot:GetResourceType()`, so an unguarded scan hands the builder dispatcher a task it cannot
+-- carry out. Measured live T60: 北京's city row claimed an unimproved NITER at (58,30) and
+-- `get_builder_tasks` marked it URGENT, but a Builder ordered onto that tile was refused a MINE
+-- ("tile has FEATURE_FLOODPLAINS_GRASSLAND ... can build here: IMPROVEMENT_FARM") and the radius-1
+-- map narration of the same tile showed no resource at all. Niter is revealed by Gunpowder, which
+-- is a Renaissance tech; the mine was never buildable this era. Same predicate the map/settle
+-- queries already use (`_helpers.resVisible`).
+local function resVisible(resEntry)
+    if not resEntry.PrereqTech then return true end
+    local t = GameInfo.Technologies[resEntry.PrereqTech]
+    return t and pTech:HasTech(t.Index)
+end
 local hashName = {}
 for u in GameInfo.Units() do hashName[u.Hash] = u.UnitType end
 for b in GameInfo.Buildings() do hashName[b.Hash] = b.BuildingType end
@@ -291,7 +305,7 @@ for i, c in Players[me]:GetCities():Members() do
             local imp = plot:GetImprovementType()
             if res >= 0 and imp < 0 then
                 local resInfo = GameInfo.Resources[res]
-                if resInfo then
+                if resInfo and resVisible(resInfo) then
                     table.insert(unimproved, resInfo.ResourceType:gsub("RESOURCE_","") .. "@" .. px .. "," .. py)
                 end
             end

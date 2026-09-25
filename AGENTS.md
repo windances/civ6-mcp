@@ -488,6 +488,27 @@ can work while that one lives. Waiting does not help: stop that process with
 Launching from a shell may need full filesystem access: the game writes `%LOCALAPPDATA%\Firaxis
 Games` and its OneDrive save directory on start, and a confined launch produces no process at all.
 
+**Re-orient in one read: `scripts\orient.py`.** After a rollback (or any cold start) the rule is
+"rebuild every fact from the game", and doing that through five separate reads is how one of them
+gets skipped. One connection prints the game overview, units, cities, tech/civics, policies,
+diplomacy (met civs only), resources, governors, trade routes, builder tasks, city-states,
+victory/demographics, religion, great people, pantheon and notifications — compact by default,
+`--full` for the raw dataclass dump, `--only a,b` to narrow, `--maps` for the narrated map.
+Two companions: `scripts\turn-of-save.py "<path>"` prints the turn a save actually holds *before*
+you load it (a manual save carries no turn in its name and the save parser cannot always read one
+out of the file — the T59 rollback had to take the game's own filename on faith), and
+`scripts\probe-tile.py x,y` prints the raw tile record (terrain, feature, resource, owner, units),
+which is what settled that (58,30) held no *visible* resource at all.
+
+**Unattended development turns: `scripts\auto-turns.py --turns N`.** It dispatches Builders along
+the task list, keeps every city's queue filled from a per-city plan, advances research and civics
+from a priority list, takes the pantheon/dedication/governor offers, buys a Builder above
+`--buy-at` gold, and writes the same diary rows the operator writes (with factual, not
+interpretive, reflections). It **never** attacks, declares war, clears a barbarian camp, moves
+toward an enemy, or touches diplomacy — and it stops and hands back the moment a non-barbarian
+enemy is within three tiles or a war starts, which is where the tactics files apply. Run
+`--dry-run` first: it prints the orders it would issue and touches nothing.
+
 **Load by name** (preferred — no `list_saves` needed):
 ```
 load_game_save("0_MCP_0079")  # find it in the game's own save list and load it

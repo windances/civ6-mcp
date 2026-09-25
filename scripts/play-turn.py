@@ -12,7 +12,10 @@ scan. This is that, deliberately small:
   play-turn.py scan <x> <y> [radius]          enemy cities in reach + the narrated map
   play-turn.py civic <CIVIC>                  start a civic (the end-of-turn blocker)
   play-turn.py produce <city> <ITEM> [X,Y]    set a city's production, category resolved for you
+  play-turn.py purchase <city> [<ITEM>]       buy a unit or building with gold (--faith for faith);
+                                              with no ITEM it lists what that city can buy and the price
   play-turn.py improve <type-or-index> <IMPROVEMENT>
+  play-turn.py order <type-or-index|all> <fortify|heal|alert|sleep|skip|auto>
   play-turn.py end [--force]                  end the turn, with two guards (below)
 
 `civic`, `produce` and `improve` exist because those three are end-turn **blockers** — the game
@@ -71,13 +74,21 @@ from civ_mcp.narrate import narrate_map  # noqa: E402
 
 
 def find(units, needle: str):
-    """A unit by MCP index, or by type name (case-insensitive substring)."""
+    """A unit by MCP index, by type name, or by the game's own localised name.
+
+    The type is matched first because it is stable across languages. The localised name is the
+    fallback, and it exists because this game runs in Chinese: every other output in the loop prints
+    侦察兵, so that is the string an operator (or a note left for one) reaches for, and it used to
+    answer "no unit matching".
+    """
     if needle.isdigit():
         index = int(needle)
         return next((u for u in units if u.unit_index == index), None)
-    needle = needle.upper().replace("UNIT_", "")
-    matches = [u for u in units if needle in str(u.unit_type).upper()]
-    return matches[0] if matches else None
+    upper = needle.upper().replace("UNIT_", "")
+    matches = [u for u in units if upper in str(u.unit_type).upper()]
+    if matches:
+        return matches[0]
+    return next((u for u in units if needle and needle in str(getattr(u, "name", ""))), None)
 
 
 def preflight_message(sessions: list, deals: list) -> str | None:
@@ -764,6 +775,183 @@ async def main() -> int:
                 city.city_id, match.category, match.item_name, target_x, target_y
             )
             print(f"{city.name}: {match.category} {match.item_name} ({match.turns}t) -> {reply}")
+            return 0
+
+        if verb == "order":
+            # Phase 5 of the skill: no unit may leave the turn without an explicit order, and
+            # `fortify` strictly beats `skip` for a unit that is staying where it is. Until this
+            # verb existed the only orders available were move/march/attack/improve/clear, so a
+            # garrison could not be told to fortify and the turn ended on `skip_remaining_units`.
+            # `order all fortify` parks every unit that still has moves.
+            needle, kind = sys.argv[2], sys.argv[3].lower()
+            actions = {
+                "fortify": gs.fortify_unit,
+                "heal": gs.heal_unit,
+                "alert": gs.alert_unit,
+                "sleep": gs.sleep_unit,
+                "skip": gs.skip_unit,
+                "auto": gs.automate_explore,
+            }
+            action = actions.get(kind)
+            if action is None:
+                print(f"unknown order {kind!r}; use one of " + ", ".join(sorted(actions)))
+                return 1
+            units = await gs.get_units()
+            targets = units if needle == "all" else [find(units, needle)]
+            if not targets or targets[0] is None:
+                print(f"no unit matching {needle!r}")
+                return 1
+            for unit in targets:
+                print(f"order {kind}: [{unit.unit_index}] {unit.unit_type} ({unit.x},{unit.y}) "
+                      f"-> {await action(unit.unit_index)}")
+            return 0
+
+        if verb == "governor":
+            # A governor point is an end-turn blocker, and every part of the decision - appoint,
+            # assign, promote - is a separate method with a separate name-modifier. `governor
+            # status` prints the same one-line-per-governor summary the orient read does.
+            sub = sys.argv[2].lower() if len(sys.argv) > 2 else "status"
+            kind_of = {
+                "victor": "GOVERNOR_THE_DEFENDER", "defender": "GOVERNOR_THE_DEFENDER",
+                "magnus": "GOVERNOR_THE_RESOURCE_MANAGER", "resource": "GOVERNOR_THE_RESOURCE_MANAGER",
+                "liang": "GOVERNOR_THE_BUILDER", "builder": "GOVERNOR_THE_BUILDER",
+                "pingala": "GOVERNOR_THE_EDUCATOR", "educator": "GOVERNOR_THE_EDUCATOR",
+                "amani": "GOVERNOR_THE_AMBASSADOR", "ambassador": "GOVERNOR_THE_AMBASSADOR",
+                "mogsha": "GOVERNOR_THE_CARDINAL", "cardinal": "GOVERNOR_THE_CARDINAL",
+                "reyna": "GOVERNOR_THE_MERCHANT", "merchant": "GOVERNOR_THE_MERCHANT",
+            }
+
+            def governor_type(token: str) -> str:
+                if token.upper().startswith("GOVERNOR_"):
+                    return token.upper()
+                return kind_of.get(token.lower(), token.upper())
+
+            if sub == "status":
+                govs = await gs.get_governors()
+                print(f"titles available={govs.points_available} spent={govs.points_spent}")
+                for g in govs.appointed or []:
+                    print(f"  {g.name} -> {g.assigned_city_name} "
+                          f"{'established' if g.is_established else f'{g.turns_to_establish}t'}"
+                          f" | can take: "
+                          + ", ".join(f"{p.name}={p.promotion_type}" for p in g.available_promotions or []))
+                return 0
+            if sub in ("appoint", "assign", "promote"):
+                if len(sys.argv) < 4:
+                    print(f"governor {sub} needs a governor name")
+                    return 1
+                who = governor_type(sys.argv[3])
+                if sub == "appoint":
+                    print(f"appoint {who}: {await gs.appoint_governor(who)}")
+                elif sub == "assign":
+                    city_name = sys.argv[4]
+                    cities, _ = await gs.get_cities()
+                    city = next((c for c in cities if city_name in str(c.name)), None)
+                    if city is None:
+                        print(f"no city matching {city_name!r}")
+                        return 1
+                    print(f"assign {who} -> {city.name}: "
+                          f"{await gs.assign_governor(who, city.city_id)}")
+                else:
+                    promotion = sys.argv[4]
+                    print(f"promote {who} {promotion}: "
+                          f"{await gs.promote_governor(who, promotion)}")
+                return 0
+            print("governor subcommands: status | appoint <name> | assign <name> <city> | "
+                  "promote <name> <PROMOTION_TYPE>")
+            return 1
+
+        if verb == "dedication":
+            # A new era's dedication is an end-turn blocker and was reachable only through a
+            # one-off script. With no argument it lists the choices with their index numbers; with
+            # an index it takes that one.
+            status = await gs.get_dedications()
+            print(f"age {getattr(status, 'age_type', '?')} era {getattr(status, 'era', '?')} "
+                  f"era_score {getattr(status, 'era_score', '?')} "
+                  f"(dark {getattr(status, 'dark_threshold', '?')}, "
+                  f"golden {getattr(status, 'golden_threshold', '?')}) "
+                  f"selections_allowed={getattr(status, 'selections_allowed', '?')} "
+                  f"active={getattr(status, 'active', [])}")
+            choices = getattr(status, "choices", []) or []
+            for choice in choices:
+                # The descriptions come back in the game's own encoding and print as mojibake on a
+                # cp936 console, so print the enum name and let the caller look the effect up.
+                print(f"  [{choice.index}] {choice.name}")
+            if len(sys.argv) < 3:
+                return 0
+            index = int(sys.argv[2])
+            print(f"choose dedication {index}: {await gs.choose_dedication(dedication_index=index)}")
+            return 0
+
+        if verb == "research":
+            print(await gs.set_research(sys.argv[2]))
+            return 0
+
+        if verb == "pantheon":
+            # Both halves of the blocker: with no argument, what is on offer and at what faith; with
+            # one, take it. A completed pantheon and a completed tech are the two blockers that used
+            # to be reachable only through a one-off script.
+            status = await gs.get_pantheon_status()
+            if len(sys.argv) < 3:
+                print(f"faith {getattr(status, 'faith_balance', '?')} | "
+                      f"has_pantheon={getattr(status, 'has_pantheon', '?')}")
+                for belief in getattr(status, "available_beliefs", []) or []:
+                    print(f"  {belief.belief_type:<38} {belief.name:<8} {belief.description}")
+                return 0
+            chosen = sys.argv[2]
+            if not chosen.upper().startswith("BELIEF_"):
+                match = next(
+                    (b for b in getattr(status, "available_beliefs", []) or []
+                     if chosen in str(b.name) or chosen.upper() in b.belief_type.upper()),
+                    None,
+                )
+                if match is None:
+                    print(f"no belief matching {chosen!r}")
+                    return 1
+                chosen = match.belief_type
+            print(f"choose {chosen}: {await gs.choose_pantheon(chosen)}")
+            return 0
+
+        if verb == "purchase":
+            # Gold above ~300 that is not saved for a named purchase is wasted (the directive), and
+            # until this verb existed the only way to spend it was a one-off script per purchase -
+            # which is how a treasury sits at 500 with fifteen unimproved tiles and no Builder.
+            # `purchase <city>` with no item lists what that city can buy and for how much.
+            city_name = sys.argv[2]
+            item = sys.argv[3].upper() if len(sys.argv) > 3 else None
+            yield_type = "YIELD_FAITH" if "--faith" in sys.argv else "YIELD_GOLD"
+            cities, _ = await gs.get_cities()
+            city = next((c for c in cities if city_name in str(c.name)), None)
+            if city is None:
+                print(f"no city matching {city_name!r}; have: "
+                      + ", ".join(str(c.name) for c in cities))
+                return 1
+            options = await gs.list_city_production(city.city_id)
+            purchasable = [
+                o for o in options
+                if getattr(o, "gold_cost", -1) and o.gold_cost > 0
+                and o.category in ("UNIT", "BUILDING")
+            ]
+            if item is None:
+                print(f"{city.name}: purchasable with {yield_type}")
+                for option in sorted(purchasable, key=lambda o: o.gold_cost):
+                    print(f"  {option.gold_cost:>5}g  {option.category:<9} {option.item_name}")
+                if not purchasable:
+                    print("  (nothing purchasable in this city)")
+                return 0
+            match = pick_production(purchasable, item)
+            if match is None:
+                # A district or a project is a legal production order and not a purchase: say which
+                # it is instead of letting the engine answer ERR:INVALID_TYPE.
+                elsewhere = pick_production(options, item)
+                if elsewhere is not None:
+                    print(f"{city.name}: {elsewhere.item_name} is {elsewhere.category} - it can only "
+                          "be produced, not bought (districts and projects are production-only)")
+                else:
+                    print(f"{city.name} cannot buy {item}; purchasable: "
+                          + ", ".join(f"{o.item_name}({o.gold_cost}g)" for o in purchasable))
+                return 1
+            reply = await gs.purchase_item(city.city_id, match.category, match.item_name, yield_type)
+            print(f"{city.name}: buy {match.item_name} for {match.gold_cost}g -> {reply}")
             return 0
 
         if verb == "improve":
