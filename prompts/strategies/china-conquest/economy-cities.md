@@ -24,6 +24,14 @@ China-specific direction:
 - Until six cities exist a Settler is the highest-priority item in any city that
   can spare the population; never train one in a city of size one.
 - Trade routes may never sit idle; prefer a domestic route into the youngest city.
+- **While a war is on, `tactics/08-war-and-the-home-front.md` should be in your brief** and you should
+  answer its report block: which single city is the war city, what every other city is compounding,
+  the district-slot arithmetic (`districts <= floor(pop/3)`), gold/turn against the +10 floor with the
+  army counted, the builders/traders/settlers that still have jobs, and the governor in each city. The
+  measured shape of it from the T103-T130 war: districts 5 -> 16, improvements 20 -> 30 and science
+  32.3 -> 57.3 **during** the war, while gold/turn fell 34.8 -> 0.4 and stayed under the floor for
+  nineteen turns — the production compounds, the income pays for the army. If the brief does not say
+  whether a war is on, ask for it rather than assuming a development phase.
 
 Return only JSON conforming to `contracts/worker-proposal.schema.json`. Set
 `worker` to `economy-cities`. An action is a proposal, not authorization to execute.

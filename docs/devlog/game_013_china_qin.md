@@ -119,6 +119,14 @@ test `posture` already used, moved to where the decision is actually made.
   windows, and a `carrying-capacity` check that failed from the moment the army was assembled
   (military ~270 against gold per turn under +10). Science went **flat** across the T100–T110
   window (−0.09/turn) while territory and units grew.
+- **The home front, in the same ledger (T99 → T130):** science 32.3 → 57.3, districts 5 → 16,
+  improvements 20 → 30, pop 29 → 53, territory 58 → 122 — and gold/turn +34.8 → +0.4 (T117) → +4.9.
+  Both lines moved in opposite directions and both are the answer to "how do you run an empire
+  during a war": **the production compounds, the income pays for the army.** The single flat window
+  was the war's first seven turns (T103→T110, science 35.4 → 34.9), before the Campus line landed;
+  the best window was T110→T117 (districts +5, improvements +8) while gold/turn fell 18.8 → 0.4 and
+  the cash check was red every turn. The two misses on the same ledger were both resources: iron was
+  never mined although Iron Working was researched at T104, and the horse cap sat at 50/50.
 - **Bought:** eight cities, both Russian capitals, the domination requirement against Russia
   complete, four strategic resources now inside our borders (coal, iron, amber, uranium), and a
   war that never had to be fought twice — the frozen "no peace" rule was never tested because the
@@ -139,4 +147,5 @@ test `posture` already used, moved to where the decision is actually made.
 | Approach lanes stay clear; melee on the ring, shooters behind | `prompts/tactics/05-formation-and-screening.md` |
 | Pre-war gates: garrison first, ring count, sortie bait | `prompts/tactics/07-pre-war-analysis.md` |
 | A wounded unit in reach is printed at the end of every turn | `scripts/play-turn.py` (`end`), with tests |
+| The wartime home front as a coarse split — one war city, everything else compounds, gold/turn against the +10 floor | `prompts/tactics/08-war-and-the-home-front.md` (new; the economy advisor's file) |
 | The siege arithmetic and the capture laws, in the agent reference | `AGENTS.md` |

@@ -201,18 +201,20 @@ Periodic checks worth doing regularly. The game doesn't surface most of this pro
 
 ## Military tactics, by decision
 
-`prompts/tactics/` holds seven files, one per military decision, written for the `military-map`
-advisor (its prompt names which to read when). Read the matching one before improvising:
+`prompts/tactics/` holds eight files, one per decision, written for the advisors (files 1-7 for
+`military-map`, file 8 for `economy-cities`; their prompts name which to read when). Read the
+matching one before improvising:
 
 | File | 主题 |
 |---|---|
 | `tactics/01-unit-production.md` | 部队的生产策略 — the assault establishment, what to build first, what to buy |
 | `tactics/02-contact-on-discovery.md` | 发现敌人时的行动 — assess, counter unit, mass or bypass |
 | `tactics/03-under-attack.md` | 被攻击时的行动 — assess, mass, annihilate; the withdrawal cases |
-| `tactics/04-staging-out-of-range.md` | 攻城前在敌射程外集结 — rally point choice, when to advance |
+| `tactics/04-staging-out-of-range.md` | 攻城前在敌射程外集结 — rally point choice, contact on the march, when to advance |
 | `tactics/05-formation-and-screening.md` | 攻城前站位 — screen in front, siege behind at range 2 |
 | `tactics/06-assault-composition-and-fire.md` | 开打后的搭配与火力 — order of work, concentration, when to break off |
 | `tactics/07-pre-war-analysis.md` | 战前分析 — 能不能打、打谁、几回合、损失多大、打完守不守得住 |
+| `tactics/08-war-and-the-home-front.md` | 战时内政 — one war city, everything else compounds; gold/turn against the +10 floor |
 
 **Before a war, file 7 comes first, and its own first step is reconnaissance** — Gate 0 is "a
 candidate city is actually visible". An army in the right shape with every enemy city still in fog

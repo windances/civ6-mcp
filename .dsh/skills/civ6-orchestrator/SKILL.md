@@ -273,7 +273,35 @@ the board.
 
 - **Development never stops, including during a war.** Improvements, growth, the
   Campus line, amenities and one wonder are the compounding engine; the army is
-  pure cost until it is actually taking cities.
+  pure cost until it is actually taking cities. **Coarse is the operative word: split
+  the cities once, at the declaration, and do not re-plan the split every turn.**
+  One city - the highest production - is the war city and builds units, siege and
+  the Encampment; **every other city builds its next district or that district's
+  building and nothing else for the duration.** Measured over the T103-T130 Russian
+  war, that split is what the ledger shows: districts 5 -> 16, improvements 20 -> 30,
+  science 32.3 -> 57.3 and territory 58 -> 122 **during** the war, while gold/turn
+  fell 34.8 -> 0.4 (a 99% fall) and `carrying-capacity` failed from T111 for the
+  remaining nineteen turns. The two lines are not in tension: **the production
+  compounds and the income pays for the army.** What a war costs the home front is
+  units and gold, not districts - and the counter-example is on the same ledger, with
+  长沙 sitting on a free district slot for thirty turns and the capital reaching the
+  Medieval era with no Campus.
+- **The units the war does not need still have jobs.** Builders keep coming and stay
+  away from the front (a builder has zero combat strength) - +10 improvements during
+  that war is what makes `builder-backlog` pass. Trade routes never sit idle; their
+  capacity comes from the Market or Commercial Hub the compounding cities are
+  building, so the two halves feed each other. A Settler is a war aim only when it
+  takes a strategic resource the army needs: Iron Working was researched at T104 and
+  the iron at (60,32)/(57,42) was still unmined at T130, so no Swordsman and no
+  Knight was ever buildable in that campaign, while the horse cap sat at 50/50
+  discarding +2/turn. Exactly one garrison per city, drawn from the cheapest spare
+  unit.
+- **Governors buy the phase, and moving one is free.** Victor in a captured or
+  low-loyalty city (Moscow held 33 loyalty and -1.9/turn with him in it and did not
+  revolt again); Pingala in the highest-population city while developing (Researcher
+  is +1 science per citizen, worth more than any building at this stage); Magnus in
+  the city producing Settlers. The full procedure, including the priority order for
+  a short turn and what to report, is `prompts/tactics/08-war-and-the-home-front.md`.
 - **Size the army from the target city, not from a target number.** More units is
   not more conquest: the 170-turn empire reached military 596 and the war still
   took 60 turns, because it built **zero** siege units. A stack that cannot break
@@ -284,7 +312,10 @@ the board.
   doubled the army to 592 by T150 and gold per turn fell to +0.6 - 45 turns of
   income handed to maintenance, for a war that had already stalled. Its carrying
   capacity was a military of roughly **250-300**. Military 596 at -0.1 gold per
-  turn is not a stronger position than 156 at +19.8; it is a slower one.
+  turn is not a stronger position than 156 at +19.8; it is a slower one. If the
+  projection takes gold/turn below +10, what is wrong is the size of the army or the
+  length of the war, **never the home front** - and gold/turn is the one number that
+  did not recover in the T103-T130 war.
 
 So the only decision that matters is when to start, and the trigger is a checklist
 rather than a turn number:
@@ -545,14 +576,21 @@ Read the four role files under `prompts/workers/`. Start each role through
 Workers have no tools. Ask each worker to return only JSON matching
 `contracts/worker-proposal.schema.json`.
 
-The military role owns six tactic files under `prompts/tactics/` - unit production, contact on
-discovery, under attack, staging outside enemy range, formation and screening, and assault
-composition and fire discipline. **The worker cannot read them: it has no tools and no
+The advisors own the tactic files under `prompts/tactics/` - unit production, contact on
+discovery, under attack, staging outside enemy range, formation and screening, assault composition
+and fire discipline, and pre-war analysis, which are the military role's; plus **the war and the
+home front**, which is the economy role's. **The worker cannot read them: it has no tools and no
 filesystem.** Read the one or two that match the turn and paste their text into the `civ_advisor`
 call yourself, next to the snapshot; name the file in the call so the worker knows which doctrine
 it is being held to, and hold its proposal to that file's prohibitions when you validate it in
 Phase 3. Without that paste the worker proposes from general knowledge and the tactic files may as
 well not exist.
+
+**While a war is on, `economy-cities` gets `tactics/08-war-and-the-home-front.md` in its brief
+too.** It is the file that answers what the cities the army is not standing in should be building -
+one war city, every other city compounding - and its report block (`WAR CITY`, `COMPOUND`, `SLOTS`,
+`CASH`, `UNITS`, `GOVERNORS`, `REVIEW`) is what the wartime split is decided from. That split is
+coarse and is decided **once, at the declaration**, not re-planned every turn.
 
 **Look a mechanic up instead of guessing, and paste what you find.** `search_knowledge(query, k, doc)`
 queries a local index of the game manual, the directive, the rule file and the retrospectives, and

@@ -1,9 +1,11 @@
-# Military tactics for the `military-map` advisor / 军事worker 战术手册
+# Tactics for the war / 战术手册
 
-Six files, one per decision the human asked to have separated. The `military-map` worker is
-read-only and sees only the immutable snapshot, so each file is written as **triggers →
-assessment → decision → prohibitions → what to report**. Read only the files the current
-snapshot calls for; they are meant to be consulted one or two at a time, not all at once.
+Eight files, one per decision the human asked to have separated. The `military-map` and
+`economy-cities` workers are read-only and see only the immutable snapshot, so each file is written
+as **triggers → assessment → decision → prohibitions → what to report**. Read only the files the
+current snapshot calls for; they are meant to be consulted one or two at a time, not all at once.
+Files 1–7 belong to `military-map`; **file 8 belongs to `economy-cities`** and goes in its brief
+whenever a war is on.
 
 | # | File | 主题 | Read it when |
 |---|---|---|---|
@@ -14,6 +16,7 @@ snapshot calls for; they are meant to be consulted one or two at a time, not all
 | 5 | `05-formation-and-screening.md` | 攻城前，部队站位策略 | the stack is formed and about to advance |
 | 6 | `06-assault-composition-and-fire.md` | 攻城开始后，部队搭配和攻击策略 | the stack is in contact with the target city |
 | 7 | `07-pre-war-analysis.md` | 战前分析：能不能打、打谁、几回合、损失、打完守不守得住 | a war is being considered, or a target chosen but not yet committed |
+| 8 | `08-war-and-the-home-front.md` | 战时内政，其他城市和单位的发展策略 | a war is on, or a `10-TURN REVIEW` arrives during one |
 
 ## Shared vocabulary
 
