@@ -7,7 +7,7 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`007-destroy-russia.md`, `008-destroy-missionaries.md`.
+`007-destroy-russia.md`, `008-destroy-missionaries.md`, `009-city-near-niter.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -36,6 +36,11 @@ second war. The verb now exists — `unit_action(action="condemn")` implements t
 candidate before it fires — and **the game itself requires a war declaration** for it, so the case it
 serves is a Russian missionary once 007 declares: a civ we are at peace with cannot be condemned by
 tool or human (`ERR:REQUIRES_WAR`). Record the reply either way in the diary's `tooling` line.
+
+**009 is third and waits on the war**: a Niter city, with a Settler (80 hammers) allowed in a city that
+is **not** the war city, an escort out of the garrison rotation, and nothing pulled off the staging row
+or the declaration. Its expiry (T175) is counted from the queue, because 005 expired unused by being
+counted from the calendar.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
