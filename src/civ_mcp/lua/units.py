@@ -35,6 +35,11 @@ for i, u in Players[id]:GetUnits():Members() do
         local nm = Locale.Lookup(u:GetName())
         local cs = entry and entry.Combat or 0
         local rs = entry and entry.RangedCombat or 0
+        -- A siege unit attacks a city with its Bombard strength and has RangedCombat 0
+        -- (UNIT_CATAPULT: CS 25, RS 0, Bombard 35, Range 2). Testing RangedCombat alone leaves it
+        -- out of the target scan entirely - its range reads 1 and its target list stays empty, so
+        -- nothing downstream can see what a Catapult is actually able to shoot (live T107).
+        local bomb = entry and entry.Bombard or 0
         local charges = u:GetBuildCharges() or 0
         local gp = u:GetGreatPerson()
         if gp then
@@ -67,8 +72,8 @@ for i, u in Players[id]:GetUnits():Members() do
         end
         -- Scan for attackable enemies if unit has moves
         local targets = ""
-        if u:GetMovesRemaining() > 0 and (cs > 0 or rs > 0) then
-            local rng = (rs > 0) and (entry and entry.Range or 1) or 1
+        if u:GetMovesRemaining() > 0 and (cs > 0 or rs > 0 or bomb > 0) then
+            local rng = ((rs > 0 or bomb > 0) and (entry and entry.Range or 1)) or 1
             local tgtList = {}
             for dy = -rng, rng do
                 for dx = -rng, rng do
@@ -370,20 +375,29 @@ end
 -- while every attack returned NO_ENEMY, healed about twenty points a turn back to 120/200, and
 -- the campaign was abandoned; the same city fell in four turns once a human attacked the tile
 -- from the game UI. Cities.GetCityInPlot is the API the game's own UI uses.
+--
+-- The resolution is the *first* thing that happens, and it wins over a unit on the tile: a city
+-- tile is attacked as a city, because the game routes an attack on that tile to the city pool and
+-- the unit inside is not separately attackable. Live T107: two Archers and a Catapult fired at
+-- Moscow and put 76 points into the garrison ARCHER and 11 into the 200-point pool - the doctrine
+-- says exactly why that is wasted ("a garrison inside takes no damage while the city is attacked
+-- and dies only with the city"). The plot must be the city's *own* tile, not merely inside its
+-- territory, or an attack on a unit standing on a farm would be redirected to the city.
 local targetCity = nil
 local cityOwner = -1
-if enemy == nil then
-    pcall(function()
-        local c = Cities.GetCityInPlot({target_x}, {target_y})
-        if c then
-            targetCity = c
-            cityOwner = c:GetOwner()
-            -- Named here, not further down: the not-at-war message below quotes it, and a city
-            -- that is out of reach should be named in the refusal (live T102 it read "unknown").
-            pcall(function() enemyName = Locale.Lookup(c:GetName()):gsub("|", "/") end)
-        end
-    end)
-end
+local targetIsCity = false
+pcall(function()
+    local c = Cities.GetCityInPlot({target_x}, {target_y})
+    if c and c:GetX() == {target_x} and c:GetY() == {target_y} then
+        targetCity = c
+        cityOwner = c:GetOwner()
+        targetIsCity = true
+        -- Named here, not further down: the not-at-war message below quotes it, and a city
+        -- that is out of reach should be named in the refusal (live T102 it read "unknown").
+        pcall(function() enemyName = Locale.Lookup(c:GetName()):gsub("|", "/") end)
+    end
+end)
+if targetCity ~= nil then enemy = nil end
 if enemy == nil and targetCity == nil then
     {_bail(f"ERR:NO_ENEMY|No hostile unit or city at ({target_x},{target_y})")}
 end
@@ -399,14 +413,12 @@ if enemyOwner ~= 63 then
 end
 local enemyHP = 0
 local enemyMaxHP = 0
-local targetIsCity = false
 if enemy then
     enemyHP = enemy:GetMaxDamage() - enemy:GetDamage()
     enemyMaxHP = enemy:GetMaxDamage()
 else
     -- What is being attacked, and by which number: a unit's HP, or the city's own HP pool (the
     -- garrison pool of the city centre district - walls are a separate pool, damaged first).
-    targetIsCity = true
     pcall(function() enemyName = Locale.Lookup(targetCity:GetName()):gsub("|", "/") end)
     pcall(function()
         local ccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
@@ -423,9 +435,20 @@ local myHP = unit:GetMaxDamage() - unit:GetDamage()
 local params = {{}}
 params[UnitOperationTypes.PARAM_X] = {target_x}
 params[UnitOperationTypes.PARAM_Y] = {target_y}
--- Determine attack type
+-- Determine attack type. A siege unit's attack on a city is its **Bombard** strength and its
+-- RangedCombat is 0 (UNIT_CATAPULT: CS 25, RS 0, Bombard 35, Range 2), so a classification that
+-- tests RangedCombat alone reads a Catapult as melee: the estimate prints "Melee", the attack path
+-- walks it toward the city and reports STOPPED_SHORT when the movement runs out, and the blow that
+-- does land is resolved as a melee attack that takes retaliation. Live T107: a Catapult standing
+-- two tiles from Moscow was refused `RANGE_ATTACK` and spent the turn walking instead.
 local unitInfo = GameInfo.Units[unit:GetType()]
-local isRanged = UnitManager.CanStartOperation(unit, UnitOperationTypes.RANGE_ATTACK, nil, true)
+local attRS = unitInfo and unitInfo.RangedCombat or 0
+local attBombard = unitInfo and unitInfo.Bombard or 0
+local attRange = unitInfo and unitInfo.Range or 1
+local isRanged = (attRS > 0 or (attBombard > 0 and targetIsCity)) and dist <= attRange
+if not isRanged then
+    isRanged = UnitManager.CanStartOperation(unit, UnitOperationTypes.RANGE_ATTACK, nil, params)
+end
 local isAir = (not isRanged) and UnitManager.CanStartOperation(unit, UnitOperationTypes.AIR_ATTACK, nil, params)
 if isRanged then
     if unit:GetMovesRemaining() <= 0 then
@@ -605,18 +628,32 @@ local unitInfo = GameInfo.Units[unit:GetType()]
 local attType = unitInfo and unitInfo.UnitType or "UNKNOWN"
 local attCS = unitInfo and unitInfo.Combat or 0
 local attRS = unitInfo and unitInfo.RangedCombat or 0
-local isRanged = attRS > 0 and dist > 1
-local effAttCS = isRanged and attRS or attCS
+local attBombard = unitInfo and unitInfo.Bombard or 0
+-- A city tile is a city target even when a unit is standing in it: the garrison is not separately
+-- attackable, it takes no damage while the city is attacked, and what the estimate should describe
+-- is the pool that actually moves. Live T107: an estimate that reasoned about the garrison ARCHER
+-- read "~76 damage" while the attack put 76 into that unit and 11 into the city.
+local tCityOnTile = nil
+pcall(function()
+    local c = Cities.GetCityInPlot({target_x}, {target_y})
+    if c and c:GetX() == {target_x} and c:GetY() == {target_y} then tCityOnTile = c end
+end)
+-- A siege unit's city attack is its Bombard strength and its RangedCombat is 0 (UNIT_CATAPULT:
+-- CS 25, RS 0, Bombard 35, Range 2), so a test on RangedCombat alone calls it melee.
+local isRanged = (attRS > 0 or (attBombard > 0 and tCityOnTile ~= nil)) and dist > 1
+local effAttCS = isRanged and (attRS > 0 and attRS or attBombard) or attCS
 -- Find defender
 local enemy = nil
-local tgtUnits = Map.GetUnitsAt({target_x}, {target_y})
-if tgtUnits then
-    for other in tgtUnits:Units() do
-        if other:GetOwner() ~= me then
-            local eInfo = GameInfo.Units[other:GetType()]
-            local eCombat = eInfo and eInfo.Combat or 0
-            if eCombat > 0 or enemy == nil then enemy = other end
-            if eCombat > 0 then break end
+if tCityOnTile == nil then
+    local tgtUnits = Map.GetUnitsAt({target_x}, {target_y})
+    if tgtUnits then
+        for other in tgtUnits:Units() do
+            if other:GetOwner() ~= me then
+                local eInfo = GameInfo.Units[other:GetType()]
+                local eCombat = eInfo and eInfo.Combat or 0
+                if eCombat > 0 or enemy == nil then enemy = other end
+                if eCombat > 0 then break end
+            end
         end
     end
 end
