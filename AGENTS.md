@@ -8,8 +8,13 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 
 **IN FORCE NOW — read each of these files before planning the turn:**
 `002-focus-fire-scouts.md`, `003-two-scouts-explore.md`, `004-city-near-iron.md`,
-`005-city-near-copper.md` (the iron city outranks the copper one: iron is strategic and the empire has
-none, copper is a bonus tile worth about +2 gold — and six cities is the directive's ceiling).
+`005-city-near-copper.md`, `006-prepare-for-russia.md`.
+
+Priority when they compete for the same queues: **006 (the assault establishment — two Catapults
+first: `siege-train` is failing and Engineering has just unlocked them)**, then **004** (iron is what
+the melee line is gated on), then **003** (two scouts, cheap), then **002** (instant, costs no
+production — a scout in reach is shot this turn), and **005** last (copper is a bonus tile worth about
++2 gold).
 
 **This list is the mechanism, not decoration.** A file added to `prompts/tasks/tmp/` while a session is
 already playing reaches it only when that session re-lists the directory; the paragraph below says to do
