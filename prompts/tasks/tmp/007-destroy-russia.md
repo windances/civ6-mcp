@@ -8,9 +8,9 @@ expires:   turn 160 — the third Catapult is the gate (一城3投石车) and it
            cities stand and why.
 done when: **Russia is eliminated** — `get_diplomacy` **no longer** lists a Russian city, every city
            we took has been resolved with `city_action` keep/raze, and no Russian unit is left inside
-           our territory. Report the count of Russian cities taken, counted from the map at the
-           declaration (Russia held **four** at T119 — 阿斯特拉罕 pop 5 (54,40), 沃罗涅什 pop 2
-           (50,37) and two in fog — not the three this file first recorded).
+           our territory. Report the count of Russian cities taken, counted as you take them (Russia
+           held **four** at T119 — 阿斯特拉罕 pop 5 (54,40), 沃罗涅什 pop 2 (50,37) and two in fog —
+           not the three this file first recorded), and say which ones were found only on the march.
 overrides: the per-city build lists, the Campus/Builder plan and the last temporary task's copper line:
            anything the assault establishment is missing comes first, and **this task authorizes a
            declaration of war on Russia** once `tactics/07`'s gates pass — 006 deliberately did not,
@@ -30,15 +30,16 @@ instruction lives here, and the checkable *parts* of it are already rules: `sieg
 `hold-what-you-take`, `use-your-attacks`, `mass-on-contact`. If a rival-city-count metric ever lands,
 convert this file to a goal with `metric(<rival cities>) == 0`.
 
-## What is already true, and what is missing (measured at T115, target row re-read at T119)
+## What is already true, and what is missing (first measured at T115, re-read at T123)
 
-| Piece | Have | Gate it is for |
+| Piece | Have (T123) | Gate it is for |
 |---|---|---|
-| siege | **2 Catapults** | `siege-train` wants **3 per city** (一城3投石车) — the binding item |
-| ranged | 4 Archers | upgrade to Crossbowmen for 500 gold once 职业军队 Professional Army lands (Mercenaries) |
-| melee | 4 (Warrior/Spearman tier) | **iron is 6/50 at +2/t**: a Swordsman is buildable past 20 (~T122), and the front line is Warrior-tier until then (`match-their-melee`) |
-| cavalry | 1 Horseman | satisfied |
+| siege | **3 Catapults — gate met at T122** | `siege-train` satisfied; Military Engineering (T123) unlocks the **Trebuchet** upgrade for all three, which `upgrade-the-siege` will demand during a war |
+| ranged | **3 Crossbowmen** (CS 30 / RS 40), one Archer left | the fourth upgrade is 125 gold |
+| melee | **1 Man-at-Arms (CS 45)**; Apprenticeship skipped the Swordsman tier | a second Warrior upgrade is 125 gold; `match-their-melee` is answered by the 45, not by a Swordsman |
+| cavalry | 1 Horseman | satisfied; Stirrups (in research at T123) would make it a Knight |
 | ram / tower | none, and none wanted | human instruction 2026-09-26: 不用锤，用投石车 |
+| iron | **22/50 at +2/t** (was 6 at T114); NITER also revealed at T123 | the melee upgrades are gold-gated now, not iron-gated |
 | the target | **four** cities at T119: 阿斯特拉罕 pop 5 (54,40), 沃罗涅什 pop 2 (50,37), **two in fog** (three at T110 — it grows) | see the read below |
 
 **The pre-war read is no longer blocked.** `get_diplomacy`'s city line prints `walls none` /
@@ -46,21 +47,26 @@ convert this file to a goal with `metric(<rival cities>) == 0`.
 `get_map_area` radius 2 gives the ring and any unit standing on the city tile. The four numbers of
 `tactics/07` step 1 are all obtainable at peace — `walls none` is a reading, not a missing one.
 
-**The target list is a snapshot, not a constant.** Russia stood at three cities when this file was
-written and at **four** by T119, two of them in fog, and the session caught the drift on the turn it
-read the file. Re-read `get_diplomacy` and count the cities from the map before the declaration — the
-same lesson as a camp coordinate copied from an old diary (T65 said (60,30); the T83 map read put it
-at (60,29)). Entry to Russian ground is refused even while Russia is FRIENDLY and Open Borders is
-signed (measured T96 and again T119: an order straight to (50,37) came back `BLOCKED (foreign ...)`),
-so the search for the fogged cities runs **around** the border with the Horseman and the Scout.
+**The target list is a snapshot, not a constant — and it is not a prerequisite.** Russia stood at
+three cities when this file was written and at **four** by T119, two of them in fog, and the session
+caught the drift on the turn it read the file. The count matters for the *end* (elimination), not for
+the trigger: **the declaration waits on the first target's numbers, not on the whole map** (human
+instruction 2026-09-26: 不用获取所有城市信息才开战). Read each remaining city when the army reaches it —
+the march finds them better than a scout does, and entry to Russian ground is refused even while
+Russia is FRIENDLY with Open Borders signed (measured T96 and T119: an order straight to (50,37) came
+back `BLOCKED (foreign ...)`). Count the cities as you take them, the same way a camp coordinate is
+re-read from the map rather than trusted from an old diary (T65 said (60,30); T83's read put it at
+(60,29)).
 
 ## The order of work
 
-1. **Read every Russian city in four numbers** (garrison / walls / HP / ring) — 阿斯特拉罕 first, it is
-   two tiles from the watch post at (54,38). **Find the fogged cities**: four are known and only two
-   are visible, so the Horseman and the Scout keep looking before the plan is called complete. The
-   abandoned branch of this map found Moscow at (54,40) and 圣彼得堡 at (56,43) — a search direction,
-   not a fact, and this branch has 阿斯特拉罕 on that tile instead.
+1. **Read the FIRST TARGET in four numbers** (garrison / walls / HP / ring) — 阿斯特拉罕 is the
+   nearest, two tiles from the watch post at (54,38), so that is the city the gates run on. The four
+   numbers are needed for **the city being attacked, not for all of them**: the two still in fog are
+   found by the march itself and read the turn the army stands outside them. Keep the Horseman and the
+   Scout looking, but they are **not** a gate. The abandoned branch of this map found Moscow at (54,40)
+   and 圣彼得堡 at (56,43) — a search direction, not a fact, and this branch has 阿斯特拉罕 on that tile
+   instead.
 2. **Finish the establishment** (file 7's checklist, directive): the **third Catapult**, a Swordsman
    once iron passes 20, the four Crossbowman upgrades after Professional Army. Do not declare before
    it is in place: 006's whole lesson is that a war you cannot finish is a war you must not start.
