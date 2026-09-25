@@ -31,10 +31,11 @@ and beside a city read as `walls none` it is dead weight. It is also the **only*
 file that authorizes the declaration of war on Russia; 006 deliberately did not.
 
 **008 rides along with 007, it does not postpone it**: destroying missionaries is lane-clearing, not a
-second war. It has one thing to establish before anything else — the MCP has **no Condemn Heretic
-verb**, and `attack` refuses a unit whose owner we are at peace with (`ERR:NOT_AT_WAR`,
-`src/civ_mcp/lua/units.py:411`), so the first hostile religious unit adjacent to one of ours must be
-attacked as a probe and the exact reply recorded in the diary's `tooling` line, kill or refusal.
+second war. The verb now exists — `unit_action(action="condemn")` implements the game's own
+`UNITCOMMAND_CONDEMN_HERETIC` (added 2026-09-26, live at the next MCP start), reporting every adjacent
+candidate before it fires — and **the game itself requires a war declaration** for it, so the case it
+serves is a Russian missionary once 007 declares: a civ we are at peace with cannot be condemned by
+tool or human (`ERR:REQUIRES_WAR`). Record the reply either way in the diary's `tooling` line.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
@@ -404,6 +405,7 @@ Some paths close. It's worth checking periodically via `get_victory_progress`:
 |--------|--------|-------|
 | `move` | Move to tile | target_x, target_y required |
 | `attack` | Attack enemy | Shows damage estimate; melee/ranged auto-detected |
+| `condemn` | Destroy an adjacent enemy religious unit (Condemn Heretic) | A game **command**, not an attack (`unit_action(action="condemn")`); the engine picks the adjacent Missionary/Apostle/Inquisitor, so the reply names every candidate first. **The game requires a war declaration** (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`), so a friend's missionary cannot be condemned by anyone — a peace-time target comes back `ERR:REQUIRES_WAR`. Added 2026-09-26 for task 008. |
 | `fortify` | +4 defense, heals | Military only |
 | `heal` | Fortify until full HP | Auto-wakes at full HP |
 | `alert` | Sleep, wake on enemy | Sentry use |

@@ -281,6 +281,7 @@ from civ_mcp.lua.units import (  # noqa: F401
     build_automate_explore,
     build_builder_tasks_query,
     build_combat_estimate_query,
+    build_condemn_heretic,
     build_delete_unit,
     build_fortify_remaining_units,
     build_fortify_unit,

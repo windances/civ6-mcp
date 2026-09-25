@@ -566,6 +566,46 @@ class GameState:
         lines = await self.conn.execute_read(lua)
         return lq.parse_settle_advisor_response(lines)
 
+    async def condemn_heretic(self, unit_index: int) -> str:
+        """Destroy an adjacent enemy religious unit (Condemn Heretic).
+
+        A game **command**, not an attack: the engine picks the adjacent religious unit and the
+        game refuses it outright against a civ we are not at war with
+        (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`). The Lua reports every
+        adjacent candidate before firing, so a condemnation is never anonymous.
+        """
+        try:
+            await self.dismiss_popup()
+        except Exception:
+            pass
+        lua = lq.build_condemn_heretic(unit_index)
+        lines = await self.conn.execute_write(lua)
+        result = _action_result(lines)
+        if not result.startswith("CONDEMNED"):
+            return result
+        tx = ty = None
+        for line in lines:
+            if line.startswith("OK:CONDEMNED") and "verify_tile:" in line:
+                try:
+                    coords = line.split("verify_tile:", 1)[1].split("|", 1)[0].split(",")
+                    tx, ty = int(coords[0]), int(coords[1])
+                except (ValueError, IndexError):
+                    tx = ty = None
+                break
+        if tx is None:
+            return result
+        # The command resolves in the game core; re-read the tile rather than trusting the request.
+        await asyncio.sleep(0.4)
+        try:
+            verify = await self.conn.execute_read(lq.build_attack_followup_query(tx, ty))
+        except Exception as exc:  # pragma: no cover - the read is best-effort
+            log.debug("condemn verification failed: %s", exc)
+            return result
+        still = [ln for ln in verify if ln.startswith("UNIT|")]
+        if still:
+            return f"{result} | STILL THERE: {'; '.join(still)} - re-read next turn before assuming the kill"
+        return f"{result} | tile ({tx},{ty}) now empty"
+
     async def fortify_unit(self, unit_index: int) -> str:
         lua = lq.build_fortify_unit(unit_index)
         lines = await self.conn.execute_write(lua)

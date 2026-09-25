@@ -1043,6 +1043,81 @@ print("{SENTINEL}")
 """
 
 
+def build_condemn_heretic(unit_index: int) -> str:
+    """Condemn Heretic: destroy an adjacent enemy religious unit.
+
+    The game exposes this as a **command**, not a UnitOperation —
+    `UNITCOMMAND_CONDEMN_HERETIC` in the install's
+    `Base/Assets/Gameplay/Data/UnitCommands.xml`, issued with
+    `UnitManager.RequestCommand(unit, UnitCommandTypes.CONDEMN_HERETIC)` and pre-checked with
+    `UnitManager.CanStartCommand(...)` (the same pair the game's own UnitPanel uses). There is no
+    target parameter: the engine picks the adjacent religious unit, so this reports every
+    candidate before it fires rather than condemning one silently.
+
+    **The game itself requires a war declaration** for this — its own refusal string is
+    `LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`: "A Religious unit in this tile
+    belongs to a player you are not at war with." So a missionary of a civ we are at peace with
+    cannot be condemned by anyone, tool or human; the case this exists for is a religious unit of
+    the civ we are at war with.
+
+    Religious units are civilians by formation class (the Missionary is `CLASS_LANDCIVILIAN` with
+    the `CLASS_RELIGIOUS` tag), so the target test is on the unit type, not the formation class.
+    """
+    return f"""
+{_lua_get_unit(unit_index)}
+local ux, uy = unit:GetX(), unit:GetY()
+local RELIGIOUS = {{ UNIT_MISSIONARY = true, UNIT_APOSTLE = true, UNIT_INQUISITOR = true, UNIT_GURU = true }}
+local found = {{}}
+for dx = -2, 2 do
+  for dy = -2, 2 do
+    local px, py = ux + dx, uy + dy
+    if Map.GetPlotDistance(ux, uy, px, py) == 1 then
+      local plotUnits = Map.GetUnitsAt(px, py)
+      if plotUnits then
+        for other in plotUnits:Units() do
+          if other:GetOwner() ~= me then
+            local oInfo = GameInfo.Units[other:GetType()]
+            if oInfo and RELIGIOUS[oInfo.UnitType] then
+              local oName, oOwner = oInfo.UnitType, tostring(other:GetOwner())
+              pcall(function() oName = Locale.Lookup(oInfo.Name) end)
+              pcall(function() oOwner = Locale.Lookup(PlayerConfigurations[other:GetOwner()]:GetCivilizationShortDescription()) end)
+              table.insert(found, {{ other, px, py, oName, oOwner }})
+            end
+          end
+        end
+      end
+    end
+  end
+end
+if #found == 0 then
+  {_bail("ERR:NO_RELIGIOUS_TARGET|No adjacent enemy religious unit to condemn (no Missionary, Apostle, Inquisitor or Guru within one tile)")}
+end
+for _, f in ipairs(found) do
+  print("CANDIDATE|" .. f[4] .. "|" .. f[5] .. "|at (" .. f[2] .. "," .. f[3] .. ")")
+end
+local target, tx, ty, tName, tOwner = found[1][1], found[1][2], found[1][3], found[1][4], found[1][5]
+local command = UnitCommandTypes.CONDEMN_HERETIC
+if not command then
+  {_bail("ERR:NO_CONDEMN_COMMAND|This game build does not expose UnitCommandTypes.CONDEMN_HERETIC")}
+end
+local canStart = false
+local okCan, canStartResult = pcall(function() return UnitManager.CanStartCommand(unit, command, nil, true) end)
+if okCan and canStartResult then canStart = true end
+if not canStart then
+  local atWar = false
+  pcall(function() atWar = Players[me]:GetDiplomacy():IsAtWarWith(target:GetOwner()) end)
+  print("TARGET|" .. tName .. "|" .. tOwner .. "|at (" .. tx .. "," .. ty .. ")")
+  if not atWar then
+    {_bail("ERR:REQUIRES_WAR|Condemn Heretic needs a war declaration - the game refuses it against a player we are not at war with (LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION). Declare war first; task 007 owns that decision.")}
+  end
+  {_bail("ERR:CANNOT_CONDEMN|The game will not start Condemn Heretic for this unit right now (no charges left, already acted, or no legal adjacent target).")}
+end
+UnitManager.RequestCommand(unit, command)
+print("OK:CONDEMNED|" .. tName .. " of " .. tOwner .. " at (" .. tx .. "," .. ty .. ")|candidates:" .. #found .. "|verify_tile:" .. tx .. "," .. ty)
+print("{SENTINEL}")
+"""
+
+
 def build_skip_unit(unit_index: int) -> str:
     """Skip a unit's turn (GameCore context — uses FinishMoves)."""
     return f"""

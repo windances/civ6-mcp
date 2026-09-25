@@ -1603,7 +1603,7 @@ async def unit_action(
 
     Args:
         unit_id: The unit's composite ID (from get_units output)
-        action: One of: move, attack, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion
+        action: One of: move, attack, condemn, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion
         target_x: Target X coordinate (required for move/attack/trade_route/teleport)
         target_y: Target Y coordinate (required for move/attack/trade_route/teleport)
         improvement: Improvement type for builders (required for improve), e.g.
@@ -1648,6 +1648,8 @@ async def unit_action(
                 return await gs.attack_unit(unit_index, target_x, target_y)
             case "fortify":
                 return await gs.fortify_unit(unit_index)
+            case "condemn":
+                return await gs.condemn_heretic(unit_index)
             case "skip":
                 return await gs.skip_unit(unit_index)
             case "found_city":
@@ -1689,7 +1691,7 @@ async def unit_action(
                     return "Error: teleport requires target_x and target_y of the destination city"
                 return await gs.teleport_to_city(unit_index, target_x, target_y)
             case _:
-                return f"Error: Unknown action '{action}'. Valid: move, attack, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion"
+                return f"Error: Unknown action '{action}'. Valid: move, attack, condemn, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion"
 
     result = await _logged(ctx, "unit_action", params, _run)
     if (

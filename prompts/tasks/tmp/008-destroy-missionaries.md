@@ -7,7 +7,7 @@ expires:   turn 160 — the same horizon as 007. Retire it early once no hostile
 done when: **no hostile religious unit stands in our territory or on a road the army uses** — a
            `get_map_area` sweep of our cities, the 阿斯特拉罕 approach and the roads between them shows
            `count == 0` of MISSIONARY / APOSTLE / INQUISITOR belonging to a civ we are at war with —
-           and the tool's answer to the attack is recorded either way (see the probe below).
+           and the tool's answer to the `condemn` is recorded either way (see below).
 overrides: the march and the city queues: a unit adjacent to a hostile religious unit may spend its
            attack on it instead of moving, and 007's staging tolerates a one-turn delay for that. It
            does **not** authorize a declaration of war on anybody (007 owns that), and it does **not**
@@ -27,29 +27,36 @@ religious unit parked on a one-tile lane is exactly the thing that cost this cam
 The instruction therefore lives here, and the checkable part (the `use-your-attacks` rule) already
 exists once a legal attack exists.
 
-## What the tool can and cannot do — measure this first
+## What the tool can and cannot do — verified in the game's own files
 
-`unit_action(action="attack", ...)` resolves the target tile by taking the first **hostile** unit and
-falling back to a non-combat one when no combat unit is on the tile
-(`src/civ_mcp/lua/units.py:348-370`), so a Missionary *is* reachable by that path. But the same
-builder refuses an attack on a civ we are at peace with:
+`unit_action(action="condemn", unit_id=…)` implements this (added 2026-09-26, live at the next MCP
+start). It is the game's own **command**, not an attack:
 
-    ERR:NOT_AT_WAR|Cannot attack <unit> — you are at peace with <civ>. Declare war first or target a
-    different unit.                     (src/civ_mcp/lua/units.py:411)
+* the command is `UNITCOMMAND_CONDEMN_HERETIC` (`Base/Assets/Gameplay/Data/UnitCommands.xml`);
+* the game issues it as `UnitManager.RequestCommand(unit, UnitCommandTypes.CONDEMN_HERETIC)` and
+  pre-checks it with `UnitManager.CanStartCommand(unit, command, nil, true)` — the same pair the
+  game's own UnitPanel uses (`UnitPanel.lua:419`);
+* **there is no target parameter**: the engine picks the adjacent religious unit, so the tool prints
+  every candidate it can see before it fires;
+* and **the game itself requires a war declaration** — its own refusal string is
+  `LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`: "A Religious unit in this tile belongs
+  to a player you are not at war with."
 
-The game's own verb for this is **Condemn Heretic**, which the MCP does not expose — there is no
-`condemn` action anywhere in `src/`. So:
+So the honest position: **a missionary of a civ we are at peace with cannot be destroyed — not by
+this tool, not by a human playing the same game.** `attack` reaches the unit but refuses with
+`ERR:NOT_AT_WAR` (`src/civ_mcp/lua/units.py:411`), and `condemn` answers `ERR:REQUIRES_WAR` for the
+same reason. The case this task serves is the war: Russian religious units once 007 declares.
 
-1. **Probe it, do not assume.** The first time a hostile religious unit is adjacent to one of our
-   military units, issue the attack and copy the exact reply into the diary's `tooling` line:
-   * `NOT_AT_WAR` → expected while at peace; the kill waits for 007's declaration, or for the tool to
-     grow a `condemn` verb.
-   * an engine refusal (ATTACK_BLOCKED / NO_ENEMY / a Lua error) → the MCP cannot condemn at all, say
-     so plainly, and treat that as the reason this task cannot be finished.
-   * a kill → the path works; record the unit, the tile and the turn.
-2. **Russia first.** Once 007's declaration is sent, Russian religious units become legal targets
-   under the same attack path, and this task rides along with the war.
-3. **Do not touch Egypt's or a city-state's.** A friend's missionary is not a target under this file.
+1. **Use `condemn` on the first hostile religious unit adjacent to one of our military units** and
+   copy the reply into the diary's `tooling` line:
+   * `CONDEMNED|… | tile (x,y) now empty` → the kill, confirmed by a re-read of the tile.
+   * `CONDEMNED|… | STILL THERE: …` → the request went out but the engine still shows the unit;
+     re-read next turn before assuming anything.
+   * `ERR:REQUIRES_WAR` → we are at peace with the owner; 007's declaration is the unlock.
+   * `ERR:NO_RELIGIOUS_TARGET` / `ERR:CANNOT_CONDEMN` → nothing adjacent, or the engine will not
+     start the command (already acted, no charges left).
+2. **Russia first.** Once 007's declaration is sent, Russian religious units are legal targets.
+3. **Do not touch Egypt's or a city-state's.** A friend's missionary cannot be condemned anyway.
 
 ## The order of work
 
