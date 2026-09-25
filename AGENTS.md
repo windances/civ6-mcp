@@ -7,21 +7,23 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-*none.* As of T115 the directory holds only `README.md`.
+`007-destroy-russia.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
 establishment complete on paper but the iron still `0/50` and the target city never read in its four
 numbers, and `005-city-near-copper` was retired **EXPIRED at T115** with no copper city founded: the
 site at (50,33) was a bonus tile worth about +2 gold and never justified a sixth city, which is
-exactly what that file said to do if the ranking came out badly. All five sit in
+exactly what that file said to do if the ranking came out badly. All six sit in
 `prompts/tasks/tmp/done/` with the turn in their name. **This list and that directory are checked
 against each other** by `tests/test_temp_tasks.py`, so a retirement that is not recorded here goes red
 instead of quietly staying in force.)
 
-An empty list is the normal state. What is outstanding after T115 is not a task file: it is the
-directive's own checklist — **3 Catapults per city** (一城3投石车), a Swordsman once the iron
-stockpile passes 20, and a target city read in its four numbers before any declaration.
+Priority: **007 outranks everything else** — it is the only task in force, and the human instruction
+behind it (消灭俄罗斯) is an objective rather than a build order. Its gates are the directive's own
+checklist: **3 Catapults per city** (一城3投石车), a Swordsman once the iron stockpile passes 20, and a
+four-number read of every Russian city before any declaration. It is also the **only** file that
+authorizes the declaration of war on Russia; 006 deliberately did not.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
