@@ -398,12 +398,34 @@ def decide(state: dict, target: int, entry: dict | None) -> tuple[str, str]:
     )
 
 
+async def load_the_save(name: str) -> str:
+    """Load a save through the adapter's own path: Lua first, OCR only as its fallback.
+
+    Not `game_launcher.load_save_from_menu`, which is the OCR half on its own: it needs the
+    game window in the foreground and clicks a screen grab of it, and that is the path that
+    failed three times while rolling back one save (2026-09-25) - "Could not find 'Load Game'
+    button" with the launcher's splash in the capture. `game_lifecycle.load_game_save` now
+    reaches the main menu's own load screen over Lua, lands the load (leader screen, CONTINUE,
+    turn read back) and falls back to the OCR navigation itself when the game's list does not
+    carry the name.
+    """
+    from civ_mcp.connection import GameConnection
+    from civ_mcp.game_lifecycle import load_game_save
+
+    conn = GameConnection()
+    await conn.connect()
+    try:
+        return await load_game_save(conn, name)
+    finally:
+        await conn.disconnect()
+
+
 async def apply_plan(action: str, name: str, target: int, force: bool) -> str:
     if action == "load-from-menu":
-        return await gl.load_save_from_menu(name)
+        return await load_the_save(name)
     if action == "launch-then-load":
         launch = await gl.launch_game()
-        return f"{launch} | Load: {await gl.load_save_from_menu(name)}"
+        return f"{launch} | Load: {await load_the_save(name)}"
     if action == "restart-and-load":
         return await gl.restart_and_load(name, force=force)
     return "nothing to do"

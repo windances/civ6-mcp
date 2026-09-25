@@ -274,3 +274,57 @@ class TestRestoringRetiredGoals:
         block = rb.check_block(archive, "ram-tower-before-civil-engineering")
         assert block is not None and "id: ram-tower-before-civil-engineering" in block
         assert "something-else" not in block
+
+
+class TestTheLoadTheRollbackIssues:
+    """The rollback's load must go through the adapter, not straight to the OCR half.
+
+    `game_launcher.load_save_from_menu` is the OCR navigation on its own: it needs the game
+    window in the foreground and clicks a screen grab of it, which is the path that failed three
+    times while rolling back one save on 2026-09-25. `game_lifecycle.load_game_save` reaches the
+    main menu's own load screen over Lua and lands the load, and falls back to that OCR
+    navigation itself when the game's save list does not carry the name.
+    """
+
+    def test_the_menu_load_goes_through_the_adapter(self, monkeypatch):
+        import asyncio
+
+        from civ_mcp import connection as connection_module
+        from civ_mcp import game_lifecycle as lifecycle
+
+        asked: list[str] = []
+
+        class FakeConnection:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def connect(self):
+                return None
+
+            async def disconnect(self):
+                asked.append("disconnected")
+
+        async def fake_load(conn, name):
+            asked.append(name)
+            return f"Loading save: {name} (issued from the LoadGameMenu Lua state)."
+
+        monkeypatch.setattr(connection_module, "GameConnection", FakeConnection)
+        monkeypatch.setattr(lifecycle, "load_game_save", fake_load)
+
+        result = asyncio.run(rb.apply_plan("load-from-menu", "AutoSave_0099", 99, False))
+        assert asked[0] == "AutoSave_0099"
+        assert "disconnected" in asked, "the connection is closed even on success"
+        assert "LoadGameMenu" in result
+
+    def test_a_hang_still_restarts_and_loads(self, monkeypatch):
+        import asyncio
+
+        called: list[tuple] = []
+
+        async def fake_restart(name, force=False):
+            called.append((name, force))
+            return "restarted"
+
+        monkeypatch.setattr(rb.gl, "restart_and_load", fake_restart)
+        assert asyncio.run(rb.apply_plan("restart-and-load", "AutoSave_0099", 99, True)) == "restarted"
+        assert called == [("AutoSave_0099", True)]
