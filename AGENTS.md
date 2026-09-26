@@ -7,8 +7,8 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`011-destroy-chengdu-ring.md`, `010-rescue-chengdu.md`, `007-destroy-russia.md`,
-`008-destroy-missionaries.md`, `009-city-near-niter.md`.
+`012-novgorod-pre-war-analysis.md`, `011-destroy-chengdu-ring.md`, `010-rescue-chengdu.md`,
+`007-destroy-russia.md`, `008-destroy-missionaries.md`, `009-city-near-niter.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -64,6 +64,19 @@ is the objective, which is why it is a file. Its clearing method is written down
 43-damage strike does the work (it is the strongest single attack in the empire), the Warrior
 **never** sorties (a CS 20 attack on a CS 45 levied Man-at-Arms reads `attacker likely dies`), and
 the mobile surplus takes the units out of the city's 2-tile reach.
+
+**012 is 007's last step, written out** (human instruction 2026-09-26: run the pre-war analysis on the
+next target): Russia is down to one city — 诺夫哥罗德 (61,42), pop 2, `walls 100`, ungarrisoned, its
+loyalty draining `-3.7/t` so it would revolt to a Free City in ~27 turns — and 007's `done when` is
+exactly that city. The file carries the four numbers, the five gates of `tactics/07` and the arithmetic
+this army actually has: 3 Trebuchets are **135–165 gross** a turn against a ~20/turn heal while the
+supply line is open (`3/6` cut at T161), a **bare melee attack does 9 against 100 walls** where the same
+attack beside the Ram does full damage, and a d2 melee unit cannot close and strike in the same turn
+(T160, measured twice) so the capture pair must be parked at d1 a turn early. It outranks 007's
+timetable only in the direction of arriving together, and 011 outranks it for the 成都 ring. It is a
+file rather than a rule because the two blocks that would have carried it are the two measured broken:
+`SIEGE FIRE` is suppressed while the whole train sits beyond city-distance 3, and `get_staging_plan`'s
+`arrive T+n` does not know that our own units jam the corridor.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
