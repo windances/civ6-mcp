@@ -615,12 +615,19 @@ class StagingOption:
 
 @dataclass
 class StagingPlan:
-    """The raw material of a staging plan: the ring, the units, and every option."""
+    """The raw material of a staging plan: the ring, the units, and every option.
+
+    ``next_ring`` / ``next_options`` are the same thing for the *next* objective, when the caller
+    named one — surplus units advance toward it rather than idling (human instruction 2026-09-26:
+    多余部队还可以向下一个城市目标/蛮族营地集结推进).
+    """
 
     target: str = ""
     ring: list[StagingRingTile] = field(default_factory=list)
     units: list[StagingUnit] = field(default_factory=list)
     options: list[StagingOption] = field(default_factory=list)
+    next_ring: list[StagingRingTile] = field(default_factory=list)
+    next_options: list[StagingOption] = field(default_factory=list)
 
 
 @dataclass

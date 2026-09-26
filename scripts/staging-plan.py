@@ -40,7 +40,20 @@ async def main() -> int:
     ap.add_argument("x", type=int, help="target city X")
     ap.add_argument("y", type=int, help="target city Y")
     ap.add_argument("--turns", type=int, default=2, help="how many turns ahead to plan")
+    ap.add_argument(
+        "--next",
+        help="the NEXT objective as x,y (the next city, or a barbarian camp): surplus units that"
+        " are not needed for the supply line advance toward it instead of idling",
+    )
     args = ap.parse_args()
+
+    next_x = next_y = None
+    if args.next:
+        try:
+            next_x, next_y = (int(v) for v in args.next.replace(" ", "").split(","))
+        except ValueError:
+            print("--next wants two integers: --next 58,39")
+            return 2
 
     conn = GameConnection()
     try:
@@ -50,8 +63,11 @@ async def main() -> int:
         return 1
     try:
         gs = GameState(conn)
-        plan = await gs.staging_plan(args.x, args.y)
-        print(f"ring tiles: {len(plan.ring)}  units: {len(plan.units)}  options: {len(plan.options)}")
+        plan = await gs.staging_plan(args.x, args.y, next_x, next_y)
+        print(
+            f"ring tiles: {len(plan.ring)}  units: {len(plan.units)}  options: {len(plan.options)}"
+            + (f"  next ring: {len(plan.next_ring)}" if plan.next_ring else "")
+        )
         print(st.render(st.assign(plan, turns_ahead=args.turns), plan))
     finally:
         await conn.disconnect()

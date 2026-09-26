@@ -791,7 +791,13 @@ async def get_settle_advisor(ctx: Context, unit_id: int) -> str:
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
-async def get_staging_plan(ctx: Context, city_x: int, city_y: int) -> str:
+async def get_staging_plan(
+    ctx: Context,
+    city_x: int,
+    city_y: int,
+    next_city_x: int | None = None,
+    next_city_y: int | None = None,
+) -> str:
     """Plan the assembly before moving anything: which unit takes which ring tile, and when.
 
     Human instruction 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优
@@ -800,16 +806,21 @@ async def get_staging_plan(ctx: Context, city_x: int, city_y: int) -> str:
     assignment: distinct tiles, shooters on the distance-2 tiles, melee on the adjacent one, and
     the conflicts named so nobody is ordered onto an occupied tile (`STACKING_CONFLICT`).
 
+    Pass the **next** objective's tile (`next_city_x`/`next_city_y` — the next city or a
+    barbarian camp) and the surplus that is not needed for the supply line is pushed toward it
+    instead of idling: 多余部队还可以向下一个城市目标/蛮族营地集结推进. The march is what the last
+    deadline was lost to, so a unit that will be needed there moves now.
+
     Read it **before** the first move of an assembly. It answers the three questions the plan
-    exists for: who goes where, who cannot fit (send those to the rear of the ring to cut the
-    supply line rather than queueing), and which turn the assault actually opens.
+    exists for: who goes where, who cannot fit (supply hexes, forward staging, or depth), and
+    which turn the assault actually opens.
     """
     gs = _get_game(ctx)
 
     async def _run():
         from . import staging as st
 
-        plan = await gs.staging_plan(city_x, city_y)
+        plan = await gs.staging_plan(city_x, city_y, next_city_x, next_city_y)
         return st.render(st.assign(plan), plan)
 
     return await _logged(

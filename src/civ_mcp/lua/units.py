@@ -1,4 +1,4 @@
-"""Units domain 鈥?Lua builders and parsers."""
+"""Units domain 閳?Lua builders and parsers."""
 
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ for i, u in Players[id]:GetUnits():Members() do
         -- fires one turn early AND causes double-promotions when end_turn's
         -- authoritative GameCore CanPromote check also fires.
         -- All promotion handling is routed through the end_turn blocker (which
-        -- uses CanPromote in GameCore 鈥?the only correct check).
+        -- uses CanPromote in GameCore 閳?the only correct check).
         local promo = "0"
         -- Upgrade info (InGame only: CanStartCommand)
         local canUp, upName, upCost = "0", "", "0"
@@ -405,14 +405,14 @@ if targetCity ~= nil then enemy = nil end
 if enemy == nil and targetCity == nil then
     {_bail(f"ERR:NO_ENEMY|No hostile unit or city at ({target_x},{target_y})")}
 end
--- Check diplomatic status 鈥?can only attack units you're at war with (barbarians always attackable)
+-- Check diplomatic status 閳?can only attack units you're at war with (barbarians always attackable)
 local enemyOwner = enemy and enemy:GetOwner() or cityOwner
 if enemyOwner ~= 63 then
     local pDiplo = Players[me]:GetDiplomacy()
     if not pDiplo:IsAtWarWith(enemyOwner) then
         local ownerCfg = PlayerConfigurations[enemyOwner]
         local ownerName = ownerCfg and Locale.Lookup(ownerCfg:GetCivilizationDescription()) or ("player " .. enemyOwner)
-        {_bail_lua('"ERR:NOT_AT_WAR|Cannot attack " .. enemyName .. " 鈥?you are at peace with " .. ownerName .. ". Declare war first or target a different unit."')}
+        {_bail_lua('"ERR:NOT_AT_WAR|Cannot attack " .. enemyName .. " 閳?you are at peace with " .. ownerName .. ". Declare war first or target a different unit."')}
     end
 end
 local unitInfo = GameInfo.Units[unit:GetType()]
@@ -500,7 +500,7 @@ if isAir then
 else
     -- Melee: let CanStartOperation be the authority on adjacency/validity.
     -- Map.GetPlotDistance can misreport distance on offset hex grids, so we
-    -- do not use it as a gate here 鈥?only as a diagnostic in the error message.
+    -- do not use it as a gate here 閳?only as a diagnostic in the error message.
     local myCS = unitInfo and unitInfo.Combat or 0
     -- Movement check: melee attack requires movement points (ranged does not)
     if unit:GetMovesRemaining() <= 0 then
@@ -509,7 +509,7 @@ else
     -- ZOC check: if unit entered enemy ZOC this turn, it cannot attack until next turn.
     -- CanStartOperation returns true but RequestOperation silently queues for next turn.
     if unit:HasMovedIntoZOC() then
-        {_bail_lua('"ERR:ZOC|Unit entered Zone of Control this turn 鈥?cannot attack until next turn. End turn and attack from current position next turn."')}
+        {_bail_lua('"ERR:ZOC|Unit entered Zone of Control this turn 閳?cannot attack until next turn. End turn and attack from current position next turn."')}
     end
     params[UnitOperationTypes.PARAM_MODIFIERS] = UnitOperationMoveModifiers.ATTACK
     if not UnitManager.CanStartOperation(unit, UnitOperationTypes.MOVE_TO, nil, params) then
@@ -520,7 +520,7 @@ else
     local newX, newY = unit:GetX(), unit:GetY()
     local newDist = Map.GetPlotDistance(newX, newY, {target_x}, {target_y})
     if newDist > 1 then
-        print("ERR:STOPPED_SHORT|Unit moved to (" .. newX .. "," .. newY .. ") but could not reach target at ({target_x},{target_y}) 鈥?" .. newDist .. " tiles away. Movement exhausted by terrain. Try again next turn from closer position.")
+        print("ERR:STOPPED_SHORT|Unit moved to (" .. newX .. "," .. newY .. ") but could not reach target at ({target_x},{target_y}) 閳?" .. newDist .. " tiles away. Movement exhausted by terrain. Try again next turn from closer position.")
         print("{SENTINEL}"); return
     end
     -- Try to read post-combat state (may fail if units moved/died)
@@ -568,7 +568,7 @@ print("{SENTINEL}")
 def build_attack_followup_query(target_x: int, target_y: int) -> str:
     """InGame context: get actual HP of units at target tile after combat.
 
-    Also checks for city defenses (walls/garrison) at the target 鈥?when
+    Also checks for city defenses (walls/garrison) at the target 閳?when
     attacking a walled city, damage goes to walls first so the garrison
     unit's HP stays unchanged even though the attack succeeded.
 
@@ -623,7 +623,7 @@ def parse_blocked_diagnostic(lines: list[str]) -> str:
             parts = line.split("|", 2)
             if len(parts) >= 3:
                 return parts[2]
-    return "unit did not move 鈥?impassable terrain, border, or no path"
+    return "unit did not move 閳?impassable terrain, border, or no path"
 
 
 def build_combat_estimate_query(unit_index: int, target_x: int, target_y: int) -> str:
@@ -698,7 +698,7 @@ if enemy == nil then
     print("{SENTINEL}")
     return
 end
--- Check diplomatic status 鈥?estimates for units at peace are misleading
+-- Check diplomatic status 閳?estimates for units at peace are misleading
 local enemyOwner = enemy:GetOwner()
 if enemyOwner ~= 63 then
     local pDiplo = Players[me]:GetDiplomacy()
@@ -707,7 +707,7 @@ if enemyOwner ~= 63 then
         local ownerName = ownerCfg and Locale.Lookup(ownerCfg:GetCivilizationDescription()) or ("player " .. enemyOwner)
         local eInfo2 = GameInfo.Units[enemy:GetType()]
         local eName = eInfo2 and eInfo2.UnitType or "UNKNOWN"
-        {_bail_lua('"ERR:NOT_AT_WAR|Cannot attack " .. eName .. " 鈥?you are at peace with " .. ownerName .. ". Declare war first."')}
+        {_bail_lua('"ERR:NOT_AT_WAR|Cannot attack " .. eName .. " 閳?you are at peace with " .. ownerName .. ". Declare war first."')}
     end
 end
 local eInfo = GameInfo.Units[enemy:GetType()]
@@ -819,7 +819,7 @@ if not isRanged then
             local fx, fy = {target_x} + dx, {target_y} + dy
             -- The 3x3 box is not the hex neighbourhood: two of its eight plots sit two tiles
             -- away, and a unit standing there does not flank. Counting them made the estimate
-            -- report "flank +6" for a pair the game's own preview calls "+4澶瑰嚮鍔犳垚" - measured
+            -- report "flank +6" for a pair the game's own preview calls "+4婢剁懓鍤崝鐘冲灇" - measured
             -- live T113 against CombatManager.SimulateAttackVersus (UnitPanel.lua:3352), which
             -- is the engine's own answer to the same question.
             if Map.GetPlotDistance({target_x}, {target_y}, fx, fy) == 1
@@ -938,9 +938,9 @@ def build_threat_scan_query() -> str:
 
     Scans all players (not just barbarians) but only reports units on tiles
     the player can currently see (PlayersVisibility:IsVisible). No arbitrary
-    distance limits 鈥?fog of war is the natural filter.
+    distance limits 閳?fog of war is the natural filter.
 
-    Uses GameCore context but filters by fog of war 鈥?only reports units
+    Uses GameCore context but filters by fog of war 閳?only reports units
     on tiles the player can currently see (PlayersVisibility:IsVisible).
     Reports owner, HP, combat strength, and distance from nearest friendly position.
     """
@@ -972,7 +972,7 @@ for pid = 0, 63 do
         local isBarbarian = (pid == 63)
         -- Skip city-state units unless we're at war with them
         if not isMajor and not isBarbarian and not pDiplo:IsAtWarWith(pid) then
-            -- City-state, not at war 鈥?not a threat
+            -- City-state, not at war 閳?not a threat
         else
         local ownerName = "Barbarian"
         if pid ~= 63 then
@@ -1058,14 +1058,14 @@ print("{SENTINEL}")
 def build_condemn_heretic(unit_index: int) -> str:
     """Condemn Heretic: destroy an adjacent enemy religious unit.
 
-    The game exposes this as a **command**, not a UnitOperation 鈥?    `UNITCOMMAND_CONDEMN_HERETIC` in the install's
+    The game exposes this as a **command**, not a UnitOperation 閳?    `UNITCOMMAND_CONDEMN_HERETIC` in the install's
     `Base/Assets/Gameplay/Data/UnitCommands.xml`, issued with
     `UnitManager.RequestCommand(unit, UnitCommandTypes.CONDEMN_HERETIC)` and pre-checked with
     `UnitManager.CanStartCommand(...)` (the same pair the game's own UnitPanel uses). There is no
     target parameter: the engine picks the adjacent religious unit, so this reports every
     candidate before it fires rather than condemning one silently.
 
-    **The game itself requires a war declaration** for this 鈥?its own refusal string is
+    **The game itself requires a war declaration** for this 閳?its own refusal string is
     `LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`: "A Religious unit in this tile
     belongs to a player you are not at war with." So a missionary of a civ we are at peace with
     cannot be condemned by anyone, tool or human; the case this exists for is a religious unit of
@@ -1130,7 +1130,7 @@ print("{SENTINEL}")
 
 
 def build_skip_unit(unit_index: int) -> str:
-    """Skip a unit's turn (GameCore context 鈥?uses FinishMoves)."""
+    """Skip a unit's turn (GameCore context 閳?uses FinishMoves)."""
     return f"""
 {_lua_get_unit_gamecore(unit_index)}
 UnitManager.FinishMoves(unit)
@@ -1531,7 +1531,7 @@ for pid = 0, 63 do
                         end end
                         -- Idle strength within reach. The supply lever above is only pullable if
                         -- somebody can walk onto the open hexes, and the cost of not checking is
-                        -- measured: at 娌冪綏娑呬粈 and 鍠€灞?the count never left 3/6 and 1/6 while
+                        -- measured: at 濞屽啰缍忓☉鍛矆 and 閸犫偓鐏?the count never left 3/6 and 1/6 while
                         -- Catapults "fortified in place because the corridor is jammed" (T155) and
                         -- the pools healed back. A unit that still has movement and is within three
                         -- tiles is exactly the unit that could be doing it, so it is counted here
@@ -1629,7 +1629,7 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
 
 
 def build_skip_remaining_units() -> str:
-    """Skip all units with moves remaining (GameCore context 鈥?FinishMoves for each)."""
+    """Skip all units with moves remaining (GameCore context 閳?FinishMoves for each)."""
     return """
 local me = Game.GetLocalPlayer()
 local count = 0
@@ -1678,7 +1678,7 @@ print("{SENTINEL}")
 
 
 def build_alert_unit(unit_index: int) -> str:
-    """Put unit on alert 鈥?sleeps but auto-wakes when enemy enters sight (InGame context)."""
+    """Put unit on alert 閳?sleeps but auto-wakes when enemy enters sight (InGame context)."""
     return f"""
 {_lua_get_unit(unit_index)}
 if UnitManager.CanStartOperation(unit, UnitOperationTypes.ALERT, nil, nil) then
@@ -1692,7 +1692,7 @@ print("{SENTINEL}")
 
 
 def build_sleep_unit(unit_index: int) -> str:
-    """Put unit to sleep 鈥?stays until manually woken (InGame context)."""
+    """Put unit to sleep 閳?stays until manually woken (InGame context)."""
     return f"""
 {_lua_get_unit(unit_index)}
 local sleepHash = GameInfo.UnitOperations["UNITOPERATION_SLEEP"].Hash
@@ -1767,7 +1767,7 @@ if plot:IsImprovementPillaged() then
         local rParams = {{}}
         rParams[UnitOperationTypes.PARAM_X] = unit:GetX()
         rParams[UnitOperationTypes.PARAM_Y] = unit:GetY()
-        -- Include improvement type 鈥?REPAIR may need to know WHICH improvement to restore
+        -- Include improvement type 閳?REPAIR may need to know WHICH improvement to restore
         local impType = plot:GetImprovementType()
         if impType >= 0 then
             local impRow = GameInfo.Improvements[impType]
@@ -1779,7 +1779,7 @@ if plot:IsImprovementPillaged() then
             print("OK:REPAIRING|{improvement_name}|" .. unit:GetX() .. "," .. unit:GetY())
             print("{SENTINEL}"); return
         else
-            -- CanStartOperation is unreliable (stale InGame state) 鈥?attempt anyway
+            -- CanStartOperation is unreliable (stale InGame state) 閳?attempt anyway
             pcall(function() UnitManager.RequestOperation(unit, repairHash, rParams) end)
             -- Check if it worked by re-reading pillage state next frame
             print("WARN:REPAIR_ATTEMPTED|CanStartOperation=false but RequestOperation sent. Verify next turn.")
@@ -1849,7 +1849,7 @@ print("{SENTINEL}")
 def build_remove_feature(unit_index: int) -> str:
     """Remove (chop/harvest) a feature from the tile the builder is standing on.
 
-    Uses UNITOPERATION_REMOVE_FEATURE 鈥?works on forest, jungle, marsh.
+    Uses UNITOPERATION_REMOVE_FEATURE 閳?works on forest, jungle, marsh.
     The game auto-detects which feature is present; no feature param needed.
     """
     return f"""
@@ -1884,7 +1884,7 @@ print("{SENTINEL}")
 def build_repair_improvement(unit_index: int) -> str:
     """Repair a pillaged improvement at the builder's current tile (InGame context).
 
-    Auto-detects the pillaged improvement 鈥?no improvement name needed.
+    Auto-detects the pillaged improvement 閳?no improvement name needed.
     """
     return f"""
 {_lua_get_unit(unit_index)}
@@ -2063,7 +2063,7 @@ print("{SENTINEL}")
 def build_build_route(unit_index: int) -> str:
     """Build a route (road/railroad) on the Military Engineer's current tile.
 
-    Uses UNITOPERATION_BUILD_ROUTE 鈥?after Steam Power tech this builds
+    Uses UNITOPERATION_BUILD_ROUTE 閳?after Steam Power tech this builds
     railroads (route type 4).  Does NOT consume charges.  Costs 1 Iron +
     1 Coal per railroad tile from the player's stockpile.
     """
@@ -2391,11 +2391,10 @@ def parse_pathing_estimate(lines: list[str]) -> PathingEstimate:
 
 
 # The staging plan: the target city's ring, our units, and the game's own pathing for every
-# (unit, ring tile) pair. Human instruction 2026-09-26: 鍦ㄩ泦缁撳墠锛岃鍒掗泦缁撴柟妗堬紝涓嶈兘琚牭浣忥紝涓嶅悓閮ㄩ槦
-# 绉诲姩鍔涗笉涓€鏍凤紝鎵惧埌鏈€浼橀泦缁撴柟妗堝悗锛屾墠寮€濮嬫墽琛? Built as one query because the alternative is one
+# (unit, ring tile) pair. Human instruction 2026-09-26: 閸︺劑娉︾紒鎾冲閿涘矁顫夐崚鎺楁肠缂佹挻鏌熷鍫礉娑撳秷鍏樼悮顐㈢壄娴ｅ骏绱濇稉宥呮倱闁劑妲?# 缁夎濮╅崝娑楃瑝娑撯偓閺嶅嚖绱濋幍鎯у煂閺堚偓娴兼﹢娉︾紒鎾存煙濡楀牆鎮楅敍灞惧瀵偓婵澧界悰? Built as one query because the alternative is one
 # `get_pathing_estimate` call per unit per ring tile, and the arithmetic that decides the plan
 # (which tile, for which unit, in which turn) has to come from `UnitManager.GetMoveToPath` and
-# `GetReachableMovement` 鈥?hand-computed hex distance was wrong twice this war.
+# `GetReachableMovement` 閳?hand-computed hex distance was wrong twice this war.
 _STAGING_TEMPLATE = """
 local me = Game.GetLocalPlayer()
 local tx, ty = __TX__, __TY__
@@ -2421,6 +2420,24 @@ for dx = -2, 2 do for dy = -2, 2 do
     end
 end end
 print("STAGEPLAN|" .. tx .. "," .. ty .. "|ring:" .. #ring)
+-- The next objective's ring, when the caller named one: surplus units advance toward it instead
+-- of idling (human instruction 2026-09-26: 多余部队还可以向下一个城市目标/蛮族营地集结推进). The
+-- march is what 007's clock was lost to, so the unit that will be needed there is moved now.
+local nextRing = {}
+local ntx, nty = __NX__, __NY__
+if ntx ~= -9999 then
+    for dx = -2, 2 do for dy = -2, 2 do
+        local px, py = ntx + dx, nty + dy
+        local p = Map.GetPlot(px, py)
+        if p then
+            local d = Map.GetPlotDistance(ntx, nty, px, py)
+            if d >= 1 and d <= 2 and not p:IsImpassable() then
+                nextRing[#nextRing + 1] = {x = px, y = py, d = d, idx = p:GetIndex()}
+                print("NEXTRING|" .. px .. "," .. py .. "|" .. d)
+            end
+        end
+    end end
+end
 for _, u in Players[me]:GetUnits():Members() do
     local ux, uy = u:GetX(), u:GetY()
     if ux ~= -9999 then
@@ -2446,6 +2463,27 @@ for _, u in Players[me]:GetUnits():Members() do
             print("UNIT|" .. ut .. "|" .. u:GetID() .. "|"
                 .. ux .. "," .. uy .. "|" .. moves .. "|" .. role
                 .. "|d" .. Map.GetPlotDistance(ux, uy, tx, ty) .. "|cs" .. cs)
+            if ntx ~= -9999 and moves > 0 then
+                for _, t2 in ipairs(nextRing) do
+                    local path2 = UnitManager.GetMoveToPath(u, t2.idx)
+                    if path2 and #path2 > 0 then
+                        local last2 = Map.GetPlotByIndex(path2[#path2])
+                        if last2:GetX() == t2.x and last2:GetY() == t2.y then
+                            local rc2 = 0
+                            for _, pIdx in ipairs(path2) do
+                                if reachSet[pIdx] then rc2 = rc2 + 1 end
+                            end
+                            local turns2
+                            if rc2 >= #path2 then turns2 = 0
+                            else turns2 = math.ceil((#path2 - rc2) / math.max(rc2, 1)) end
+                            if turns2 <= 3 then
+                                print("NEXTOPTION|" .. u:GetID() .. "|" .. t2.x .. "," .. t2.y
+                                    .. "|" .. turns2 .. "|" .. (reachSet[t2.idx] and 1 or 0))
+                            end
+                        end
+                    end
+                end
+            end
             if moves > 0 then
                 for _, t in ipairs(ring) do
                     local path = UnitManager.GetMoveToPath(u, t.idx)
@@ -2474,7 +2512,7 @@ print("__SENTINEL__")
 """
 
 
-def build_staging_plan_query(target_x: int, target_y: int) -> str:
+def build_staging_plan_query(target_x: int, target_y: int, next_x: int | None = None, next_y: int | None = None) -> str:
     """GameCore/InGame: the ring around a target city and every unit's path to each ring tile.
 
     One query instead of one per (unit, tile): the ring is at most ~18 tiles and the army is
@@ -2486,6 +2524,8 @@ def build_staging_plan_query(target_x: int, target_y: int) -> str:
     return (
         _STAGING_TEMPLATE.replace("__TX__", str(int(target_x)))
         .replace("__TY__", str(int(target_y)))
+        .replace("__NX__", str(int(next_x) if next_x is not None else -9999))
+        .replace("__NY__", str(int(next_y) if next_y is not None else -9999))
         .replace("__SENTINEL__", SENTINEL)
     )
 
@@ -2524,6 +2564,20 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     strength=strength,
                 )
             )
+        elif line.startswith("NEXTRING|") and len(parts) >= 3:
+            x, y = (int(v) for v in parts[1].split(","))
+            plan.next_ring.append(StagingRingTile(x=x, y=y, distance=int(parts[2])))
+        elif line.startswith("NEXTOPTION|") and len(parts) >= 5:
+            x, y = (int(v) for v in parts[2].split(","))
+            plan.next_options.append(
+                StagingOption(
+                    unit_id=int(parts[1]),
+                    x=x,
+                    y=y,
+                    turns=int(parts[3]),
+                    this_turn=parts[4] == "1",
+                )
+            )
         elif line.startswith("OPTION|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[2].split(","))
             plan.options.append(
@@ -2539,7 +2593,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
     return plan
 
 
-# 鈹€鈹€ Post-move visibility 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# 閳光偓閳光偓 Post-move visibility 閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓閳光偓
 
 
 def build_post_move_visibility_query(now_x: int, now_y: int, radius: int = 4) -> str:
@@ -2668,14 +2722,14 @@ def build_builder_tasks_query() -> str:
 
     Outputs TASK| lines for tiles needing work and BUILDER| lines for builder units.
     Uses hardcoded resource mapping and terrain heuristics for improvement recommendations.
-    Does NOT use CanStartOperation with remote tiles (corrupts engine state 鈫?crash).
+    Does NOT use CanStartOperation with remote tiles (corrupts engine state 閳?crash).
     """
     return """
 local me = Game.GetLocalPlayer()
 local pTech = Players[me]:GetTechs()
 -- A strategic resource the player has not unlocked yet is still returned by
 -- `Plot:GetResourceType()`, and this scan used to emit an URGENT task for it - measured live T60,
--- where 鍖椾含's row carried an unimproved NITER at (58,30), a Builder was sent there, and the MINE
+-- where 閸栨ぞ鍚?s row carried an unimproved NITER at (58,30), a Builder was sent there, and the MINE
 -- was refused ("tile has FEATURE_FLOODPLAINS_GRASSLAND ... can build here: IMPROVEMENT_FARM")
 -- because Niter needs Gunpowder, a Renaissance tech: the tile's resource was invisible to the map
 -- query the whole time. An unbuildable URGENT task is worse than no task, because it moves a

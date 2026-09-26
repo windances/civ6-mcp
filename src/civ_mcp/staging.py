@@ -199,30 +199,76 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2) -> StagingPlanResult:
     # The surplus, in the order the employment ladder in `render` gives: the supply hexes of
     # the ring first (each unit cuts the hex it stands on plus its ring neighbours), then depth
     # behind the ring for whoever is left.
+    # The surplus, in the order the employment ladder in `render` gives. Supply hexes are for
+    # units that can take a hit (they are adjacent to the city, inside its strike): melee,
+    # anti-cavalry and cavalry - never a siege or ranged unit, which dies there. Then forward
+    # staging toward the next objective, then depth behind the ring. An assault unit that could
+    # not reach a ring tile is offered the next objective too, and only reported as unplaced if
+    # there is nowhere for it to go.
     supply_tiles = [t for t in _supply_hexes(plan.ring) if (t.x, t.y) not in taken]
     supply_positions = {(t.x, t.y) for t in supply_tiles}
-    for unit in surplus_units:
-        chosen = None
-        for option in sorted(
-            (o for o in _candidates(plan, unit) if o.turns <= turns_ahead),
-            key=lambda o: (o.turns, 0 if (o.x, o.y) in supply_positions else 1),
-        ):
-            if (option.x, option.y) in taken:
-                continue
-            if (option.x, option.y) in supply_positions:
-                chosen = option
-                break
-        if chosen is None:
-            result.surplus.append(Assignment(unit=unit, tile=None, turns=0, this_turn=False))
-            continue
-        tile = by_pos[(chosen.x, chosen.y)]
-        taken[(chosen.x, chosen.y)] = f"{unit.unit_type} #{unit.unit_id} (supply)"
-        supply_positions.discard((chosen.x, chosen.y))
+    current_ring = {(t.x, t.y) for t in plan.ring}
+    no_tile = list(result.unplaced)
+    result.unplaced = []
+
+    def forward_option(unit: m.StagingUnit) -> m.StagingOption | None:
+        candidates = sorted(
+            (
+                o
+                for o in plan.next_options
+                if o.unit_id == unit.unit_id
+                and o.turns <= turns_ahead
+                and (o.x, o.y) not in current_ring
+                and (o.x, o.y) not in taken
+            ),
+            key=lambda o: (o.turns, o.x, o.y),
+        )
+        return candidates[0] if candidates else None
+
+    def place_forward(unit: m.StagingUnit) -> bool:
+        option = forward_option(unit)
+        if option is None:
+            return False
+        tile = next((t for t in plan.next_ring if (t.x, t.y) == (option.x, option.y)), None)
+        if tile is None:
+            return False
+        taken[(option.x, option.y)] = f"{unit.unit_type} #{unit.unit_id} (advance)"
         result.surplus.append(
             Assignment(
-                unit=unit, tile=tile, turns=chosen.turns, this_turn=chosen.this_turn, note="SUPPLY"
+                unit=unit, tile=tile, turns=option.turns, this_turn=option.this_turn, note="ADVANCE"
             )
         )
+        return True
+
+    for unit in surplus_units:
+        chosen = None
+        if unit.role == "melee":
+            for option in sorted(
+                (o for o in _candidates(plan, unit) if o.turns <= turns_ahead),
+                key=lambda o: (o.turns, 0 if (o.x, o.y) in supply_positions else 1),
+            ):
+                if (option.x, option.y) in taken:
+                    continue
+                if (option.x, option.y) in supply_positions:
+                    chosen = option
+                    break
+        if chosen is not None:
+            tile = by_pos[(chosen.x, chosen.y)]
+            taken[(chosen.x, chosen.y)] = f"{unit.unit_type} #{unit.unit_id} (supply)"
+            supply_positions.discard((chosen.x, chosen.y))
+            result.surplus.append(
+                Assignment(
+                    unit=unit, tile=tile, turns=chosen.turns, this_turn=chosen.this_turn, note="SUPPLY"
+                )
+            )
+            continue
+        if place_forward(unit):
+            continue
+        result.surplus.append(Assignment(unit=unit, tile=None, turns=0, this_turn=False))
+
+    for unit in no_tile:
+        if not place_forward(unit):
+            result.unplaced.append(unit)
 
     cut, total = supply_coverage(
         plan.ring, [a.unit for a in result.placed + result.surplus]
@@ -268,7 +314,8 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
         )
     if result.surplus:
         on_supply = [a for a in result.surplus if a.note == "SUPPLY"]
-        depth = [a for a in result.surplus if a.note != "SUPPLY"]
+        advancing = [a for a in result.surplus if a.note == "ADVANCE"]
+        depth = [a for a in result.surplus if a.note not in ("SUPPLY", "ADVANCE")]
         lines.append(
             "  SURPLUS (the assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged —"
             " everything else has a job, and it is not a firing tile):"
@@ -277,6 +324,13 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             lines.append(
                 f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
                 f"  CUT THE SUPPLY LINE (stands on a hex the city heals from)"
+            )
+        for a in advancing:
+            lines.append(
+                f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
+                f"  ADVANCE toward the next objective"
+                f"{' this turn' if a.this_turn else f' in {a.turns} turn(s)'} — out of this city's"
+                f" strike, and that much less marching when the next siege opens"
             )
         for a in depth:
             lines.append(
@@ -294,10 +348,11 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                 )
             )
         lines.append(
-            "    Ladder if there are more: supply hexes > the reinforcement road > depth behind the"
-            " ring > the garrison of a city we just took > pillage (cavalry ignores ZOC) >"
-            " nothing. Never stack them on the ring: our own units are the usual thing blocking"
-            " our own firing tiles."
+            "    Ladder if there are more: supply hexes > the reinforcement road > forward staging"
+            " toward the NEXT city or barbarian camp (pass its tile to the plan; the march is what"
+            " the last deadline was lost to) > depth behind the ring > the garrison of a city we"
+            " just took > pillage (cavalry ignores ZOC) > nothing. Never stack them on the ring:"
+            " our own units are the usual thing blocking our own firing tiles."
         )
     if result.conflicts:
         lines.append("  CONFLICTS (one unit per tile — a second order is STACKING_CONFLICT):")

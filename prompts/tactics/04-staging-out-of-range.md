@@ -157,13 +157,22 @@ order — it is a ladder, not a preference:
 3. **Depth behind the ring, out of the city's two-tile strike.** Not decoration: the stack loses a
    screen unit every few turns (T154: our only Horseman died attacking the city), and a replacement
    already standing behind the ring keeps the shooters at full fire.
-4. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
+4. **Forward staging toward the next objective** (human instruction 2026-09-26: 多余部队还可以向下一个
+   城市目标/蛮族营地集结推进). Pass the next city's tile — or a barbarian camp's — to the plan
+   (`get_staging_plan`'s `next_city_x/next_city_y`, `staging-plan.py --next x,y`), and the surplus
+   that is not needed on this ring is pushed toward it: outside this city's strike, on the shortest
+   path, arriving while the current siege is still running. **The march is what the last deadline
+   was lost to** — 007 expired at T160 with 喀山 two firing turns away and one city never found —
+   and a unit that arrives three turns after the current city falls costs exactly those three turns.
+   When the next objective is still in fog, forward staging means advancing along the road toward
+   the nearest unexplored ground, which is also the reconnaissance the task needs.
+5. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
    it is what `hold-what-you-take` asks for. 阿斯特拉罕 needed it at −23.5 loyalty/turn; 成都 was
    raided precisely because it had none (T153–T155).
-5. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
+6. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
    the enemy's Lavra, mines and roads behind the front. Russia's faith comes from its Lavra:
    pillaging it stops the stream at source, worth more than any number of missionary kills.
-6. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
+7. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
    it is re-tasked to the next objective. “Fortified in place because the corridor is jammed”
    (T155, verbatim) is a queue, not a plan.
 

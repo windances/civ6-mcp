@@ -196,13 +196,19 @@ class GameState:
         )
         return lq.parse_pathing_estimate(lines)
 
-    async def staging_plan(self, target_x: int, target_y: int) -> lq.StagingPlan:
+    async def staging_plan(
+        self, target_x: int, target_y: int, next_x: int | None = None, next_y: int | None = None
+    ) -> lq.StagingPlan:
         """The ring around a target city, our units, and every unit's path to every ring tile.
 
         One query, not one per (unit, tile): the plan decides which unit takes which tile in
         which turn, and those movement numbers have to come from the game's own pathfinding.
+        ``next_x``/``next_y`` add the next objective's ring, so surplus units can be pushed
+        toward it instead of idling.
         """
-        lines = await self.conn.execute_write(lq.build_staging_plan_query(target_x, target_y))
+        lines = await self.conn.execute_write(
+            lq.build_staging_plan_query(target_x, target_y, next_x, next_y)
+        )
         return lq.parse_staging_plan_response(lines)
 
     async def get_victory_progress(self) -> lq.VictoryProgress:

@@ -1,7 +1,6 @@
 """The staging plan: distinct tiles, different movement, and no queueing in the corridor.
 
-Human instruction, 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优集结
-方案后，才开始执行. The game supplies the ring and the paths (`lua/units.py`); this file decides the
+Human instruction, 2026-09-26: 鍦ㄩ泦缁撳墠锛岃鍒掗泦缁撴柟妗堬紝涓嶈兘琚牭浣忥紝涓嶅悓閮ㄩ槦绉诲姩鍔涗笉涓€鏍凤紝鎵惧埌鏈€浼橀泦缁?鏂规鍚庯紝鎵嶅紑濮嬫墽琛? The game supplies the ring and the paths (`lua/units.py`); this file decides the
 assignment, and these tests cover that decision without a game.
 """
 
@@ -23,7 +22,7 @@ def plan(units, options, ring=None):
         m.StagingRingTile(x=56, y=42, distance=1),
         m.StagingRingTile(x=55, y=42, distance=2),
     ]
-    return m.StagingPlan(target="圣彼得堡", ring=ring, units=units, options=options)
+    return m.StagingPlan(target="鍦ｅ郊寰楀牎", ring=ring, units=units, options=options)
 
 
 def unit(uid, kind, role, x=50, y=50, moves=2):
@@ -80,11 +79,11 @@ class TestAssignment:
 
 
 class TestTheSurplusHasAJob:
-    """Human instruction: 攻城部队确定后，如果还有多余部队，如何安排？
+    """Human instruction: 鏀诲煄閮ㄩ槦纭畾鍚庯紝濡傛灉杩樻湁澶氫綑閮ㄩ槦锛屽浣曞畨鎺掞紵
 
     The assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged. Everything above it
-    takes the supply hexes of the ring first — each unit cuts the hex it stands on plus its ring
-    neighbours, so closing six hexes takes about three units — then depth behind the ring.
+    takes the supply hexes of the ring first -each unit cuts the hex it stands on plus its ring
+    neighbours, so closing six hexes takes about three units -then depth behind the ring.
     """
 
     def _units(self, siege=4, melee=3):
@@ -104,7 +103,7 @@ class TestTheSurplusHasAJob:
             for t in ring
         ]
 
-    def test_the_extra_siege_unit_cuts_the_supply_line_instead_of_taking_a_firing_tile(self):
+    def test_the_extra_melee_unit_cuts_the_supply_line_instead_of_taking_a_firing_tile(self):
         ring = [
             m.StagingRingTile(x=55, y=41, distance=2),
             m.StagingRingTile(x=56, y=41, distance=2),
@@ -112,11 +111,16 @@ class TestTheSurplusHasAJob:
             m.StagingRingTile(x=56, y=42, distance=1),
             m.StagingRingTile(x=57, y=42, distance=1),
             m.StagingRingTile(x=57, y=43, distance=1),
+            # extra adjacent hexes, so the assault force (6 units) does not fill them all: a
+            # supply hex must still be free for the surplus unit to take, which is the whole
+            # point of the rung
+            m.StagingRingTile(x=58, y=43, distance=1),
+            m.StagingRingTile(x=58, y=42, distance=1),
         ]
-        units = self._units(siege=4, melee=1)
+        units = self._units(siege=3, melee=4)
         result = st.assign(plan(units, self._options(units, ring), ring))
-        assert len(result.placed) == 4, "3 siege + 1 melee is the establishment"
-        assert len(result.surplus) == 1, "the fourth siege unit is surplus"
+        assert len(result.placed) == 6, "3 siege + 3 melee is the establishment"
+        assert len(result.surplus) == 1, "the fourth melee unit is surplus"
         assert result.surplus[0].note == "SUPPLY"
         assert result.surplus[0].tile.distance == 1, "supply hexes are the adjacent ring"
         text = st.render(result, plan(units, self._options(units, ring), ring))
@@ -136,6 +140,37 @@ class TestTheSurplusHasAJob:
         assert [a.note for a in result.surplus] == [""], "the fourth siege unit is surplus"
         assert result.surplus[0].tile is None, "nothing in reach, so it holds behind the ring"
         assert "DEPTH" in st.render(result, plan(units, options, ring))
+
+    def test_a_surplus_unit_advances_toward_the_next_objective(self):
+        """Human instruction 2026-09-26: 澶氫綑閮ㄩ槦杩樺彲浠ュ悜涓嬩竴涓煄甯傜洰鏍?铔棌钀ュ湴闆嗙粨鎺ㄨ繘.
+
+        The march is what the last deadline was lost to, so a surplus unit that cannot help the
+        current siege -no supply hex in reach, no depth slot -is pushed toward the next target's
+        ring now, as long as the tile is outside this city's strike.
+        """
+        units = [
+            m.StagingUnit("UNIT_TREBUCHET", 1, 55, 40, 2, "siege", distance=3),
+            m.StagingUnit("UNIT_TREBUCHET", 2, 54, 40, 2, "siege", distance=4),
+            m.StagingUnit("UNIT_TREBUCHET", 3, 53, 40, 2, "siege", distance=5),
+            m.StagingUnit("UNIT_MAN_AT_ARMS", 4, 52, 42, 2, "melee", distance=7),
+        ]
+        plan_ = plan(
+            units,
+            [
+                m.StagingOption(unit_id=1, x=58, y=41, turns=0, this_turn=True),
+                m.StagingOption(unit_id=2, x=57, y=38, turns=1),
+            ],
+            [m.StagingRingTile(x=58, y=41, distance=2), m.StagingRingTile(x=57, y=38, distance=2)],
+        )
+        plan_.next_ring = [m.StagingRingTile(x=52, y=44, distance=2)]
+        plan_.next_options = [m.StagingOption(unit_id=4, x=52, y=44, turns=1)]
+        result = st.assign(plan_)
+        advance = [a for a in result.surplus if a.note == "ADVANCE"]
+        assert len(advance) == 1, "the surplus melee unit has a next objective to reach"
+        assert (advance[0].tile.x, advance[0].tile.y) == (52, 44)
+        text = st.render(result, plan_)
+        assert "ADVANCE toward the next objective" in text
+        assert "less marching when the next siege opens" in text
 
     def test_the_ladder_is_printed_with_the_answer(self):
         ring = [m.StagingRingTile(x=56, y=42, distance=1)]
@@ -163,7 +198,7 @@ class TestTheParser:
         """Found on the first live run of this query (2026-09-26): a Scout filed as melee.
 
         A Scout has Combat 10, so a classifier that only asks "is Combat > 0" put it on
-        `(58,40) d1` — adjacent to the city, inside its strike, where it dies for nothing.
+        `(58,40) d1` -adjacent to the city, inside its strike, where it dies for nothing.
         """
         units = [
             m.StagingUnit("UNIT_SCOUT", 1, 60, 42, 3, "recon", distance=3, strength=10),
@@ -178,10 +213,10 @@ class TestTheParser:
         assert [u.unit_type for u in result.recon] == ["UNIT_SCOUT"]
         assert all(a.unit.unit_type != "UNIT_SCOUT" for a in result.placed + result.surplus)
         text = st.render(result, plan(units, options, ring))
-        assert "RECON — never a ring tile" in text
+        assert "RECON" in text and "never a ring tile" in text
 
     def test_a_unit_far_from_the_target_is_not_called_unreachable(self):
-        # A garrison 8 tiles away is not "no tile in reach", it is not part of this plan — and
+        # A garrison 8 tiles away is not "no tile in reach", it is not part of this plan -and
         # the two read very differently to whoever picks the file up.
         units = [
             m.StagingUnit("UNIT_TREBUCHET", 1, 55, 40, 2, "siege", distance=3),
