@@ -599,6 +599,18 @@ class StagingUnit:
     role: str = "melee"  # siege / ranged / short-ranged / melee / recon
     distance: int = 0  # tiles to the target city
     strength: int = 0  # combat strength, for ordering units within a role
+    hp: int = 0
+    max_hp: int = 0
+
+    @property
+    def wounded(self) -> bool:
+        """Half health or worse: a front-line unit in this state is a casualty waiting to happen.
+
+        Measured over this war: a 55 HP Horseman attacking a walled city was destroyed outright
+        (T154), and a Knight went 52 -> 6 in one blow from a single Man-at-Arms (T151). Relieving
+        it is how the ring keeps a screen without paying for a replacement unit.
+        """
+        return self.max_hp > 0 and self.hp * 2 <= self.max_hp
 
 
 @dataclass

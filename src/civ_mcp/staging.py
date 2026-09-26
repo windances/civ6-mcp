@@ -68,6 +68,7 @@ class StagingPlanResult:
     unplaced: list[m.StagingUnit] = field(default_factory=list)
     surplus: list[Assignment] = field(default_factory=list)
     recon: list[m.StagingUnit] = field(default_factory=list)
+    rotation: list[Assignment] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
     idle_tiles: list[m.StagingRingTile] = field(default_factory=list)
     opens_on: int = 0  # the turn the last shooter is in position (0 = this turn)
@@ -126,7 +127,7 @@ def _candidates(plan: m.StagingPlan, unit: m.StagingUnit) -> list[m.StagingOptio
     return [o for o in plan.options if o.unit_id == unit.unit_id]
 
 
-def assign(plan: m.StagingPlan, turns_ahead: int = 2) -> StagingPlanResult:
+def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> StagingPlanResult:
     """Greedy assignment: the units that decide the assault open pick their tile first.
 
     Greedy is the right shape here rather than an optimal solver, and deliberately so: the
@@ -161,6 +162,32 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2) -> StagingPlanResult:
         else:
             surplus_units.append(unit)
     result.recon = recon
+
+    # Rotation before placement (human instruction 2026-09-26: 多余部队还可以替换残血的扛伤部队).
+    # A front-line unit at half health or worse does not take a ring tile — it is the unit the
+    # city's strike or the enemy's field army kills (a 55 HP Horseman died attacking a walled city
+    # at T154; a Knight went 52 -> 6 in one blow at T151). Its slot goes to the freshest spare of
+    # the same role, and the wounded unit withdraws to heal (20/turn in a city, 15 in our
+    # territory, 5 where it was hit).
+    if rotate:
+        for unit in list(assault):
+            if unit.role not in ("melee", "short-ranged") or not unit.wounded:
+                continue
+            assault.remove(unit)
+            left[unit.role] = left.get(unit.role, 0) + 1  # free the establishment slot
+            relief = next((s for s in surplus_units if s.role == unit.role and not s.wounded), None)
+            if relief is not None:
+                surplus_units.remove(relief)
+                assault.append(relief)
+            result.rotation.append(
+                Assignment(
+                    unit=unit,
+                    tile=None,
+                    turns=0,
+                    this_turn=False,
+                    note=relief.unit_type if relief is not None else "",
+                )
+            )
 
     for unit in assault:
         options = [
@@ -353,6 +380,27 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             " the last deadline was lost to) > depth behind the ring > the garrison of a city we"
             " just took > pillage (cavalry ignores ZOC) > nothing. Never stack them on the ring:"
             " our own units are the usual thing blocking our own firing tiles."
+        )
+    if result.rotation:
+        lines.append(
+            "  ROTATION (a wounded front-line unit yields its slot to a fresh one and heals):"
+        )
+        for a in result.rotation:
+            relief = a.note or "no fresh unit of the same role available"
+            lines.append(
+                f"    {a.unit.unit_type:<20} #{a.unit.unit_id} ({a.unit.hp}/{a.unit.max_hp} hp)"
+                f"  WITHDRAW to heal — relieved by {relief}"
+                + (
+                    ""
+                    if a.note
+                    else " — no relief, and the enemy is stronger here than we are: break off"
+                    " rather than feed the next unit in"
+                )
+            )
+        lines.append(
+            "    Order matters: put the relief on the tile the same turn the wounded unit leaves,"
+            " attack with the wounded one BEFORE it withdraws if it has a target, and send it where"
+            " it heals fastest (20/turn in a city, 15 in our territory, 5 where it was hit)."
         )
     if result.conflicts:
         lines.append("  CONFLICTS (one unit per tile — a second order is STACKING_CONFLICT):")

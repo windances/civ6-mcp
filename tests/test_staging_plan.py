@@ -229,6 +229,54 @@ class TestTheParser:
         assert "TOO FAR to matter for this assault (d8)" in text
         assert "NO TILE IN REACH" not in text
 
+    def test_a_wounded_front_liner_is_relieved_by_a_fresh_one(self):
+        """Human instruction 2026-09-26: 多余部队还可以替换残血的扛伤部队.
+
+        A front-line unit at half health is the one the city's strike kills — a 55 HP Horseman
+        died attacking a walled city (T154), a Knight went 52 -> 6 in one blow (T151). It yields
+        its ring tile to a fresh unit of the same role and withdraws to heal.
+        """
+        units = [
+            m.StagingUnit("UNIT_TREBUCHET", 1, 55, 40, 2, "siege", distance=3, hp=70, max_hp=100),
+            m.StagingUnit("UNIT_MAN_AT_ARMS", 2, 55, 42, 2, "melee", distance=2, hp=27, max_hp=100),
+            m.StagingUnit("UNIT_MAN_AT_ARMS", 3, 54, 42, 2, "melee", distance=3, hp=100, max_hp=100),
+            m.StagingUnit("UNIT_MAN_AT_ARMS", 4, 53, 42, 2, "melee", distance=4, hp=100, max_hp=100),
+            # a fourth front-liner is one above the establishment, i.e. the relief
+            m.StagingUnit("UNIT_MAN_AT_ARMS", 5, 52, 42, 2, "melee", distance=5, hp=100, max_hp=100),
+        ]
+        ring = [
+            m.StagingRingTile(x=58, y=41, distance=2),
+            m.StagingRingTile(x=58, y=40, distance=1),
+            m.StagingRingTile(x=59, y=40, distance=1),
+        ]
+        options = [
+            m.StagingOption(unit_id=1, x=58, y=41, turns=0, this_turn=True),
+            m.StagingOption(unit_id=2, x=58, y=40, turns=0, this_turn=True),
+            m.StagingOption(unit_id=3, x=58, y=40, turns=0, this_turn=True),
+            m.StagingOption(unit_id=5, x=59, y=40, turns=0, this_turn=True),
+        ]
+        result = st.assign(plan(units, options, ring))
+        rotated = [a for a in result.rotation]
+        assert len(rotated) == 1 and rotated[0].unit.unit_id == 2
+        assert rotated[0].note == "UNIT_MAN_AT_ARMS", "the fresh Man-at-Arms relieves it"
+        placed = [a.unit.unit_id for a in result.placed]
+        assert 2 not in placed, "the wounded unit does not hold a ring tile"
+        assert 5 in placed, "the fresh surplus unit took the slot"
+        text = st.render(result, plan(units, options, ring))
+        assert "ROTATION" in text and "WITHDRAW to heal" in text
+        assert "(27/100 hp)" in text
+
+    def test_a_wounded_siege_unit_is_not_rotated_out_of_its_firing_tile(self):
+        # A siege unit at range 2 is not taking the city's strike; only the front line rotates.
+        units = [
+            m.StagingUnit("UNIT_TREBUCHET", 1, 55, 40, 2, "siege", distance=3, hp=20, max_hp=100),
+        ]
+        ring = [m.StagingRingTile(x=58, y=41, distance=2)]
+        options = [m.StagingOption(unit_id=1, x=58, y=41, turns=0, this_turn=True)]
+        result = st.assign(plan(units, options, ring))
+        assert result.rotation == []
+        assert [a.unit.unit_id for a in result.placed] == [1]
+
     def test_it_reads_the_three_line_shapes(self):
         from civ_mcp import lua as lq
 

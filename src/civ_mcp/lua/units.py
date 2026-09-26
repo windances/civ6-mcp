@@ -2462,7 +2462,8 @@ for _, u in Players[me]:GetUnits():Members() do
             elseif rs > 0 then role = "short-ranged" end
             print("UNIT|" .. ut .. "|" .. u:GetID() .. "|"
                 .. ux .. "," .. uy .. "|" .. moves .. "|" .. role
-                .. "|d" .. Map.GetPlotDistance(ux, uy, tx, ty) .. "|cs" .. cs)
+                .. "|d" .. Map.GetPlotDistance(ux, uy, tx, ty) .. "|cs" .. cs
+                .. "|hp" .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage())
             if ntx ~= -9999 and moves > 0 then
                 for _, t2 in ipairs(nextRing) do
                     local path2 = UnitManager.GetMoveToPath(u, t2.idx)
@@ -2547,11 +2548,15 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
         elif line.startswith("UNIT|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[3].split(","))
             distance = strength = 0
+            hp = max_hp = 0
             for token in parts[6:]:
                 if token.startswith("d"):
                     distance = int(token[1:] or 0)
                 elif token.startswith("cs"):
                     strength = int(token[2:] or 0)
+                elif token.startswith("hp") and "/" in token:
+                    cur, _, total = token[2:].partition("/")
+                    hp, max_hp = int(cur or 0), int(total or 0)
             plan.units.append(
                 StagingUnit(
                     unit_type=parts[1],
@@ -2562,6 +2567,8 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     role=parts[5],
                     distance=distance,
                     strength=strength,
+                    hp=hp,
+                    max_hp=max_hp,
                 )
             )
         elif line.startswith("NEXTRING|") and len(parts) >= 3:

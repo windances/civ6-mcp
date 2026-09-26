@@ -154,10 +154,25 @@ order — it is a ladder, not a preference:
 2. **The road the enemy's reinforcements use.** Russia rebuilt from 13 military to 105 during this
    war and produced a Man-at-Arms that took our Knight from 52 to 6 in one blow (T151). A unit on
    the approach kills them one at a time instead of letting them arrive together.
-3. **Depth behind the ring, out of the city's two-tile strike.** Not decoration: the stack loses a
+3. **Rotation: relieve a wounded front-line unit** (human instruction 2026-09-26: 多余部队还可以替换
+   残血的扛伤部队). A front-liner at half health or worse is not a screen, it is the unit the city's
+   strike or the enemy's field army kills: a 55 HP Horseman attacking a walled city was **destroyed
+   outright** (T154) and a Knight went **52 → 6 in one blow** (T151). `get_staging_plan` prints a
+   `ROTATION` block with the unit's HP, and the freshest spare of the same role takes its tile.
+   Three rules make the swap work:
+   - **the relief arrives the same turn the wounded unit leaves** — the tile is one unit wide, and
+     a gap turn is the turn the city's strike lands on whoever is still standing there;
+   - **the wounded unit attacks before it withdraws** if it has a target; the attack costs the move
+     anyway and it heals from the next turn;
+   - **it goes where the healing is fastest**: 20/turn inside a city, 15 in our territory, 10
+     neutral, 5 where it was hit (`manual:1066-1085`).
+   **Rotation outranks taking another tile.** Replacing a 27 HP Man-at-Arms with a fresh one is worth
+   more than one more shooter on the ring, because the alternative is losing the unit and its tile
+   together.
+4. **Depth behind the ring, out of the city's two-tile strike.** Not decoration: the stack loses a
    screen unit every few turns (T154: our only Horseman died attacking the city), and a replacement
    already standing behind the ring keeps the shooters at full fire.
-4. **Forward staging toward the next objective** (human instruction 2026-09-26: 多余部队还可以向下一个
+5. **Forward staging toward the next objective** (human instruction 2026-09-26: 多余部队还可以向下一个
    城市目标/蛮族营地集结推进). Pass the next city's tile — or a barbarian camp's — to the plan
    (`get_staging_plan`'s `next_city_x/next_city_y`, `staging-plan.py --next x,y`), and the surplus
    that is not needed on this ring is pushed toward it: outside this city's strike, on the shortest
@@ -166,13 +181,13 @@ order — it is a ladder, not a preference:
    and a unit that arrives three turns after the current city falls costs exactly those three turns.
    When the next objective is still in fog, forward staging means advancing along the road toward
    the nearest unexplored ground, which is also the reconnaissance the task needs.
-5. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
+6. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
    it is what `hold-what-you-take` asks for. 阿斯特拉罕 needed it at −23.5 loyalty/turn; 成都 was
    raided precisely because it had none (T153–T155).
-6. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
+7. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
    the enemy's Lavra, mines and roads behind the front. Russia's faith comes from its Lavra:
    pillaging it stops the stream at source, worth more than any number of missionary kills.
-7. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
+8. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
    it is re-tasked to the next objective. “Fortified in place because the corridor is jammed”
    (T155, verbatim) is a queue, not a plan.
 
