@@ -1,4 +1,4 @@
-﻿"""Units domain 鈥?Lua builders and parsers."""
+"""Units domain 鈥?Lua builders and parsers."""
 
 from __future__ import annotations
 
@@ -2433,12 +2433,19 @@ for _, u in Players[me]:GetUnits():Members() do
             local reach = UnitManager.GetReachableMovement(u)
             local reachSet = {}
             if reach then for _, i in ipairs(reach) do reachSet[i] = true end end
+            -- Recon is not a front-line unit: a Scout has Combat 10, so a test that only asks
+            -- "is Combat > 0" files it as melee and the plan sends it to a tile adjacent to a
+            -- city, where it dies for nothing (seen on the first live run of this query,
+            -- 2026-09-26: UNIT_SCOUT #262146 -> (58,40) d1).
             local role = "melee"
-            if bomb > 0 then role = "siege"
+            local ut = info and info.UnitType or "?"
+            if string.find(ut, "SCOUT") or string.find(ut, "EXPLORER") then role = "recon"
+            elseif bomb > 0 then role = "siege"
             elseif rs > 0 and (info.Range or 1) >= 2 then role = "ranged"
             elseif rs > 0 then role = "short-ranged" end
-            print("UNIT|" .. (info and info.UnitType or "?") .. "|" .. u:GetID() .. "|"
-                .. ux .. "," .. uy .. "|" .. moves .. "|" .. role)
+            print("UNIT|" .. ut .. "|" .. u:GetID() .. "|"
+                .. ux .. "," .. uy .. "|" .. moves .. "|" .. role
+                .. "|d" .. Map.GetPlotDistance(ux, uy, tx, ty) .. "|cs" .. cs)
             if moves > 0 then
                 for _, t in ipairs(ring) do
                     local path = UnitManager.GetMoveToPath(u, t.idx)
@@ -2499,6 +2506,12 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             )
         elif line.startswith("UNIT|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[3].split(","))
+            distance = strength = 0
+            for token in parts[6:]:
+                if token.startswith("d"):
+                    distance = int(token[1:] or 0)
+                elif token.startswith("cs"):
+                    strength = int(token[2:] or 0)
             plan.units.append(
                 StagingUnit(
                     unit_type=parts[1],
@@ -2507,6 +2520,8 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     y=y,
                     moves=int(parts[4]),
                     role=parts[5],
+                    distance=distance,
+                    strength=strength,
                 )
             )
         elif line.startswith("OPTION|") and len(parts) >= 6:

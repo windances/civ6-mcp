@@ -67,6 +67,7 @@ class StagingPlanResult:
     placed: list[Assignment] = field(default_factory=list)
     unplaced: list[m.StagingUnit] = field(default_factory=list)
     surplus: list[Assignment] = field(default_factory=list)
+    recon: list[m.StagingUnit] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
     idle_tiles: list[m.StagingRingTile] = field(default_factory=list)
     opens_on: int = 0  # the turn the last shooter is in position (0 = this turn)
@@ -148,12 +149,18 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2) -> StagingPlanResult:
     left = dict(_ESTABLISHMENT)
     assault: list[m.StagingUnit] = []
     surplus_units: list[m.StagingUnit] = []
+    recon: list[m.StagingUnit] = []
     for unit in ordered:
-        if left.get(unit.role, 0) > 0:
+        if unit.role == "recon":
+            # A Scout is not an assault unit: filing it as melee sent one to a ring tile
+            # adjacent to the city on the first live run of this query.
+            recon.append(unit)
+        elif left.get(unit.role, 0) > 0:
             left[unit.role] -= 1
             assault.append(unit)
         else:
             surplus_units.append(unit)
+    result.recon = recon
 
     for unit in assault:
         options = [
@@ -242,10 +249,22 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             f"{' - FIRE from here' if a.unit.role in ('siege', 'ranged') and a.tile.distance == 2 else ''}"
         )
     for unit in result.unplaced:
+        far = unit.distance > 6
         lines.append(
             f"  {unit.unit_type:<22} #{unit.unit_id} ({unit.x},{unit.y}) moves {unit.moves}"
-            f"  NO TILE IN REACH within {2} turns — send it to the rear of the ring to cut the"
-            f" supply line, do not queue it in the corridor"
+            + (
+                f"  TOO FAR to matter for this assault (d{unit.distance}) — leave it on its own"
+                f" task; it is not part of this plan."
+                if far
+                else f"  NO TILE IN REACH within {2} turns — send it to the rear of the ring to"
+                f" cut the supply line, do not queue it in the corridor"
+            )
+        )
+    for unit in result.recon:
+        lines.append(
+            f"  {unit.unit_type:<22} #{unit.unit_id} ({unit.x},{unit.y}) moves {unit.moves}"
+            f"  RECON — never a ring tile: it has CS {unit.strength or '~10'} and dies to the"
+            f" city's strike. Keep it scouting; the plan does not spend it."
         )
     if result.surplus:
         on_supply = [a for a in result.surplus if a.note == "SUPPLY"]

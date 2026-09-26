@@ -159,6 +159,41 @@ class TestTheSurplusHasAJob:
 
 
 class TestTheParser:
+    def test_a_scout_is_never_sent_to_a_ring_tile(self):
+        """Found on the first live run of this query (2026-09-26): a Scout filed as melee.
+
+        A Scout has Combat 10, so a classifier that only asks "is Combat > 0" put it on
+        `(58,40) d1` — adjacent to the city, inside its strike, where it dies for nothing.
+        """
+        units = [
+            m.StagingUnit("UNIT_SCOUT", 1, 60, 42, 3, "recon", distance=3, strength=10),
+            m.StagingUnit("UNIT_TREBUCHET", 2, 55, 40, 2, "siege", distance=3, strength=35),
+        ]
+        ring = [m.StagingRingTile(x=57, y=39, distance=1), m.StagingRingTile(x=58, y=41, distance=2)]
+        options = [
+            m.StagingOption(unit_id=1, x=57, y=39, turns=0, this_turn=True),
+            m.StagingOption(unit_id=2, x=58, y=41, turns=0, this_turn=True),
+        ]
+        result = st.assign(plan(units, options, ring))
+        assert [u.unit_type for u in result.recon] == ["UNIT_SCOUT"]
+        assert all(a.unit.unit_type != "UNIT_SCOUT" for a in result.placed + result.surplus)
+        text = st.render(result, plan(units, options, ring))
+        assert "RECON — never a ring tile" in text
+
+    def test_a_unit_far_from_the_target_is_not_called_unreachable(self):
+        # A garrison 8 tiles away is not "no tile in reach", it is not part of this plan — and
+        # the two read very differently to whoever picks the file up.
+        units = [
+            m.StagingUnit("UNIT_TREBUCHET", 1, 55, 40, 2, "siege", distance=3),
+            m.StagingUnit("UNIT_WARRIOR", 2, 60, 31, 2, "melee", distance=8),
+        ]
+        ring = [m.StagingRingTile(x=58, y=41, distance=2)]
+        options = [m.StagingOption(unit_id=1, x=58, y=41, turns=0, this_turn=True)]
+        result = st.assign(plan(units, options, ring))
+        text = st.render(result, plan(units, options, ring))
+        assert "TOO FAR to matter for this assault (d8)" in text
+        assert "NO TILE IN REACH" not in text
+
     def test_it_reads_the_three_line_shapes(self):
         from civ_mcp import lua as lq
 

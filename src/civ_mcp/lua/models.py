@@ -584,14 +584,21 @@ class StagingRingTile:
 
 @dataclass
 class StagingUnit:
-    """One of our fighting units, with the movement it has left."""
+    """One of our fighting units, with the movement it has left.
+
+    ``role`` is ``siege`` / ``ranged`` / ``short-ranged`` / ``melee`` / ``recon``. Recon is its
+    own role because a Scout has Combat 10: a test that only asks "is Combat > 0" files it as
+    melee and the plan sends it to a tile adjacent to a city, where it dies for nothing.
+    """
 
     unit_type: str
     unit_id: int
     x: int
     y: int
     moves: int
-    role: str = "melee"  # siege / ranged / short-ranged / melee
+    role: str = "melee"  # siege / ranged / short-ranged / melee / recon
+    distance: int = 0  # tiles to the target city
+    strength: int = 0  # combat strength, for ordering units within a role
 
 
 @dataclass
