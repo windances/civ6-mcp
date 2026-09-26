@@ -268,3 +268,26 @@ when: turn() >= 60
 require: metric(improvements) >= metric(cities) * 3
 message: Fewer than three improvements per city. Unimproved tiles are the usual reason an empire stalls, and builders are the cheapest multiplier in the game - if gold is above ~300, buy one instead of saving.
 -->
+
+## Activated 2026-09-26 (staged in `pending/` until a server computed their metrics)
+
+A rule that names a metric the running server does not compute reports itself `un-evaluable` every
+turn and cannot be satisfied — the rule file is re-read on every turn, but the *metric set* lives in
+the MCP process's memory. Both rules below therefore shipped in `prompts/checks/pending/` and were cut
+in here once a server that computes `camps_within_3` and `enemy_supply_uncut_with_idle` was running
+(measured T174). Both metrics are in `end_turn._CONTACT_METRIC_KEYS`, so a dead scan zeroes them and
+the rule switches itself off rather than firing blind.
+
+<!-- check
+id: answer-the-camp
+when: metric(camps_within_3) >= 1
+require: metric(attacks_this_turn) >= 1
+message: A barbarian camp stands within three tiles of one of our cities and nothing attacked this turn. A camp is a tactics/07 target (human instruction 2026-09-26), and it is destroyed by force - one military unit MOVING onto its tile clears it. Run the camp gates and answer them in the diary: CAMP (x,y) terrain; GUARD (every barbarian within two tiles, class/CS/HP); FORCE (two attackers with the counter unit plus the unspent unit that walks in - barbarian Spearmen are anti-cavalry, so ranged plus melee, never cavalry into spears, never a Scout/Builder/Trader); GROUND (what the last step costs, from a tile we already hold); WORTH (gold, era score, the CIVIC_MILITARY_TRADITION inspiration, and what it has been spawning); HOLD (which city gives up its garrison); CONVERT (any barbarian next to our melee worth the human's Three-Six Stratagems play). A camp left alone keeps producing era-appropriate units beside that city - the camp beside 北京 (T83 map read: (60,29); an earlier note said (60,30)) produced the Spearman that cost 160 gold at T65 - so either this turn's attack is on its guard, or the diary says what the raid is waiting for.
+-->
+
+<!-- check
+id: cut-the-supply
+require: metric(enemy_supply_uncut_with_idle) == 0
+message: An enemy city has open adjacent hexes - its supply line - while our fighting units within three tiles still have movement. A city heals about twenty points a turn while any adjacent hex is outside our zone of control (manual:1066-1085, HEALING DAMAGE TO CITIES), so cutting the last hex is worth more than any amount of extra fire. Measured over the T139-T159 Russian war: 沃罗涅什 read `supply line 3/6 cut` and 喀山 read `1/6` for their whole sieges, while spare units "fortified in place because the corridor is jammed" (T155, verbatim) - both pools came back to full and both cities rebuilt their walls; 圣彼得堡 took six turns of fire for the same reason, because the heal was out-damaged rather than cut, and one firing tile could not out-damage it. Order the surplus units - the ones with movement and nothing to shoot at - onto or beside the open hexes, taking the far side of the ring rather than queueing in the corridor; a unit that walks there is out of the firing line that turn, and declining that trade belongs in the diary.
+-->
+

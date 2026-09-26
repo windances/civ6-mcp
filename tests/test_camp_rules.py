@@ -145,15 +145,19 @@ class TestTheRule:
         assert [check.check_id for check, _ in result.failures] == ["answer-the-camp"]
         assert "not available" in result.failures[0][1]
 
-    def test_the_rule_ships_staged_not_live(self):
-        # The metrics come from the running server's memory while the rule file is re-read every
-        # turn, so a live rule naming a metric an older server does not compute would fail every
-        # turn. It is staged in prompts/checks/pending/ and activated on the next MCP restart.
+    def test_the_rule_is_live_now_that_the_server_computes_the_metric(self):
+        # It shipped staged while an older server was playing: the rule file is re-read every turn,
+        # but the metric set lives in the MCP process, so an unknown key turns the rule into an
+        # un-evaluable failure every turn. The server that computes `camps_within_3` is the one the
+        # block was cut into, so the staging folder must no longer hold it and the live file must.
         live, _ = tc.load_checks()
-        assert live and "id: answer-the-camp" not in live
-        staged = (ROOT / "prompts" / "checks" / "pending" / "answer-the-camp.md").read_text(
-            encoding="utf-8"
-        )
-        assert "id: answer-the-camp" in staged
-        assert "camps_within_3" in staged
-        assert "```markdown" in staged  # the block to cut into the live file
+        assert "id: answer-the-camp" in live
+        assert "camps_within_3" in live
+        assert not (ROOT / "prompts" / "checks" / "pending" / "answer-the-camp.md").exists()
+
+    def test_the_supply_rule_was_activated_in_the_same_batch(self):
+        live, _ = tc.load_checks()
+        assert "id: cut-the-supply" in live
+        assert "enemy_supply_uncut_with_idle" in live
+        assert "enemy_supply_uncut_with_idle" in et._CONTACT_METRIC_KEYS
+        assert not (ROOT / "prompts" / "checks" / "pending" / "cut-the-supply.md").exists()
