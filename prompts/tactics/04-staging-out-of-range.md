@@ -97,6 +97,48 @@ Two consequences that decide whether the assembly finishes on schedule:
    (file 7, gate 3): whoever is nominated has to arrive unspent and above ~40 HP, and that unit
    should not be the one doing the attacking.
 
+## Step 3b — the staging plan, written before the first move
+
+**Human instruction, 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优集结方案后，才开始执行.**
+No unit moves until this table exists. It is not a note in the diary's tactical line — it is the
+order of march, written down, and it is what the 10-turn review quotes back.
+
+| column | what goes in it |
+|---|---|
+| unit | type + id (ids change on upgrade — re-read after every `upgrade_unit`) |
+| from | its tile **now**, from `get_units`, not from memory |
+| moves | its movement allowance: Catapult/Trebuchet 2, Crossbowman 2, Tiger 2, Ram 2, Warrior/Spearman/Man-at-Arms 2–3, Horseman 4, Knight 4–5 (`PURSUIT` +1). **They are not equal, and the plan is wrong the moment it treats them as equal.** |
+| to | one tile, and a **different** tile from every other unit's |
+| cost | `get_pathing_estimate(unit_id, x, y)` — the game's own pathfinding. Never hand-compute: this war paid twice for that ((55,42) is not adjacent to (56,43); (54,41) is distance 3 from (56,43), not 2) |
+| arrive | the turn it is there, counted from the pathing estimate |
+| role | screen / melee / capture / siege / ranged |
+| fires | yes / no / **unknown until a shot is ordered** — count only `yes` when you state the turn's expected shots |
+
+Build it, then hold it to these three rules:
+
+1. **No two units may be sent to the same tile.** A second order onto an occupied tile is refused
+   `STACKING_CONFLICT` and the unit spends the turn where it was. A plan with a shared tile is not a
+   plan, it is two wasted unit-turns and a re-plan next turn.
+2. **The corridor is the binding constraint, so the plan must name it.** Approaches are one or two
+   tiles wide — the 圣彼得堡 approach was the `(56,40)→(56,39)→(57,38)` corridor between mountains and
+   the river, and on T155 that produced, verbatim, “`Catapult 1769485` and `Xbow 2752533` fortified in
+   place because the corridor is jammed”. Two answers, and the plan picks one deliberately: **stagger
+   the arrivals by one turn** (the unit that cannot fit stays at the rally point and moves next turn),
+   or **route the surplus round the far side**, which is also the order that cuts the city's supply
+   line. Queueing in the corridor and hoping is the third option and it is the one this war took.
+3. **Optimise the turn the siege opens, not the first arrival.** The plan is optimal when the *last*
+   firing tile is occupied and the screen is in front on the same turn — that is the first turn the
+   train fires as a train. Concretely: reserve the distance-2 tiles for shooters, keep at least one
+   adjacent tile for the capture unit (our own stack is the usual thing standing on it), put the
+   screen on the tile nearest the enemy, and move the shooters that have **≥2 movement points left
+   after arriving** so they can fire the turn they land. A shooter that spends both points walking
+   fires next turn — measured four turns running, T155–T158.
+
+**A unit with no tile in the plan is not left idle.** It is given the rear of the ring: occupying the
+hexes the city still draws its supply line from (the `SIEGE PROGRESS` block counts them — 沃罗涅什
+`3/6`, 喀山 `1/6`). That is how the same army both cuts the ~20/turn heal and stops queueing behind
+itself.
+
 ## Step 4 — the march
 
 - Move in formation, not in a queue: the screen leads, the ranged and siege follow within one

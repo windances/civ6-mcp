@@ -153,7 +153,15 @@ Each turn in order:
    If resuming after context compaction, call `get_diary` first.
 2. `get_units` — positions, HP, moves, charges, nearby threats
 3. `get_map_area` around cities/units — terrain, resources, enemy units
-4. Move/action each unit
+4. Move/action each unit. **Before the assembly's first move, write the staging plan** (human
+   instruction 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优集结方案后，才开始执行):
+   one row per unit — where it is now, its own movement allowance, the one tile it goes to, the
+   `get_pathing_estimate` cost, the turn it arrives, its role, and whether it can fire from there.
+   No two units to the same tile (`STACKING_CONFLICT` costs the turn), name the corridor and either
+   stagger the arrivals or send the surplus round the far side of the target, and optimise the turn
+   the **last** firing tile is filled rather than the first unit's arrival. A unit with no tile gets
+   the rear of the ring, which is also what cuts the city's supply line. The table and the three
+   rules are `prompts/tactics/04-staging-out-of-range.md` step 3b.
 5. `get_cities` — queues, growth, pillaged districts
 6. `get_district_advisor` if placing a new district
 7. `set_city_production` / `set_research` if needed
