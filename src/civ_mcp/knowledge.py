@@ -32,7 +32,19 @@ from dataclasses import dataclass
 
 # What gets indexed when no sources are named. `src/` is deliberately not here: the manual and the
 # prompts are what a turn needs to look up, the code is already searchable with grep.
-DEFAULT_SOURCES = ("prompts", "docs", "AGENTS.md", "SETUP-WINDOWS.md")
+# The corpus `python .tools/kb.py index` builds. `.tools` is not skipped (see `_SKIP_DIRS`) precisely
+# so the extracted game manual can live here: without it the index holds only our own writing, and the
+# one question the doctrine cannot answer - "what does the manual actually say?" - has nowhere to go.
+# `kb.py index --source` *replaces* this tuple rather than adding to it, so the manual belongs in the
+# default set; a source that is absent (a fresh clone without `.tools/manuals/`) is skipped by
+# `iter_files`, not an error.
+DEFAULT_SOURCES = (
+    "prompts",
+    "docs",
+    "AGENTS.md",
+    "SETUP-WINDOWS.md",
+    ".tools/manuals/manual.clean.txt",
+)
 DEFAULT_DB = ".tools/kb/knowledge.sqlite"
 
 _TEXT_SUFFIXES = (".md", ".txt", ".yml", ".yaml", ".json")

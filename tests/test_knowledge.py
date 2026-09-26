@@ -30,6 +30,35 @@ def scratch() -> pathlib.Path:
     return path
 
 
+class TestTheDefaultCorpusIncludesTheManual:
+    """`kb.py index` must build one index that can answer a manual question.
+
+    `index --source ...` *replaces* the default tuple rather than adding to it, so a manual that is
+    not in `DEFAULT_SOURCES` is a manual that the documented one-command rebuild silently drops - and
+    the only question the doctrine cannot answer ("what does the manual say?") then has no source.
+    """
+
+    def test_the_manual_is_a_default_source(self):
+        assert any("manual" in source for source in knowledge.DEFAULT_SOURCES), (
+            "the extracted game manual must be in DEFAULT_SOURCES, not only reachable with "
+            "`kb.py index --source`, which replaces the corpus"
+        )
+
+    def test_the_manual_is_indexable_when_it_is_present(self):
+        manual = REPO / ".tools" / "manuals" / "manual.clean.txt"
+        if not manual.exists():  # a fresh clone without the extraction step
+            return
+        files = knowledge.iter_files(knowledge.DEFAULT_SOURCES)
+        assert manual.resolve() in {p.resolve() for p in files}
+        # and our own writing is still there - the manual is an addition, not a replacement
+        assert any(str(p).endswith("AGENTS.md") for p in files)
+        assert any("prompts" in p.parts for p in files)
+
+    def test_a_missing_source_is_skipped_rather_than_fatal(self):
+        files = knowledge.iter_files((".tools/does-not-exist-anywhere",))
+        assert files == []
+
+
 MANUAL_LIKE = """\
 71
 

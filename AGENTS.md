@@ -248,10 +248,17 @@ search_knowledge("what can a battering ram do", doc="manual")
 search_knowledge("城墙 修复", doc="manual")          # Chinese falls back to substring match
 ```
 
-Build or refresh the index with `python .tools/kb.py index [--source <path>]` (it is per
-checkout, and stale after the corpus changes). When a mechanic is in doubt, this is cheaper and
-more honest than a guess — and the manual beats the doctrine when they disagree, because the
-doctrine is only ever a summary of it.
+Build or refresh the index with `python .tools/kb.py index` (it is per checkout, and stale after the
+corpus changes). The default corpus is `prompts/`, `docs/`, `AGENTS.md`, `SETUP-WINDOWS.md` **and the
+extracted manual** `.tools/manuals/manual.clean.txt` — `--source` **replaces** that list rather than
+adding to it, so passing one source by hand builds an index that has lost the rest (measured
+2026-09-26: a rebuild with no `--source` silently dropped the manual, 100 docs instead of 104 and no
+manual at all). When a mechanic is in doubt, this is cheaper and more honest than a guess — and the
+manual beats the doctrine when they disagree, because the doctrine is only ever a summary of it.
+**A mechanic the manual does not cover is answered by the game's own files**, not by memory: the
+install's `Base/Assets/Gameplay/Data/*.xml` and `Base/Assets/Text/en_US/*.xml` carry the authoritative
+rulings (that is where `UNITCOMMAND_CONDEMN_HERETIC` and its
+`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION` were found).
 
 ## Diary
 
