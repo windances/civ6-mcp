@@ -1,9 +1,17 @@
 ﻿# TEMP TASK 008 — destroy the missionaries
 
 added:     2026-09-26 (human instruction: 消灭传教士)
-expires:   turn 160 — the same horizon as 007. Retire it early once no hostile religious unit is left
-           anywhere we can see, or as `008-destroy-missionaries-expired-T160.md` with a count of what
-           was killed and what is still walking around.
+expires:   turn 185 — **extended at T160 with 007, whose horizon this file explicitly borrows**
+           ("its `expires` is 007's"). The extension is not a claim that missionaries are still a
+           problem: repeated `get_map_area` sweeps of 成都, 圣彼得堡, the 喀山 approach and the
+           阿斯特拉罕 corridor through T160 have shown **no hostile religious unit at all**, and the
+           `condemn` verb has therefore never had a legal target to exercise. The file stays in force
+           so that the sweep keeps happening while the war is on and so the tool's answer can still
+           be recorded the first time a Russian missionary does appear; if none appears by T185 it
+           retires as `008-destroy-missionaries-expired-T185.md` with that zero count as the report.
+           Retire it early once no hostile religious unit is left anywhere we can see, or as
+           `008-destroy-missionaries-expired-T185.md` with a count of what was killed and what is
+           still walking around.
 done when: **no hostile religious unit stands in our territory or on a road the army uses** — a
            `get_map_area` sweep of our cities, the 阿斯特拉罕 approach and the roads between them shows
            `count == 0` of MISSIONARY / APOSTLE / INQUISITOR belonging to a civ we are at war with —

@@ -1,11 +1,19 @@
 ﻿# TEMP TASK 007 — destroy Russia
 
 added:     2026-09-26 (human instruction: 消灭俄罗斯)
-expires:   turn 160 — the third Catapult is the gate (一城3投石车) and it lands ~T124, the iron
-           stockpile passes 20 ~T121 and the war is four cities at T119 (two of them still in fog)
-           at 4-8 turns each plus the march; count from the queue, not the calendar. Retire it early
-           if Russia is gone, or as `007-destroy-russia-expired-T160.md` with a report of which
-           cities stand and why.
+expires:   turn 185 — **extended at T160 by the incoming session, and the extension is written from
+           the queue, not the calendar.** The original T160 was counted when the war was four cities
+           at T119 with two still in fog; by T160 the map had changed underneath it. Russia is down
+           to **two** cities and both are now located: 喀山 pop 1 (58,39) read `walls none` with a
+           179/200 pool, and 诺夫哥罗德 pop 2 (61,42) read `walls 100` — the fog city the T119
+           estimate never found. The remaining work is: take 喀山 (no walls, one Crossbowman in
+           range, the melee at d2 of the ring and the corridor one unit wide, so ~2-4 turns), then
+           march the train the six tiles to 诺夫哥罗德 and break 100 walls (~5-8 turns including the
+           march), then resolve the capture. That is 10-14 turns of queue, so T185 is reachable and
+           T160 was not. Retiring it at T160 would have left the elimination objective in force under
+           the directive but with no file, which is the state AGENTS.md says a task must not be left
+           in. Retire it early if Russia is gone, or as `007-destroy-russia-expired-T185.md` with a
+           report of which cities stand and why.
 done when: **Russia is eliminated** — `get_diplomacy` **no longer** lists a Russian city, every city
            we took has been resolved with `city_action` keep/raze, and no Russian unit is left inside
            our territory. Report the count of Russian cities taken, counted as you take them (Russia
