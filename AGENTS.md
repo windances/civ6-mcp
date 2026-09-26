@@ -161,7 +161,10 @@ Each turn in order:
    stagger the arrivals or send the surplus round the far side of the target, and optimise the turn
    the **last** firing tile is filled rather than the first unit's arrival. A unit with no tile gets
    the rear of the ring, which is also what cuts the city's supply line. The table and the three
-   rules are `prompts/tactics/04-staging-out-of-range.md` step 3b.
+   rules are `prompts/tactics/04-staging-out-of-range.md` step 3b, and **`get_staging_plan(city_x,
+   city_y)` builds it for you**: give it the target city's tile and it returns the ring, every
+   fighting unit's path to each ring tile from the game's own pathfinding, one assignment with
+   distinct tiles and the conflicts named, and the turn the assault opens.
 5. `get_cities` — queues, growth, pillaged districts
 6. `get_district_advisor` if placing a new district
 7. `set_city_production` / `set_research` if needed

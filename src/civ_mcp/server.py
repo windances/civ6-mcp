@@ -791,6 +791,33 @@ async def get_settle_advisor(ctx: Context, unit_id: int) -> str:
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
+async def get_staging_plan(ctx: Context, city_x: int, city_y: int) -> str:
+    """Plan the assembly before moving anything: which unit takes which ring tile, and when.
+
+    Human instruction 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优
+    集结方案后，才开始执行. Give it the tile of the city you are about to assault and it returns
+    the ring, every fighting unit's path to each ring tile (the game's own pathfinding), and one
+    assignment: distinct tiles, shooters on the distance-2 tiles, melee on the adjacent one, and
+    the conflicts named so nobody is ordered onto an occupied tile (`STACKING_CONFLICT`).
+
+    Read it **before** the first move of an assembly. It answers the three questions the plan
+    exists for: who goes where, who cannot fit (send those to the rear of the ring to cut the
+    supply line rather than queueing), and which turn the assault actually opens.
+    """
+    gs = _get_game(ctx)
+
+    async def _run():
+        from . import staging as st
+
+        plan = await gs.staging_plan(city_x, city_y)
+        return st.render(st.assign(plan), plan)
+
+    return await _logged(
+        ctx, "get_staging_plan", {"city_x": city_x, "city_y": city_y}, _run
+    )
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
 async def get_pathing_estimate(
     ctx: Context, unit_id: int, target_x: int, target_y: int
 ) -> str:

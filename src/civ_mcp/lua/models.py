@@ -572,6 +572,51 @@ class PathingEstimate:
 
 
 @dataclass
+class StagingRingTile:
+    """One tile of the target city's ring, at distance 1 (melee/adjacent) or 2 (shooting)."""
+
+    x: int
+    y: int
+    distance: int
+    blocked: bool = False
+    water: bool = False
+
+
+@dataclass
+class StagingUnit:
+    """One of our fighting units, with the movement it has left."""
+
+    unit_type: str
+    unit_id: int
+    x: int
+    y: int
+    moves: int
+    role: str = "melee"  # siege / ranged / short-ranged / melee
+
+
+@dataclass
+class StagingOption:
+    """A unit's path to one ring tile: turns to arrive, and whether it arrives this turn."""
+
+    unit_id: int
+    x: int
+    y: int
+    turns: int
+    this_turn: bool = False
+    path_len: int = 0
+
+
+@dataclass
+class StagingPlan:
+    """The raw material of a staging plan: the ring, the units, and every option."""
+
+    target: str = ""
+    ring: list[StagingRingTile] = field(default_factory=list)
+    units: list[StagingUnit] = field(default_factory=list)
+    options: list[StagingOption] = field(default_factory=list)
+
+
+@dataclass
 class SettleCandidate:
     """A candidate location for founding a city."""
 

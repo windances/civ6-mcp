@@ -1,4 +1,4 @@
-"""Lua code builders and response parsers for Civ 6 game state.
+﻿"""Lua code builders and response parsers for Civ 6 game state.
 
 Each domain has:
 - build_*_query() -> str: returns Lua code to execute via FireTuner
@@ -191,6 +191,10 @@ from civ_mcp.lua.models import (  # noqa: F401
     OwnedResource,
     PantheonStatus,
     PathingEstimate,
+    StagingOption,
+    StagingPlan,
+    StagingRingTile,
+    StagingUnit,
     PendingDeal,
     PlayerRow,
     PolicyInfo,
@@ -289,6 +293,7 @@ from civ_mcp.lua.units import (  # noqa: F401
     build_build_route,
     build_improve_tile,
     build_pathing_estimate_query,
+    build_staging_plan_query,
     build_post_move_visibility_query,
     build_remove_feature,
     build_remove_improvement,
@@ -312,6 +317,7 @@ from civ_mcp.lua.units import (  # noqa: F401
     parse_combat_estimate,
     parse_fog_neighbor_response,
     parse_pathing_estimate,
+    parse_staging_plan_response,
     parse_post_move_visibility,
     parse_siege_posture_response,
     parse_threat_scan_response,
