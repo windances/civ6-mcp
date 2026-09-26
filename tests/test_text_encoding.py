@@ -11,6 +11,8 @@ The policy is one line per family, and it is cheap to keep:
 * a `.zh.` file carries a UTF-8 BOM;
 * a `.en.` file is **pure ASCII** (the one encoding no viewer can guess wrong) and carries none;
 * any other document containing a non-ASCII byte carries a BOM;
+* **`AGENTS.md` is English only** (human instruction 2026-09-27), so it is pure ASCII with no BOM: a
+  non-ASCII character in it is a half-finished translation or a mark the gate normalises;
 * the launcher strips the BOM before building the prompt, and must keep doing so.
 
 `civ_mcp.text_encoding` is the single source of truth for the document walk, and
@@ -78,6 +80,40 @@ class TestLanguageVariants:
                 f"mojibake on a zh-CN machine - found {offenders} "
                 f"(U+{', U+'.join(f'{ord(c):04X}' for c in offenders)})"
             )
+
+
+class TestTheAgentReferenceIsEnglishOnly:
+    """Human instruction 2026-09-27: `AGENTS.md` is English only, and English here means pure ASCII.
+
+    Every session reads that file, and it is the one document whose readers include a zh-CN editor and
+    a byte-budget renderer. So it is held to the same bar as the `.en.` files: pure ASCII, no BOM. A
+    non-ASCII character in it is either a half-finished translation or one of the typographic marks
+    `scripts/fix-text-encoding.py` normalises, and both are cheap to fix the moment they appear.
+    """
+
+    def test_it_is_pure_ascii(self):
+        raw = (ROOT / "AGENTS.md").read_bytes()
+        assert not raw.startswith(BOM), (
+            "AGENTS.md is pure ASCII and must not carry a BOM - run "
+            "`python scripts/fix-text-encoding.py`"
+        )
+        bad = [
+            (number, line)
+            for number, line in enumerate(raw.decode("utf-8", errors="replace").splitlines(), start=1)
+            if not line.isascii()
+        ]
+        assert not bad, (
+            "AGENTS.md is English only, so it must be pure ASCII: run "
+            "`python scripts/fix-text-encoding.py` to normalise the marks (- , ->, ...) and translate "
+            "what is left: " + "; ".join(f"line {number}: {line.strip()[:70]}" for number, line in bad[:5])
+        )
+
+    def test_the_checker_sees_a_stray_character(self):
+        # The same rule through the module the pre-commit hook runs, so the hook and the suite cannot
+        # disagree about what is in the file.
+        assert text_encoding.ascii_lines(ROOT) == []
+        assert text_encoding.stray_boms(ROOT) == []
+        assert "AGENTS.md" in text_encoding.ASCII_ONLY
 
 
 class TestEveryDocumentIsUnambiguous:

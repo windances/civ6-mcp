@@ -7,7 +7,11 @@ on 2026-09-26 for a `.zh.txt` task file, an English one (twelve em dashes), `AGE
 strategy/tactics documents.
 
 The policy is one line per family: a document holding a non-ASCII byte carries a BOM, an English
-`.en.` file is pure ASCII and carries none, and a Chinese `.zh.` file always carries one.
+`.en.` file is pure ASCII and carries none, and a Chinese `.zh.` file always carries one. **`AGENTS.md`
+is held to the English bar too** (human instruction 2026-09-27: AGENT.md全用英文): every session reads
+it, so it is pure ASCII with no BOM, and a non-ASCII character in it is either a translation somebody
+started and did not finish or a typographic mark - `ascii_lines` finds the first, `ascii_fix`
+normalises the second.
 
 **The writers are the weak point.** The agent's own file tools (`write`/`edit` in the harness) emit
 plain UTF-8 with no BOM, so editing any of these documents silently strips it - measured twice, on
@@ -167,3 +171,85 @@ def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str
             if looks_corrupt(line):
                 found.append((path, i + 1, line.strip()))
     return found
+
+
+# --------------------------------------------------------------------------------------
+# English only: `AGENTS.md` is pure ASCII, and the marks are converted rather than argued about
+# --------------------------------------------------------------------------------------
+#
+# Human instruction 2026-09-27 (AGENT.md全用英文): the agent reference is English, and English here
+# means the bar the `.en.` files are already held to - **pure ASCII**, the one encoding no viewer can
+# guess wrong. Two kinds of non-ASCII turn up in practice, and they need different treatment: the
+# typographic marks (`—`, `→`, `…`, `≤`) are a mechanical substitution, and CJK prose is a sentence
+# somebody has to write in English. `ascii_fix` does the first, `ascii_lines` reports the second, and
+# the pre-commit hook runs both, so the file cannot drift back into a half-translated state.
+
+ASCII_ONLY = ("AGENTS.md",)
+
+# Applied to ASCII-only documents by `ascii_fix`, longest mark first so `—` never eats a `–`.
+ASCII_MARKS = (
+    ("\u2014", " - "),   # em dash
+    ("\u2013", "-"),     # en dash
+    ("\u2192", "->"),    # right arrow
+    ("\u2026", "..."),   # horizontal ellipsis
+    ("\u2264", "<="),    # less-or-equal
+    ("\u2265", ">="),    # greater-or-equal
+    ("\u00d7", "x"),     # multiplication sign
+    ("\u00a0", " "),     # no-break space
+    ("\u2018", "'"),     # curly quotes, all four, because a document is not a word processor
+    ("\u2019", "'"),
+    ("\u201c", '"'),
+    ("\u201d", '"'),
+)
+
+
+def ascii_only_documents(root: str | pathlib.Path) -> list[pathlib.Path]:
+    """The documents held to the pure-ASCII bar, that are present in this tree."""
+    return [path for path in documents(root) if path.name in ASCII_ONLY]
+
+
+def ascii_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str]]:
+    """(path, line number, line) for every non-ASCII line of an ASCII-only document.
+
+    A line that survives `ascii_fix` is prose, not punctuation: it holds CJK (or another script) and
+    has to be written in English. The BOM is reported separately by `stray_boms` because it is not a
+    line, and on a pure-ASCII document it is one byte of decoration that has to go.
+    """
+    found = []
+    for path in ascii_only_documents(root):
+        for number, line in enumerate(path.read_text(encoding="utf-8-sig").splitlines(), start=1):
+            if not line.isascii():
+                found.append((path, number, line))
+    return found
+
+
+def stray_boms(root: str | pathlib.Path) -> list[pathlib.Path]:
+    """ASCII-only documents that carry a BOM: the hint is for non-ASCII text, and this is not that."""
+    return [
+        path for path in ascii_only_documents(root)
+        if path.read_bytes().startswith(BOM)
+    ]
+
+
+def ascii_fix(root: str | pathlib.Path) -> list[pathlib.Path]:
+    """Normalise the typographic marks and drop the BOM on every ASCII-only document.
+
+    Returns the files that changed. Idempotent: a document that is already pure ASCII is untouched, so
+    this cannot rewrite a file the author just wrote.
+    """
+    fixed = []
+    for path in ascii_only_documents(root):
+        raw = path.read_bytes()
+        text = raw.decode("utf-8-sig")
+        for mark, replacement in ASCII_MARKS:
+            text = text.replace(mark, replacement)
+        # An em dash typed with spaces around it (" — ") becomes "  -  " the moment the mark is
+        # replaced. Those doubled spaces are the conversion's artefact, not the author's, so collapse
+        # them - narrowly, around a lone hyphen, because table cells pad with spaces legitimately.
+        for _ in range(3):
+            text = text.replace("  -  ", " - ").replace("  - ", " - ").replace(" -  ", " - ")
+        wanted = text.encode("utf-8")  # no BOM: that is the point of the pure-ASCII bar
+        if wanted != raw:
+            path.write_bytes(wanted)
+            fixed.append(path)
+    return fixed
