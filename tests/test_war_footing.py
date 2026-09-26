@@ -340,6 +340,34 @@ class TestSiegePosture:
         entry = self.posture(enemy_distance=999, screen_enemy_distance=999, city_distance=9)
         assert et._siege_posture_event([entry], et._siege_metrics([entry]), 116) is None
 
+    def test_the_train_says_how_many_of_it_can_actually_fire(self):
+        """Three siege units is a count of units; the shots are what the city feels.
+
+        Measured: 阿斯特拉罕 had one distance-2 tile with LOS, 圣彼得堡 had one siege unit in
+        range while two stood at distance 4 and 6 for three turns (T151-T152), and 喀山 opened
+        with all three at distance 3, 4 and 4 (T159). The line has to name them.
+        """
+        entries = [
+            self.posture(x=55, y=41, enemy_distance=1, screen_enemy_distance=2, city_distance=1),
+            self.posture(x=55, y=40, enemy_distance=2, screen_enemy_distance=2, city_distance=4),
+            self.posture(x=55, y=39, enemy_distance=3, screen_enemy_distance=2, city_distance=4),
+        ]
+        text = et._siege_posture_event(entries, et._siege_metrics(entries), 159)
+        assert "SIEGE FIRE: 1/3 siege unit(s) inside range 2" in text
+        assert "OUT OF RANGE" in text
+        assert text.count("at distance 4") == 2
+        assert "cannot fire the same turn" in text
+
+    def test_a_train_that_can_all_fire_says_so(self):
+        entries = [
+            self.posture(x=55, y=41, city_distance=2, enemy_distance=1, screen_enemy_distance=2),
+            self.posture(x=55, y=42, city_distance=2, enemy_distance=1, screen_enemy_distance=2),
+        ]
+        text = et._siege_posture_event(entries, et._siege_metrics(entries), 160)
+        assert "SIEGE FIRE: 2/2 siege unit(s) inside range 2" in text
+        assert "full train, fire it" in text
+        assert "OUT OF RANGE" not in text
+
     def test_the_parser_reads_the_line_and_ignores_junk(self):
         entry = lq.parse_siege_posture_response(
             ["SIEGE_POSTURE|UNIT_CATAPULT|54,39|enemy:1|screen:2|screen_enemy:3|city:1|Moscow", "junk"]

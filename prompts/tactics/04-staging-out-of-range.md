@@ -198,6 +198,30 @@ before the declaration and again the turn the stack forms:
    unit able to reach the city until they moved.
 4. **Write the order of arrival down** — which unit takes which tile on which turn — because the
    move-cost arithmetic above decides whether the ring fills in one turn or three.
+5. **Count shots, not units. This is the measurement the whole step exists for.** Three siege units
+   is a roster; the city only feels the ones inside range 2 with LOS. Measured over the T139–T159
+   war: 阿斯特拉罕 had **one** distance-2 tile with LOS out of three candidates, 沃罗涅什 fired from
+   two, 圣彼得堡 spent T151–T152 with **one** siege unit in range while the other two stood at
+   distance 4 and 6, and 喀山 opened on T159 with all three at distance **3, 4 and 4** — zero shots.
+   `SIEGE POSTURE` now ends with a `SIEGE FIRE: n/m siege units inside range 2` line and names the
+   out-of-range ones: **read it before writing the turn's plan, and if n < m the plan is to walk the
+   others in, not to fire again.** A unit that spends its move arriving fires **next** turn — a
+   two-tile move, a river crossing or a hill each cost both movement points (measured four turns
+   running, T155–T158: `NO_MOVES|Ranged attacks require movement`), so a shooter either starts the
+   turn in the ring or is a turn late by construction.
+6. **Fill the ring from the rear, and give the spare units the far side.** Two things follow from a
+   ring that is one tile wide. First, **the heal**: an enemy city heals ~20/turn while any adjacent
+   hex is outside our zone of control, and the `SIEGE PROGRESS` block counts it — 沃罗涅什 read
+   `supply line 3/6 cut` and 喀山 read `1/6` on the turn it was first fired on, which is why both
+   pools came back. A unit with nothing to shoot at is not idle: send it round the back to occupy
+   the uncut hexes. Second, **the jam**: the corridor at 圣彼得堡 was so narrow that on T155
+   `Catapult 1769485 and Xbow 2752533 were fortified in place because the corridor is jammed`, i.e.
+   two shooters spent a turn queued behind their own army. Approaches are one or two tiles wide;
+   send the surplus round the other side on the *march*, not on the turn the ring has to be filled.
+7. **Do not bring the ram or the melee forward piecemeal to fill a gap.** A bare melee attack did
+   **9** against 100 walls (T150) where the same attack beside the Battering Ram does full damage,
+   and a 55 HP Horseman attacking a walled, garrisoned city was destroyed outright (T154) — the
+   ring is filled by units that can survive on it, in the order that lets them support each other.
 
 ## Step 7 — the go/no-go
 

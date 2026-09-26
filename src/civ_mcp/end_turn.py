@@ -1114,6 +1114,31 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
             f" screen {screen if screen != 999 else 'none'} (its enemy {screen_enemy if screen_enemy != 999 else '-'}),"
             f" city {city if city != 999 else '-'} ({city_name}) - {state}"
         )
+    if len(posture) > 1 and closest_city != 999:
+        # The measured failure this line exists for: a train of three siege units that fires with
+        # one of them. At 阿斯特拉罕 only one distance-2 tile had line of sight, at 圣彼得堡 only
+        # one siege unit was inside range 2 while two stood at distance 4 and 6 for three turns
+        # (T151-T152), and at 喀山 all three were at distance 3, 4 and 4 on T159 - so the "3
+        # Catapults" the directive counts is a *count of units*, not of shots, and nothing said so.
+        # Staging is the answer (tactics/04): arrive together, inside the ring, before opening.
+        cannot_fire = [
+            (getattr(e, "unit_type", "?"), int(getattr(e, "city_distance", 999) or 999))
+            for e in posture
+            if int(getattr(e, "city_distance", 999) or 999) > 2
+        ]
+        lines.append(
+            f"  SIEGE FIRE: {len(posture) - len(cannot_fire)}/{len(posture)} siege unit(s) inside"
+            f" range 2 of the target"
+            + (
+                " - OUT OF RANGE: "
+                + ", ".join(f"{name} at distance {dist}" for name, dist in cannot_fire)
+                + ". They contribute nothing where they stand: walk them into the ring together"
+                " before firing again, and remember that a unit which spends its move arriving"
+                " cannot fire the same turn (a two-tile move, a river or a hill costs both points)."
+                if cannot_fire
+                else " - that is the full train, fire it."
+            )
+        )
     if exposed:
         lines.append(
             "  Fix the formation before advancing: the screen moves up (or the siege unit back),"
