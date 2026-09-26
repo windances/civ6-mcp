@@ -1,9 +1,12 @@
 """System prompts and scenario prompt builder for CivBench.
 
 Two system prompt tiers:
-- STANDARD_SYSTEM_PROMPT: Full AGENTS.md playbook (~15KB). Used by the
-  standard track to test whether models follow known-good guidance under
-  Sensorium constraints.
+- STANDARD_SYSTEM_PROMPT: the AGENTS.md playbook plus the strategy directive (~90KB with the
+  directive; AGENTS.md alone crossed 64KB on 2026-09-26 and the reference now carries only the
+  procedure and the interface facts). Used by the standard track to test whether models follow
+  known-good guidance under Sensorium constraints. **The directive has to be concatenated here**:
+  in a live session the orchestrator skill loads it, and this track has no skill, so without it the
+  standard prompt would be missing the strategy the playbook refers to.
 - BASELINE_SYSTEM_PROMPT: Minimal ~75-line generic prompt. Used by the
   open track as a default (teams can override with --solver).
 """
@@ -17,11 +20,18 @@ if TYPE_CHECKING:
     from evals.scenarios import Scenario
 
 # ---------------------------------------------------------------------------
-# Standard track: full AGENTS.md playbook
+# Standard track: AGENTS.md playbook + the strategy directive
 # ---------------------------------------------------------------------------
 
-_AGENTS_MD = Path(__file__).resolve().parent.parent / "AGENTS.md"
-STANDARD_SYSTEM_PROMPT = _AGENTS_MD.read_text()
+_ROOT = Path(__file__).resolve().parent.parent
+_AGENTS_MD = _ROOT / "AGENTS.md"
+_DIRECTIVE_MD = _ROOT / "prompts" / "strategies" / "china-conquest" / "directive.md"
+
+# utf-8-sig: both documents carry a BOM (see AGENTS.md, "File encoding"), and the default encoding on
+# a zh-CN Windows box is cp936, which would decode the BOM as text and mangle every Chinese character.
+STANDARD_SYSTEM_PROMPT = "\n\n".join(
+    path.read_text(encoding="utf-8-sig") for path in (_AGENTS_MD, _DIRECTIVE_MD)
+)
 
 # ---------------------------------------------------------------------------
 # Baseline: minimal generic prompt (open track default)

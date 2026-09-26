@@ -288,75 +288,84 @@ that same analysis, with six camp gates instead of the city's five).
 
 ## Strategic Patterns
 
-### Moving Civilians
-Before moving a builder, settler, or trader to a new tile, `get_map_area` (radius 2) around the destination is worth the query. Civilians have zero combat strength — a single barbarian scout captures them. The cost of losing a builder (5-7 turns of production + charges) is almost always worse than taking one extra turn to check or escort.
+**Interface facts and measured traps, not doctrine.** The strategy is the directive, which the
+orchestrator skill loads every session; the per-decision playbooks are `prompts/tactics/`, which the
+advisor prompts carry. What belongs here is what a tool does that the obvious reading gets wrong, and
+where a topic is owned elsewhere this section points at it and stops.
 
-**Water is a wall until `CIVIC`-era tech, and city-state land is a wall even when we are its suzerain.** Two measured movement refusals from the T92–T93 turns of the live replay, both of which look like tool failures and are not:
-- **A land unit cannot embark without `TECH_SHIPBUILDING`** — the adapter answers "water tile - land units need Shipbuilding tech to embark", and it blocked five scout orders in two turns. A strait is impassable, an island is unreachable, and a "dark map" may simply be ocean: route scouts along the coast, and do not read the refusal as a hang or a bug.
-- **A tile owned by a city-state refused our scout with "need suzerainty or Open Borders" while `get_city_states` listed us as Suzerain with 5 envoys.** Whatever the cause, the practical rule is the same as for a foreign unit parked in a lane: route around it and say so, rather than assuming suzerainty grants passage.
+### Moving civilians
+`get_map_area` (radius 2) around a builder's, settler's or trader's destination is worth the query:
+civilians have zero combat strength and losing one costs 5-7 turns of production plus its charges. **Two
+refusals look like tool failures and are not** (measured T92-T93): a **land unit cannot embark without
+`TECH_SHIPBUILDING`** ("water tile - land units need Shipbuilding tech to embark"), so a strait is
+impassable and a "dark map" may simply be ocean; and a tile owned by a **city-state refused our scout
+while `get_city_states` listed us as its Suzerain with 5 envoys**, so route around it rather than assume
+suzerainty grants passage. Hills, forests and jungles cost 2 movement each and stack (forest-hills 3+),
+so a 2-move civilian that lands on forest-hills cannot act until next turn - and
+`get_pathing_estimate(unit_id, target_x, target_y)` uses the game's own pathfinding.
 
-Hills cost 2 movement, forests/jungles cost 2, and they stack (forest-hills = 3+). A settler or builder with 2 base moves arriving on forest-hills uses all movement and can't act until next turn. Route through flat terrain when possible, or plan to arrive one turn early.
+### Builders
+`get_builder_tasks` lists every tile that needs work, prioritised (URGENT > HIGH > NORMAL) with the
+nearest idle builder for each: call it once per turn and dispatch top-down. A builder 3-4 tiles away is
+still worth the walk, and map tiles print movement cost (`[mv:2]`, `[mv:3]`) and roads, so route along
+them.
 
-`get_pathing_estimate(unit_id, target_x, target_y)` estimates how many turns a unit needs to reach a destination, using the game's actual pathfinding. Use it before committing units to long marches.
-
-### Builder Management
-Idle builders are wasted production. `get_builder_tasks` shows all tiles needing improvements across your empire, prioritized (URGENT > HIGH > NORMAL), with the nearest idle builder for each task. Call it once per turn during the builder phase, then dispatch builders top-down by priority.
-
-Don't skip builders that are 3-4 tiles from a task — a few turns of walking is better than sitting idle forever. For long-distance dispatches, use `get_pathing_estimate` to verify the route. Map tiles now show movement cost (`[mv:2]`, `[mv:3]`) and road presence — route builders along roads when possible.
-
-After context compaction, call `get_builder_tasks` again to reconstruct your builder situation. The tool provides a fresh snapshot — no need to remember previous assignments.
-
-### Spending Gold & Faith
-Gold and faith sitting idle lose value over time. `purchase_item(city_id, item_type, item_name)` buys units/buildings instantly with gold (or faith via `yield_type="YIELD_FAITH"`). `purchase_tile(city_id, x, y)` buys a specific tile. `patronize_great_person` buys a GP outright. If you're saving, name the item and the turn — otherwise, deploy it.
-
-### Expansion
-Each city multiplies your districts, yields, and Great Person generation. The gap between a 3-city and 5-city empire by the Medieval era is hard to recover from. If city count is lagging, a settler is typically the highest-impact production choice — more so than most infrastructure in existing cities. Check loyalty before settling: negative-loyalty sites near rivals need a governor assigned immediately via `assign_governor(governor_type, city_id)` or they'll flip.
-
-### Growth
-Stagnant cities fall behind exponentially. If any city has food surplus ≤ 0, that's worth fixing this turn (Farm, Granary, domestic Trade Route, or `set_city_focus(city_id, "FOOD")`). Turns-to-growth over 15 is a signal the city needs food infrastructure.
+### Growth and settling
+The thresholds, which are hard stops rather than warnings: **food surplus <= 0** is worth fixing this
+turn (Farm, Granary, domestic Trade Route, `set_city_focus(city_id, "FOOD")`) and **turns-to-growth >
+15** says the city needs food infrastructure; **`housing - pop <= 1`** stalls a city for dozens of
+turns, so fix it now or settle the next city on fresh water; a negative-loyalty site needs
+`assign_governor` or a garrison the turn it is founded or it flips.
 
 ### Exploration
-You can't settle what you can't see, and you can't counter threats you don't know exist. A scout set to `automate` is one of the best investments in the early game. If a scout is lost or stuck, replacing it early keeps the information flow going.
+You cannot settle or counter what you have not seen. A scout on `automate` keeps the information flow
+going, and replacing a lost scout early is cheaper than the turns spent blind.
 
-### Diplomacy
-Diplomacy generates yield: each alliance +1 favor/turn per alliance level, each suzerainty +1 favor/turn. Government tier also gives favor. This compounds. Friendships don't give favor directly but enable alliances (which do). Delegations (25g) are cheap on first meeting. Friendships open up when a civ is Friendly. Alliances require friendship (30+ turns) and Diplomatic Service civic. Embassies are available once Writing is researched.
-
-If favor is accumulating above 100 with no World Congress imminent, it's worth thinking about whether it could be better deployed in trade or alliance building.
-
-### War Declaration
-War declarations take effect for diplomacy immediately but the **combat engine does not sync until the next turn**. After declaring war via `send_diplomatic_action`, units cannot attack the new enemy until the following turn. Plan accordingly: declare war on turn N, position units adjacent to targets, then attack on turn N+1. Do not reload or retry if attacks return `NO_ENEMY` on the declaration turn — this is expected behavior.
+### War declaration
+War takes effect in diplomacy immediately, but **the combat engine does not sync until the next turn**:
+declare on turn N, position that turn, attack on N+1. Do not reload or retry when attacks answer
+`NO_ENEMY` on the declaration turn.
 
 ### Wartime
-During war, keeping a military unit garrisoned in or near each city is worth the tradeoff against offensive strength. Cities with walls can fire at enemies via `city_action(city_id, "attack", target_x, target_y)` (range 2). Cities that fall are expensive to recover — when you capture a city, `city_action` with `keep`, `raze`, or `liberate_founder`/`liberate_previous` resolves the decision. If your military strength is significantly below an enemy's and you're not making progress, `propose_peace(player_id)` — available after a 10-turn cooldown — is usually better than a war of attrition while the rest of the map moves on.
+A city with walls can fire at an enemy within 2 tiles (`city_action(city_id, "attack", target_x,
+target_y)`) - measured 43 damage, no retaliation, which is the cheapest damage in the empire - and a
+captured city is resolved with `city_action` (`keep`, `raze`, `liberate_founder`, `liberate_previous`)
+or the turn will not end. **Peace is not an option**: the directive forbids `propose_peace` outright and
+every offer is refused, so a war ends only when its cities are yours.
 
-### Military Readiness
-Check rival military strength in `get_diplomacy` periodically. A neighbor at 2x+ your strength who isn't a friend or ally is a risk worth taking seriously. Minimum useful peacetime: 1 garrison per city plus a mobile unit. Units become progressively weaker relative to rivals if not upgraded (Slinger→Archer with Archery, Warrior→Swordsman with Iron Working) — use `upgrade_unit`.
+### Military readiness
+`get_diplomacy` carries rival military strength, and a neighbour at 2x or more who is not a friend or an
+ally is the risk worth tracking. Units that fall behind their tier lose fights they would have won -
+`upgrade_unit` needs tech, resources and gold. Garrisons while a war is on are the rule
+`one-garrison-per-city`; the peacetime standing army is the directive's call.
 
-### Barbarian Camps
-Camps upgrade with the era — an Ancient-era camp spawns Warriors; the same camp in the Medieval era spawns Man-at-Arms. Clearing a camp within a few turns of finding it is almost always easier than fighting the units it produces over many turns.
+### Barbarian camps - the half the doctrine does not cover
+The camp doctrine is the skill's and `tactics/07`'s: the six gates C1-C6, "no HP, no walls, no garrison
+bonus, one military unit moving onto its tile destroys it", Spearmen are anti-cavalry, and convert an
+adjacent barbarian before the raid. What is only here is the tooling.
 
-**A camp is a `tactics/07` target, and it is destroyed by force** (human instruction, 2026-09-26; this replaces the earlier "do not clear camps" rule, under which a camp was valued only as a pool of units for the leader ability). A camp has **no HP, no walls and no garrison bonus** — one military unit **moving onto its tile** destroys it — so the analysis is about the guard, not the camp: count every barbarian within two tiles with its class and HP, read the camp tile's terrain and what the last step costs in movement, pick **two** attackers with the counter unit plus an unspent unit to walk in, confirm the walk-in starts from a tile we already hold, weigh gold/era score/the `CIVIC_MILITARY_TRADITION` inspiration (its boost is "clear a barbarian camp") against the units pulled off the plan, and say which city gives up its garrison. **Locate the camp from the map every time** — a camp can be cleared by someone else and respawn nearby, and a coordinate copied from an old diary has already been wrong once (T65's note said (60,30); the T83 map read put the camp at (60,29)). Barbarian **Spearmen are anti-cavalry** — ranged fire plus a melee walk-in, never cavalry into spears; a Scout, Builder or Trader sent at a camp is captured instead. Report `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD / CONVERT / GO`.
+- **Locate the camp from the map every time.** A camp can be cleared by someone else and respawn nearby,
+  and a coordinate copied from an old diary has already been wrong once (T65's note said (60,30); the T83
+  map read put it at (60,29)).
+- **The raid has a one-command entry point:** `scripts\run-dsh-headless.ps1 -TaskFile
+  prompts\tasks\clear-the-camp.zh.txt` (English: `clear-the-camp.en.txt`) - one raid end to end, without
+  declaring war and without changing the development plan.
+- **A camp is visible to the rules.** `end_turn` computes `camps_within_3` from `get_map_area` (a camp is
+  the tile improvement `IMPROVEMENT_BARBARIAN_CAMP`, so no new Lua was needed) and `answer-the-camp` is
+  live in `prompts/checks/turn-checks.md`. **A rule naming a metric the running server does not compute
+  reports `un-evaluable` every turn and nobody can satisfy it**, which is why a new rule is staged in
+  `prompts/checks/pending/` until a server computing its metric is running.
+- Report `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD / CONVERT / GO`, and report a convertible
+  barbarian - one standing next to one of our melee units - **before** the raid, so the human can use
+  三十六计 from the game UI.
 
-The leader ability 三十六计 Three-Six Stratagems converts an adjacent barbarian, but only from the game UI. So report any barbarian standing next to one of our melee units whose type is worth converting **before** the raid — then clear the camp anyway.
-
-**The raid has a one-command entry point:** `scripts\run-dsh-headless.ps1 -TaskFile prompts\tasks\clear-the-camp.zh.txt` (English: `clear-the-camp.en.txt`). It plays one raid end to end — status check, the six camp gates, the force, the walk-in, the report — without declaring war or changing the development plan.
-
-**A camp is visible to the rules, and the rule for it is now live.** `end_turn` computes `camps_within_3` (via `_camps_within_3`, two lines of Python over the existing `get_map_area` — a camp is a tile improvement, `IMPROVEMENT_BARBARIAN_CAMP`, so no new Lua was needed), and `answer-the-camp` was **cut into `prompts/checks/turn-checks.md` at T174**, once a server computing its metric was running. That staging was the whole point: the rule file is re-read every turn but the *metric set* lives in the MCP process's memory, and `turn_checks.evaluate` raises on an unknown metric — so a rule cut in early reports itself `un-evaluable` every turn and nobody can satisfy it. **`cut-the-supply` was activated in the same batch**, on the metric `enemy_supply_uncut_with_idle` added 2026-09-26 with the `idle3:` field in the capture-readiness scan: an enemy city still holding open adjacent hexes while our fighting units within three tiles have movement left is a city we are choosing to let heal — 沃罗涅什 sat at `supply 3/6` and 喀山 at `1/6` for their whole sieges while Catapults held position in the jammed corridor, and both pools came back to full. `prompts/checks/pending/` no longer holds either, and `tests/test_camp_rules.py` asserts they are live rather than staged.
-
-### Religion
-Religious victory is the easiest win condition to miss because it produces no notifications and unfolds slowly. `get_religion_spread` shows the picture. If a rival religion reaches majority in most civs, the window for a response narrows quickly. Religious units bought from a city carry **that city's majority religion** — buy them from cities where your own religion is majority, not a converted city.
-
-To found a religion: build a Holy Site → earn a Great Prophet → `get_religion_beliefs()` to see available beliefs → `found_religion(name, beliefs)`. The Great Prophet pool fills early (roughly half the major civs).
-
-Trade routes spread the origin city's religion to the destination — worth factoring into routing decisions if conversion pressure is a concern.
-
-### Victory Path Viability
-Some paths close. It's worth checking periodically via `get_victory_progress`:
-
-- **Science**: Campuses → Universities → Spaceport → 4 space projects. Research Alliances and Great Scientists accelerate.
-- **Culture**: Tourism (offense) vs rival domestic tourists (defense). Theater Squares, Great Works, Wonders, Open Borders (+25%), Trade Routes (+25%). Late-game: National Parks, Rock Bands, Seaside Resorts.
-- **Religious**: Requires a founded religion (Great Prophet pool fills early). Missionaries spread; Apostles fight theological combat (killing = 250 pressure in 10-tile radius). Buy religious units only from cities where your religion is majority.
-- **Diplomatic**: 20 DVP. World Congress resolutions, scored competitions, wonders. Favor from government tier, alliances, suzerainties. If a DVP-stripping resolution targets you, vote Option B on yourself (net 0 vs -2).
+### Religion - the one fact no metric can see
+A religious unit is `FORMATION_CLASS_RELIGIOUS` with `Combat = 0`, so **every contact metric and every
+rule is blind to it, and the tile's unit list in `get_map_area` is the only detector**. The strategy on
+them is the directive's and is blunt: China buys **no** religious unit, at peace one cannot be touched at
+all (`condemn` answers `ERR:REQUIRES_WAR`, `attack` answers `ERR:NOT_AT_WAR`, a city strike returns
+`NO_ENEMY`), and faith income is attacked at its source instead. The `get_religion_spread` cadence is in
+**Strategic Checkpoints** below.
 
 ## Combat Quick Reference
 
@@ -445,7 +454,7 @@ Military Engineers (requires Encampment + Armory): `build_route` builds a railro
 - `send_diplomatic_action(action="RESIDENT_EMBASSY")` — requires Writing tech
 - `form_alliance(player_id, type)` — types: MILITARY/RESEARCH/CULTURAL/ECONOMIC/RELIGIOUS; requires friendship 30t + Diplomatic Service civic
 - `propose_trade(player_id, ...)` — trade gold/GPT/resources/favor/open borders/cities. Use `mode="test"` first to see the AI's counter-offer without committing, then `mode="send"` to finalize. Cities use `city_id` from `get_trade_options`.
-- `propose_peace(player_id)` — white peace; 10t war cooldown required
+- `propose_peace(player_id)` — white peace; 10t war cooldown required. **The directive forbids it**: never call it, and refuse every offer, whether it arrives as a trade or as a session
 - `get_trade_options(other_player_id)` — see what a civ has available to trade (gold, resources, favor, cities, agreements)
 - `get_pending_trades` — check incoming trade offers; `respond_to_trade(player_id, accept)` to accept/reject
 - Check `get_diplomacy` for defensive pacts before declaring war
@@ -455,7 +464,7 @@ Military Engineers (requires Encampment + Armory): `build_route` builds a railro
 
 **City-states:** `get_city_states` → `send_envoy`. Suzerainty = +1 favor/turn. Types: Scientific/Industrial/Trade/Cultural/Religious/Militaristic.
 
-**Diplomatic Favor:** earned from government tier (base +1, scales with tier), alliances (+1/t per level), suzerainties (+1/t). Spend in World Congress for Diplomatic Victory Points.
+**Diplomatic Favor:** earned from government tier (base +1, scales with tier), alliances (+1/t per level), suzerainties (+1/t). Spend in World Congress for Diplomatic Victory Points; favor above ~100 with no congress imminent is better deployed in a trade than banked.
 
 ## Production & Research
 
