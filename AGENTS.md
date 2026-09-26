@@ -298,7 +298,11 @@ Periodic checks worth doing regularly. The game doesn't surface most of this pro
   (what the last 10 turns bought, per-turn rates), quotes your own plan and prediction from
   10 turns earlier back at you, lists the assault prerequisites the directive requires
   against the units you actually have, flags idle district slots and the gold/turn carrying
-  limit, and projects the current rates forward. **Answer its three questions in that turn's
+  limit, and projects the current rates forward. **While a war is on it also carries a
+  `WAR ECONOMY` line** — how many of our cities are building civilians (Builder, Settler, Trader,
+  religious unit) and which ones. That line is advisory, not a rule: it is `tactics/08`'s one-war-city
+  question asked in the turn it matters, and a task's Settler in a compounding city is a legitimate
+  answer to it. **Answer its three questions in that turn's
   diary**: (1) was the window efficient, with numbers; (2) which prerequisite for the next
   goal is in place and which is missing; (3) does the planned completion turn still hold,
   and if not, what changes. Ten flat turns are invisible turn by turn — this is where they

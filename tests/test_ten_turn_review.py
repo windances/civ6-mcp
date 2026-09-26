@@ -33,6 +33,26 @@ def unit(uid: int, unit_type: str) -> m.UnitInfo:
     )
 
 
+def city(city_id: int, name: str, building: str) -> m.CityInfo:
+    return m.CityInfo(
+        city_id=city_id,
+        name=name,
+        x=10 + city_id,
+        y=20,
+        population=4,
+        food=1.0,
+        production=5.0,
+        gold=0.0,
+        science=1.0,
+        culture=1.0,
+        faith=0.0,
+        housing=6.0,
+        amenities=2,
+        turns_to_grow=5,
+        currently_building=building,
+    )
+
+
 def row(turn: int, **fields) -> dict:
     base = {
         "turn": turn,
@@ -146,3 +166,60 @@ class TestReviewText:
 
     def test_no_earlier_row_means_no_review(self):
         assert _ten_turn_review_text(10, None, row(10), {}) is None
+
+
+class TestWarEconomy:
+    """战时战争城市在造平民 (human request 2026-09-26).
+
+    The war city builds the war; the rest of the empire compounds. Both halves are in
+    `tactics/08`, and neither is visible in a diary row - the row counts cities, it does not
+    say what each one is building. So the line can only exist if the review is handed the
+    post-turn city snapshot, and it is advisory: it asks for a sentence, it does not fail a
+    rule. A Settler for task 009 in a non-war city is a legitimate answer to it.
+    """
+
+    WAR = {"RUSSIA": {"state": 6}}
+
+    def test_it_names_every_city_building_a_civilian(self):
+        cities = {
+            1: city(1, "Astrakhan", "UNIT_BUILDER"),
+            2: city(2, "Chengdu", "UNIT_SETTLER"),
+            3: city(3, "Xian", "UNIT_CATAPULT"),
+        }
+        text = _ten_turn_review_text(
+            120, row(110, diplo_states=self.WAR), row(120, diplo_states=self.WAR), {}, cities
+        )
+        assert "WAR ECONOMY: 2/3 cities building civilians while at war" in text
+        assert "Astrakhan UNIT_BUILDER" in text
+        assert "Chengdu UNIT_SETTLER" in text
+        assert "tactics/08" in text
+
+    def test_no_line_at_peace(self):
+        # The same queues in peacetime are just development; nothing to answer for.
+        cities = {1: city(1, "Xian", "UNIT_BUILDER")}
+        text = _ten_turn_review_text(120, row(110), row(120), {}, cities)
+        assert "WAR ECONOMY" not in text
+
+    def test_no_line_when_every_queue_is_military(self):
+        cities = {1: city(1, "Xian", "UNIT_CATAPULT"), 2: city(2, "Chengdu", "BUILDING_MONUMENT")}
+        text = _ten_turn_review_text(
+            120, row(110, diplo_states=self.WAR), row(120, diplo_states=self.WAR), {}, cities
+        )
+        assert "WAR ECONOMY" not in text
+
+    def test_a_military_engineer_is_not_a_civilian(self):
+        # It is a support unit and what it builds is war work: counting it would cry wolf.
+        cities = {1: city(1, "Xian", "UNIT_MILITARY_ENGINEER")}
+        text = _ten_turn_review_text(
+            120, row(110, diplo_states=self.WAR), row(120, diplo_states=self.WAR), {}, cities
+        )
+        assert "WAR ECONOMY" not in text
+
+    def test_no_city_snapshot_is_not_a_crash(self):
+        # An older caller (or a call site with no snapshot) still gets the rest of the review.
+        text = _ten_turn_review_text(
+            120, row(110, diplo_states=self.WAR), row(120, diplo_states=self.WAR), {}
+        )
+        assert "WAR ECONOMY" not in text
+        assert "REQUIRED IN THIS TURN'S DIARY" in text
+        assert "assault prerequisites" in text

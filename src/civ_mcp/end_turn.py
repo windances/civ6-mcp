@@ -620,16 +620,53 @@ def _war_train_status(units: dict | None) -> tuple[str, list[str]]:
     return ", ".join(parts), missing
 
 
+# Items that build nothing that fights. A war city queued on one of these is the home-front
+# question, and the review states it rather than assuming the agent noticed (human request
+# 2026-09-26: 战时战争城市在造平民). A Military Engineer is deliberately absent - it is a support
+# unit and what it builds (roads, forts) is war work, so counting it would cry wolf.
+_CIVILIAN_PRODUCTIONS = frozenset(
+    {
+        "UNIT_BUILDER",
+        "UNIT_SETTLER",
+        "UNIT_TRADER",
+        "UNIT_MISSIONARY",
+        "UNIT_APOSTLE",
+        "UNIT_INQUISITOR",
+        "UNIT_GURU",
+        "UNIT_ARCHAEOLOGIST",
+        "UNIT_NATURALIST",
+        "UNIT_ROCK_BAND",
+    }
+)
+
+
+def _civilian_queues(cities) -> list[tuple[str, str]]:
+    """(city name, item) for every city whose queue holds a civilian unit.
+
+    Needs the live city snapshot, not the diary row: the row records how many cities exist,
+    never what each one is building.
+    """
+    rows = cities.values() if isinstance(cities, dict) else (cities or [])
+    queues: list[tuple[str, str]] = []
+    for city in rows:
+        item = str(getattr(city, "currently_building", "") or "").upper()
+        if item in _CIVILIAN_PRODUCTIONS:
+            queues.append((str(getattr(city, "name", "?") or "?"), item))
+    return queues
+
+
 def _ten_turn_review_text(
     turn: int,
     past: dict | None,
     now: dict | None,
     units: dict | None,
+    cities=None,
 ) -> str | None:
     """The every-10-turns review: what the window bought, what is still missing, ETA.
 
-    Pure so it can be tested without a game: it only reads diary rows and the unit list.
-    Returns None when there is no earlier row to compare against yet.
+    Pure so it can be tested without a game: it reads diary rows, the unit list, and - when the
+    caller has one - the live city snapshot. Returns None when there is no earlier row to
+    compare against yet.
     """
     if not past or not now:
         return None
@@ -658,6 +695,20 @@ def _ten_turn_review_text(
         f"  assault prerequisites (conquest directive): {train}"
         + (f" - MISSING {', '.join(missing)}" if missing else " - complete")
     )
+
+    # The home front while the army is in the field. One war city builds the war and everything
+    # else compounds (tactics/08), so a queue full of Builders and Settlers is not an error by
+    # itself - but it is a decision, and this is the turn the agent has to own it out loud.
+    civilians = _civilian_queues(cities)
+    if civilians and _at_war_from_row(now):
+        total = len(cities) if cities else 0
+        named = "; ".join(f"{name} {item}" for name, item in civilians)
+        lines.append(
+            f"  WAR ECONOMY: {len(civilians)}/{total} cities building civilians while at war "
+            f"({named}) - the war city builds the war and everything else compounds "
+            f"(tactics/08); name the war city in the diary and say why each of these queues is "
+            f"deliberate (a task's Settler is)."
+        )
 
     wonders = now.get("wonders")
     lines.append(
@@ -963,7 +1014,7 @@ async def _check_turn_checks(
 
 
 async def _check_ten_turn_review(
-    gs, turn_after: int, units: dict | None, rows: list[dict] | None = None
+    gs, turn_after: int, units: dict | None, rows: list[dict] | None = None, cities=None
 ) -> list[lq.TurnEvent]:
     """Every 10 turns: read the diary back and demand the three-question review.
 
@@ -971,6 +1022,9 @@ async def _check_ten_turn_review(
     ten turns produced almost nothing (2026-09-20: science +6 in the 50 turns from T30 to
     T80, no wonder until T100, a siege train still absent at T120). The measurement is the
     MCP's job, the judgement is the agent's, and the diary is where it is checked.
+
+    ``cities`` is the post-turn city snapshot, needed for the WAR ECONOMY line: the diary
+    row counts cities, it does not say what each one is building.
     """
     from . import diary as diary_mod
 
@@ -981,7 +1035,7 @@ async def _check_ten_turn_review(
 
     past = _latest_at_or_before(rows, turn_after - 10)
     now = _latest_at_or_before(rows, turn_after)
-    text = _ten_turn_review_text(turn_after, past, now, units)
+    text = _ten_turn_review_text(turn_after, past, now, units, cities)
     if text is None:
         return []
     return [lq.TurnEvent(priority=1, category="review", message=text)]
@@ -3375,7 +3429,11 @@ async def execute_end_turn(gs: GameState) -> str:
         try:
             events.extend(
                 await _check_ten_turn_review(
-                    gs, turn_after, snap_after.units if snap_after else None, diary_rows
+                    gs,
+                    turn_after,
+                    snap_after.units if snap_after else None,
+                    diary_rows,
+                    snap_after.cities if snap_after else None,
                 )
             )
         except Exception:

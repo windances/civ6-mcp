@@ -129,10 +129,16 @@ Notice what is not on the list: re-planning the split. Step 2 was decided at the
 
 ## Step 6 — the review gate
 
-The `10-TURN REVIEW` asks three questions, and during a war two of them are this file's:
+The `10-TURN REVIEW` asks three questions, and during a war three of its lines are this file's:
 
-- **did districts / improvements / science move in the window** — with the numbers; and
-- **is gold/turn still above +10 with the army counted.**
+- **did districts / improvements / science move in the window** — with the numbers;
+- **is gold/turn still above +10 with the army counted**; and
+- **`WAR ECONOMY: n/m cities building civilians while at war (… )`** — the MCP counts our cities whose
+  queue is a Builder, Settler, Trader or religious unit and names them, because the diary row counts
+  cities and never says what each one is building. Nothing fails on this line: it is the question this
+  file exists for, asked in the turn it matters. Answer it — name the war city, and say of each queue
+  below it whether it is deliberate (a task's Settler in a compounding city is) or the decision that
+  went missing. A queue of Builders in four cities is only wrong if nobody chose it.
 
 Answer both in that turn's diary. The two windows read differently and the difference is diagnostic:
 
