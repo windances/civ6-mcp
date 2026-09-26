@@ -14,7 +14,11 @@
      什么：
      * `not_running` —— 游戏没起来；需要启动，如果没载入对局还需要选一个存档。
      * `main_menu` / `leader_screen` —— 需要选一个存档并载入。`list_saves` 是可读的，你可以把最新的
-       几个连同回合号报出来供人类挑选，**但不要自己去载入**。
+       几个连同回合号报出来供人类挑选，**但不要自己去载入**。推荐要给到"能直接照做"的程度，因为人类
+       马上就会按它行动：两个存档家族都要报——`0_MCP_NNNN` 和游戏自己的 `AutoSave_NNNN`——各自带上
+       回合号，并且**任何回滚之后优先选最新的 `AutoSave`**，因为 `0_MCP_NNNN` 的名字在不同回滚分支
+       之间会撞车，同一个名字可能是完全不同的局面。如果某个存档到底停在哪一回合有疑问，
+       `scripts\turn-of-save.py "<path>"` 可以在任何东西被载入**之前**把回合号打出来。
      * `tuner_busy` —— FireTuner 只允许一个连接，已被别的进程占着（报告里会带 pid）。等下去没用：
        要么人类用 `scripts\civ6-clean.ps1` 停掉那个进程，要么继续在那个会话里打。
      * 游戏在屏幕上但 FireTuner 不响应（"Is the game running with EnableTuner=1?"）—— 这局是在 MCP
@@ -25,9 +29,22 @@
    启游戏。
 
 1. 这是上下文为空的新会话。先调 `get_diary` 读你自己留下的历史——意图、计划、判断——但**局面一律以游
-   戏为准，不要用日记里的数字**。然后完整重查一遍：`get_game_overview`、`get_units`、`get_cities`、
-   每座城与每支部队周边的 `get_map_area`、`get_tech_civics`、`get_policies`、`get_governors`、
-   `get_diplomacy`、`get_victory_progress`、`get_trade_routes`、`get_empire_resources`。
+   戏为准，不要用日记里的数字**。然后用**一次**读取把全部事实重建出来：
+
+   ```
+   .venv\Scripts\python.exe scripts\orient.py --radius 2
+   ```
+
+   它在同一条连接上打印：总览、部队、城市、科技/市政、政策、外交、资源、总督、商路、建造者任务、城
+   邦、胜利/人口统计、宗教、伟人、万神殿与通知。要按城市与部队周边的地图来做计划时加 `--maps`，想收
+   窄用 `--only a,b`，某个字段真的存疑时用 `--full`。**不要自己手敲这份清单**：把一次重新定位拆成十
+   来次独立读取，总会漏掉其中一次，这个脚本就是为此存在的。如果它回答 `could not connect to
+   FireTuner`，那就是第 0 步的失败情形——停下汇报，不要循环重试。
+
+   还有三个它**不**打印的通道，而这三个都会卡住回合：`get_pending_diplomacy`（AI 主动发起的外交会话
+   会阻塞推进——用 `respond_to_diplomacy` 应答）、`get_pending_trades`（`respond_to_trade`）、以及
+   `get_world_congress`（**世界议会在 `end_turn` 内部同步触发**，所以任何投票都必须先用
+   `queue_wc_votes` 排队）。
 
 2. **规划之前先读临时任务**：`prompts/tasks/tmp/` 下每一个 `*.md`（不读 `README.md`，不读 `done/`）。
    那些文件是**在效指令**，各自带有 `done when:`、`overrides:`、`expires:`，而循环里没有别的东西知道

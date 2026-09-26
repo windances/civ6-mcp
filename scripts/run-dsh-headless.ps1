@@ -56,7 +56,25 @@ if (-not (Test-Path $dshBin) -or -not (Test-Path $uvBin)) {
 }
 
 if (-not $env:DEEPSEEK_API_KEY) {
-    Write-Warning 'DEEPSEEK_API_KEY is not set. The first model turn will fail with an auth error.'
+    # Measured: the launch proceeds for several seconds and then dies with
+    # `dsh: MISSING_CREDENTIAL: llm-deepseek: no API key for provider route
+    # "deepseek-official"`, leaving a stub session directory and a "starting" heartbeat
+    # behind. The global store does not apply here because DSH_HOME points at the
+    # project's .dsh-home, which has none (SETUP-WINDOWS.md, "A launch needs the
+    # credential in the launching environment"). One warning line was easy to read past,
+    # so it now carries the consequence and all three remedies.
+    Write-Warning @'
+DEEPSEEK_API_KEY is not set, and this launcher cannot get the key from anywhere else:
+DSH_HOME is the project's .dsh-home, which has no credential store, so the global
+~/.dsh/.credentials.yaml does not apply. The launch will start the MCP, run for a few
+seconds, then die with MISSING_CREDENTIAL and leave residue behind.
+
+  current shell only:   $env:DEEPSEEK_API_KEY = "sk-..."
+  persist for the user: [Environment]::SetEnvironmentVariable("DEEPSEEK_API_KEY", "sk-...", "User")
+  then open a NEW shell (a persisted variable is not visible in the running one).
+
+Residue from a failed launch is removed with scripts\civ6-clean.ps1.
+'@
 }
 
 if ($TaskFile -and $Task) {

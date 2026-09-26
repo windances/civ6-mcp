@@ -18,7 +18,12 @@ report.
      * `not_running` - the game is not up; it needs a launch, and a save if no match is loaded.
      * `main_menu` / `leader_screen` - a save has to be chosen and loaded. `list_saves` is readable
        and you may report the newest few with their turns so the human can pick, but **do not load
-       one yourself.**
+       one yourself.** Make the recommendation concrete, because the human is about to act on it:
+       report the newest save from **both** families - `0_MCP_NNNN` and the game's own `AutoSave_NNNN`
+       - with its turn, and prefer the newest `AutoSave` after any rollback, because `0_MCP_NNNN` names
+       collide across rolled-back branches and the same name can be a different board. If the turn a
+       save holds is in doubt, `scripts\turn-of-save.py "<path>"` prints it *before* anything is
+       loaded.
      * `tuner_busy` - FireTuner serves exactly one connection and another process holds it (the
        report names the pid). Waiting does not help: the human either stops that process with
        `scripts\civ6-clean.ps1`, or keeps playing in that session.
@@ -32,9 +37,25 @@ report.
 
 1. This is a fresh session with an empty context. Call `get_diary` for the history you left yourself -
    the intent, the plans, the judgements - but take the position from the game, never from your
-   notes. Then re-query it in full: `get_game_overview`, `get_units`, `get_cities`, `get_map_area`
-   around every city and every unit, `get_tech_civics`, `get_policies`, `get_governors`,
-   `get_diplomacy`, `get_victory_progress`, `get_trade_routes`, `get_empire_resources`.
+   notes. Then rebuild every fact in **one** read:
+
+   ```
+   .venv\Scripts\python.exe scripts\orient.py --radius 2
+   ```
+
+   It prints overview, units, cities, tech/civics, policies, diplomacy, resources, governors, trade
+   routes, builder tasks, city-states, victory/demographics, religion, great people, pantheon and
+   notifications over one connection. Add `--maps` when the map around the cities and the units is
+   what you have to plan with, `--only a,b` to narrow it, `--full` for a field genuinely in dispute.
+   Do not re-derive that list by hand: a re-orientation done as eleven separate reads is how one of
+   them gets skipped, which is why the script exists. If it answers `could not connect to FireTuner`,
+   that is step 0's failure case - stop and report, do not retry in a loop.
+
+   Three channels it does **not** print, and all three block the turn:
+   `get_pending_diplomacy` (an AI-initiated session blocks progression - answer it with
+   `respond_to_diplomacy`), `get_pending_trades` (`respond_to_trade`), and `get_world_congress`
+   (**the World Congress fires synchronously inside `end_turn`**, so any vote has to be queued with
+   `queue_wc_votes` before it).
 
 2. **Read the temporary tasks before planning**: every `*.md` in `prompts/tasks/tmp/` (not
    `README.md`, not `done/`). Those files are instructions in force, each with its own `done when:`,

@@ -12,10 +12,10 @@ times; `--full` prints the raw form when a field is genuinely in question.
 Read-only. It issues no orders.
 
 Usage:
-  .venv\\Scripts\\python.exe .tools\\orient.py
-  .venv\\Scripts\\python.exe .tools\\orient.py --only diplomacy,units
-  .venv\\Scripts\\python.exe .tools\\orient.py --full --only governors
-  .venv\\Scripts\\python.exe .tools\\orient.py --maps --radius 2
+  .venv\\Scripts\\python.exe scripts\\orient.py
+  .venv\\Scripts\\python.exe scripts\\orient.py --only diplomacy,units
+  .venv\\Scripts\\python.exe scripts\\orient.py --full --only governors
+  .venv\\Scripts\\python.exe scripts\\orient.py --maps --radius 2
 """
 
 from __future__ import annotations
