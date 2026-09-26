@@ -53,6 +53,12 @@ Measure it **per unit and to the ring tile, not to the rally point**: a unit tha
 point and stops is not assembled, it is one turn short. `get_pathing_estimate` is the query; straight
 line distance is not (hand-computed hex distances were wrong four times in one war).
 
+**Stage the march, do not steer it.** The adapter stops a unit at its intermediate tile
+(`STOPPED_MID_PATH`) and it stays there until it is ordered again, so a column that is "steered" every
+turn costs one order per unit per turn — measured T128–T139, twelve turns of re-ordering ten units
+before contact. Give each unit a **phase target** (rally → ring tile) and re-order only when it has
+arrived; a phase that is still in progress needs no decision.
+
 Measured anchor, T99–T105: 长沙 (52,30) to the staging row (54,37) is **11 movement points** through
 a corridor whose first three tiles are 2-cost jungle — **six turns at 2 MP**, for every Archer and
 Catapult in the army. The plan that said "the Catapults are 5–7 turns from the border" was right for
@@ -219,6 +225,12 @@ is only safe *because* the war has not started is not a rally point.
   refused onto (55,36) because a Catapult stood there). Melee and siege each need their own tile;
   only a **support** unit (the ram) may share a tile with a military one, and that is how it is
   meant to work. When the rally row is written down, give every military unit its own hex.
+- **Do not assume you choose the start date.** Twice now (T103 on the abandoned branch, and T139–T140
+  on this one) forming up inside the enemy's sight produced **their** declaration while our line was
+  still one or two turns from complete — the Archer appears, the war starts, and the first turn is
+  spent re-screening instead of firing. Either assemble out of sight and advance as one, or accept the
+  enemy's timing and make the arrival order defensive (melee front, siege behind, screen already in
+  place). Both are plans; drifting into contact is not.
 - Do not stage with the siege train in front or unscreened, even at a safe distance — the
   formation is file 5.
 - Do not drag the ram toward a city read as `walls none`: it only helps melee against walls, so it

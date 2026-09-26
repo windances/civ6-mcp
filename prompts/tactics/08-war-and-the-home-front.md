@@ -62,6 +62,12 @@ destination: measured T109, **250 gold went to one Archer → Crossbowman upgrad
 went 418 → 188 in a single turn. That was the right purchase — it is the upgrade that takes an
 Archer's 9–11 against a CS 35 garrison to 35 — and holding 300 "for later" would not have been.
 
+**The war city builds the war, and the other cities build everything else.** Measured T142: four of
+five cities were producing Builders (~320 hammers of civilian production) with a war running, a
+Catapult lost and the Trebuchet upgrade still on the table — and one of those four was 西安, the city
+the assault establishment came from. Builders, Settlers and Traders belong in the cities the army is
+not fighting from; the war city's queue is siege, melee, upgrades and its own walls.
+
 ## Step 2 — split the cities once: one war city, everything else compounds
 
 - **The war city** — the highest-production city — builds units, siege and the Encampment/Barracks,

@@ -181,6 +181,14 @@ Live T107: the same two tiles of range that let an Archer hit Moscow refused a C
 firing positions are per tile **and per unit**, and a tile is only a firing position once a shot from
 it has been ordered and not refused.
 
+**Deliverable: the firing list, before the declaration.** Name the tiles at distance ≤ 2 from the
+target that our siege units can shoot from — with `SIEGE POSTURE` as the arbiter, not a hand-computed
+distance — and say which of them the column can reach with a movement point to spare. Measured at
+阿斯特拉罕 (54,40) on T140–T143: **one** Catapult tile worked ((54,38)); (55,38) is distance 2 with no
+LOS and (56,38) is distance 3, so three Catapults fired twice a turn and a 200-point pool stood for
+three turns. The arithmetic in gate 1 assumes every shooter fires — this list is what makes that
+assumption true or false.
+
 **If the ring is smaller than the number of shooters, the siege is longer than the arithmetic says,
 by exactly that ratio.** Either accept the longer timetable in the plan, or do not start.
 

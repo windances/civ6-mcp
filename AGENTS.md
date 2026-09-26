@@ -168,7 +168,13 @@ Each turn in order:
    (`mass-on-contact` fails while an enemy is in contact and only one of your units is in range),
    rather than trading one-for-one. Before an assault, the same result carries a **SIEGE POSTURE**
    line per siege unit — distance to the nearest enemy, how far that enemy is from the unit
-   screening it, and distance to the nearest enemy city. Form up outside enemy range with the
+   screening it, and distance to the nearest enemy city. **Read it before moving any siege unit: it is
+   the only reliable answer to "can this tile shoot?"** The `CAN ATTACK:` hint lists targets a
+   Catapult then answers `NO_LOS` to, and hex distance cannot be derived by hand — measured on
+   阿斯特拉罕 (54,40): (54,38) fires (LOS), (55,38) is distance 2 with no LOS, (56,38) is distance 3.
+   A siege that arrives without knowing which of its ring tiles actually fire gets one or two shots a
+   turn instead of three, which is the difference between a one-turn pool and a three-turn one.
+   Form up outside enemy range with the
    melee in front and the siege behind (`screen-the-siege` fails while a siege unit is within two
    tiles of an enemy with nothing closer to that enemy than itself), then advance. When you are
    attacking a city, the result now always carries its numbers — `city hp: N/200, walls: N/100 or
@@ -409,7 +415,7 @@ Some paths close. It's worth checking periodically via `get_victory_progress`:
 | Action | Effect | Notes |
 |--------|--------|-------|
 | `move` | Move to tile | target_x, target_y required |
-| `attack` | Attack enemy | Shows damage estimate; melee/ranged auto-detected |
+| `attack` | Attack enemy | Shows damage estimate; melee/ranged auto-detected. **A siege unit (Catapult/Trebuchet/Bombard) cannot attack units** — it attacks cities and districts only, and asking it to hit a unit comes back `ERR:SIEGE_CANNOT_ATTACK_UNITS`; use a ranged unit (Crossbowman) against units. |
 | `condemn` | Destroy an adjacent enemy religious unit (Condemn Heretic) | A game **command**, not an attack (`unit_action(action="condemn")`); the engine picks the adjacent Missionary/Apostle/Inquisitor, so the reply names every candidate first. **The game requires a war declaration** (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`), so a friend's missionary cannot be condemned by anyone — a peace-time target comes back `ERR:REQUIRES_WAR`. Added 2026-09-26 for task 008. |
 | `fortify` | +4 defense, heals | Military only |
 | `heal` | Fortify until full HP | Auto-wakes at full HP |
@@ -458,7 +464,14 @@ Military Engineers (requires Encampment + Armory): `build_route` builds a railro
 - **Envoys**: tokens available — `get_city_states` → `send_envoy`
 - **Dedication**: new era — `get_dedications` → `choose_dedication`
 - **City Capture**: conquered or disloyal city — `city_action(city_id, "keep"/"raze"/"liberate_founder"/"liberate_previous")`
-- Move responses show the **target tile**, not arrival position (async pathfinding)
+- Move responses show the **target tile**, not arrival position (async pathfinding). **A move or attack
+  that reports `STOPPED_SHORT` or `STOPPED_MID_PATH` may still have taken effect** — measured T141, a
+  Horseman's attack reported "could not reach target" while the target was left at 26 HP. Re-read with
+  `get_units` before re-ordering anything that reports a short or partial movement.
+- **A post-combat city read is an estimate, not a fact.** Measured T140–T142 on 阿斯特拉罕: the city
+  read `200/200` after two connections that had landed, then `85`, then `55`. Judge progress from the
+  `SIEGE PROGRESS` block and from a *later* estimate, never from the immediate reply — and do not
+  conclude from one stale number that the attack did nothing.
 
 ## Diplomacy
 

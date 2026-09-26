@@ -411,6 +411,17 @@ if enemyOwner ~= 63 then
         {_bail_lua('"ERR:NOT_AT_WAR|Cannot attack " .. enemyName .. " — you are at peace with " .. ownerName .. ". Declare war first or target a different unit."')}
     end
 end
+local unitInfo = GameInfo.Units[unit:GetType()]
+local attRS = unitInfo and unitInfo.RangedCombat or 0
+local attBombard = unitInfo and unitInfo.Bombard or 0
+local attRange = unitInfo and unitInfo.Range or 1
+-- A siege unit cannot attack a **unit**. The classification below only reads a Bombard as ranged when
+-- the target is a city, so an order against a unit fell through to the melee branch and the Catapult
+-- WALKED toward the target: measured live T140, one whole turn lost and a misleading STOPPED_SHORT
+-- back. The right answer against a unit is a ranged unit, so refuse it here, by name.
+if enemy ~= nil and attBombard > 0 and attRS == 0 then
+    {_bail_lua('"ERR:SIEGE_CANNOT_ATTACK_UNITS|" .. enemyName .. " is a unit, and a siege unit cannot attack units - Catapults and Trebuchets attack cities and districts only. Use a ranged unit (Crossbowman, RS 40) against units, or target the city tile it stands on."')}
+end
 local enemyHP = 0
 local enemyMaxHP = 0
 if enemy then
@@ -441,10 +452,7 @@ params[UnitOperationTypes.PARAM_Y] = {target_y}
 -- walks it toward the city and reports STOPPED_SHORT when the movement runs out, and the blow that
 -- does land is resolved as a melee attack that takes retaliation. Live T107: a Catapult standing
 -- two tiles from Moscow was refused `RANGE_ATTACK` and spent the turn walking instead.
-local unitInfo = GameInfo.Units[unit:GetType()]
-local attRS = unitInfo and unitInfo.RangedCombat or 0
-local attBombard = unitInfo and unitInfo.Bombard or 0
-local attRange = unitInfo and unitInfo.Range or 1
+-- (unitInfo/attRS/attBombard/attRange are read above, before the siege-versus-unit refusal.)
 local isRanged = (attRS > 0 or (attBombard > 0 and targetIsCity)) and dist <= attRange
 if not isRanged then
     isRanged = UnitManager.CanStartOperation(unit, UnitOperationTypes.RANGE_ATTACK, nil, params)

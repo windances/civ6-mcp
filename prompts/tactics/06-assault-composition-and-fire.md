@@ -61,7 +61,16 @@ a re-siege. Both failures above cost a full turn each.
 
 ## Order of work, every turn
 
-1. **Siege knocks the walls to 0.**
+0. **Read the ring before moving anything: which of our tiles can actually shoot?** `SIEGE POSTURE` is
+   the arbiter — the `CAN ATTACK:` hint lists targets a Catapult then answers `NO_LOS` to, and hex
+   distance cannot be worked out by hand. Measured at 阿斯特拉罕 (54,40): **(54,38) fires, (55,38) is
+   distance 2 with no LOS, (56,38) is distance 3**, so a three-Catapult train fired **twice** a turn
+   and the 200-point pool took three turns instead of the one the arithmetic promised. Sort the ring
+   into "fires" and "dead" *before* the column advances, and stage each siege unit on a tile that has
+   been tested. **A siege unit attacks cities and districts only**: ordering one at a unit is refused
+   (`ERR:SIEGE_CANNOT_ATTACK_UNITS`) — the old path walked the Catapult at the target and lost the
+   whole turn (T140); use a ranged unit (Crossbowman, RS 40) against units.
+1. **Siege knocks the walls to 0** (and then the city's HP pool).
 2. **Melee (following the Catapult fire, with the ram adjacent when the city has walls) takes the
    city** - and until then it is **also a
    damage dealer, not a place-holder**. A melee unit attacks the city's HP pool from the tile
@@ -101,7 +110,13 @@ a re-siege. Both failures above cost a full turn each.
    the unit in - an empty city is not a city that cannot be hit, it is a city that can be
    entered. Two live failures to avoid: a city left at 0 HP heals about twenty points a turn
    and is back to 120/200 six turns later, and a broken city with nobody to walk into it is
-   four turns of fire thrown away.
+   four turns of fire thrown away. **The turn a city falls, put a governor or a garrison on its
+   tile** (`hold-what-you-take`) and set its queue — 阿斯特拉罕 came to us at **loyalty 50** with
+   `producing: NONE`, which is both a flip risk and an `end_turn` blocker.
+   **Reads of a city just after a hit are estimates, not facts**: T140–T142 the same city read
+   `200/200` after two connections that had landed, then `85`, then `55`. Judge progress by the
+   `SIEGE PROGRESS` delta and by a *later* reading — never conclude from one stale number that the
+   attack did nothing.
 5. **Re-check before the capture move**: a city only falls to a melee unit; a turn spent firing
    at a 0-wall city from range is a turn not spent finishing it.
 
