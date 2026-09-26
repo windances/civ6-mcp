@@ -7,9 +7,12 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`,
-`015-yerevan-pre-war-analysis.md`.
-(`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
+`013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`, `016-destroy-yerevan.md`.
+(**015-yerevan-pre-war-analysis** was **done at T177**: Yerevan is at **(63,37)**, pop **10** read from
+the city-state's own trade screen, an **ARCHER** garrison and a Trader on the city tile, a HORSEMAN at
+(63,38) and a WARRIOR at (63,39), walls **unreadable at peace** — and the verdict is **`leave it
+alone`**, because Egypt already holds its suzerainty, one envoy token contests it more cheaply than an
+army, and a city-state advances Domination by nothing. `001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
 establishment complete on paper but the iron still `0/50` and the target city never read in its four
@@ -94,6 +97,25 @@ detector**. It ends in `count == 0` with the tiles swept, or in an expiry that s
 at peace; the chase, when a war comes, is `get_staging_plan(kill_x, kill_y)`'s mobile-only `KILL`
 bucket, and the thing worth more than any single kill is the **faith source** — pillage the Holy Site
 that produces it.
+
+**016 is the assault on Yerevan itself** (human instruction 2026-09-26: 战前集结，消灭埃里温), and it is
+the one instruction in this game that **overrides a completed analysis**: 015 read the city in its four
+numbers and returned `leave it alone`, and the human has said otherwise — so the `overrides:` line names
+015's verdict **and** the directive's city-state rule (`directive.md:497-499`) **for this one city**, the
+declaration is authorized on **player 8 and nothing else** (not Egypt, which holds the suzerainty, not a
+second city-state, not a camp), and the diary must record the human instruction as the **reason of
+record** rather than inventing a strategic one. What it carries: `get_staging_plan(63,37)` with **three
+overrides** this map paid for (a Crouching Tiger posted at d2 is wrong — Range 1; a siege unit posted at
+d1 is refused; `arrive T+n` does not know our own units jam the corridor, so **one move per call** and
+re-read); the force already on the doorstep (2 Bombards, 1 Trebuchet — the third shooter is 013's first
+upgrade at 85g — 2 Musketmen, a Knight, the Ram with its "stack it with the attacker" warning, a
+Spearman, the Tiger, the Crossbowmen); **probe-then-train** on the walls, because a city-state's walls
+are **unreadable at peace** and the wall number has to come from the first melee attack; declare, wait a
+turn, then attack; the **Horseman at (63,38)** countered by anti-cavalry or ranged fire, because cavalry
+reaches past the line; and the honest ledger — Egypt holds the suzerainty, so this removes the bonus from
+the board for both of us rather than taking it, the grievances land with everyone who knows Yerevan, and
+a city-state advances Domination by nothing. Its expiry is written from the queue (2–3 turns of assembly
+plus the wall and pool phases), not from the calendar.
 
 **015 is the pre-war analysis of Yerevan, with the scouts close in** (human instruction 2026-09-26:
 战前分析埃里温，侦察兵贴近侦察). Yerevan is **player 8, Religious**, and the one fact nobody has is its own
