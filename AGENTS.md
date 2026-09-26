@@ -7,7 +7,8 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`.
+`013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`,
+`015-yerevan-pre-war-analysis.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -93,6 +94,24 @@ detector**. It ends in `count == 0` with the tiles swept, or in an expiry that s
 at peace; the chase, when a war comes, is `get_staging_plan(kill_x, kill_y)`'s mobile-only `KILL`
 bucket, and the thing worth more than any single kill is the **faith source** — pillage the Holy Site
 that produces it.
+
+**015 is the pre-war analysis of Yerevan, with the scouts close in** (human instruction 2026-09-26:
+战前分析埃里温，侦察兵贴近侦察). Yerevan is **player 8, Religious**, and the one fact nobody has is its own
+tile: the diary records what its *levy* did to us — three Man-at-Arms on 成都's ring, our IRON mine
+pillaged, and its units fighting at 喀山, last seen at **(62,38)/(62,39)** on T165 — but no row anywhere
+gives the city's `(x,y)`. So this is `tactics/07` **Step 0** in its pure form, and the recon starts
+where its units were. Its suzerain slot was **empty at T165** (it read `Suzerain: 俄罗斯` at T163, and
+Russia's elimination cleared it) with **0 envoys**, so one token would take it — which is exactly what
+the verdict has to weigh, because the directive says a city-state is **not** a conquest target and is
+attacked only for a **stated reason** (a rival about to take the suzerainty, or a chokepoint/resource
+the next war needs): `leave it alone` is as much a result as a reason is. It suspends 011's "no attack
+on Yerevan itself" **for reconnaissance only** — scouts may stand adjacent, `get_deal_options(8)` may be
+used — and authorizes no declaration, no attack, no gold. Two measured traps are written into it: a
+city-state's border refuses passage **even to its suzerain** (T92–T93), so 贴近侦察 means reading
+`get_map_area` from the nearest tile we *can* occupy; and a city-state's **walls may be unreadable at
+peace** (`get_city_states` gives type and envoys, `get_diplomacy` lists civilisations not city-states),
+so the honest report says which of the four numbers came from a result line and which one has to wait
+for a probe attack.
 
 **010 and 011 retired together at T166, and their one durable correction is a coordinate.** Both files
 named **成都's IRON mine at (60,32)** as the pillaged tile; the tool proved otherwise — `repair` there
