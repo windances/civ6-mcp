@@ -6,7 +6,9 @@ Moved out of `AGENTS.md`'s Turn Loop on 2026-09-26, when that file crossed the 6
 injection budget. Nothing was reworded: this is step 9 as it stood, and it is the reference for
 every block `end_turn` prints — SIEGE POSTURE and SIEGE FIRE, BATTLE ASSESSMENT, SIEGE PROGRESS,
 TAKE THE CITY, LOYALTY WARNING, UPGRADE AVAILABLE, UNUSED ATTACK — with the measurement behind
-each one.
+each one. The three blocks that until 2026-09-27 were described only in `AGENTS.md` are here too,
+added the same day that file was cut back to the running-game loop: **the 10-TURN REVIEW** (and the
+**WAR ECONOMY** line it carries while a war is on) and the **empire warnings**.
 
 9. `end_turn` — it also evaluates `prompts/checks/turn-checks.md` on **every** turn and
    prints every failing rule in the result (`CHECK FAILED [id]: … (require: …)`). Those are
@@ -122,3 +124,22 @@ each one.
    state Moscow was in when it revolted (captured T112, a Free City by T116, retaken T121 at a
    cost of nine attacks). Assign a governor (`assign_governor`) or garrison the tile; if the
    governor is needed at the front, say so in the diary.
+
+**Every tenth turn, `end_turn` also prints a 10-TURN REVIEW** — the window measured rather than
+remembered: what the last 10 turns bought and at what per-turn rates, your own plan and prediction from
+ten turns earlier quoted back at you, the assault prerequisites the directive requires against the
+units you actually have, the idle district slots, the gold/turn carrying limit, and a projection of the
+current rates forward. **While a war is on it carries a `WAR ECONOMY` line as well** — how many of your
+cities are building civilians (Builder, Settler, Trader, religious unit) and which ones. That line is
+advisory, not a rule: it is `tactics/08`'s one-war-city question asked in the turn it matters, and a
+task's Settler in a compounding city is a legitimate answer to it.
+
+The review ends with three questions, and they belong in that turn's diary, not in your head: (1) was
+the window efficient, with numbers; (2) which prerequisite for the next goal is in place and which is
+missing; (3) does the planned completion turn still hold, and if not, what changes. **Ten flat turns are
+invisible turn by turn — this block is where they show up.**
+
+**Empire warnings** are the other standing block, and they arrive every turn rather than every tenth:
+loyalty crises, idle trade routes, a gold deficit, resource caps, scoreboard position and military
+imbalance. They cover the blind spots a turn-by-turn reader does not notice, and they substitute for
+nothing — the periodic deep checks (victory progress, religion spread, diplomacy) still have to be made.

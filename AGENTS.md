@@ -1,6 +1,6 @@
 ﻿# Civ 6 MCP — Agent Reference
 
-An MCP server connecting to a live Civilization VI game via FireTuner. You can read full game state and issue commands. All commands respect game rules.
+An MCP server connecting to a live Civilization VI game via FireTuner. You can read full game state and issue commands. All commands respect game rules. Starting a **new** game - the civ kit, the research path, the first victory hypothesis - is `docs/new-game.md`; this reference is the running-game loop.
 
 **You only know what you explicitly query.** A human player passively absorbs the score ticker, religion lens, unit health bars — you have none of that. Information you don't ask for simply doesn't enter your world model. The patterns below exist to compensate for this.
 
@@ -64,64 +64,37 @@ lives. It records no task's content and no retirement — **the file is the task
 - The `IN FORCE NOW` line and the directory are checked against each other by `tests/test_temp_tasks.py`,
   so a retirement that is not recorded goes red instead of quietly staying in force.
 
-
-`end_turn` now runs **empire warnings** automatically — alerts for loyalty crises, idle trade routes, gold deficits, resource caps, scoreboard position, and military imbalance. These compensate for the most common blind spots, but don't replace periodic deep checks (victory progress, religion spread, diplomacy).
-
 ## File encoding: a document with Chinese in it carries a UTF-8 BOM
 
-On a zh-CN machine an editor that cannot see a BOM decodes the file as codepage 936 (GBK), so
-`游戏应当已经在运行` is shown as `娓告垙搴斿綋宸茬粡鍦ㄨ繍琛` — the bytes are valid UTF-8 and nothing is
-corrupt, the viewer guessed wrong. The rule: **a document holding a non-ASCII byte carries a BOM; an
-English `.en.` file is pure ASCII and carries none; a Chinese `.zh.` file always carries one.**
-
-**The agent's own `write`/`edit` tools emit plain UTF-8 and silently strip the BOM** (measured on
-`prompts/tasks/continue-current.zh.txt` and on `AGENTS.md`). So after editing `AGENTS.md`, a tactics
-file or a temporary task file, run:
+On a zh-CN machine an editor that cannot see a BOM decodes the file as codepage 936 (GBK) and shows
+mojibake for text whose bytes are valid UTF-8. The rule: **a document holding a non-ASCII byte carries
+a BOM; an English `.en.` file is pure ASCII and carries none; a Chinese `.zh.` file always carries
+one.** The agent's own `write`/`edit` tools emit plain UTF-8 and **silently strip the BOM**, so after
+editing `AGENTS.md`, a tactics file or a temporary task file run:
 
 ```
-python scripts/fix-text-encoding.py            # put the BOM back
+python scripts/fix-text-encoding.py             # put the BOM back
 python scripts/fix-text-encoding.py --check     # report only; exit 1 when one is missing
 ```
 
-**The check is mandatory, and it is more than the BOM.** A BOM is a display hint; it says nothing
-about whether the characters are still the ones somebody wrote. Measured 2026-09-26: a PowerShell
-`Get-Content | Set-Content` round trip decoded five files as GBK and wrote them back as UTF-8 — valid
-UTF-8, every BOM in place, **278 corrupted characters** (in `units.py`, `server.py`, a test, a script
-and `SETUP-WINDOWS.md`, the game's own menu labels among them) and 843 green tests. So the gate now
-checks content as well, and it is enforced rather than remembered:
+**The check is mandatory, and it is more than the BOM**: a BOM says nothing about whether the
+characters are still the ones somebody wrote, so the gate also greps every file for the damage a
+GBK round trip leaves behind. It runs in `git commit` (`.githooks/pre-commit`, installed once per clone
+by `python scripts/install-hooks.py`), and `tests/test_text_encoding.py` runs the same check, so a
+damaged document turns the suite red instead of reaching a prompt. **Never edit these documents through
+a `Get-Content | Set-Content` round trip** - that is the one thing the gate exists to stop. The whole
+mechanism, the repair tool and the exemption list are `SETUP-WINDOWS.md` ("the BOM is load-bearing",
+line 634).
 
-* **`git commit` runs it** — `.githooks/pre-commit` blocks the commit when a document is missing its
-  BOM or any file carries the round trip's damage (`scripts/install-hooks.py` installs it; a fresh
-  clone needs that one command, and the suite fails without it);
-* **the repair is two commands, and neither guesses**: `python scripts/repair-text.py --apply`
-  rewrites the punctuation artefacts and every run that reverses exactly, and *reports* what needs an
-  authoritative source (the game's own `Vanilla_zh_Hans_CN.xml` for a game label, a clean copy
-  elsewhere in the repository for a quoted instruction); `python scripts/fix-text-encoding.py` puts
-  the BOMs back;
-* **a line that documents the damage is exempt** — three places show mojibake on purpose
-  (`SETUP-WINDOWS.md`'s "the prefix is missing" example, a retrospective quoting a mangled advice
-  string, and the loyalty test's U+FFFD sample), and the checker leaves them alone because a checker
-  that cannot tell an example from an accident is one somebody switches off.
-
-`tests/test_text_encoding.py` runs the same check, so the suite goes red until it is run — the
-repair is one command, not a promise. **Never edit these files through a `Get-Content | Set-Content`
-round trip**: that is what caused the damage above, and it is the one thing the gate exists to stop.
-The MCP reads these files as `utf-8-sig` (`turn_checks.py`, `knowledge.py`, `strategy_directive.py`),
-so a BOM never reaches a prompt or a parsed rule.
-
-**A batch of document edits leaves two derived things stale, and both are one command.** Run them in
-this order, every time a batch of documents changes:
+**A batch of document edits leaves two derived things stale, and both are one command:**
 
 ```
 python scripts/fix-text-encoding.py --check   # the mandatory gate: BOMs + GBK round-trip damage
-python .tools/kb.py index                     # the knowledge index (measured 2026-09-26: 313
-                                              # documents, 6440 chunks, 3 seconds - manual included)
+python .tools/kb.py index                     # the knowledge index
 ```
 
-The index is a *derived* file: a query against a stale one answers confidently with text that no
-longer exists. Its corpus is the repository's own writing, the extracted manual, and whatever
-`.tools/kb/extra-sources.txt` adds for this checkout (the game install's `Gameplay/Data` and
-`Text/en_US`, which is where the rules the manual excerpt omits are written down verbatim).
+The index is *derived*: a query against a stale one answers confidently with text that no longer
+exists.
 
 ## Coordinate System
 
@@ -129,15 +102,6 @@ longer exists. Its corpus is the repository's own writing, the extracted manual,
 - Y increases → south (down). Y decreases → north (up).
 - X increases → east. X decreases → west.
 - Moving from (9,24) to (9,26) is **south**, not north.
-
-## Game Start
-
-Before your first turn:
-1. Read your civ's unique abilities, units, and buildings — what is this civ designed to do?
-2. Identify the tech/civic that unlocks your unique unit; plan a research path to reach it.
-3. Form a working hypothesis for a victory path. Hold it loosely — geography and rivals will clarify things through the Classical era.
-
-Early choices compound. Each decision shapes what's available 20, 40, 60 turns later. A scout reveals the map early; a defensive unit lets your settlers move safely; more cities mean more districts which mean more everything. Religious civs often benefit from Holy Site infrastructure before the Great Prophet pool fills. What you don't build early, you pay for later.
 
 ## Turn Loop
 
@@ -156,20 +120,16 @@ Each turn in order:
 3. `get_map_area` around cities/units — terrain, resources, enemy units
 4. Move/action each unit. **Before the assembly's first move, write the staging plan** (human
    instruction 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优集结方案后，才开始执行):
-   one row per unit — where it is now, its own movement allowance, the one tile it goes to, the
+   one row per unit - where it is now, its movement allowance, the one tile it goes to, the
    `get_pathing_estimate` cost, the turn it arrives, its role, and whether it can fire from there.
-   No two units to the same tile (`STACKING_CONFLICT` costs the turn), name the corridor and either
-   stagger the arrivals or send the surplus round the far side of the target, and optimise the turn
-   the **last** firing tile is filled rather than the first unit's arrival. A unit with no tile gets
-   the rear of the ring, which is also what cuts the city's supply line. The table and the three
-   rules are `prompts/tactics/04-staging-out-of-range.md` step 3b, and **`get_staging_plan(city_x,
-   city_y)` builds it for you**: give it the target city's tile and it returns the ring, every
-   fighting unit's path to each ring tile from the game's own pathfinding, one assignment with
-   distinct tiles and the conflicts named, and the turn the assault opens. **The same three phases —
-   战前分析 (`tactics/07`), 攻城前集结 (`tactics/04` + this tool), 攻城执行 (`tactics/05`/`06`) — run
-   on every enemy city and every barbarian camp** (human instruction 2026-09-26), so pass a **camp's**
-   tile exactly as you pass a city's: the ring and the assignment are the same, the reply says
-   `STAGING PLAN for the camp at x,y` and `WALK-IN OPENS`, and there is no supply line to cut.
+   **`get_staging_plan(city_x, city_y)` builds that table for you** from the game's own pathfinding:
+   distinct tiles, the conflicts named, and the turn the assault opens. The three staging rules - no two
+   units to one tile, name the corridor, fill the **last** firing tile first - are
+   `prompts/tactics/04-staging-out-of-range.md` step 3b. **The same three phases - 战前分析
+   (`tactics/07`), 攻城前集结 (`tactics/04` + this tool), 攻城执行 (`tactics/05`/`06`) - run on every
+   enemy city and every barbarian camp** (human instruction 2026-09-26), so pass a **camp's** tile
+   exactly as you pass a city's: the ring and the assignment are the same, the reply says `STAGING PLAN
+   for the camp at x,y` and `WALK-IN OPENS`, and there is no supply line to cut.
 5. `get_cities` — queues, growth, pillaged districts
 6. `get_district_advisor` if placing a new district
 7. `set_city_production` / `set_research` if needed
@@ -180,9 +140,11 @@ Each turn in order:
    `prompts/checks/archive/`. Fix the gap, or record in the diary why it is being accepted — either
    way it must not pass unnoticed. The same result carries the blocks that decide a fight —
    `SIEGE POSTURE` (ending in `SIEGE FIRE: n/m`), `BATTLE ASSESSMENT`, `SIEGE PROGRESS`,
-   `TAKE THE CITY`, `LOYALTY WARNING`, `UPGRADE AVAILABLE`, `UNUSED ATTACK` — and every one of them
-   has a rule attached. **What each block means, and which measurement produced it, is
-   `docs/turn-result-blocks.md`**; read that before acting on a block you have not seen before.
+   `TAKE THE CITY`, `LOYALTY WARNING`, `UPGRADE AVAILABLE`, `UNUSED ATTACK` — plus **empire warnings**
+   every turn (loyalty crises, idle trade routes, gold deficits, resource caps, scoreboard position,
+   military imbalance) — and every one of them has a rule attached. **What each block means, and which
+   measurement produced it, is `docs/turn-result-blocks.md`**; read that before acting on a block you
+   have not seen before.
 
 ## Looking things up: `search_knowledge`
 
@@ -229,19 +191,11 @@ Five reflection fields each turn (all required, non-empty):
 Periodic checks worth doing regularly. The game doesn't surface most of this proactively.
 
 ### Around every 10 turns:
-- **The `end_turn` result carries a `10-TURN REVIEW`** — the MCP measures the window
-  (what the last 10 turns bought, per-turn rates), quotes your own plan and prediction from
-  10 turns earlier back at you, lists the assault prerequisites the directive requires
-  against the units you actually have, flags idle district slots and the gold/turn carrying
-  limit, and projects the current rates forward. **While a war is on it also carries a
-  `WAR ECONOMY` line** — how many of our cities are building civilians (Builder, Settler, Trader,
-  religious unit) and which ones. That line is advisory, not a rule: it is `tactics/08`'s one-war-city
-  question asked in the turn it matters, and a task's Settler in a compounding city is a legitimate
-  answer to it. **Answer its three questions in that turn's
-  diary**: (1) was the window efficient, with numbers; (2) which prerequisite for the next
-  goal is in place and which is missing; (3) does the planned completion turn still hold,
-  and if not, what changes. Ten flat turns are invisible turn by turn — this is where they
-  show up.
+- **The `end_turn` result carries a `10-TURN REVIEW`**, and a `WAR ECONOMY` line while a war is on:
+  read what the window actually bought, and **answer its three questions in that turn's diary** - was
+  the window efficient, with numbers; which prerequisite for the next goal is in place and which is
+  missing; does the planned completion turn still hold, and if not, what changes. What each of those
+  blocks measures is `docs/turn-result-blocks.md`.
 - `get_empire_resources` — unimproved luxuries and nearby strategics
 - Surplus luxuries: duplicates beyond 1 copy provide zero amenity benefit. Trade them via `propose_trade` for GPT, strategic resources, or luxury types you don't own (each new type = +1 amenity to 4 cities). Even 5 GPT per surplus luxury adds up over 30 turns. Use `mode="test"` to check what the AI will accept before sending.
 - Gold/faith balance: if either is accumulating with no plan, spend it — `purchase_item`, `purchase_tile`, `patronize_great_person`
@@ -369,13 +323,6 @@ all (`condemn` answers `ERR:REQUIRES_WAR`, `attack` answers `ERR:NOT_AT_WAR`, a 
 
 ## Combat Quick Reference
 
-| Unit | CS | RS | Range |
-|------|----|----|-------|
-| Warrior | 20 | — | — |
-| Slinger | 5 | 15 | 1 |
-| Archer | 25 | 25 | 2 |
-| Barbarian Warrior | 20 | — | — |
-
 - Ranged attacks don't take damage; melee attacks do
 - Forests/mountains block ranged LOS — targets with blocked LOS are filtered from `get_units` attack lists
 - Fortified units: +4 defense, heal each turn
@@ -391,7 +338,6 @@ all (`condemn` answers `ERR:REQUIRES_WAR`, `attack` answers `ERR:NOT_AT_WAR`, a 
 | `fortify` | +4 defense, heals | Military only |
 | `heal` | Fortify until full HP | Auto-wakes at full HP |
 | `alert` | Sleep, wake on enemy | Sentry use |
-| `sleep` | Sleep indefinitely | Manual wake required |
 | `skip` | End unit's turn | Always works |
 | `automate` | Auto-explore | Scouts only |
 | `delete` | Disband unit | Removes maintenance |
