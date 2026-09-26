@@ -132,22 +132,41 @@ class TestTheSkipReport:
         gs.unused_attacks = unused
 
         class Conn:
+            def __init__(self):
+                self.writes = 0
+
             async def execute_write(self, _lua):
+                self.writes += 1
                 return ["OK:FORTIFIED|2 fortified"]
 
             async def execute_read(self, _lua):
+                self.writes += 1
                 return ["OK:SKIPPED|13 units"]
 
         gs.conn = Conn()
         return gs
 
-    def test_the_attack_about_to_be_lost_is_named(self):
+    def test_the_sweep_refuses_while_an_attack_is_pending(self):
+        """Naming the loss was not enough - four attacks died this way over one war.
+
+        Measured T145-T152: a Crossbowman pair with a legal shot on the galley at (50,23), a
+        Horseman standing adjacent to its target at (56,42), and a Man-at-Arms twice (the
+        second one a real second attack, the one ELITE_GUARD grants). Refusing is what makes
+        the loss impossible rather than reported after the fact.
+        """
         gs = self._gs(["UNIT_HEAVY_CHARIOT@53,36 -> UNIT_SWORDSMAN@53,35(7hp)"])
         report = asyncio.run(gs.skip_remaining_units())
-        assert "UNUSED ATTACK (1 unit(s)" in report
+        assert report.startswith("REFUSED|UNUSED ATTACK (1 unit(s)")
         assert "UNIT_HEAVY_CHARIOT@53,36 -> UNIT_SWORDSMAN@53,35(7hp)" in report
-        assert "finished for the turn" in report
-        assert "SKIPPED|13 units" in report, "the skip still happens"
+        assert "force=True" in report
+        assert gs.conn.writes == 0, "a refusal must not fortify or finish anything"
+
+    def test_force_sweeps_and_names_what_it_discarded(self):
+        gs = self._gs(["UNIT_HORSEMAN@56,42 -> UNIT_MAN_AT_ARMS@56,43(76hp)"])
+        report = asyncio.run(gs.skip_remaining_units(force=True))
+        assert "UNUSED ATTACK (1 unit(s) had a legal attack" in report
+        assert "UNIT_HORSEMAN@56,42" in report
+        assert "SKIPPED|13 units" in report, "the deliberate sweep still happens"
 
     def test_a_clean_turn_says_nothing_extra(self):
         gs = self._gs([])
@@ -155,6 +174,49 @@ class TestTheSkipReport:
         assert "UNUSED ATTACK" not in report
         assert "SKIPPED|13 units" in report
         assert "FORTIFIED|2 fortified" in report
+
+
+class TestTheEndTurnSweep:
+    """The path that actually ate them: end_turn resolves the "units with moves" blocker.
+
+    It must keep resolving it - one forgotten unit used to freeze the turn for the whole poll
+    budget - but never when the leftover move is an attack.
+    """
+
+    def _gs(self, entries):
+        return TestTheSkipReport()._gs(entries)
+
+    def test_a_pending_attack_bounces_the_turn_without_sweeping(self):
+        gs = self._gs(["UNIT_MAN_AT_ARMS@56,42 -> UNIT_GREAT_WRITER@56,43(100hp)"])
+        resolved, note = asyncio.run(et._sweep_unmoved_units(gs))
+        assert resolved is False
+        assert "UNUSED ATTACK at end_turn" in note
+        assert "UNIT_MAN_AT_ARMS@56,42" in note
+        assert "force=True" in note
+        assert gs.conn.writes == 0
+
+    def test_a_forgotten_unit_is_still_swept(self):
+        gs = self._gs([])
+        resolved, note = asyncio.run(et._sweep_unmoved_units(gs))
+        assert resolved is True
+        assert "SKIPPED|13 units" in note
+        assert gs.conn.writes == 2, "fortify then skip, exactly as before"
+
+    def test_a_refusal_from_the_sweep_itself_is_surfaced_not_looped(self):
+        # The two scans can disagree (the first read can fail and return [] by design), so the
+        # sweep's own refusal has to end the loop rather than send it round again.
+        class Refusing:
+            async def unused_attacks(self):
+                return []
+
+            async def skip_remaining_units(self, force=False):
+                from civ_mcp.game_state import SKIP_REFUSED
+
+                return f"{SKIP_REFUSED}UNUSED ATTACK (1 unit(s) ...)"
+
+        resolved, note = asyncio.run(et._sweep_unmoved_units(Refusing()))
+        assert resolved is False
+        assert note.startswith("REFUSED|")
 
 
 class TestTheRules:

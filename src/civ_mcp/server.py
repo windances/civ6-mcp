@@ -1704,15 +1704,22 @@ async def unit_action(
 
 
 @mcp.tool()
-async def skip_remaining_units(ctx: Context) -> str:
+async def skip_remaining_units(ctx: Context, force: bool = False) -> str:
     """Skip all units that still have moves remaining.
 
     Useful after diplomacy encounters invalidate all standing orders.
     Uses GameCore FinishMoves on each unit — fast, reliable, no async issues.
+
+    **Refuses when a unit still has a legal attack**, naming it, and touches nothing: an
+    attack discarded here is gone for the turn, and four were lost that way over the
+    T139-T152 Russian war (measured: the Crossbowman pair on the galley at T145, a Horseman
+    at T148, a Man-at-Arms twice). Order the attack(s), or pass force=True to discard them
+    deliberately. `end_turn` bounces on the same condition instead of sweeping.
     """
     gs = _get_game(ctx)
     return await _logged(
-        ctx, "skip_remaining_units", {}, lambda: gs.skip_remaining_units()
+        ctx, "skip_remaining_units", {"force": force},
+        lambda: gs.skip_remaining_units(force=force),
     )
 
 

@@ -28,6 +28,11 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+# The marker `skip_remaining_units` returns when it refuses to sweep units that still have a
+# legal attack. `end_turn` matches on it, because the alternative - sweeping and reporting -
+# is what discarded four attacks over the T139-T152 Russian war.
+SKIP_REFUSED = "REFUSED|"
+
 
 class GameState:
     """High-level async API for Civ 6 game state + actions."""
@@ -708,12 +713,28 @@ class GameState:
             return []
         return lq.parse_loyalty_response(lines)
 
-    async def skip_remaining_units(self) -> str:
+    async def skip_remaining_units(self, force: bool = False) -> str:
         # Look for attacks that are about to be thrown away *before* finishing moves: after
         # this call the units are fortified and the attack is gone for the turn. Seen live at
         # T109-T116, where a Heavy Chariot sat next to a 7 HP Swordsman for seven turns and
         # was swept up by this call every time without anyone being told.
+        #
+        # Naming it was not enough. Measured over the T139-T152 Russian war, four attacks were
+        # discarded by this sweep and each cost a unit-turn: a Crossbowman pair on the galley
+        # at (50,23) on T145, a Horseman adjacent to its target on T148, and a Man-at-Arms
+        # twice (T151, and T152 with the second attack ELITE_GUARD grants). So the default is
+        # now to refuse: the units are left alone, the attacks are named, and finishing the
+        # turn anyway takes an explicit force=True. A refusal is what makes `use-your-attacks`
+        # answerable - the rule fires after the fact, this happens before it.
         unused = await self.unused_attacks()
+        if unused and not force:
+            listed = "\n".join(f"  {entry}" for entry in unused)
+            return (
+                f"{SKIP_REFUSED}UNUSED ATTACK ({len(unused)} unit(s) have a legal attack and "
+                f"have not taken it):\n{listed}\n"
+                "  Nothing was swept. Order the attack(s), or call this again with "
+                "force=True to discard them on purpose."
+            )
         # First try to fortify/heal combat units (InGame context)
         fortify_result = ""
         try:
@@ -732,7 +753,7 @@ class GameState:
             listed = "\n".join(f"  {entry}" for entry in unused)
             report += (
                 f"\nUNUSED ATTACK ({len(unused)} unit(s) had a legal attack and did not take it):"
-                f"\n{listed}\n  These moves are now finished for the turn."
+                f"\n{listed}\n  These moves are now finished for the turn (force=True)."
             )
         return report
 

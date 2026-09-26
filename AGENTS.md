@@ -165,8 +165,16 @@ Each turn in order:
    when the enemy in contact is cavalry with no anti-cavalry unit in the army. Deal with it this
    turn, with the counter unit — or record in the diary why you deliberately let it pass. Two
    more are about **attacks you already have**: `use-your-attacks` fires while a
-   legal attack is still unused (`skip_remaining_units` now names those units as it discards
-   them), and `finish-the-wounded` fires when an enemy within two tiles is at 20 HP or less and
+   legal attack is still unused, and since 2026-09-26 **neither the tool nor `end_turn` will
+   discard one for you** — `skip_remaining_units` refuses and names the units, and the
+   "a unit still has moves" blocker bounces with the attack listed instead of sweeping it.
+   That is a measured change, not a preference: over the T139–T152 Russian war four attacks
+   were swept away invisibly, each costing a unit-turn (a Crossbowman pair on the galley at
+   (50,23) on T145, a Horseman adjacent to its target at (56,42) on T148, and a Man-at-Arms
+   twice — the second one a real second attack, which is what `ELITE_GUARD`'s extra attack
+   per turn means: when a unit that already attacked a city is still listed, that is a second
+   shot, not a double count). Order the attack; `skip_remaining_units(force=True)` is the
+   deliberate discard. And `finish-the-wounded` fires when an enemy within two tiles is at 20 HP or less and
    nothing attacked — a wounded enemy comes back, and **how fast depends on where it stands**: the
    manual's healing rates are 20 HP/turn in a city, 15 in friendly territory, 10 neutral, 5 in
    enemy territory (naval 2, friendly only). Those numbers come from `manual:1066-1085`
@@ -195,7 +203,13 @@ Each turn in order:
    tiles of an enemy with nothing closer to that enemy than itself), then advance. When you are
    attacking a city, the result now always carries its numbers — `city hp: N/200, walls: N/100 or
    none` — and the turn result carries a **SIEGE PROGRESS** block with the delta, escalating to
-   `SIEGE STALLED` after three recorded turns without a net drop. A city heals about twenty points
+   `SIEGE STALLED` after three recorded turns without a net drop. **Walls are learned from a
+   result line, never from an estimate**: the estimate reads `CITY_CENTER (CS:0, HP:200)` for a
+   walled and an unwalled city alike, and 圣彼得堡 read `walls none` on the way in and answered
+   `walls: 100/100` to the first melee attack (T149) — so probe with one cheap attack before the
+   train commits, and treat one city's `walls none` as a snapshot, not a property of the map. A
+   bare melee attack does **9** against 100 walls where the same attack beside the Battering Ram
+   does full damage; that number is why the Ram travels with the melee (T150, measured). A city heals about twenty points
    a turn **while it has a supply line** — the manual's rule is that any adjacent hex outside your
    units' zone of control is a supply line, so standing on (or beside) every adjacent hex stops the
    heal outright, which is cheaper than out-damaging it. Fire that neither cuts the supply nor
@@ -472,7 +486,7 @@ Military Engineers (requires Encampment + Armory): `build_route` builds a railro
 
 | Other unit tools | |
 |--------|--------|
-| `skip_remaining_units` | Skip all units with remaining moves (useful after diplomacy) |
+| `skip_remaining_units` | Skip all units with remaining moves (useful after diplomacy). **Refuses and names the units while any has a legal attack** — pass `force=True` to discard them deliberately |
 | `upgrade_unit(unit_id)` | Upgrade to next type (requires tech + resources + gold) |
 
 ## End Turn Blockers

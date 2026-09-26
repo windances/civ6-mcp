@@ -9,6 +9,7 @@ import time
 from typing import TYPE_CHECKING
 
 import civ_mcp.narrate as nr
+from civ_mcp import game_state as gsk
 from civ_mcp import lua as lq
 from civ_mcp.connection import LuaError
 from civ_mcp.game_lifecycle import cleanup_old_autosaves, save_game
@@ -605,6 +606,31 @@ _REVIEW_METRICS: tuple[tuple[str, str, str], ...] = (
     ("techs_completed", "techs", "{:+.0f}"),
     ("civics_completed", "civics", "{:+.0f}"),
 )
+
+
+async def _sweep_unmoved_units(gs) -> tuple[bool, str]:
+    """Resolve the "a unit still has moves" blocker - unless an attack would be lost.
+
+    Returns ``(resolved, message)``. The sweep exists because one forgotten unit used to
+    freeze the turn for the whole ~9 minute poll budget, so it is not removed - but a unit
+    with a legal attack is not forgotten, and sweeping it is how four attacks died over the
+    T139-T152 Russian war without anyone seeing them go. When one is pending this returns
+    ``(False, ...)`` and nothing is touched: the caller bounces the turn with the attack
+    named, and `skip_remaining_units(force=True)` remains the deliberate way to discard it.
+    """
+    unused = await gs.unused_attacks()
+    if unused:
+        return False, (
+            "UNUSED ATTACK at end_turn: " + "; ".join(unused) + " - these units still have a"
+            " legal attack, so the turn was not swept. Order the attack(s), or call"
+            " skip_remaining_units(force=True) to discard them deliberately."
+        )
+    report = str(await gs.skip_remaining_units())
+    if report.startswith(gsk.SKIP_REFUSED):
+        # The scan above and the sweep's own scan disagreed (a flaky read). Surface it rather
+        # than sweep, and never loop: refusing is always safe here.
+        return False, report
+    return True, report
 
 
 def _war_train_status(units: dict | None) -> tuple[str, list[str]]:
@@ -2739,13 +2765,25 @@ async def execute_end_turn(gs: GameState) -> str:
                         # skip_remaining_units tool does - fortify combat units,
                         # then skip whatever still has moves - and log it loudly so
                         # the omission stays visible rather than silent.
-                        skipped = await gs.skip_remaining_units()
-                        log.warning(
-                            "ENDTURN_BLOCKING_UNITS auto-resolved (a unit still had "
-                            "moves at end_turn): %s",
-                            str(skipped)[:200],
-                        )
-                        resolved_any = True
+                        #
+                        # With one exception, measured over the T139-T152 Russian war: a
+                        # unit with a *legal attack* is not a forgotten unit, and sweeping
+                        # it here is how four attacks were discarded (the Crossbowman pair
+                        # on the galley at T145, a Horseman on T148, a Man-at-Arms twice,
+                        # including the second attack ELITE_GUARD grants). Those attacks
+                        # were invisible at the moment they were lost, so this bounces
+                        # instead - naming them, with the force=True escape for a
+                        # deliberate discard.
+                        resolved, note = await _sweep_unmoved_units(gs)
+                        if resolved:
+                            log.warning(
+                                "ENDTURN_BLOCKING_UNITS auto-resolved (a unit still had "
+                                "moves at end_turn): %s",
+                                note[:200],
+                            )
+                            resolved_any = True
+                            continue
+                        hard_blockers.append((blocking_type, note))
                         continue
                     except Exception:
                         log.debug("Auto-resolve units blocker failed", exc_info=True)

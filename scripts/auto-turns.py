@@ -363,7 +363,13 @@ class Runner:
         pending = [u for u in await self.gs.get_units() if u.moves_remaining > 0]
         if pending:
             self.say(f"    skip {len(pending)} unit(s) with unspent moves")
-            await self.gs.skip_remaining_units()
+            # force=True is this runner's contract, not a shortcut: it never attacks and it
+            # hands back the moment an enemy is within three tiles, so an attack left unused
+            # here is a unit it has already refused to command. Without the flag the sweep
+            # would refuse and the turn would stall.
+            report = str(await self.gs.skip_remaining_units(force=True))
+            if "UNUSED ATTACK" in report:
+                self.say("    WARNING: an attack was discarded by the sweep (see above)")
         result = await end_turn_module.execute_end_turn(self.gs)
         head = str(result).strip().splitlines()[:1]
         self.say(f"    end: {head[0] if head else '(no output)'}")
