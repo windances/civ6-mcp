@@ -257,7 +257,47 @@ class TestTheMetric:
             "enemy_city_hp_min": 999,
             "enemy_supply_open_min": 999,
             "enemy_cities_supplied": 0,
+            "enemy_supply_uncut_with_idle": 0,
         }
+
+    def test_a_city_we_are_letting_heal_with_idle_units_in_reach_is_counted(self):
+        """The supply lever, and whether anyone is free to pull it.
+
+        Measured over the T139-T159 war: 沃罗涅什 sat at `supply 3/6` and 喀山 at `1/6` for their
+        whole sieges - both pools healed back to full - while Catapults held position in the
+        jammed corridor. Cutting the open hexes is worth more than extra fire, so a city with open
+        supply *and* our units within three tiles that still have movement is the case the rule
+        reads.
+        """
+        def line(name: str, supply: str, idle: int) -> str:
+            return (
+                f"CAPTURE_READY|{name}|60,30|hp:150|max:200|walls:74/100|owner:1"
+                f"|melee_adjacent:1|melee_within_2:3|supply:{supply}|idle3:{idle}|UNIT_SPEARMAN"
+            )
+
+        rows = lq.parse_capture_readiness_response(
+            [line("St Petersburg", "3/6", 2), line("Kazan", "3/6", 0), line("Voronezh", "6/6", 2)]
+        )
+        metrics = et._capture_metrics(rows)
+        assert metrics["enemy_cities_supplied"] == 2, "two of the three still have a supply line"
+        assert metrics["enemy_supply_uncut_with_idle"] == 1, "only the first has units free to cut it"
+        assert metrics["enemy_supply_open_min"] == 0, "one city is fully cut"
+
+    def test_the_idle_count_is_read_by_name_and_defaults_to_zero(self):
+        # A line from a build without `idle3:` must not shift the unit name into it, and must read
+        # as zero rather than silently suppressing the rule.
+        older = lq.parse_capture_readiness_response(
+            ["CAPTURE_READY|X|54,40|hp:150|max:200|walls:0/0|owner:1"
+             "|melee_adjacent:1|melee_within_2:2|supply:2/6|UNIT_SPEARMAN"]
+        )[0]
+        assert older.idle_within_3 == 0
+        assert older.melee_unit == "UNIT_SPEARMAN"
+        current = lq.parse_capture_readiness_response(
+            ["CAPTURE_READY|X|54,40|hp:150|max:200|walls:0/0|owner:1"
+             "|melee_adjacent:1|melee_within_2:2|supply:2/6|idle3:3|UNIT_SPEARMAN"]
+        )[0]
+        assert current.idle_within_3 == 3
+        assert current.melee_unit == "UNIT_SPEARMAN"
 
     def test_the_contact_metrics_carry_them_and_scan_once(self):
         class FakeGS:

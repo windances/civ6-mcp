@@ -709,6 +709,11 @@ class CaptureReadiness:
     # heal at all - cutting the last open hex is a lever the army can pull.
     supply_covered: int = 0
     supply_total: int = 0
+    # Our fighting units within three tiles that still have movement. The supply lever is only
+    # pullable if somebody can walk onto the open hexes, and this is that count - measured over
+    # the T139-T159 war, the cities that healed back were exactly the ones whose ring stayed at
+    # 1/6 or 3/6 cut while spare units sat queued in the corridor.
+    idle_within_3: int = 0
 
     @property
     def supply_open(self) -> int:

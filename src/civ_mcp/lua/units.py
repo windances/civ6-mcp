@@ -1526,12 +1526,31 @@ for pid = 0, 63 do
                                 end
                             end
                         end end
+                        -- Idle strength within reach. The supply lever above is only pullable if
+                        -- somebody can walk onto the open hexes, and the cost of not checking is
+                        -- measured: at 沃罗涅什 and 喀山 the count never left 3/6 and 1/6 while
+                        -- Catapults "fortified in place because the corridor is jammed" (T155) and
+                        -- the pools healed back. A unit that still has movement and is within three
+                        -- tiles is exactly the unit that could be doing it, so it is counted here
+                        -- with the game's own distance function rather than by hand.
+                        local idle = 0
+                        for _, u4 in Players[me]:GetUnits():Members() do
+                            local ux4, uy4 = u4:GetX(), u4:GetY()
+                            if ux4 ~= -9999 and u4:GetMovesRemaining() > 0 then
+                                local i4 = GameInfo.Units[u4:GetType()]
+                                if i4 and ((i4.Combat or 0) + (i4.RangedCombat or 0) + (i4.Bombard or 0)) > 0
+                                    and Map.GetPlotDistance(ux4, uy4, cx, cy) <= 3 then
+                                    idle = idle + 1
+                                end
+                            end
+                        end
                         print("CAPTURE_READY|" .. cName .. "|" .. cx .. "," .. cy
                             .. "|hp:" .. cHP .. "|max:" .. cMax
                             .. "|walls:" .. wHP .. "/" .. wMax
                             .. "|owner:" .. pid
                             .. "|melee_adjacent:" .. adj .. "|melee_within_2:" .. near
                             .. "|supply:" .. covered .. "/" .. total
+                            .. "|idle3:" .. idle
                             .. "|" .. who)
                     end
                 end
@@ -1570,15 +1589,20 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
         except ValueError:
             wall_hp, wall_max = 0, 0
         # `supply:C/T` was added after the melee counts; a line from an older build simply has the
-        # unit name there, so both shapes are accepted.
-        supply_covered, supply_total, unit_name = 0, 0, ""
+        # unit name there, so both shapes are accepted. `idle3:N` came later again, and is looked
+        # for by name so a line without it is read as zero rather than shifting the unit name.
+        supply_covered, supply_total, unit_name, idle_within_3 = 0, 0, "", 0
         if len(parts) > 9 and parts[9].startswith("supply:"):
             try:
                 covered, total = parts[9].split(":", 1)[1].split("/", 1)
                 supply_covered, supply_total = int(covered), int(total)
             except ValueError:
                 supply_covered, supply_total = 0, 0
-            unit_name = parts[10] if len(parts) > 10 else ""
+            rest = parts[10:]
+            for token in rest:
+                if token.startswith("idle3:"):
+                    idle_within_3 = number(token)
+            unit_name = next((t for t in rest if not t.startswith("idle3:")), "")
         elif len(parts) > 9:
             unit_name = parts[9]
         out.append(
@@ -1594,6 +1618,7 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
                 melee_within_2=number(parts[8]) if len(parts) > 8 else 0,
                 supply_covered=supply_covered,
                 supply_total=supply_total,
+                idle_within_3=idle_within_3,
                 melee_unit=unit_name,
             )
         )

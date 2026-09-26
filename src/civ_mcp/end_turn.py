@@ -39,6 +39,7 @@ _CONTACT_METRIC_KEYS = (
     "enemy_city_hp_min",
     "enemy_supply_open_min",
     "enemy_cities_supplied",
+    "enemy_supply_uncut_with_idle",
     "strongest_enemy_melee_cs",
     "our_best_melee_cs",
     "melee_upgrades_available",
@@ -1172,6 +1173,13 @@ def _capture_metrics(readiness: list) -> dict:
         # bombardment is fighting a heal or not.
         "enemy_supply_open_min": 999,
         "enemy_cities_supplied": 0,
+        # The supply lever, and whether anyone is free to pull it: a city with open adjacent
+        # hexes that has our fighting units within three tiles *with movement left* is a city we
+        # are letting heal. Measured over the T139-T159 war: 沃罗涅什 sat at 3/6 and 喀山 at 1/6
+        # cut for their whole sieges while spare units held position in the corridor, and both
+        # pools came back to full. Cutting the last hex is worth more than any amount of extra
+        # fire, so this is the count the rule reads.
+        "enemy_supply_uncut_with_idle": 0,
     }
     for entry in readiness or []:
         hp = int(getattr(entry, "hp", 0) or 0)
@@ -1184,6 +1192,8 @@ def _capture_metrics(readiness: list) -> dict:
             metrics["enemy_supply_open_min"] = min(metrics["enemy_supply_open_min"], open_hexes)
             if open_hexes > 0:
                 metrics["enemy_cities_supplied"] += 1
+                if int(getattr(entry, "idle_within_3", 0) or 0) > 0:
+                    metrics["enemy_supply_uncut_with_idle"] += 1
         if hp <= 0:
             metrics["downed_enemy_cities"] += 1
             if int(getattr(entry, "melee_adjacent", 0) or 0) > 0:
