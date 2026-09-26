@@ -7,8 +7,8 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`010-rescue-chengdu.md`, `007-destroy-russia.md`, `008-destroy-missionaries.md`,
-`009-city-near-niter.md`.
+`011-destroy-chengdu-ring.md`, `010-rescue-chengdu.md`, `007-destroy-russia.md`,
+`008-destroy-missionaries.md`, `009-city-near-niter.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -51,6 +51,19 @@ which is the resource every melee upgrade in this war runs on. Unit survival com
 aim: lift the raid with the city's own ranged strike, the garrison and the nearest ranged unit, then
 repair the mine. It authorizes **no** peace with Russia, **no** attack on Yerevan itself, and **no**
 pulling of the siege train off 圣彼得堡's wall phase.
+
+**011 is 010's escalation** (human instruction 2026-09-26: 消灭成都外围部队): 010 says the city is
+safe (no hostile within 2 tiles, walls up, mine repaired); 011 says the **ring out to 3 tiles is
+empty** — the levied units' staging ground — with the same mine repaired at the end. While both are
+in force, 010's `done when` is the intermediate checkpoint and 011's is the objective; it outranks
+010's *hold* posture for the units it needs and 007's timetable for those same units, and it
+authorizes nothing else (no peace, no attack on Yerevan, no pulling the train off 喀山 or
+圣彼得堡). The rules that already cover the fighting — `use-your-attacks`, `mass-on-contact`,
+`finish-the-wounded`, `hold-what-you-take` — fired correctly on this raid; what they cannot express
+is the objective, which is why it is a file. Its clearing method is written down: the city's own
+43-damage strike does the work (it is the strongest single attack in the empire), the Warrior
+**never** sorties (a CS 20 attack on a CS 45 levied Man-at-Arms reads `attacker likely dies`), and
+the mobile surplus takes the units out of the city's 2-tile reach.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
