@@ -3054,6 +3054,90 @@ def _foreign_tuner_clients(clients: list[int], pids: list[int]) -> list[int]:
     return [pid for pid in clients if pid != own and pid not in pids]
 
 
+def passive_status() -> dict:
+    """What can be learned about the game **without touching it**.
+
+    ``game_status`` answers the same question by connecting: it probes the tuner and reads
+    the screen with OCR. That is right when this process is the one about to act, and wrong
+    when another session may be mid-turn - FireTuner serves one connection, so a probe from
+    here is an intrusion, and the one situation where the question matters most ("is someone
+    already playing?") is exactly the one where asking it must not disturb the answer.
+
+    So this reads only passive signals: the process list, the OS TCP table's owner for the
+    tuner port, the heartbeat file, and window presence. No socket connect, no OCR. The
+    caller may connect *afterwards*, once ``tuner.foreign_clients`` is empty and no fresh
+    heartbeat names another pid.
+
+    Returns a JSON-serializable dict: pids, window title, the tuner table, the freshest
+    heartbeat (with its age and whether its pid is alive), and ``other_session``.
+    """
+    pids = _running_game_pids()
+    window = None
+    try:
+        found = _find_game_window()
+        window = {"title": getattr(found, "title", None), "pid": getattr(found, "pid", None)} if found else None
+    except Exception:  # noqa: BLE001 - window enumeration is a convenience, not the answer
+        window = None
+
+    table = _tuner_port_state()
+    foreign = _foreign_tuner_clients(table.get("clients", []), pids)
+
+    heartbeat: dict = {}
+    beat_path = None
+    for path in _heartbeat_candidates():
+        try:
+            candidate = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - a missing or unreadable file is not a session
+            continue
+        if candidate.get("ts"):
+            heartbeat, beat_path = candidate, path
+            break
+    if heartbeat:
+        beat_pid = int(heartbeat.get("pid") or 0)
+        heartbeat = dict(heartbeat)
+        heartbeat["age_seconds"] = round(time.time() - float(heartbeat.get("ts") or 0), 1)
+        heartbeat["pid_alive"] = _pid_alive(beat_pid)
+        heartbeat["source"] = str(beat_path)
+        heartbeat.pop("ts", None)
+
+    return {
+        "pids": pids,
+        "window": window,
+        "tuner": {
+            "listening": bool(table.get("listening")),
+            "clients": list(table.get("clients") or []),
+            "foreign_clients": foreign,
+            "note": (
+                ""
+                if sys.platform == "win32"
+                else "TCP owner table is Windows-only; listening is unknown here"
+            ),
+        },
+        "heartbeat": heartbeat,
+        "other_session": _other_active_session(),
+    }
+
+
+def _pid_alive(pid: int) -> bool:
+    """Is this pid running? Never raises; an unknown pid is 'not alive'."""
+    if not pid:
+        return False
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            SYNCHRONIZE = 0x00100000
+            handle = ctypes.windll.kernel32.OpenProcess(SYNCHRONIZE, False, pid)
+            if not handle:
+                return False
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return True
+        os.kill(pid, 0)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def game_status() -> str:
     """Where the game is right now, and what that state calls for.
 
@@ -3065,6 +3149,10 @@ def game_status() -> str:
     The screen is read whenever there is a window, not only when the tuner answers:
     with another agent holding the single FireTuner connection, OCR is the only way to
     know that a game is loaded and at which turn.
+
+    **This one connects** (tuner probe, then OCR) because it serves the moment this
+    process is about to act. To ask the same question before a handoff - while another
+    session may hold the single FireTuner connection - use ``passive_status``.
     """
     pids = _running_game_pids()
     window = _find_game_window()

@@ -6,8 +6,12 @@ carries the turn inside the file only, and when the parser finds no timeline blo
 game is relaunched and a save loaded), so this reads the file first and prints what it holds.
 
 Usage:
-  .venv\\Scripts\\python.exe .tools\\turn-of-save.py "<path to .Civ6Save>"
-  .venv\\Scripts\\python.exe .tools\\turn-of-save.py --list      # every save, newest first
+  .venv\\Scripts\\python.exe scripts\\turn-of-save.py "<path to .Civ6Save>"
+  .venv\\Scripts\\python.exe scripts\\turn-of-save.py --list      # every save, newest first
+
+The turn this prints is the one that matters, because the two save families are numbered
+differently: measured 2026-09-26 on three consecutive pairs, `0_MCP_NNNN` holds turn NNNN while
+the game's own `AutoSave_NNNN` holds turn NNNN-1 (`0_MCP_0142` = T142, `AutoSave_0142` = T141).
 """
 
 from __future__ import annotations

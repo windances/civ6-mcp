@@ -606,6 +606,33 @@ All victories trigger immediately when the condition is met — they do not wait
 
 ## Game Recovery
 
+**Handing the match to a fresh session is one command, and it is not the agent's:**
+```
+scripts\resume-game.ps1            # check, tell the human what to do, stop
+scripts\resume-game.ps1 -Wait      # ... or wait for the human's load, then launch a session
+scripts\resume-game.ps1 -Rollback  # the human deliberately loaded an earlier save
+```
+It runs `civ_mcp.handoff` first, which reads only **passive** signals — the process list, the
+OS TCP table's owner for the FireTuner port, the heartbeat file, and the saves on disk with
+the turn each file actually holds — so it can be run at any time, **including while another
+session is playing** (the MCP's own `get_game_status` connects and reads the screen, which is
+right when this process is about to act and wrong when asking must not disturb the answer).
+It ends in one verdict: `not_running` (launch), `no_match` (load a save), `tuner_silent`
+(started without EnableTuner), `tuner_busy` (another session holds the tuner), or `in_game`
+hand it over. **It never launches and never loads** — that stays the human's call, which is
+why the verdict's job is to say who does what. When it is `in_game` the session's task is
+**generated from those facts** (`.civ6-mcp-data/resume-task.en.txt`), so no turn number or
+save name in it can go stale.
+
+**The two save families are numbered differently, measured 2026-09-26:** `0_MCP_NNNN` holds
+turn NNNN, and the game's own **`AutoSave_NNNN` holds turn NNNN-1** (`0_MCP_0142` holds T142,
+`AutoSave_0142` holds T141 — three pairs checked). So "the number in the name is the turn" is
+true only of the MCP's files; comparing a loaded turn against an autosave's name is off by
+one, and `scripts\turn-of-save.py "<path>"` prints what a save really holds before it is
+loaded. Both families matter and neither is authoritative: "Continue Game" resumes whichever
+file is **newest by time**, so that is what the handoff recommends, and a newer file that is
+*not* the furthest position is the rollback smell worth flagging.
+
 **Ask where the game is before touching anything:**
 ```
 get_game_status   # not_running / starting / in_game / leader_screen / main_menu / loading / tuner_busy

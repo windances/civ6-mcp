@@ -5,6 +5,13 @@ position another session is mid-turn in gets thrown away. Your first job is only
 the game can take commands. If it can, carry this match on for at most 100 more turns, then stop and
 report.
 
+**This file is the static fallback.** The preferred entry point is `scripts\resume-game.ps1`, which
+checks the state passively (`scripts\handoff.py`), prints what the human has to do when nothing can
+take over, and  -  once the game is loaded  -  writes a task from those facts (the turn it verified, the
+turn cap) before launching the session. Use this file when that preflight cannot describe the
+situation, or when a human has pointed a session at it directly. It carries no turn number and no
+save name for exactly that reason: those go stale within a turn.
+
 0. **Capability check, read-only.** Two calls, in this order:
    - `get_game_status` - it answers with the state, the turn, and a `NEXT:` line.
    - `get_game_overview` - a real read. A status string that says `in_game` while the read fails
