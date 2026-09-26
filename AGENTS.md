@@ -182,120 +182,15 @@ Each turn in order:
 6. `get_district_advisor` if placing a new district
 7. `set_city_production` / `set_research` if needed
 8. Run **Strategic Checkpoints** if it's time
-9. `end_turn` — it also evaluates `prompts/checks/turn-checks.md` on **every** turn and
-   prints every failing rule in the result (`CHECK FAILED [id]: … (require: …)`). Those are
-   not suggestions: they are the strategy directive's checkable rules, measured against the
-   units you actually have and this turn's diary row. Fix the gap, or record in the diary
-   why it is being accepted — either way it must not pass unnoticed. A rule marked `once: true`
-   is a **goal**: when you satisfy it you get one `CHECK ACHIEVED … retired` line and it stops
-   being checked for the rest of the game, so a rule disappearing from the list means it was
-   done, not that the check broke. The same turn also reports `CHECK FILE PRUNED`: the achieved
-   goal is removed from `prompts/checks/turn-checks.md`, after a timestamped copy is written to
-   `prompts/checks/archive/`. What stays in the file is exactly what is still outstanding.
-   Two of those rules are about **contact on the march**: if enemy units are within two tiles
-   of your units while the army is assembling, you are walking past something that will kill the
-   siege train — the requirement is `use-your-attacks` (no legal attack may be left unused) plus
-   `mass-on-contact` (two or three attackers on the target, not one), and `counter-the-cavalry`
-   when the enemy in contact is cavalry with no anti-cavalry unit in the army. Deal with it this
-   turn, with the counter unit — or record in the diary why you deliberately let it pass. Two
-   more are about **attacks you already have**: `use-your-attacks` fires while a
-   legal attack is still unused, and since 2026-09-26 **neither the tool nor `end_turn` will
-   discard one for you** — `skip_remaining_units` refuses and names the units, and the
-   "a unit still has moves" blocker bounces with the attack listed instead of sweeping it.
-   That is a measured change, not a preference: over the T139–T152 Russian war four attacks
-   were swept away invisibly, each costing a unit-turn (a Crossbowman pair on the galley at
-   (50,23) on T145, a Horseman adjacent to its target at (56,42) on T148, and a Man-at-Arms
-   twice — the second one a real second attack, which is what `ELITE_GUARD`'s extra attack
-   per turn means: when a unit that already attacked a city is still listed, that is a second
-   shot, not a double count). Order the attack; `skip_remaining_units(force=True)` is the
-   deliberate discard. And `finish-the-wounded` fires when an enemy within two tiles is at 20 HP or less and
-   nothing attacked — a wounded enemy comes back, and **how fast depends on where it stands**: the
-   manual's healing rates are 20 HP/turn in a city, 15 in friendly territory, 10 neutral, 5 in
-   enemy territory (naval 2, friendly only). Those numbers come from `manual:1066-1085`
-   §HEALING DAMAGE TO CITIES — `search_knowledge("city heals a small amount supply line",
-   doc="manual")` prints the lines if one of them is ever in doubt. The one that must not be left alive is the enemy
-   inside a city; the one to compare against is the enemy in the field at 5–10. The same numbers
-   are the reason to rotate **our own** damaged units back across the border: 15/turn at home
-   against 5/turn where they were hit. Once a
-   war is on, two more apply: `one-garrison-per-city` (one unit per city, everything else at the
-   front) and `answer-the-attack` (a unit that was hit gets a response this turn — fight back,
-   screen it, or withdraw and say so). When a unit is hit — or the moment enemy forces come into
-   contact — the turn result also carries a **BATTLE ASSESSMENT**: every enemy within three tiles
-   with its class, strength, HP, distance, and how many of your fighting units are already in
-   range. Use it — mass two or three attackers on one target so it dies this turn
-   (`mass-on-contact` fails while an enemy is in contact and only one of your units is in range),
-   rather than trading one-for-one. Before an assault, the same result carries a **SIEGE POSTURE**
-   line per siege unit — distance to the nearest enemy, how far that enemy is from the unit
-   screening it, and distance to the nearest enemy city. **Read it before moving any siege unit: it is
-   the only reliable answer to "can this tile shoot?"** The `CAN ATTACK:` hint lists targets a
-   Catapult then answers `NO_LOS` to, and hex distance cannot be derived by hand — measured on
-   阿斯特拉罕 (54,40): (54,38) fires (LOS), (55,38) is distance 2 with no LOS, (56,38) is distance 3.
-   A siege that arrives without knowing which of its ring tiles actually fire gets one or two shots a
-   turn instead of three, which is the difference between a one-turn pool and a three-turn one.
-   Form up outside enemy range with the
-   melee in front and the siege behind (`screen-the-siege` fails while a siege unit is within two
-   tiles of an enemy with nothing closer to that enemy than itself), then advance. When you are
-   attacking a city, the result now always carries its numbers — `city hp: N/200, walls: N/100 or
-   none` — and the turn result carries a **SIEGE PROGRESS** block with the delta, escalating to
-   `SIEGE STALLED` after three recorded turns without a net drop. **Walls are learned from a
-   result line, never from an estimate**: the estimate reads `CITY_CENTER (CS:0, HP:200)` for a
-   walled and an unwalled city alike, and 圣彼得堡 read `walls none` on the way in and answered
-   `walls: 100/100` to the first melee attack (T149) — so probe with one cheap attack before the
-   train commits, and treat one city's `walls none` as a snapshot, not a property of the map. A
-   bare melee attack does **9** against 100 walls where the same attack beside the Battering Ram
-   does full damage; that number is why the Ram travels with the melee (T150, measured). A city heals about twenty points
-   a turn **while it has a supply line** — the manual's rule is that any adjacent hex outside your
-   units' zone of control is a supply line, so standing on (or beside) every adjacent hex stops the
-   heal outright, which is cheaper than out-damaging it. Fire that neither cuts the supply nor
-   out-damages the healing is fire that never happened: fix the assault or break it off.
-   **A city only changes hands when a capture-capable unit walks onto its tile** — melee,
-   anti-cavalry or cavalry; ranged, siege and support units cannot — and that last step has no
-   damage number attached to it, so the turn result carries a **TAKE THE CITY** block whenever an
-   enemy city's HP pool is empty: it names the unit in reach and the tile to move it to, and
-   `take-the-city` fails while a city at 0 HP is still standing with one of our capture-capable
-   units adjacent. Cavalry belonged on that list from the start and was not: live T122 a Heavy
-   Chariot took Moscow at 0/200 while the scan reported no capture-capable unit on the tile.
-   Two things this fixed in the adapter itself: an enemy city with **no garrison unit**
-   in it used to answer `ERR:NO_ENEMY` to `attack` (so a broken city could not be hit at all and
-   healed back while the army watched), and a move onto an enemy city tile went out without the
-   ATTACK modifier, so the capture move was refused. `attack` and `move` now both resolve a city
-   at the target tile through `Cities.GetCityInPlot`, and a unit ordered onto a 0 HP city
-   takes it and reports `CITY TAKEN` — resolve it with `city_action` keep/raze.
-   **The numbers behind that step, measured over the T103–T130 Russian war (game 13):** the
-   capturing unit must **move** (attacking spends all remaining movement — T110 Moscow fell because
-   the Chariot was ordered to move), it must be **adjacent at the start of the turn** (T129: a
-   four-tile order with four movement points reached three tiles and the zone of control refused the
-   last step; T117: a Warrior walked away from the capital for the same reason), and it must have
-   **health** (T115: a 9 HP Horseman died taking a 0/200 city). A city at 0 HP heals ~20 a turn
-   while it has a supply line, so a failed capture is a re-siege, not a delay. The same war's fire
-   arithmetic, which decides how long a siege takes: an Archer does **9–11** against a city holding
-   a CS 35 garrison and **35** against the same city ungarrisoned, while a **Catapult does 45–52
-   either way** — so a garrisoned city is a Catapult job, and the cheapest way to remove the
-   garrison bonus is to invite the sortie (T109: it left Moscow, and four shooters went from ~11 a
-   shot to 95 in one turn). An ungarrisoned, wall-less city does **not retaliate against melee**
-   (36 and 44 damage measured, 0 taken), and a siege fires only as many shots as its ring of
-   distance-2 tiles allows, which mountains and `NO_LOS` reduce per tile.
-   Two more rules compare what the enemy fields with what you have. **`match-their-melee`** fails
-   while enemy melee within three tiles of the army is CS 35 or better and your front line is
-   still Warrior/Spearman tier — an unupgraded line loses every trade with a Swordsman (35) or a
-   Man-at-Arms (45), and the `BATTLE ASSESSMENT` block adds a `MATCHUP:` line naming the unit, the
-   two combat strengths and the gold an upgrade costs. **`upgrade-the-siege`** fails during a war
-   while a siege unit can be upgraded and the treasury covers it, because a Catapult does 45
-   against a city where a Trebuchet does 55; the turn result carries an **UPGRADE AVAILABLE**
-   block listing each unit, its upgrade target and its price. Massing attackers or doing the
-   upgrade both clear these rules — trading one-for-one with a better unit does not.
-   **Loyalty can take a city back with no battle at all**, so the turn result carries a
-   **LOYALTY WARNING** while any of your cities is below 50 loyalty or losing loyalty: each city's
-   pool, its per-turn pressure, **which way the game says it is going** and its
-   turns-to-conversion figure — printed together, because that figure is a revolt countdown only
-   while the city is *losing* loyalty and counts turns to a full pool while it gains (the game's
-   own banner reads the two in one breath, `CityBannerManager.lua:2355-2358`) — the next owner
-   while it drains, the governor in residence, the garrison on its tile and the game's own advice
-   string. `hold-what-you-take`
-   then fails while a low-loyalty city has **no governor in it and no unit on its tile** — the
-   state Moscow was in when it revolted (captured T112, a Free City by T116, retaken T121 at a
-   cost of nine attacks). Assign a governor (`assign_governor`) or garrison the tile; if the
-   governor is needed at the front, say so in the diary.
+9. `end_turn` — it evaluates `prompts/checks/turn-checks.md` on **every** turn and prints every
+   failing rule (`CHECK FAILED [id] … (require: …)`); a `once: true` rule is a goal that retires
+   itself, and an achieved goal is pruned from the file after a timestamped copy goes to
+   `prompts/checks/archive/`. Fix the gap, or record in the diary why it is being accepted — either
+   way it must not pass unnoticed. The same result carries the blocks that decide a fight —
+   `SIEGE POSTURE` (ending in `SIEGE FIRE: n/m`), `BATTLE ASSESSMENT`, `SIEGE PROGRESS`,
+   `TAKE THE CITY`, `LOYALTY WARNING`, `UPGRADE AVAILABLE`, `UNUSED ATTACK` — and every one of them
+   has a rule attached. **What each block means, and which measurement produced it, is
+   `docs/turn-result-blocks.md`**; read that before acting on a block you have not seen before.
 
 ## Looking things up: `search_knowledge`
 
@@ -654,114 +549,21 @@ All victories trigger immediately when the condition is met — they do not wait
 
 ## Game Recovery
 
+**Ask where the game is before touching anything: `get_game_status`** — `not_running` / `starting` /
+`in_game` / `leader_screen` / `main_menu` / `loading` / `tuner_busy`, plus the turn and a `NEXT:`
+line. Infer the state from that call, never from the wording of whichever call happened to fail.
+
+**One session at a time.** FireTuner serves exactly one connection. `kill_game` and
+`restart_and_load` refuse while another session is playing (they name the pid), and a second MCP
+cannot attach while that one lives — waiting changes nothing. Stop it with `scripts\civ6-clean.ps1`,
+or keep playing in its session.
+
 **Handing the match to a fresh session is one command, and it is not the agent's:**
-```
-scripts\resume-game.ps1            # check, tell the human what to do, stop
-scripts\resume-game.ps1 -Wait      # ... or wait for the human's load, then launch a session
-scripts\resume-game.ps1 -Rollback  # the human deliberately loaded an earlier save
-```
-It runs `civ_mcp.handoff` first, which reads only **passive** signals — the process list, the
-OS TCP table's owner for the FireTuner port, the heartbeat file, and the saves on disk with
-the turn each file actually holds — so it can be run at any time, **including while another
-session is playing** (the MCP's own `get_game_status` connects and reads the screen, which is
-right when this process is about to act and wrong when asking must not disturb the answer).
-It ends in one verdict: `not_running` (launch), `no_match` (load a save), `tuner_silent`
-(started without EnableTuner), `tuner_busy` (another session holds the tuner), or `in_game`
-hand it over. **It never launches and never loads** — that stays the human's call, which is
-why the verdict's job is to say who does what. When it is `in_game` the session's task is
-**generated from those facts** (`.civ6-mcp-data/resume-task.en.txt`), so no turn number or
-save name in it can go stale.
+`scripts\resume-game.ps1` (check and report), `-Wait` (wait for the human's load, then launch),
+`-Rollback`, `-DryRun`. It reads only passive signals, never launches and never loads, and generates
+the session's task from the facts it just read.
 
-**The two save families are numbered differently, measured 2026-09-26:** `0_MCP_NNNN` holds
-turn NNNN, and the game's own **`AutoSave_NNNN` holds turn NNNN-1** (`0_MCP_0142` holds T142,
-`AutoSave_0142` holds T141 — three pairs checked). So "the number in the name is the turn" is
-true only of the MCP's files; comparing a loaded turn against an autosave's name is off by
-one, and `scripts\turn-of-save.py "<path>"` prints what a save really holds before it is
-loaded. Both families matter and neither is authoritative: "Continue Game" resumes whichever
-file is **newest by time**, so that is what the handoff recommends, and a newer file that is
-*not* the furthest position is the rollback smell worth flagging.
-
-**Ask where the game is before touching anything:**
-```
-get_game_status   # not_running / starting / in_game / leader_screen / main_menu / loading / tuner_busy
-```
-It answers with the state, the turn, and a `NEXT:` line, so a recovery does not have to be
-inferred from whichever call happened to fail. Two answers change what you do: `in_game`
-means a game is already playable (nothing to launch or load), and `tuner_busy` means another
-process holds the FireTuner connection — FireTuner serves exactly one, so no call from here
-can work while that one lives. Waiting does not help: stop that process with
-`scripts\civ6-clean.ps1`, or keep playing in its session.
-
-**MCP autosaves:** `end_turn` automatically saves every turn as `0_MCP_NNNN` (last 5 kept). These are your primary recovery points.
-
-**Two recovery traps, both measured on 2026-09-25 (five crashes/hangs in one session):**
-
-1. **`0_MCP_NNNN` names collide across rolled-back branches, and a rollback does not delete the
-   abandoned branch's files.** Loading `0_MCP_0122` by name silently loaded the *other* branch's
-   position — same turn number, different board (18 units, two Trebuchets, no Moscow), so the turn
-   check passed and only reading the units back caught it. **After any rollback, recover with the
-   game's own per-session autosave, `AutoSave_NNNN`** (in `Saves/Single/auto`, OneDrive-redirected
-   on Windows: `C:/Users/<user>/OneDrive/文档/My Games/Sid Meier's Civilization VI/Saves/Single/`),
-   choosing the newest one at or before the lost turn by modification time. The save-list Lua probe
-   (`.tools/probes/save-list.lua`) prints names, paths and times so the two can be told apart.
-2. **A turn that will not advance is not necessarily a hang.** Twice it was the game waiting for a
-   mouse: once parked on the leader screen after a load (the CONTINUE click was landing on the
-   browser, because `_click` injects at screen coordinates and a fullscreen game must be in front —
-   fixed by focusing first, `_bring_to_front`), and once behind a natural-disaster popup plus twenty
-   `InvitePopup`s. **Read the screen (`.tools/whats-on-screen.py`) before restarting**, and try
-   `dismiss_popup` before relaunching.
-
-Launching from a shell may need full filesystem access: the game writes `%LOCALAPPDATA%\Firaxis
-Games` and its OneDrive save directory on start, and a confined launch produces no process at all.
-
-**Re-orient in one read: `scripts\orient.py`.** After a rollback (or any cold start) the rule is
-"rebuild every fact from the game", and doing that through five separate reads is how one of them
-gets skipped. One connection prints the game overview, units, cities, tech/civics, policies,
-diplomacy (met civs only), resources, governors, trade routes, builder tasks, city-states,
-victory/demographics, religion, great people, pantheon and notifications — compact by default,
-`--full` for the raw dataclass dump, `--only a,b` to narrow, `--maps` for the narrated map.
-Two companions: `scripts\turn-of-save.py "<path>"` prints the turn a save actually holds *before*
-you load it (a manual save carries no turn in its name and the save parser cannot always read one
-out of the file — the T59 rollback had to take the game's own filename on faith), and
-`scripts\probe-tile.py x,y` prints the raw tile record (terrain, feature, resource, owner, units),
-which is what settled that (58,30) held no *visible* resource at all.
-
-**Unattended development turns: `scripts\auto-turns.py --turns N`.** It dispatches Builders along
-the task list, keeps every city's queue filled from a per-city plan, advances research and civics
-from a priority list, takes the pantheon/dedication/governor offers, buys a Builder above
-`--buy-at` gold, and writes the same diary rows the operator writes (with factual, not
-interpretive, reflections). It **never** attacks, declares war, clears a barbarian camp, moves
-toward an enemy, or touches diplomacy — and it stops and hands back the moment a non-barbarian
-enemy is within three tiles or a war starts, which is where the tactics files apply. Run
-`--dry-run` first: it prints the orders it would issue and touches nothing.
-
-**Load by name** (preferred — no `list_saves` needed):
-```
-load_game_save("0_MCP_0079")  # find it in the game's own save list and load it
-get_game_overview              # verify load
-```
-It works from the main menu as well as in-game: with no game loaded the same two calls run in
-the game's own FrontEnd load-screen state (`LoadGameMenu`), so nothing has to be clicked and no
-window has to be in front. It then lands the load itself — waits for the leader screen, clicks
-CONTINUE, and reads the turn back — so the reply names the turn actually loaded and a wrong one
-comes back as `WARNING: the game reports turn N, but '<save>' holds turn M`. OCR menu navigation
-is the fallback for a save the game's list does not carry.
-
-**When the game hangs** (AI turn loop):
-```
-restart_and_load("0_MCP_NNNN")   # kill + relaunch + load (~90s)
-get_game_overview                 # verify load
-```
-
-**Turn regression detection:** If you accidentally load a wrong save (e.g. the T1 scenario save instead of your autosave), `end_turn` will emit a CRITICAL warning with the correct autosave name to reload.
-
-Other tools: `list_saves`, `load_save(index)`, `kill_game`, `launch_game`, `load_save_from_menu(name)`.
-Save names omit the extension: `"AutoSave_0221"`. Writing `"AutoSave_0221.Civ6Save"` is accepted
-too, and stripped, because the game's own save list carries it.
-
-**One session at a time.** `kill_game` and `restart_and_load` refuse while another session is
-playing (they name the pid holding the FireTuner connection or writing a recent heartbeat), so
-a recovery cannot throw away a position someone else is mid-turn in. Pass `force=True` only
-when you know that session is dead. Loading a save the game is already sitting on is not a
-load: `load_game_save` answers "Already loaded" from the current turn instead of clicking
-through a main menu that is not on screen.
+**Everything else is `docs/game-recovery.md`** — the two recovery traps, the `0_MCP_NNNN` name
+collisions across rolled-back branches, the `AutoSave_NNNN` offset, `orient.py`, `turn-of-save.py`,
+`auto-turns.py`, loading by name, the hang recovery and the save list. Read it before any recovery:
+it is the section that used to live here, unchanged, and it is still the authority.
