@@ -24,9 +24,12 @@ These tests are the guard rail on the protocol itself, not on any one task.
 
 from __future__ import annotations
 
+import json
 import pathlib
 import re
 import sys
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -34,6 +37,7 @@ sys.path.insert(0, str(ROOT / "src"))
 TMP = ROOT / "prompts" / "tasks" / "tmp"
 AGENTS = ROOT / "AGENTS.md"
 REGISTER = TMP / "current_tasks.md"
+DATA = ROOT / ".civ6-mcp-data"
 HEADER_FIELDS = ("added:", "expires:", "done when:", "overrides:", "scope:")
 # Neither of these is a task: `README.md` documents the directory, `current_tasks.md` is the register.
 NON_TASKS = frozenset({"README.md", "current_tasks.md"})
@@ -41,6 +45,65 @@ NON_TASKS = frozenset({"README.md", "current_tasks.md"})
 
 def task_files() -> list[pathlib.Path]:
     return sorted(p for p in TMP.glob("*.md") if p.name not in NON_TASKS)
+
+
+def expires_turn(path: pathlib.Path) -> int | None:
+    """The turn this task's `expires:` names, or None when the line is unreadable."""
+    line = next(
+        (l for l in path.read_text(encoding="utf-8-sig").splitlines() if l.startswith("expires:")),
+        "",
+    )
+    found = re.search(r"turn (\d+)", line)
+    return int(found.group(1)) if found else None
+
+
+def game_turn() -> int | None:
+    """The turn the game stands on, read offline - the clock an expiry has to be compared with.
+
+    The **newest save by mtime** leads, because the saves are the only record that keeps moving while a
+    human plays with no session attached - which is exactly the window in which an expiry goes
+    unnoticed (016 sat in the directory from T191 to T193 with `expires: turn 190`). The two save
+    families are named for different turns: `0_MCP_NNNN` holds turn NNNN, and `AutoSave_NNNN` holds
+    NNNN - 1 (measured 2026-09-26), so each name is read for the turn it actually holds.
+
+    The heartbeat and the diary are the fallbacks, and they are deliberately not consulted when a save
+    is available: both are written *by a session*, so after a rollback they can name a turn the game
+    has left behind and would report a live task as expired.
+    """
+    try:
+        from civ_mcp import game_launcher as gl  # noqa: PLC0415
+
+        saves = []
+        for directory in (gl.SAVE_DIR, gl.SINGLE_SAVE_DIR):
+            for path in pathlib.Path(directory).glob("*.Civ6Save"):
+                found = re.match(r"(0_MCP_|AutoSave_)(\d+)", path.name)
+                if found:
+                    number = int(found.group(2))
+                    turn = number if found.group(1) == "0_MCP_" else number - 1
+                    saves.append((path.stat().st_mtime, turn))
+        if saves:
+            return max(saves)[1]
+    except Exception:  # a fresh clone has no game install, and that is not a failure
+        pass
+
+    heartbeat = DATA / "heartbeat.json"
+    if heartbeat.exists():
+        try:
+            turn = json.loads(heartbeat.read_text(encoding="utf-8-sig")).get("turn")
+            if isinstance(turn, int) and turn > 0:
+                return turn
+        except (OSError, ValueError):
+            pass
+
+    # The newest diary by mtime is this checkout's live game; an older seed's diary can name a higher
+    # turn than the current match, so the others are not consulted.
+    diaries = sorted(DATA.glob("diary_*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for diary in diaries[:1]:
+        tail = diary.read_bytes()[-200_000:].decode("utf-8", errors="replace")
+        turns = [int(n) for n in re.findall(r'"turn":\s*(\d+)', tail)]
+        if turns:
+            return max(turns)
+    return None
 
 
 def named_tasks(text: str) -> set[str]:
@@ -189,6 +252,30 @@ class TestEveryTaskFileIsRetirable:
                 if l.startswith("expires:")
             )
             assert re.search(r"turn \d+", line), f"{path.name}'s expiry has no turn: {line!r}"
+
+    def test_no_task_in_the_directory_is_past_its_expiry(self):
+        """An expired task left behind is an instruction that never retires.
+
+        Measured 2026-09-27: 016's `expires:` was `turn 190` and the game reached T193 before anyone
+        moved it, and **the other tests in this class were all green** - the list, the register and the
+        directory agreed with each other perfectly, because none of them knows what turn it is. This is
+        the clock, and it is offline: the newest save names the turn.
+        """
+        turn = game_turn()
+        if turn is None:
+            pytest.skip("no save, heartbeat or diary to read a turn from")
+        late = [
+            (path.name, expiry)
+            for path in task_files()
+            if (expiry := expires_turn(path)) is not None and expiry < turn
+        ]
+        assert not late, (
+            f"the game is on turn {turn} and these files are past their expiry: "
+            + "; ".join(f"{name} (expires turn {n})" for name, n in late)
+            + ". Retire each one in the turn it ends: move it to `done/` as `-expired-T<turn>.md`, or as"
+            " `-done-T<turn>.md` when its `done when:` holds, update `IN FORCE NOW` and"
+            " `current_tasks.md` in the same commit, and record the turn in the diary's `tooling` line."
+        )
 
     def test_done_holds_no_instructions(self):
         # done/ is a record. A task file there must not be readable as an instruction, so nothing

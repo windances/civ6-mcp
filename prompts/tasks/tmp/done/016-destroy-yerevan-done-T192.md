@@ -117,3 +117,29 @@ produced the wall number; the declaration turn and the turn the first volley lan
 turn and the supply line; the capture resolution; and the cost — units lost, gold spent (and which
 line of 013's earmark it came from), grievances and Egypt's reaction. If it expires, say where the
 train stood, what the walls read when probed, and what blocked the assault.
+
+## Outcome — retired **done** at T192, and who actually took the city
+
+The `done when:` held: **Yerevan (63,37) is ours.** The session that took over at T192 verified it from
+the game on its first read — city id **786443**, pop **8**, a **Crossbowman** garrison — and retired this
+file as `-done-T192.md` in the same turn (`tests/test_temp_tasks.py` and this file's `AGENTS.md` line
+agree with `done/`).
+
+**It was not this task's own assault that took it.** The diary's last entry before T192 is T177 and the
+agent's `0_MCP_*` saves stop at T178, so **T178–T191 were played by the human with no session attached**.
+Everything about that window was therefore re-read from the game rather than from the notes at T192:
+the empire went **11 -> 15 cities**, Yerevan was taken, and **three Egyptian cities were ours —
+Memphis (65,41), Shedet (66,45), Abydos (68,38)** — with Egypt (player 7) at war. The consequences for
+the record: the assault's own numbers, which the "Report when it is done" section below asks for — the
+probe that read the walls, the declaration turn, the shots per turn, the supply line, the capture
+resolution — **were never observed by an agent and cannot be reconstructed**; the staging plan this file
+carried stopped at the T177 assembly, in the diary.
+
+**The cost it predicted was paid, and it is on the ledger.** The file said capturing a city-state
+"removes the bonus from the board for both of us". The T194 ten-turn review records exactly that:
+switching Classical Republic -> Merchant Republic **and losing Yerevan's city-state bonuses** moved the
+passive yields (science -11.6, culture -5.5 across that window). So the annexation cost the suzerain
+bonus as forecast, and it bought no Domination progress — the three cities that did count were Egypt's.
+
+Sources: diary T192 (the verification and this retirement), diary T194 (the lost bonus),
+`docs/task-history.md` (this file as it stood at the 2026-09-26 split).

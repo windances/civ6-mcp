@@ -21,4 +21,3 @@ ones measured.
 |---|---|---|---|---|
 | `013-upgrade-and-scout.md` | 2026-09-26 | turn 195 | 攒钱升级部队，侦察兵找下一个战前分析目标 — the gold is earmarked for a named upgrade list and the scouts find the target that list exists for | the war upgrades are paid for and a candidate is read in (x,y) |
 | `014-destroy-missionaries-everywhere.md` | 2026-09-26 | turn 200 | 全域消灭传教士 — every hostile religious unit on the map; at peace only the sweep is possible | no hostile religious unit is left anywhere we can see — `count == 0` |
-| `016-destroy-yerevan.md` | 2026-09-26 | turn 190 | 战前集结，消灭埃里温 — stage the assault on Yerevan (player 8) inside its 2-tile strike and take the city | Yerevan (63,37) is ours |
