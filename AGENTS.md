@@ -7,76 +7,103 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`012-novgorod-pre-war-analysis.md`, `011-destroy-chengdu-ring.md`, `010-rescue-chengdu.md`,
-`007-destroy-russia.md`, `008-destroy-missionaries.md`, `009-city-near-niter.md`.
+`013-upgrade-and-scout.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
 establishment complete on paper but the iron still `0/50` and the target city never read in its four
 numbers, and `005-city-near-copper` was retired **EXPIRED at T115** with no copper city founded: the
 site at (50,33) was a bonus tile worth about +2 gold and never justified a sixth city, which is
-exactly what that file said to do if the ranking came out badly. All six sit in
-`prompts/tasks/tmp/done/` with the turn in their name. **This list and that directory are checked
-against each other** by `tests/test_temp_tasks.py`, so a retirement that is not recorded here goes red
-instead of quietly staying in force.)
+exactly what that file said to do if the ranking came out badly. Then the war ended: at **T165**
+`007-destroy-russia` was **done** (Russia is eliminated), `008-destroy-missionaries` was **done with a
+zero count** (no hostile religious unit anywhere we could see, both `condemn` refusals recorded) and
+`012-novgorod-pre-war-analysis` was **done** (诺夫哥罗德 read in its four numbers and taken); at
+**T166** `010-rescue-chengdu` and `011-destroy-chengdu-ring` were both **done** — 成都 reads walls
+100/100 with a Warrior garrison, a radius-3 sweep holds **no hostile unit at all**, and the pillaged
+IRON mine is repaired; and at **T168** `009-city-near-niter` was **done** — 胶东 (54,21) owns the
+NITER at (53,21) and a Builder mined it. All **twelve** sit in `prompts/tasks/tmp/done/` with the turn
+in their name. **This list and that directory are checked against each other** by
+`tests/test_temp_tasks.py`, so a retirement that is not recorded here goes red instead of quietly
+staying in force.)
 
-Priority: **007 outranks everything else** — it is the objective (消灭俄罗斯) rather than a build order.
-Its gates are the directive's own
-checklist: **3 Catapults per city** (一城3投石车 — met at T122), a melee unit above the Warrior tier
-once the iron stockpile passes 20, and a four-number read of **the first target** before any
-declaration — **not of every Russian city** (human instruction 2026-09-26: 不用获取所有城市信息才开战;
-the rest are read as the army reaches them, and scouting them is not a gate). **The Battering Ram the
-empire already owns joins the assault** (human instruction 2026-09-26: 已经有攻城锤，就参战) — a support
-unit beside the melee, where it makes their attacks do full damage against walls; nothing new is built,
-and beside a city read as `walls none` it is dead weight. It is also the **only**
-file that authorizes the declaration of war on Russia; 006 deliberately did not.
+**The Russian war is over (T165) and the conquest task is retired with it.** Russia is eliminated:
+诺夫哥罗德 (61,42) was its last city, taken at T165, and the five cities we took — 阿斯特拉罕 (54,40),
+沃罗涅什 (50,37), 圣彼得堡 (56,43, its former capital), 喀山 (58,39) and 诺夫哥罗德 — are all resolved
+with `city_action keep` and all garrisoned. The **file** is gone; the **directive's conquest rules are
+not** — no peace with anyone while a war stands, one garrison per captured city, and the same three
+phases (战前分析 `tactics/07`, 集结 `tactics/04`, 执行 `tactics/05`/`06`) before the next war. What this
+war measured, so the next one does not have to rediscover it:
 
-**008 rides along with 007, it does not postpone it**: destroying missionaries is lane-clearing, not a
-second war. The verb now exists — `unit_action(action="condemn")` implements the game's own
-`UNITCOMMAND_CONDEMN_HERETIC` (added 2026-09-26, live at the next MCP start), reporting every adjacent
-candidate before it fires — and **the game itself requires a war declaration** for it, so the case it
-serves is a Russian missionary once 007 declares: a civ we are at peace with cannot be condemned by
-tool or human (`ERR:REQUIRES_WAR`). Record the reply either way in the diary's `tooling` line.
+- **The Trebuchet is the wall-breaker — not the melee, and not the Battering Ram.** One Trebuchet shot
+  at 诺夫哥罗德 took the walls `92 -> 34` (**58 points**), while a Man-at-Arms standing on a tile
+  adjacent to the city, with the Ram on another adjacent tile, did **8** on its first hit — the bare
+  number the doctrine quotes as the no-Ram case. The Ram's text says "when adjacent to a city, attacking
+  melee units do full damage to Walls"; it did not apply from `(61,41)` with the Ram at `(60,43)`, so
+  **stack it with the attacker and re-measure before trusting it**. Once the walls read 0 the same melee
+  hits took **23–48** off the HP pool.
+- **A melee attack that reduces a city to 0 captures it outright.** No separate walk-in move is needed:
+  the attack's own estimate read `CITY_CENTER (CS:0, HP:-156)` and the city was ours, with the attacker
+  standing on its tile (the follow-up `move` answered `STACKING_CONFLICT ... already on (61,42)`).
+- **A combat reply that repeats byte-identically is a phantom attack.** The adapter kept offering a
+  legal attack the engine had stopped accepting; a `move` onto the city tile settled it by answering
+  `CAPTURE_MOVE|BLOCKED`. Verify with a different call instead of repeating the same one.
+- **`get_diplomacy`'s `walls N` is a static maximum.** It still read `walls 100` while the walls stood
+  at 0. Read walls and HP from a combat result line or from `SIEGE PROGRESS`, never from that line.
+- **`get_staging_plan` will post a Crouching Tiger at a d2 tile labelled "short-ranged".** The Tiger has
+  **Range 1** and cannot fire from there; it needs a d1 tile it can reach with a movement point spare.
 
-**009 is third and waits on the war**: a Niter city, with a Settler (80 hammers) allowed in a city that
-is **not** the war city, an escort out of the garrison rotation, and nothing pulled off the staging row
-or the declaration. Its expiry (T175) is counted from the queue, because 005 expired unused by being
-counted from the calendar.
+**008 rides along with 007, and both are now retired** — kept here only for the verb: destroying
+missionaries is lane-clearing, not a second war. `unit_action(action="condemn")` implements the game's own
+`UNITCOMMAND_CONDEMN_HERETIC` and **the game itself requires a war declaration** for it, so a civ we are
+at peace with cannot be condemned by tool or human (`ERR:REQUIRES_WAR`). Both attempts in this game
+returned `ERR:NO_RELIGIOUS_TARGET`, and it was **an adjacency fact, not a tool failure**: the unit had to
+be within one tile of the missionary, and it was two. Record the reply either way in the diary's
+`tooling` line.
 
-**010 is the defensive exception, and it outranks 007 for the units it needs** (human instruction
-2026-09-26: 救援成都). A levied Yerevan Man-at-Arms and a levied Horseman are on 成都's ring —
-Yerevan is Russia's suzerain city-state, so the raid is Russia's war by proxy — 成都 had no garrison
-until T155 and no walls until ~T157, and the raid has already **pillaged 成都's IRON mine at (60,32)**,
-which is the resource every melee upgrade in this war runs on. Unit survival comes before the war
-aim: lift the raid with the city's own ranged strike, the garrison and the nearest ranged unit, then
-repair the mine. It authorizes **no** peace with Russia, **no** attack on Yerevan itself, and **no**
-pulling of the siege train off 圣彼得堡's wall phase.
+**009 retired at T168** and was the cleanest of the twelve: 胶东 (54,21) was founded with the NITER at
+**(53,21)** inside its border, 上海's Builder walked there, and `IMPROVEMENT_MINE` went in — no feature
+to clear first, no escort needed, and no delay to the war it was told to stay out of. The one lesson it
+carries is the one that let it work: **its expiry was written from the queue, not the calendar**, which
+is exactly why 005 expired unused and this one closed early.
 
-**011 is 010's escalation** (human instruction 2026-09-26: 消灭成都外围部队): 010 says the city is
-safe (no hostile within 2 tiles, walls up, mine repaired); 011 says the **ring out to 3 tiles is
-empty** — the levied units' staging ground — with the same mine repaired at the end. While both are
-in force, 010's `done when` is the intermediate checkpoint and 011's is the objective; it outranks
-010's *hold* posture for the units it needs and 007's timetable for those same units, and it
-authorizes nothing else (no peace, no attack on Yerevan, no pulling the train off 喀山 or
-圣彼得堡). The rules that already cover the fighting — `use-your-attacks`, `mass-on-contact`,
-`finish-the-wounded`, `hold-what-you-take` — fired correctly on this raid; what they cannot express
-is the objective, which is why it is a file. Its clearing method is written down: the city's own
-43-damage strike does the work (it is the strongest single attack in the empire), the Warrior
-**never** sorties (a CS 20 attack on a CS 45 levied Man-at-Arms reads `attacker likely dies`), and
-the mobile surplus takes the units out of the city's 2-tile reach.
+**013 is the peacetime task** (human instruction 2026-09-26: 攒钱升级部队，侦察兵找下一个战前分析目标),
+and it is one file because the two halves answer to each other: the gold is earmarked for a named
+upgrade list, and the scouts go find the target that list exists for. **The list is exact** — two
+Man-at-Arms → MUSKETMAN at 85g each, three Trebuchets → BOMBARD at 85g each (a Trebuchet shot took
+诺夫哥罗德's walls `92 -> 34`, so the next tier of that tool is the empire's cheapest damage), and the
+Scout → SKIRMISHER at 125g last and droppable. **The Siege Tower is not on the list even though the
+game offers it for 40g**: 不用锤，用投石车 forbids it, and the file says so in its `overrides:` line. It
+holds a **100g floor** so an emergency purchase stays possible, which is why 425g of war upgrades runs
+to ~T195 at +15.3g/turn. The recon half is `tactics/07` **Step 0** — `get_deal_options` on both met
+civs first (no unit moves), then the two Scouts and the Knight into the fog that hides **four unmet
+civilisations** and all five cities of the civ that has denounced us — and it ends in either a
+candidate read in its four numbers or an explicit `no candidate visible` report. It authorizes no
+declaration, no peace and no raid; it produces the *input* to the next 战前分析.
 
-**012 is 007's last step, written out** (human instruction 2026-09-26: run the pre-war analysis on the
-next target): Russia is down to one city — 诺夫哥罗德 (61,42), pop 2, `walls 100`, ungarrisoned, its
-loyalty draining `-3.7/t` so it would revolt to a Free City in ~27 turns — and 007's `done when` is
-exactly that city. The file carries the four numbers, the five gates of `tactics/07` and the arithmetic
-this army actually has: 3 Trebuchets are **135–165 gross** a turn against a ~20/turn heal while the
-supply line is open (`3/6` cut at T161), a **bare melee attack does 9 against 100 walls** where the same
-attack beside the Ram does full damage, and a d2 melee unit cannot close and strike in the same turn
-(T160, measured twice) so the capture pair must be parked at d1 a turn early. It outranks 007's
-timetable only in the direction of arriving together, and 011 outranks it for the 成都 ring. It is a
-file rather than a rule because the two blocks that would have carried it are the two measured broken:
-`SIEGE FIRE` is suppressed while the whole train sits beyond city-distance 3, and `get_staging_plan`'s
-`arrive T+n` does not know that our own units jam the corridor.
+**010 and 011 retired together at T166, and their one durable correction is a coordinate.** Both files
+named **成都's IRON mine at (60,32)** as the pillaged tile; the tool proved otherwise — `repair` there
+answered `NOT_PILLAGED`, and the map showed `(60,32)` intact with the pillage on **(61,32)**, the tile
+the levied Man-at-Arms was standing on. The city's own row prints `!! PILLAGED TILES: MINE, 32` with the
+**y coordinate only**, which is exactly how both files came to name the wrong hex; a tile-level read
+settles it, and a y-only narration never should. What the raid itself taught: **the city's ranged strike
+is the cheapest weapon in the empire** (43 damage, no retaliation, and it killed a levied Horseman and a
+levied Man-at-Arms outright), **the Warrior never sorties** (a CS 20 attack into a CS 45 Man-at-Arms
+reads `attacker likely dies`, and the garrison's job is to hold the tile for `hold-what-you-take`), and
+**a hostile religious unit is not always removable** — `condemn` needs one tile of adjacency, not two,
+and city strikes return `NO_ENEMY` against a Missionary. The ring emptied not because we cleared it but
+because **Russia's destruction dissolved the Yerevan levy**, and we took Yerevan's suzerainty the turn
+after: an enemy that is a city-state's proxy dies with the suzerain.
+
+**012 is retired (T165) and what survives is the reading habit it carried.** The requirement it existed
+to enforce still holds for any walled target: **read the target in its four numbers — garrison / walls /
+HP pool / ring — from result lines, never from `get_diplomacy`** (whose `walls N` is a static maximum:
+it still read `walls 100` while 诺夫哥罗德's walls stood at 0). Two further traps it named are now
+confirmed: `get_staging_plan` will post a **Crouching Tiger** at a d2 tile labelled "short-ranged", and
+the Tiger has **Range 1** and cannot fire from there at all; and **the pathfinder drifts west** — orders
+for a Knight at (58,35) and a Trebuchet at (58,36) both resolved to tiles *west* of their start
+((57,38) and (57,37)), the same signature as the T159 eight-order batch. The two blocks the file was
+written for were indeed the broken ones: `SIEGE FIRE` speaks only once a shooter is inside range 2, and
+`get_staging_plan`'s `arrive T+n` does not know that our own units jam the corridor.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
