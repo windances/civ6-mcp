@@ -1,4 +1,4 @@
-"""MCP server for Civilization VI 鈥?lets LLM agents read game state and play.
+"""MCP server for Civilization VI —lets LLM agents read game state and play.
 
 Uses FastMCP with the lifespan pattern to maintain a persistent TCP connection
 to the running game via FireTuner protocol.
@@ -97,7 +97,7 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
     result = await asyncio.to_thread(game_launcher._launch_game_sync)
     log.info("Auto-boot: launch result: %s", result)
 
-    # 2. Connect to FireTuner (retry 鈥?game takes time to start)
+    # 2. Connect to FireTuner (retry —game takes time to start)
     for attempt in range(90):
         try:
             await conn.connect()
@@ -115,14 +115,14 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
 
     # 2b. Verify Lua states exist (port can open before game initialises).
     # A hung splash screen ("Loading, Please Wait...") has port open but
-    # GameCore never appears. Skip this check 鈥?the main menu legitimately
+    # GameCore never appears. Skip this check —the main menu legitimately
     # has no GameCore on any platform; it only appears after a save is
     # loaded (step 3). The splash hang detection was causing false kills
     # when autosaves were cleaned (game stays at main menu, no GameCore).
-    if conn.gamecore_index is None and False:  # disabled 鈥?see comment above
+    if conn.gamecore_index is None and False:  # disabled —see comment above
         log.warning(
             "Auto-boot: FireTuner connected but GameCore not found "
-            "鈥?game may be hung at splash screen"
+            "—game may be hung at splash screen"
         )
         for retry in range(30):
             await asyncio.sleep(2)
@@ -134,7 +134,7 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
             except ConnectionError:
                 pass
         else:
-            log.error("Auto-boot: GameCore never appeared 鈥?killing hung game")
+            log.error("Auto-boot: GameCore never appeared —killing hung game")
             heartbeat.write("error")
             await asyncio.to_thread(game_launcher._kill_game_sync)
             await asyncio.sleep(5)
@@ -150,7 +150,7 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
                     pass
                 await asyncio.sleep(1)
             if conn.gamecore_index is None:
-                log.error("Auto-boot: relaunch also failed 鈥?giving up")
+                log.error("Auto-boot: relaunch also failed —giving up")
                 heartbeat.write("error")
                 return
 
@@ -162,7 +162,7 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
 
     # 4. Wait for save to load, click through leader intro, then reconnect.
     # The CONTINUE GAME button on the leader screen has low-contrast
-    # teal-on-teal text that OCR often misses 鈥?fall back to positional
+    # teal-on-teal text that OCR often misses —fall back to positional
     # click grid if OCR fails. Verify the click actually worked by
     # checking for Lua states (only available once in-game, not on leader
     # screen).
@@ -176,10 +176,10 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
     if clicked:
         log.info("Auto-boot: clicked CONTINUE GAME via OCR")
     else:
-        log.warning("Auto-boot: OCR missed CONTINUE 鈥?using positional click grid")
+        log.warning("Auto-boot: OCR missed CONTINUE —using positional click grid")
         await asyncio.to_thread(game_launcher._click_continue_positional)
 
-    # Verify the click worked 鈥?Lua states only appear once past the
+    # Verify the click worked —Lua states only appear once past the
     # leader screen into gameplay. Retry positional click if needed.
     await asyncio.sleep(3)
     game_ready = False
@@ -201,13 +201,13 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
                 await asyncio.to_thread(game_launcher._click_continue_positional)
         await asyncio.sleep(1)
     if not game_ready:
-        log.warning("Auto-boot: save may not have loaded 鈥?GameCore not found")
+        log.warning("Auto-boot: save may not have loaded —GameCore not found")
         heartbeat.write("error")
         return
 
     # 5. Verify correct save loaded. If the wrong save loaded (e.g.
     # main-menu "Continue Game" loaded a stale autosave instead of the
-    # scenario save), reload the correct one via Lua 鈥?no OCR needed.
+    # scenario save), reload the correct one via Lua —no OCR needed.
     try:
         verify = await conn.execute_read(
             "local t = Game.GetCurrentGameTurn(); "
@@ -219,12 +219,12 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
                 turn = int(line.split("|")[1])
                 if turn > 5:
                     log.error(
-                        "Auto-boot: loaded T%d but expected T1 鈥?wrong save! "
+                        "Auto-boot: loaded T%d but expected T1 —wrong save! "
                         "Reloading '%s' via Lua",
                         turn,
                         save_name,
                     )
-                    # Retry via Lua (Network.LoadGame) 鈥?bypasses OCR entirely
+                    # Retry via Lua (Network.LoadGame) —bypasses OCR entirely
                     result = await load_game_save(conn, save_name)
                     log.info("Auto-boot: Lua reload result: %s", result)
                     await asyncio.sleep(15)
@@ -252,7 +252,7 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
                                 if t2 > 5:
                                     log.error(
                                         "Auto-boot: Lua reload also loaded T%d "
-                                        "鈥?falling back to kill + OCR",
+                                        "—falling back to kill + OCR",
                                         t2,
                                     )
                                     await game_launcher.kill_game()
@@ -291,7 +291,7 @@ async def _auto_boot(conn: GameConnection, save_name: str) -> None:
 async def lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     conn = GameConnection()
 
-    # Telemetry emitter 鈥?routes events to local JSONL + optional cloud sink
+    # Telemetry emitter —routes events to local JSONL + optional cloud sink
     emitter = TelemetryEmitter()
     emitter.add_sink(LocalSink())
     cloud_bucket = os.environ.get("CIV_MCP_TELEMETRY_BUCKET")
@@ -465,7 +465,7 @@ async def _logged(
         if _logged._conn_errors >= 5:
             log.error(
                 "CONNECTION RECOVERY: %d consecutive connection failures "
-                "鈥?triggering restart_and_load",
+                "—triggering restart_and_load",
                 _logged._conn_errors,
             )
             _logged._conn_errors = 0
@@ -494,7 +494,7 @@ async def _logged(
                 log.error("CONNECTION RECOVERY: restart failed", exc_info=True)
 
         return result
-    # Success 鈥?reset connection error counter + refresh heartbeat
+    # Success —reset connection error counter + refresh heartbeat
     _logged._conn_errors = 0
     heartbeat.write("playing", turn=turn or 0)
     ms = int((time.monotonic() - start) * 1000)
@@ -567,12 +567,12 @@ async def get_game_overview(ctx: Context) -> str:
             )
             if gameover.is_defeat:
                 text += (
-                    f"\n\n*** GAME OVER 鈥?DEFEAT ***\n"
+                    f"\n\n*** GAME OVER —DEFEAT ***\n"
                     f"{gameover.winner_leader} of {gameover.winner_name} won a {vtype} victory.\n"
                     f"No further actions are possible."
                 )
             else:
-                text += f"\n\n*** GAME OVER 鈥?VICTORY ***\nYou won a {vtype} victory!"
+                text += f"\n\n*** GAME OVER —VICTORY ***\nYou won a {vtype} victory!"
             try:
                 await logger.log_game_over(
                     is_defeat=gameover.is_defeat,
@@ -802,7 +802,7 @@ async def get_staging_plan(
 ) -> str:
     """Plan the assembly before moving anything: which unit takes which ring tile, and when.
 
-    Human instruction 2026-09-26: 鍦ㄩ泦缁撳墠锛岃鍒掗泦缁撴柟妗堬紝涓嶈兘琚牭浣忥紝涓嶅悓閮ㄩ槦绉诲姩鍔涗笉涓€鏍凤紝鎵惧埌鏈€浼?    闆嗙粨鏂规鍚庯紝鎵嶅紑濮嬫墽琛? Give it the tile of the city you are about to assault and it returns
+    Human instruction 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优集结方案后，才开始执行. Give it the tile of the city you are about to assault and it returns
     the ring, every fighting unit's path to each ring tile (the game's own pathfinding), and one
     assignment: distinct tiles, shooters on the distance-2 tiles, melee on the adjacent one, and
     the conflicts named so nobody is ordered onto an occupied tile (`STACKING_CONFLICT`).
@@ -814,9 +814,9 @@ async def get_staging_plan(
     for a camp is only the last step, because one military unit moving onto its tile destroys it -
     the guard, not the camp, is the enemy, and the walk-in must arrive unspent.
 
-    Pass the **next** objective's tile (`next_city_x`/`next_city_y` 鈥?the next city or a
+    Pass the **next** objective's tile (`next_city_x`/`next_city_y` —the next city or a
     barbarian camp) and the surplus that is not needed for the supply line is pushed toward it
-    instead of idling: 澶氫綑閮ㄩ槦杩樺彲浠ュ悜涓嬩竴涓煄甯傜洰鏍?铔棌钀ュ湴闆嗙粨鎺ㄨ繘. The march is what the last
+    instead of idling: 多余部队还可以向下一个城市目标/蛮族营地集结推进. The march is what the last
     deadline was lost to, so a unit that will be needed there moves now.
 
     Read it **before** the first move of an assembly. It answers the three questions the plan
@@ -888,7 +888,7 @@ async def get_builder_tasks(ctx: Context) -> str:
     """Get a prioritized task board for all your builders.
 
     Scans your territory for tiles needing improvements and matches them
-    with idle builders. Like the builder lens in the UI 鈥?shows what to
+    with idle builders. Like the builder lens in the UI —shows what to
     build where and which builder is closest.
 
     Priority tiers:
@@ -1321,7 +1321,7 @@ async def choose_dedication(ctx: Context, dedication_index: int) -> str:
 
 @mcp.tool(annotations={"readOnlyHint": True})
 async def get_trade_options(ctx: Context, other_player_id: int) -> str:
-    """See what both sides can trade 鈥?like opening the trade screen.
+    """See what both sides can trade —like opening the trade screen.
 
     Args:
         other_player_id: The player ID (from get_diplomacy output)
@@ -1431,7 +1431,7 @@ async def propose_trade(
     if request_open_borders:
         request_items.append({"type": "AGREEMENT", "subtype": "OPEN_BORDERS"})
     if joint_war_target > 0:
-        # Joint war is mutual 鈥?both sides commit
+        # Joint war is mutual —both sides commit
         offer_items.append({"type": "AGREEMENT", "subtype": "JOINT_WAR"})
         request_items.append({"type": "AGREEMENT", "subtype": "JOINT_WAR"})
 
@@ -1664,7 +1664,7 @@ async def unit_action(
     For repair: repairs a pillaged improvement on the builder's current tile. No improvement name needed.
     For remove_improvement: demolishes an intact improvement on the builder's current tile (e.g. to replace a farm with a mine). Costs one charge.
     For activate: activates a Great Person on their matching district.
-    For sacrifice_charges: Royal Society builder sacrifice 鈥?spends ALL builder charges to boost a district project (2% of cost per charge). Builder must be on the district tile.
+    For sacrifice_charges: Royal Society builder sacrifice —spends ALL builder charges to boost a district project (2% of cost per charge). Builder must be on the district tile.
     For spread_religion: spreads religion at current tile. Missionaries/Apostles only.
     For build_route: builds road/railroad on current tile. Military Engineers only. No charges used; costs 1 Iron + 1 Coal per railroad tile.
     For fortify/skip/found_city/automate/heal/alert/sleep/delete: no target needed.
@@ -1745,7 +1745,7 @@ async def unit_action(
         and target_x is not None
         and target_y is not None
     ):
-        _get_camera(ctx).push(target_x, target_y, f"{action}鈫?{target_x},{target_y})")
+        _get_camera(ctx).push(target_x, target_y, f"{action}→{target_x},{target_y})")
     return result
 
 
@@ -1754,7 +1754,7 @@ async def skip_remaining_units(ctx: Context, force: bool = False) -> str:
     """Skip all units that still have moves remaining.
 
     Useful after diplomacy encounters invalidate all standing orders.
-    Uses GameCore FinishMoves on each unit 鈥?fast, reliable, no async issues.
+    Uses GameCore FinishMoves on each unit —fast, reliable, no async issues.
 
     **Refuses when a unit still has a legal attack**, naming it, and touches nothing: an
     attack discarded here is gone for the turn, and four were lost that way over the
@@ -1784,7 +1784,7 @@ async def set_city_production(
         city_id: City ID (from get_cities output)
         item_type: UNIT, BUILDING, DISTRICT, or PROJECT
         item_name: e.g. UNIT_WARRIOR, BUILDING_MONUMENT, DISTRICT_CAMPUS, PROJECT_LAUNCH_EARTH_SATELLITE
-        target_x: X coordinate for district/wonder placement (required for districts 鈥?use get_district_advisor to find best tile)
+        target_x: X coordinate for district/wonder placement (required for districts —use get_district_advisor to find best tile)
         target_y: Y coordinate for district/wonder placement
 
     Tip: call get_cities first to see your cities and their IDs.
@@ -1950,18 +1950,18 @@ async def end_turn(
     before ending the turn.
 
     All 5 reflection parameters are required and must be non-empty.
-    These form the per-turn diary 鈥?your persistent memory across sessions:
-        tactical: What happened this turn 鈥?combat, movements, improvements.
-        strategic: Current standing vs rivals 鈥?yields, city count, victory path.
+    These form the per-turn diary —your persistent memory across sessions:
+        tactical: What happened this turn —combat, movements, improvements.
+        strategic: Current standing vs rivals —yields, city count, victory path.
         tooling: Tool issues or observations. Write "No issues" if none.
         planning: Concrete actions for the next 5-10 turns.
-        hypothesis: Predictions 鈥?enemy behavior, resource needs, timelines.
+        hypothesis: Predictions —enemy behavior, resource needs, timelines.
 
     IMPORTANT: Reflections are recorded BEFORE the AI processes its turn.
     Anything that surfaces after end_turn (diplomacy proposals, AI movements,
     events reported in the turn result) belongs in the NEXT turn's diary.
     If end_turn is blocked and you call it again after resolving the blocker,
-    the diary entry from the first call is kept 鈥?do not repeat reflections.
+    the diary entry from the first call is kept —do not repeat reflections.
     """
     gs = _get_game(ctx)
 
@@ -2016,7 +2016,7 @@ async def end_turn(
     if _is_retry and _diary_civ_type is not None:
         # Merge reflections into the most recent agent row (from the
         # previous end_turn call that wrote before hitting a blocker).
-        # Merges into whichever turn that row belongs to 鈥?handles both
+        # Merges into whichever turn that row belongs to —handles both
         # same-turn retries and turn-advanced-during-blocker cases.
         try:
             path = _diary_path(_diary_civ_type, _diary_seed, _diary_run_id)
@@ -2130,7 +2130,7 @@ async def end_turn(
         if _hang_window_unfocused(diagnosis):
             log.warning(
                 "HANG DIAGNOSIS T%s: game window was not in the foreground "
-                "(%s) 鈥?re-focusing and retrying end_turn before any restart",
+                "(%s) —re-focusing and retrying end_turn before any restart",
                 _diag_turn,
                 (diagnosis.get("window") or {}).get("foreground_window", "?"),
             )
@@ -2162,7 +2162,7 @@ async def end_turn(
                 "HANG RECOVERY: Save file %s not found, cannot auto-recover",
                 save_path,
             )
-            # Fall through 鈥?return the hang message to agent
+            # Fall through —return the hang message to agent
         else:
             identity_before = gs._game_identity
             gs._hang_retry_active = True
@@ -2207,7 +2207,7 @@ async def end_turn(
 
                     # Step 2b: Verify correct game loaded (with retries).
                     # The game may still be on the leader screen after
-                    # restart 鈥?Lua states exist but game APIs aren't
+                    # restart —Lua states exist but game APIs aren't
                     # fully initialized. Retry the check rather than
                     # restarting the entire recovery cycle.
                     if identity_before is not None:
@@ -2235,7 +2235,7 @@ async def end_turn(
                         if not identity_ok:
                             log.warning(
                                 "HANG RECOVERY: identity check inconclusive "
-                                "鈥?proceeding anyway (attempt %d)",
+                                "—proceeding anyway (attempt %d)",
                                 attempt,
                             )
 
@@ -2266,7 +2266,7 @@ async def end_turn(
                             hang_turn,
                             attempt,
                         )
-                        break  # success 鈥?fall through to normal processing
+                        break  # success —fall through to normal processing
                 else:
                     # All retries exhausted
                     earlier = max(1, hang_turn_int - 3)
@@ -2279,7 +2279,7 @@ async def end_turn(
                         f"AI turn hung at T{hang_turn} after "
                         f"{_MAX_HANG_RETRIES} automatic restart attempts "
                         f"with escalating waits. The hang may be "
-                        f"probabilistic 鈥?another attempt could work. "
+                        f"probabilistic —another attempt could work. "
                         f"Try restart_and_load('{hang_save.replace(hang_turn, str(earlier))}') "
                         f"to skip back a few turns."
                     )
@@ -2307,7 +2307,7 @@ async def end_turn(
             _get_logger(ctx).set_turn(new_turn)
             _get_spatial(ctx).set_turn(new_turn)
             heartbeat.write("playing", turn=new_turn)
-        # Map capture 鈥?record terrain (first turn) + ownership delta
+        # Map capture —record terrain (first turn) + ownership delta
         if _diary_civ_type and _diary_seed:
             try:
                 mc = _get_map_capture(ctx)
@@ -2328,7 +2328,7 @@ async def end_turn(
                 gs._wc_blocker_count = wc_count + 1
                 if gs._wc_blocker_count >= 3:
                     log.warning(
-                        "WC blocker repeated %d times on T%d 鈥?auto-submitting",
+                        "WC blocker repeated %d times on T%d —auto-submitting",
                         gs._wc_blocker_count,
                         current,
                     )
@@ -2341,7 +2341,7 @@ async def end_turn(
                 gs._wc_blocker_count = 1
 
     # Log structured game-over entry.
-    # Also check on HANG 鈥?the game may have ended during AI processing but
+    # Also check on HANG —the game may have ended during AI processing but
     # InGame Lua froze, so end_turn returned HANG instead of GAME OVER.
     # The GameCore fallback in check_game_over can detect this.
     if "HANG:" in result and "GAME OVER" not in result:
@@ -2356,13 +2356,13 @@ async def end_turn(
                 )
                 if hang_check.is_defeat:
                     result = (
-                        f"GAME OVER 鈥?DEFEAT. {hang_check.winner_leader} "
+                        f"GAME OVER —DEFEAT. {hang_check.winner_leader} "
                         f"of {hang_check.winner_name} won a {vtype} victory. "
                         f"The game has ended. No further actions are possible."
                     )
                 else:
                     result = (
-                        f"GAME OVER 鈥?VICTORY! You won a {vtype} victory! "
+                        f"GAME OVER —VICTORY! You won a {vtype} victory! "
                         f"The game has ended."
                     )
         except Exception:
@@ -2391,7 +2391,7 @@ async def end_turn(
             else:
                 log.error(
                     "GAME OVER detected but no GameOverStatus available "
-                    "鈥?outcome will be missing from log"
+                    "—outcome will be missing from log"
                 )
         except Exception:
             log.warning("Failed to log game-over entry", exc_info=True)
@@ -2475,7 +2475,7 @@ async def get_diary(
     if not entries:
         return f"No diary entries yet for this game ({civ_type}, seed {seed})."
 
-    # New format (v2) has N rows per turn 鈥?filter to agent rows only.
+    # New format (v2) has N rows per turn —filter to agent rows only.
     # Old format entries (no "v" key) pass through unchanged.
     entries = [e for e in entries if "v" not in e or e.get("is_agent")]
 
@@ -2954,7 +2954,7 @@ async def dismiss_popup(ctx: Context) -> str:
 
 @mcp.tool(annotations={"destructiveHint": True})
 async def run_lua(ctx: Context, code: str, context: str = "gamecore") -> str:
-    """Run arbitrary Lua code in the game. Advanced escape hatch 鈥?prefer built-in tools.
+    """Run arbitrary Lua code in the game. Advanced escape hatch —prefer built-in tools.
 
     Args:
         code: Lua code to execute. Use print() for output, end with print("---END---").
@@ -2962,7 +2962,7 @@ async def run_lua(ctx: Context, code: str, context: str = "gamecore") -> str:
                  "ingame" for commands and UI-dependent queries.
 
     Context differences:
-      gamecore: Players[], GameInfo.*, Map.*, Game.* 鈥?safe read-only access.
+      gamecore: Players[], GameInfo.*, Map.*, Game.* —safe read-only access.
                 CANNOT use: UI.*, UnitManager.*, CityManager.*, notifications.
       ingame:   All APIs including UI.*, UnitManager.*, CityManager.*.
                 Use for: moving units, setting research, diplomacy actions.
@@ -3031,7 +3031,7 @@ async def load_game_save(ctx: Context, save_name: str) -> str:
 # ---------------------------------------------------------------------------
 # Game Lifecycle (kill / launch / load from menu)
 # ---------------------------------------------------------------------------
-# These tools do NOT require a FireTuner connection 鈥?they manage the game
+# These tools do NOT require a FireTuner connection —they manage the game
 # process itself. Hardcoded to Civ 6 only (no arbitrary system commands).
 
 
@@ -3049,7 +3049,7 @@ async def search_knowledge(
 
     Args:
         query: keywords or a phrase, e.g. "zone of control", "city healing supply line",
-            "鍩庡 淇". Chinese queries fall back to substring matching.
+            "城墙 修复". Chinese queries fall back to substring matching.
         k: how many chunks to return (default 5, max 25).
         doc: restrict to documents whose path contains this, e.g. "manual" or "tactics/06".
     """
@@ -3094,7 +3094,7 @@ async def launch_game(ctx: Context) -> str:
     """Launch Civ 6 via Steam.
 
     Starts the game and waits for the process to appear (~15-30 seconds).
-    The game will be at the main menu after launch 鈥?use load_save or
+    The game will be at the main menu after launch —use load_save or
     restart_and_load to load a specific save.
 
     NOTE: FireTuner connection is NOT available at the main menu.
@@ -3162,7 +3162,7 @@ async def restart_and_load(ctx: Context, save_name: str | None = None, force: bo
             if actual != identity_before:
                 log.warning(
                     "restart_and_load: wrong game loaded "
-                    "(expected %s, got %s) 鈥?retrying",
+                    "(expected %s, got %s) —retrying",
                     identity_before,
                     actual,
                 )
@@ -3206,8 +3206,8 @@ def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    # Remap SIGTERM 鈫?SIGINT so asyncio's existing SIGINT handler triggers a
-    # graceful shutdown (cancels all tasks 鈫?lifespan finally block runs 鈫?    # conn.disconnect() closes the FireTuner TCP connection cleanly).
+    # Remap SIGTERM →SIGINT so asyncio's existing SIGINT handler triggers a
+    # graceful shutdown (cancels all tasks →lifespan finally block runs →    # conn.disconnect() closes the FireTuner TCP connection cleanly).
     # Without this, SIGTERM kills the process immediately, leaving the game
     # with an abrupt TCP RST which can cause it to crash.
     # SIGTERM is not available on Windows, so skip the remap there.

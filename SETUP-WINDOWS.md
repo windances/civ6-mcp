@@ -1,4 +1,4 @@
-﻿# civ6-mcp DSH Orchestrator 鈥?Windows setup record
+﻿# civ6-mcp DSH Orchestrator —Windows setup record
 
 Repo: `https://github.com/windances/civ6-mcp` (fork of `lmwilki/civ6-mcp`)
 Workspace: `C:\mine\mine\ws_dsh\civ6`
@@ -13,19 +13,19 @@ two actions that still need a human.
 
 | Component | State |
 |---|---|
-| Repo source | Downloaded via `codeload.github.com` zip (no `.git` 鈥?see 搂6) |
+| Repo source | Downloaded via `codeload.github.com` zip (no `.git` —see 搂6) |
 | Node.js | v24.11.1 (meets the `>=24` engine) |
-| DSH | `@deepseek-ai/dsh@0.1.2-rc.1` in `node_modules/` 鈥?`dsh --version` replies `0.1.2-rc.1` |
-| `uv` | 0.12.17 鈥?project-local at `.tools/bin/uv.exe` (plus extensionless `.tools/bin/uv`), **and installed globally on PATH** (see 搂7) |
+| DSH | `@deepseek-ai/dsh@0.1.2-rc.1` in `node_modules/` —`dsh --version` replies `0.1.2-rc.1` |
+| `uv` | 0.12.17 —project-local at `.tools/bin/uv.exe` (plus extensionless `.tools/bin/uv`), **and installed globally on PATH** (see 搂7) |
 | Python env | `.venv` on Python 3.12.10, `civ-mcp` entry point present |
-| Static gate | `npm run qualify` 鈥?**PASS** (79 tools inventoried) |
+| Static gate | `npm run qualify` —**PASS** (79 tools inventoried) |
 | Orchestrator tests | **19/19 PASS** |
-| MCP stdio handshake | **PASS** 鈥?75 tools, `run_lua` correctly absent |
+| MCP stdio handshake | **PASS** —75 tools, `run_lua` correctly absent |
 | DSH overlay resolve | **PASS** (`--dump-config`) |
 | Python suite | 96 passed / 3 blocked by the agent sandbox (see 搂6) |
-| **FireTuner on :4318** | **WORKING** 鈥?verified 2026-09-19: `netstat` shows `127.0.0.1:4318 LISTENING`; the adapter read live state (turn 133, China, 4 cities, 15 units) |
-| **CivBench scenario saves** | **INSTALLED** 鈥?`0A_GROUND_CONTROL`, `0B_SNOWFLAKE`, `0C_CRY_HAVOC` copied into the game's `Saves\Single` (22 saves listed in total) |
-| **`DEEPSEEK_API_KEY`** | **NOT SET 鈥?action required (last blocker)** |
+| **FireTuner on :4318** | **WORKING** —verified 2026-09-19: `netstat` shows `127.0.0.1:4318 LISTENING`; the adapter read live state (turn 133, China, 4 cities, 15 units) |
+| **CivBench scenario saves** | **INSTALLED** —`0A_GROUND_CONTROL`, `0B_SNOWFLAKE`, `0C_CRY_HAVOC` copied into the game's `Saves\Single` (22 saves listed in total) |
+| **`DEEPSEEK_API_KEY`** | **NOT SET —action required (last blocker)** |
 
 Qualification totals: **79 tools** available to a plain MCP client; **78** once the DSH
 overlay sets `CIV_MCP_DISABLE_LUA=1`, which is the intended safety control. The two counts that
@@ -46,7 +46,7 @@ python .tools/kb.py stats
 ```
 
 * The index lives at `.tools/kb/knowledge.sqlite` (override with `--db` or
-  `$CIV_MCP_KNOWLEDGE_DB`) and is **per checkout** 鈥?a game clone needs its own
+  `$CIV_MCP_KNOWLEDGE_DB`) and is **per checkout** —a game clone needs its own
   `python .tools/kb.py index` run, and a rebuild after the corpus changes.
 * The manual text is copyrighted and stays local (`.tools/manuals/`); only the reader
   (`.tools/pdf-text.py`) and the indexer are committed.
@@ -64,12 +64,12 @@ their own script file, because PowerShell strips the quotes out of inline `-c ".
 
 ## 2. Required actions (only you can do these)
 
-### 2a. Enable the FireTuner TCP interface 鈥?DONE 鉁?
+### 2a. Enable the FireTuner TCP interface —DONE ✓
 Confirmed working. This section is retained as a reference for the next time the
 setting is lost (e.g. a fresh install or a reset `AppOptions.txt`).
 
 **Config file location on this machine** (the README's documented path is wrong
-here 鈥?see the note below):
+here —see the note below):
 
 ```
 C:\Users\pala\AppData\Local\Firaxis Games\Sid Meier's Civilization VI\AppOptions.txt
@@ -86,8 +86,8 @@ EnableTuner 1
 
 > **Why the README's path misleads:** upstream says to edit
 > `Documents\My Games\Sid Meier's Civilization VI\AppOptions.txt`. On this
-> install, `C:\Users\pala\OneDrive\鏂囨。\My Games\Sid Meier's Civilization VI\`
-> holds only **saves and mods** 鈥?`AppOptions.txt` does not exist there at all.
+> install, `C:\Users\pala\OneDrive\文档\My Games\Sid Meier's Civilization VI\`
+> holds only **saves and mods** —`AppOptions.txt` does not exist there at all.
 > This Civ 6 build keeps **configuration** under
 > `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\` (alongside
 > `UserOptions.txt`, `GraphicsOptions.txt`, `SoundOpts.txt`, `InputSettings.json`)
@@ -97,18 +97,18 @@ EnableTuner 1
 startup, so toggling "Tuner (disables achievements)" in the Options menu writes
 `EnableTuner 1` to the file but does **not** open the port until you restart the
 game. If `AppOptions.txt` has a newer timestamp than the game process start time,
-that is exactly what happened 鈥?restart Civilization VI, reload your save, then
+that is exactly what happened —restart Civilization VI, reload your save, then
 re-test.
 
 Recommended settings at the same time:
 
 | Setting | Value | Why |
 |---|---|---|
-| Tuner | Enabled | Required 鈥?opens the TCP debug port; disables achievements |
+| Tuner | Enabled | Required —opens the TCP debug port; disables achievements |
 | Auto End Turn | Disabled | The agent decides when turns end |
 | Windowed mode | Recommended | Watch the agent play; needed for OCR save loading |
 
-Then confirm the port is actually open. **Use the project's own test 鈥?it is the
+Then confirm the port is actually open. **Use the project's own test —it is the
 definitive check** (it performs the real FireTuner handshake, not just a port
 probe):
 
@@ -117,7 +117,7 @@ cd C:\mine\mine\ws_dsh\civ6
 .\.venv\Scripts\python.exe scripts\test_connection.py
 ```
 
-With the Tuner off it prints `FAIL 鈥?Connection refused.`; once enabled it reports
+With the Tuner off it prints `FAIL —Connection refused.`; once enabled it reports
 a successful handshake and lists Lua states such as `GameCore_Tuner` and `InGame`.
 
 If you just want a quick port probe, **use `netstat`**:
@@ -126,7 +126,7 @@ If you just want a quick port probe, **use `netstat`**:
 netstat -ano | findstr :4318                              # any output = listening
 ```
 
-> **Do not use `Get-NetTCPConnection` on this machine 鈥?it returns false
+> **Do not use `Get-NetTCPConnection` on this machine —it returns false
 > negatives.** Verified 2026-09-19: `netstat -ano` reported
 > `TCP 127.0.0.1:4318 LISTENING 12004` and a raw socket connected successfully,
 > while `Get-NetTCPConnection -LocalPort 4318` returned **nothing in any state**.
@@ -134,12 +134,12 @@ netstat -ano | findstr :4318                              # any output = listeni
 > of issue as the directory-enumeration restriction noted in 搂6), so it will tell
 > you the tuner is down when it is fine.
 
-`Test-NetConnection` is unreliable for a different reason 鈥?it is a `NetTCPIP`
+`Test-NetConnection` is unreliable for a different reason —it is a `NetTCPIP`
 module cmdlet, so it is absent from cmd.exe and from sessions where that module is
 not loaded. It may also inherit the same false-negative behaviour above.
 
 Or a PowerShell 5.1-safe socket probe (do **not** use the `??` null-coalescing
-operator here 鈥?that is PowerShell 7+ only and this box runs 5.1):
+operator here —that is PowerShell 7+ only and this box runs 5.1):
 
 ```powershell
 $c = New-Object Net.Sockets.TcpClient
@@ -149,15 +149,15 @@ try { $c.Connect('127.0.0.1', 4318); 'OPEN' } catch { 'CLOSED' } finally { $c.Cl
 > **`CLOSED` from that probe does not mean the tuner is down.** It serves one connection
 > at a time, so a second client is refused while the port is listening and busy.
 > `netstat -ano | findstr :4318` shows that case as `ESTABLISHED` with the client's pid,
-> and `get_game_status` reports it as `tuner_busy` 鈥?verified 2026-09-20 with an agent
+> and `get_game_status` reports it as `tuner_busy` —verified 2026-09-20 with an agent
 > playing while a second process was refused. See **搂 FireTuner serves one connection**.
 
 > **If port 4318 never opens:** the *Sid Meier's Civilization VI SDK* Steam tool
 > is not installed on this machine (only app `289070`, the base game). The base
 > install does ship `Debug\Civ6TunerPlugin.dll`, which is usually enough for a
 > direct client like civ6-mcp, so try the menu route first. If the port stays
-> closed, install the SDK from Steam 鈫?Library 鈫?filter by **Tools**, then
-> restart. Also make sure `FireTuner.exe` (the SDK's GUI) is **not** running 鈥?> the game accepts only one tuner connection.
+> closed, install the SDK from Steam →Library →filter by **Tools**, then
+> restart. Also make sure `FireTuner.exe` (the SDK's GUI) is **not** running —> the game accepts only one tuner connection.
 
 ### 2b. Export your DeepSeek key
 
@@ -196,7 +196,7 @@ npm run bootstrap:win
 packages and four launcher/OCR tests start failing with *"Game launcher requires Windows OCR
 support"*.
 
-### Headless 鈥?one turn
+### Headless —one turn
 
 ```powershell
 cd C:\mine\mine\ws_dsh\civ6
@@ -227,9 +227,9 @@ node --test --experimental-test-isolation=none test\dsh\*.test.mjs
 
 On this machine `bash` resolves to **WSL bash** (`C:\WINDOWS\system32\bash.exe`).
 The upstream README explicitly warns against running civ6-mcp from WSL (unreliable
-WSL2鈫擶indows networking; failed tuner connections lock up the game). The `.ps1`
-launchers perform the identical steps 鈥?project-local `DSH_HOME`, telemetry
-disabled, overlay applied 鈥?without going through WSL. `npm run dsh:play` and
+WSL2→擶indows networking; failed tuner connections lock up the game). The `.ps1`
+launchers perform the identical steps —project-local `DSH_HOME`, telemetry
+disabled, overlay applied —without going through WSL. `npm run dsh:play` and
 `npm run dsh:web` (the POSIX ones) will still route through WSL; prefer the
 `:win` variants. Git Bash (`C:\Program Files\Git\bin\bash.exe`) also works and is
 not WSL, if you prefer the `.sh` scripts and invoke bash by full path.
@@ -243,20 +243,20 @@ failing command before being fixed.
 
 | File | Change | Symptom fixed |
 |---|---|---|
-| `src/civ_mcp/version.py` | `read_text(encoding="utf-8")` | `import civ_mcp` died with `UnicodeDecodeError: 'gbk' codec can't decode byte 0x94` 鈥?`pyproject.toml` contains an em dash and this box's locale encoding is **cp936** |
+| `src/civ_mcp/version.py` | `read_text(encoding="utf-8")` | `import civ_mcp` died with `UnicodeDecodeError: 'gbk' codec can't decode byte 0x94` —`pyproject.toml` contains an em dash and this box's locale encoding is **cp936** |
 | `src/civ_mcp/diary.py` | `read_text(encoding="utf-8")` 脳2, `open(..., encoding="utf-8")` | The diary is agent-authored text; would crash on any non-GBK character. This is your cross-session memory file |
 | `src/civ_mcp/game_launcher.py` | `open(vdf, encoding="utf-8", errors="replace")` | Steam `libraryfolders.vdf` locale-decoded |
-| `src/civ_mcp/game_launcher.py` | win32 save path resolved via `SHGetFolderPathW(CSIDL_PERSONAL)`, falling back to the registry `User Shell Folders\Personal`, then `~/Documents` | `~/Documents` is only a guess. This machine's Documents is **OneDrive-redirected** to `C:\Users\pala\OneDrive\鏂囨。`, so `SINGLE_SAVE_DIR` resolved to `C:\Users\pala\Documents\...` 鈥?a path that **does not exist**. `install_saves.py` would have copied saves where the game never reads them, and `list_saves` globbed an empty directory |
+| `src/civ_mcp/game_launcher.py` | win32 save path resolved via `SHGetFolderPathW(CSIDL_PERSONAL)`, falling back to the registry `User Shell Folders\Personal`, then `~/Documents` | `~/Documents` is only a guess. This machine's Documents is **OneDrive-redirected** to `C:\Users\pala\OneDrive\文档`, so `SINGLE_SAVE_DIR` resolved to `C:\Users\pala\Documents\...` —a path that **does not exist**. `install_saves.py` would have copied saves where the game never reads them, and `list_saves` globbed an empty directory |
 | `scripts/qualify-static.mjs` | `fileURLToPath()` instead of `URL.pathname` | `URL.pathname` yields `/C:/...`, so `join()` produced `C:\C:\...` and `npm run qualify` died with `ENOENT` |
-| `scripts/qualify-mcp.py` | Reader thread + `queue.Queue` instead of `select()`, and `Popen(..., encoding="utf-8", errors="replace")` + `PYTHONUTF8=1` for the child | (a) `select()` cannot poll a pipe on Windows 鈫?`OSError: [WinError 10093] WSAStartup`. (b) With `text=True` alone the child's JSON-RPC output was decoded with the locale codec 鈫?`UnicodeDecodeError: 'gbk' codec can't decode byte 0x94`, so `npm run qualify:mcp` failed on this machine |
+| `scripts/qualify-mcp.py` | Reader thread + `queue.Queue` instead of `select()`, and `Popen(..., encoding="utf-8", errors="replace")` + `PYTHONUTF8=1` for the child | (a) `select()` cannot poll a pipe on Windows →`OSError: [WinError 10093] WSAStartup`. (b) With `text=True` alone the child's JSON-RPC output was decoded with the locale codec →`UnicodeDecodeError: 'gbk' codec can't decode byte 0x94`, so `npm run qualify:mcp` failed on this machine |
 | `dsh/civ6.cordis.yml` | Added `PYTHONUTF8: '1'` to the `mcp-civ6` env | Belt-and-braces against any remaining locale-encoded text I/O inside the adapter |
 
 ### A strategic resource bought in a trade is paid for and never delivered (found 2026-09-25)
 
 `propose_trade` can report a completed deal and leave the resource in the seller's hands. Measured
 live, T119-T121: 100 gold plus one duplicate Cocoa were offered to Egypt (a declared friend) for
-20 iron, `test_trade` answered `ACCEPTABLE 鈥?this deal would be accepted as-is`, `propose_trade`
-answered `ACCEPTED|Trade accepted with 鍩冨強 ... They give: 20x 閾?(30t)` - and the iron never
+20 iron, `test_trade` answered `ACCEPTABLE —this deal would be accepted as-is`, `propose_trade`
+answered `ACCEPTED|Trade accepted with 埃及 ... They give: 20x 铁 (30t)` - and the iron never
 arrived. Both sides were checked, because the result line is not evidence:
 
 | | before | after |
@@ -264,7 +264,7 @@ arrived. Both sides were checked, because the result line is not evidence:
 | our gold | 193 | 93 (we paid) |
 | our Cocoa | x3 | x2 (we paid) |
 | Egypt's iron | 20 | gone from their list (they paid) |
-| our stockpile | `HORSES 50` | `HORSES 50` 鈥?and `IRON amount=0, per_turn=0, imported=0` |
+| our stockpile | `HORSES 50` | `HORSES 50` —and `IRON amount=0, per_turn=0, imported=0` |
 
 The `imported=0` is what rules out the generous reading: a strategic-resource deal is not a
 per-turn trickle that would show up later, there is no import at all. Two turns later the stockpile
@@ -274,7 +274,7 @@ line, and prefer a source of your own.
 
 That is usually available: the same `get_empire_resources` call that exposed the empty import listed
 two unclaimed iron tiles within four tiles of our cities (`(57,42)` near Moscow, `(60,32)` near
-鍖椾含). A settler, or border growth, gets the resource without the diplomacy path at all.
+北京). A settler, or border growth, gets the resource without the diplomacy path at all.
 
 ### The missing `launcher-windows` extra broke every hang recovery (found 2026-09-20)
 
@@ -284,14 +284,14 @@ extra, so a plain `uv sync` installs a server that can read the game but can nev
 recover it:
 
 ```powershell
-# required on Windows 鈥?not part of the base dependencies
+# required on Windows —not part of the base dependencies
 uv pip install -e ".[launcher-windows]"
 ```
 
 Symptoms when it is absent (both observed on 2026-09-20, T109 and T111):
 
 - `end_turn` returns `HANG:<turn>:<save>` and the built-in auto-recovery answers
-  `HANG RECOVERY FAILED at T<turn>: restart_and_load threw an exception` 鈥?the
+  `HANG RECOVERY FAILED at T<turn>: restart_and_load threw an exception` —the
   `winrt` import inside `_ocr_winrt()` raises, and the running agent is then left
   to hand-recover.
 - The game is relaunched but lands on the **main menu** with the save never
@@ -304,8 +304,8 @@ The imports are lazy (inside the functions), so installing the extra fixes a
 
 The AI-turn hang is the single largest cost in a long game: **six hangs on
 2026-09-20 alone** (T20, T37, T91 脳2, T107, T109, T111), every one of them
-587鈥?91 s, i.e. ~5% of turns and roughly an hour of wall clock. They are not
-caused by anything the agent does 鈥?across the whole day there was exactly one
+587—91 s, i.e. ~5% of turns and roughly an hour of wall clock. They are not
+caused by anything the agent does —across the whole day there was exactly one
 war declaration, at T111, and the other five hangs have no diplomatic action
 anywhere near them.
 
@@ -316,12 +316,12 @@ first:
 - `server.py::_diagnose_hang(turn)` writes one JSON line per hang to
   `hang_diagnosis.jsonl` in the MCP data dir: window rect, whether the window was
   visible / minimised / in the foreground, which window *was* in the foreground,
-  and the first 25 OCR lines of the screen. Deliberately **Lua-free** 鈥?the poll
+  and the first 25 OCR lines of the screen. Deliberately **Lua-free** —the poll
   loop's own comments note that extra InGame queries during an AI turn are
   themselves a hang trigger, so this costs only a window snapshot and one OCR pass.
 - `server.py::_hang_window_unfocused()` then decides whether to retry in place.
   Civ VI does not advance an AI turn while its window is in the background, and
-  the poll loop never checked for that. When 鈥?and only when 鈥?the window had
+  the poll loop never checked for that. When —and only when —the window had
   actually lost focus (or was minimised), the server re-focuses it and retries
   `end_turn` once before paying for a restart. The common case adds no extra wait,
   because a focused window skips the branch entirely.
@@ -329,14 +329,14 @@ first:
 Read the next hang from `hang_diagnosis.jsonl` rather than re-deriving it from a
 ten-minute silence.
 
-### The launcher only read an English main menu 鈥?FIXED 2026-09-20
+### The launcher only read an English main menu —FIXED 2026-09-20
 
 **Correction to an earlier note in this file.** The `load_game_save` failure below
 was first written up here as the cause of the 2026-09-20 outage. It was not. The
 auto-recovery had already thrown on the missing `winrt` import *before* it could
 navigate anything, and the relaunched game resumed its own autosave by itself,
-so play continued at T111 鈫?T113 unattended. This section is still a real latent
-blocker 鈥?it just was not the one that bit that day.
+so play continued at T111 →T113 unattended. This section is still a real latent
+blocker —it just was not the one that bit that day.
 
 The failure, as actually observed:
 
@@ -349,7 +349,7 @@ Cause, verified two ways:
 
 - `_navigate_to_save_sync()` searched only English literals (`"Single Player"`,
   `"Load Game"`, the `"Autosaves"` filter) and there was **no localization layer
-  anywhere** in `src/civ_mcp` 鈥?the only `language` reference in the package was
+  anywhere** in `src/civ_mcp` —the only `language` reference in the package was
   the OCR engine's `try_create_from_user_profile_languages()`.
 - `%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI\AppOptions.txt`:
 
@@ -360,7 +360,7 @@ Cause, verified two ways:
   ```
 
   The UI is Simplified Chinese, so the string `Single Player` never appears on
-  screen. The window capture was always fine 鈥?capturing a live screen and
+  screen. The window capture was always fine —capturing a live screen and
   OCR'ing it returns real Chinese UI text.
 
 **Fix applied** (keeps the Chinese UI; chose this over switching the game to
@@ -368,32 +368,32 @@ English):
 
 | File | Change |
 |---|---|
-| `src/civ_mcp/game_launcher.py` | `_MENU_LABELS` maps each logical control to every spelling it can appear under 鈥?`single_player` 鈫?`鍗曚汉妯″紡`, `load_game` 鈫?`鍔犺浇娓告垙`, `continue` 鈫?`缁х画`, `autosaves` 鈫?`鑷姩淇濆瓨`. The Chinese strings are the game's own, joined out of `Vanilla_zh_Hans_CN.xml` by Tag (`.tools/join-loc-strings.py`), not transliterations |
-| `src/civ_mcp/game_launcher.py` | `_find_text` / `_wait_for_text` / `_click_text` accept a label *list*; `_label_matches` compares again with spaces removed, because the Windows OCR engine returns CJK one glyph per word (`鍗?浜?妯?寮廯) |
-| `src/civ_mcp/game_launcher.py` | `_normalize` trim was `[^a-z0-9]`, which **deleted every non-ASCII character** 鈥?both sides then normalized to `""` and compared equal. Now Unicode-aware; verified byte-identical on English inputs (`.tools/check-normalize.py`) |
-| `src/civ_mcp/game_launcher.py` | CONTINUE lookup uses `prefer_bottom`, since `缁х画` is an ordinary word and the leader-screen blurb can contain it |
+| `src/civ_mcp/game_launcher.py` | `_MENU_LABELS` maps each logical control to every spelling it can appear under —`single_player` →`单人模式`, `load_game` →`加载游戏`, `continue` →`继续`, `autosaves` →`自动保存`. The Chinese strings are the game's own, joined out of `Vanilla_zh_Hans_CN.xml` by Tag (`.tools/join-loc-strings.py`), not transliterations |
+| `src/civ_mcp/game_launcher.py` | `_find_text` / `_wait_for_text` / `_click_text` accept a label *list*; `_label_matches` compares again with spaces removed, because the Windows OCR engine returns CJK one glyph per word (`单 人 模 式`) |
+| `src/civ_mcp/game_launcher.py` | `_normalize` trim was `[^a-z0-9]`, which **deleted every non-ASCII character** —both sides then normalized to `""` and compared equal. Now Unicode-aware; verified byte-identical on English inputs (`.tools/check-normalize.py`) |
+| `src/civ_mcp/game_launcher.py` | CONTINUE lookup uses `prefer_bottom`, since `继续` is an ordinary word and the leader-screen blurb can contain it |
 | `src/civ_mcp/game_launcher.py` | The misleading `"Is the game at the main menu?"` message now says the game may still be loading or already in-game |
 | `src/civ_mcp/server.py`, `scripts/menu_audit.py` | `_auto_boot`'s CONTINUE click and the menu-audit tool use the same label table |
-| `tests/test_menu_labels.py` | 21 tests, including real Windows-OCR-shaped input (`鍗?浜?妯?寮廯) and a regression set proving the English path is unchanged |
+| `tests/test_menu_labels.py` | 21 tests, including real Windows-OCR-shaped input (`单 人 模 式`) and a regression set proving the English path is unchanged |
 
 Verified against real OCR output from this machine (`.tools/e2e-real-ocr.py`): on
-a live capture containing `缁?缁璥, the localized label matches at `exact=True`
+a live capture containing `继 续`, the localized label matches at `exact=True`
 while the old English `"CONTINUE"` does not.
 
-**Caveat:** the main-menu labels (`鍗曚汉妯″紡`, `鍔犺浇娓告垙`, `鑷姩淇濆瓨`) come from the
+**Caveat:** the main-menu labels (`单人模式`, `加载游戏`, `自动保存`) come from the
 game's localization database, but the *positive* live check on this machine only
-covered `缁х画`, which was on screen at the time. The main-menu strings could not
+covered `继续`, which was on screen at the time. The main-menu strings could not
 be exercised without interrupting a running game, so the next recovery that lands
 on the main menu is the real test of those three.
 
 New files (additive only):
 
-- `scripts/run-dsh-headless.ps1`, `scripts/run-dsh-web.ps1` 鈥?WSL-free launchers
-- `scripts/civ6-clean.ps1` 鈥?stop the game, the MCP and the agent, and clear the
+- `scripts/run-dsh-headless.ps1`, `scripts/run-dsh-web.ps1` —WSL-free launchers
+- `scripts/civ6-clean.ps1` —stop the game, the MCP and the agent, and clear the
   stale heartbeat; never touches the Web GUI (see "Stopping a session cleanly")
-- `package.json` 鈥?added `dsh:play:win` / `dsh:web:win`
-- `.tools/bin/uv.exe` + `.tools/bin/uv` 鈥?uv 0.12.17
-- `.venv/bin/python`, `.venv/bin/pytest` 鈥?Git Bash shims (upstream scripts expect
+- `package.json` —added `dsh:play:win` / `dsh:web:win`
+- `.tools/bin/uv.exe` + `.tools/bin/uv` —uv 0.12.17
+- `.venv/bin/python`, `.venv/bin/pytest` —Git Bash shims (upstream scripts expect
   the POSIX `.venv/bin/` layout; uv creates `.venv/Scripts/` on Windows)
 
 ---
@@ -448,7 +448,7 @@ Consequences and workarounds:
   scratch paths rather than `tmp_path`, and the full suite runs clean from the workspace:
   `373 passed`.
 - **Undeletable junk dirs**: `.tmp` contains pip temp dirs with deny-ACLs that cannot be
-  reset without elevation (`icacls /reset` 鈫?"Access is denied"). They are inert. Delete them
+  reset without elevation (`icacls /reset` →"Access is denied"). They are inert. Delete them
   from an elevated prompt if they bother you.
 - **`node_modules` was installed with `--ignore-scripts`.** DSH and the
   orchestrator tests work, but if you ever hit a missing native binary from a
@@ -471,7 +471,7 @@ C:\Users\pala\AppData\Local\Programs\Python\Python312\Scripts\uv.exe
 C:\Users\pala\AppData\Local\Programs\Python\Python312\Scripts\uvx.exe
 ```
 
-**No PATH or registry change was needed** 鈥?that directory is the Python 3.12
+**No PATH or registry change was needed** —that directory is the Python 3.12
 `Scripts` folder, which was already on the user PATH. Verify from anywhere:
 
 ```powershell
@@ -491,7 +491,7 @@ Notes:
 
 - This is a plain copy of the same 0.12.17 binary used at `.tools/bin/uv.exe`, so
   the two cannot drift until you update one of them.
-- `uv` here is a **standalone binary, not a Python package** 鈥?it was extracted
+- `uv` here is a **standalone binary, not a Python package** —it was extracted
   from the PyPI wheel because GitHub release downloads are blocked on this
   network (搂5). `pip install uv` would also work but would download from the
   throttled PyPI CDN unless you pass the TUNA index.
@@ -503,19 +503,19 @@ Notes:
 ## 8. Verified working: Git Bash (not WSL)
 
 The repo's POSIX entry points were verified end-to-end under **Git Bash**
-(`MINGW64_NT-10.0`, bash 5.3.15) 鈥?`uname` confirms MINGW64, and `WSL_DISTRO_NAME`
+(`MINGW64_NT-10.0`, bash 5.3.15) —`uname` confirms MINGW64, and `WSL_DISTRO_NAME`
 is empty, so this is *not* WSL. The test deliberately ran with `PYTHONUTF8`
 unset and `PYTHONIOENCODING` cleared, to prove the repo works on a cp936 machine
 without environment hacks.
 
 | Check | Result |
 |---|---|
-| `.venv/bin/python` shim | `-x OK` 鈫?Python 3.12.10; `import civ_mcp` OK |
+| `.venv/bin/python` shim | `-x OK` →Python 3.12.10; `import civ_mcp` OK |
 | `.venv/bin/pytest` shim | `-x OK` |
-| `node_modules/.bin/dsh` | `-x OK` 鈫?0.1.2-rc.1 |
-| `.tools/bin/uv` (extensionless PE) | `-x OK` 鈫?uv 0.12.17 |
-| `bash scripts/qualify-mcp.sh` | **PASS** 鈥?75 tools, `run_lua` disabled |
-| `bash scripts/dump-dsh-config.sh` | **PASS** 鈥?overlay resolves |
+| `node_modules/.bin/dsh` | `-x OK` →0.1.2-rc.1 |
+| `.tools/bin/uv` (extensionless PE) | `-x OK` →uv 0.12.17 |
+| `bash scripts/qualify-mcp.sh` | **PASS** —75 tools, `run_lua` disabled |
+| `bash scripts/dump-dsh-config.sh` | **PASS** —overlay resolves |
 | `bash scripts/run-dsh-headless.sh` | Starts the civ6 MCP server, then stops at `MISSING_CREDENTIAL` (no key set) |
 
 So the bash toolchain is sound. The only outstanding item is the LLM credential.
@@ -533,7 +533,7 @@ bash scripts/run-dsh-headless.sh "Play one complete turn using the civ6-orchestr
 
 **Do not run this from WSL.** Even though `bash` on PATH resolves to
 `C:\WINDOWS\system32\bash.exe` (WSL), that path puts the process inside Linux,
-where it cannot inherit the Windows environment and where WSL2鈫擶indows networking
+where it cannot inherit the Windows environment and where WSL2→擶indows networking
 breaks the tuner on `127.0.0.1:4318`. Always invoke Git Bash explicitly
 (`C:\Program Files\Git\bin\bash.exe`) or use the `npm run dsh:play:win` launcher.
 
@@ -559,8 +559,8 @@ interfere with normal Git Bash operation.
 ### Startup prompts: read by the agent, never passed as an argument
 
 A handoff is now **computed, not written**: `scripts\resume-game.ps1` runs the read-only
-preflight in `civ_mcp.handoff`, prints what is true and who has to act, and 鈥?once the game
-is loaded 鈥?**generates** the session's task from those facts. The generated file is the
+preflight in `civ_mcp.handoff`, prints what is true and who has to act, and —once the game
+is loaded —**generates** the session's task from those facts. The generated file is the
 prompt; a hand-written one goes stale in exactly the parts that matter (measured 2026-09-26:
 the static prompt still listed eleven reads by hand after `scripts/orient.py` had replaced
 them with one connection, and it told the reader to run a path that did not exist).
@@ -572,9 +572,9 @@ powershell -NoProfile -File scripts\resume-game.ps1 -Rollback  # a deliberate ro
 powershell -NoProfile -File scripts\resume-game.ps1 -DryRun    # print, launch nothing
 ```
 
-The preflight reads only **passive** signals 鈥?the process list, `GetExtendedTcpTable` for the
+The preflight reads only **passive** signals —the process list, `GetExtendedTcpTable` for the
 FireTuner port's owner, the heartbeat file, and the saves on disk **with the turn each file
-actually holds** 鈥?so it is safe to run while another session is playing, which is precisely
+actually holds** —so it is safe to run while another session is playing, which is precisely
 when the question matters. Its verdict is one of five states, and it never launches, loads or
 clicks anything:
 
@@ -584,15 +584,15 @@ clicks anything:
 | `no_match` | a save is loaded (or a load already in progress finishes) |
 | `tuner_silent` | the game was started without `EnableTuner=1`: restart it with the tuner |
 | `tuner_busy` | another session holds the FireTuner connection (`civ6-clean.ps1`, or play there) |
-| `in_game` | nothing 鈥?the task is generated and the headless session starts |
+| `in_game` | nothing —the task is generated and the headless session starts |
 
 `prompts/tasks/continue-current.{zh,en}.txt` remains as the **static fallback** for a handoff
 the preflight cannot describe, and `-TaskFile <path>` hands any prompt to the session directly.
 The two situational pairs that used to live here are retired: `resume-after-crash.*` told the
 agent to `launch_game` and `load_game_save` itself, which contradicts the rule that launching
 and loading are the human's calls, and `continue-from-t59.*` hard-coded a turn from a game
-that has moved on. Both scenarios are switches on the one flow now 鈥?a crash is `-Wait`, a
-rollback is `-Rollback` 鈥?and the rule that a crash is **not** a rollback lives in the
+that has moved on. Both scenarios are switches on the one flow now —a crash is `-Wait`, a
+rollback is `-Rollback` —and the rule that a crash is **not** a rollback lives in the
 generated task, where it is stated only when it applies.
 
 **`-TaskFile` / `--task-file` does not pass the file's text as the task.** It
@@ -609,12 +609,12 @@ two independent ways. Both are measurable with `.tools/_argvprobe.cmd` and
 
 | Prompt passed as text | via `node.exe` directly | via the `dsh.cmd` shim |
 |---|---|---|
-| `zh` 鈥?385 chars, 4 ASCII `"` | 381 chars: every `"` deleted | 80 bytes: the first line only |
-| `en` 鈥?1130 chars, 2 ASCII `"` | 1128 chars, split into 3 arguments that the CLI rejoins with spaces | 80 bytes: the first line only |
+| `zh` —385 chars, 4 ASCII `"` | 381 chars: every `"` deleted | 80 bytes: the first line only |
+| `en` —1130 chars, 2 ASCII `"` | 1128 chars, split into 3 arguments that the CLI rejoins with spaces | 80 bytes: the first line only |
 
 The shim failure is silent: cmd.exe ends the command line at the first newline, so
 dsh receives less task than was written and never complains. Bypassing the shim is
-not a fix either 鈥?Windows PowerShell does not escape embedded `"` when it builds a
+not a fix either —Windows PowerShell does not escape embedded `"` when it builds a
 native command line, so the quotes vanish outright, and when they are surrounded by
 spaces the argument also splits into pieces that `program.args.join(' ')` in the
 headless bundle reassembles with spaces.
@@ -639,7 +639,7 @@ UTF-8 file as mojibake. The BOM is what makes them detect UTF-8. The English fil
 must not have one: it is pure ASCII, so a BOM would be pointless.
 
 **Editing that file with a tool that round-trips decoded text silently drops the
-BOM**, which puts the mojibake straight back. That is not hypothetical 鈥?it
+BOM**, which puts the mojibake straight back. That is not hypothetical —it
 happened while adding a paragraph to this very prompt. If `Get-Content` starts
 showing `缂佈呯敾瑜版挸澧?..` again, the content is fine and only the prefix is missing:
 
@@ -675,7 +675,7 @@ progress and no completed turn.
 **The two families are numbered differently, so the name is not the turn.** Measured
 2026-09-26 on three consecutive pairs: `0_MCP_0142` holds **T142** while
 `AutoSave_0142` holds **T141**. The MCP's own prefix therefore verifies against the
-loaded turn (`0_MCP_0077` must load as turn 77) and the game's autosave does not 鈥?`scripts\turn-of-save.py "<path>"` prints what either one really holds before it is
+loaded turn (`0_MCP_0077` must load as turn 77) and the game's autosave does not —`scripts\turn-of-save.py "<path>"` prints what either one really holds before it is
 loaded. This is also why the preflight compares **file turns** and recommends the
 newest file by time: "Continue Game" resumes that one, and a newer file that is not
 the furthest position is the rollback smell worth flagging.
@@ -692,19 +692,19 @@ than computed.
 
 Measured 2026-09-20 16:38 while one agent was playing a turn-80 game: the port was
 `ESTABLISHED` with that agent's MCP (pid 23276), and `connect()` from a second process
-was **refused** 鈥?byte for byte the same answer as a tuner that has not started. Read
+was **refused** —byte for byte the same answer as a tuner that has not started. Read
 that way, `game_status` said `starting` and advised waiting 30-60s for something that
 was already up, was in a game, and would never become free.
 
 `_tuner_port_state()` now reads `GetExtendedTcpTable` (no subprocess, the same shape as
 the Toolhelp process scan) and reports the listener and its clients, so the state
 becomes `tuner_busy` with the holding pid and the advice that fits: stop that process,
-or keep playing in its session 鈥?waiting changes nothing. `_is_tuner_port_open()` keeps
+or keep playing in its session —waiting changes nothing. `_is_tuner_port_open()` keeps
 its old meaning, "this process can attach", because the launch and load flows must not
 proceed on a port somebody else owns.
 
 **The screen is read even when the tuner is not ours.** With another process holding the
-connection, OCR is the only source left, and the HUD prints `鍥炲悎 80 / 500` 鈥?so
+connection, OCR is the only source left, and the HUD prints `回合 80 / 500` —so
 `game_status` still names the turn and says plainly that this process cannot attach,
 instead of degrading to "unknown". Verified live on 2026-09-20 while an agent played turn
 83: the probe could not attach (the connection was held), and the screen still read
@@ -715,18 +715,18 @@ playable by hand, but no query or command will work until it is relaunched throu
 
 **OCR boxes are rebuilt into visual lines before anything is parsed.** One line of the
 game's UI comes back as several boxes and **the box order is not the reading order**: a
-live session reported turn 81 as "turn 8" because the HUD had been split into `鍥?鍚?8`
+live session reported turn 81 as "turn 8" because the HUD had been split into `回合 8`
 and `1 / 5 0 0` with the tail first, so joining the whole screen into one string put the
 digits out of order. `_ocr_lines` groups boxes by y (within a third of the text height)
 and sorts each group by x, and `_ocr_turn` reads the first line that carries the counter.
-A stray "鍥炲悎 3" lower down in a tooltip no longer wins over the HUD in the top strip.
+A stray "回合 3" lower down in a tooltip no longer wins over the HUD in the top strip.
 
 ### A load request while the front end is not up yet (found 2026-09-20)
 
 A live session asked `get_game_status` (correctly, first), was told `not_running`, launched
 the game, listed saves, and then asked to load `AutoSave_0080` one second after the launch
 returned. The window was still on the splash. Every menu step waits for its own control, so
-the fast path spent 90s looking for 鍗曚汉妯″紡 and the list path spent another 90s 鈥?**172s** 鈥?before answering `FAILED: the game is not showing its main menu`, which reads like a broken
+the fast path spent 90s looking for 单人模式 and the list path spent another 90s —**172s** —before answering `FAILED: the game is not showing its main menu`, which reads like a broken
 game and was not: `get_game_status` 35s later said `in_game`, and the turn was read in 3s.
 
 Three changes, in order of how much time they save:
@@ -736,11 +736,11 @@ Three changes, in order of how much time they save:
    list path. Previously both paths waited for the same menu, so a game that had not reached
    it yet paid twice.
 2. **An already-loaded game is not navigated at all.** The first thing the path does is ask
-   the game for its turn (~2s): the same turn as the save asked for is `Already loaded 鈥?   Nothing to load.`, a different turn is a fast `FAILED` naming `restart_and_load`. This is
-   the common case 鈥?a recovery asked to load the save the game is already sitting on.
+   the game for its turn (~2s): the same turn as the save asked for is `Already loaded —   Nothing to load.`, a different turn is a fast `FAILED` naming `restart_and_load`. This is
+   the common case —a recovery asked to load the save the game is already sitting on.
 3. **The failure names the state.** When the menu never appears, the message says which of
-   the three it is 鈥?a game already in progress, a main menu whose row OCR did not match, or
-   `still starting (its window shows: 鈥?` 鈥?instead of one sentence covering all three.
+   the three it is —a game already in progress, a main menu whose row OCR did not match, or
+   `still starting (its window shows: —` —instead of one sentence covering all three.
 
 `game_lifecycle.load_game_save` had the same hole one level up: it chose between the menu
 path and `restart_and_load` from `conn.gamecore_index`, a *cached* connection fact, so a
@@ -832,7 +832,7 @@ load. The decision table is pinned by `tests/test_rollback_decisions.py`.
 session): the diary split found nothing to archive and left the file byte-identical, the save
 archive **reused** the folder an earlier run had made (0 new save, 80 already archived - the
 idempotence that a second run needs), then `load-from-menu` took 35s
-(`Clicked Single Player 鈫?Continue Game 鈫?CONTINUE (colour match)`) and the run ended
+(`Clicked Single Player →Continue Game →CONTINUE (colour match)`) and the run ended
 `VERIFIED: the game is at turn 60`. The load path needed **no wider sandbox mode**.
 
 The earlier pair of runs (20:45:58 and 20:47:03) had archived the same 80 saves twice, 127 MB
@@ -855,7 +855,7 @@ menu there is no `InGame` state - the tuner lists only FrontEnd states (`FrontEn
 `LoadGameMenu` x3, `SaveGameMenu`, ...) - so every main-menu load fell through to OCR menu
 navigation, which needs the game window in the foreground and clicks a screen grab of it. That is
 the path that failed three times on this box while rolling back one save: twice with
-`_wait_for_text: 'Autosaves | 鑷姩淇濆瓨' not found after 12s` (the screen still showing the main
+`_wait_for_text: 'Autosaves | 自动保存' not found after 12s` (the screen still showing the main
 menu) and once with `Could not find 'Load Game' button` after 6s, with the launcher's splash art
 in the capture, then two game restarts to get a working FireTuner back.
 
@@ -904,8 +904,8 @@ TURN START (T60) - read this before planning. Rules: turn-checks.md, measured ag
     [builder-backlog] failing for 14 turn(s) - Fewer than three improvements per city.
   the last turn bought: gold/turn -1.0; military -38
   rate over that window: science +0.17/t, military -12.00/t, improvements +0.00/t
-  you planned last turn (planning): T60-T72: (1) 瑗垮畨 65536 on Plaza completion -> UNIT_TRADER ...
-  you planned this turn (planning): T61-T75: (1) 鍖椾含 builder 720900 -> STONE quarry (57,27) ...
+  you planned last turn (planning): T60-T72: (1) 西安 65536 on Plaza completion -> UNIT_TRADER ...
+  you planned this turn (planning): T61-T75: (1) 北京 builder 720900 -> STONE quarry (57,27) ...
   VERDICT: no failing rule cleared and the last turn bought nothing measurable - the plan is
   not being executed as written. Change one thing this turn, name it in the diary, and say
   which turn it lands.
@@ -938,7 +938,7 @@ reads at the start of every turn kept listing work that was finished, which is t
 its purpose. The sweep runs where the checks run, at the end of the turn that achieves the
 goal: the file is copied to `prompts/checks/archive/turn-checks-<YYYYmmdd-HHMMSS>.md`
 **first**, the rule block is replaced by a one-line trace
-(`<!-- achieved T60: ram-tower-before-civil-engineering (original in archive/鈥? -->`), the
+(`<!-- achieved T60: ram-tower-before-civil-engineering (original in archive/— -->`), the
 hand-written prose is left alone, and the turn result reports
 
 ```
@@ -1177,7 +1177,7 @@ composition and fire discipline - plus a `README.md` with the shared vocabulary 
 rule names the turn result prints) and the rules that hold in every file.
 
 They are written for the `military-map` advisor, which is read-only and sees only the immutable
-snapshot, so each one is organised as **trigger 鈫?assess 鈫?decide 鈫?prohibitions 鈫?what to
+snapshot, so each one is organised as **trigger →assess →decide →prohibitions →what to
 report**, with the game's own numbers (Catapult 45 vs cities, the ranged strike's two tiles,
 Battlcry's +7 against melee and ranged) instead of adjectives.
 
@@ -1240,7 +1240,7 @@ Two additions close that (`tests/test_unused_attacks.py`, 17 cases):
   per unit.
 - **The check context carries `unused_attacks`**, and two rules use it: `use-your-attacks`
   (`require: metric(unused_attacks) <= 0`) and `finish-the-wounded` (an enemy within 2 tiles at
-  鈮?20 hp requires `attacks_this_turn >= 1`).
+  ≈ 20 hp requires `attacks_this_turn >= 1`).
 
 `use-your-attacks` exists because the rule added earlier the same day - `engage-the-screen`,
 "enemies within 2 tiles and `attacks_this_turn >= 1`" - **passes a turn like T111**, where two
@@ -1321,7 +1321,7 @@ do not each pay for a snapshot. Functions:
 `and`/`or`/`not`, parentheses. Point `CIV_MCP_TURN_CHECKS` at another file to swap the set.
 
 **Expressions are parsed with `ast` and evaluated against a whitelist of node types and
-function names 鈥?never `eval`.** A check file is data: `__import__('os').system(...)` or
+function names —never `eval`.** A check file is data: `__import__('os').system(...)` or
 attribute access is rejected with a `CheckError`, and a rule that *has* a `require:` but
 cannot be evaluated is reported rather than silently dropped. A block without a `require:`
 is treated as an example in prose, because the file documents its own format.
@@ -1386,8 +1386,8 @@ turn without playing.
 ### One session at a time: kill_game refuses to interrupt another
 
 Reproducing the above cost a real position. A verification run called `kill_game()` while a
-live session was mid-turn-82 鈥?that session's log shows a `get_units` eight seconds before
-the kill 鈥?and the game had to be reloaded from its newest autosave (`0_MCP_0082`). A kill is
+live session was mid-turn-82 —that session's log shows a `get_units` eight seconds before
+the kill —and the game had to be reloaded from its newest autosave (`0_MCP_0082`). A kill is
 not a neutral diagnostic.
 
 `_other_active_session()` now names the other session from two independent signals: a
@@ -1405,19 +1405,19 @@ pinned by `tests/test_menu_navigation.py`:
 
 | Was | Now | Why |
 |---|---|---|
-| four clicks to load a named save | **Continue Game first when the newest save is the one asked for** | 鍗曚汉妯″紡 鈫?缁х画娓告垙 resumes the most recent save in two clicks, with no save list to read and no row to pick. It is also the more correct target: the newest save is not necessarily the newest `0_MCP_` file - the game writes its own `AutoSave_*` alongside and after a plain exit that one is a turn ahead (2026-09-20: `AutoSave_0080` at turn 80 against `0_MCP_0079` at turn 79) |
+| four clicks to load a named save | **Continue Game first when the newest save is the one asked for** | 单人模式 →继续游戏 resumes the most recent save in two clicks, with no save list to read and no row to pick. It is also the more correct target: the newest save is not necessarily the newest `0_MCP_` file - the game writes its own `AutoSave_*` alongside and after a plain exit that one is a turn ahead (2026-09-20: `AutoSave_0080` at turn 80 against `0_MCP_0079` at turn 79) |
 | `PrintWindow` capture | screen grab (`ImageGrab`) | the flow's own comment says PrintWindow + SetForegroundWindow during the DX12 loading phase can crash the renderer, and the flow polls for the continue button in exactly that phase |
 | `SetForegroundWindow` before every click | only when the game is not already foreground, and skippable with `CIV_MCP_NO_FOREGROUND_STEAL=1` | a grab reads whatever is on top, so the game has to be on top. Disabling it outright was tried first and failed the other way: after a cold launch the game comes up behind the browser, the grab captures that instead, and the flow reports "the game is not showing its main menu" while the game is right there |
-| `y_offset=15` on the Load Game item | the OCR box centre | at 3840x2160 the menu rows are 38 px apart, so a +15 nudge lands in the gap or on 鍒涘缓娓告垙 - it opened the Create Game screen and the load reported "Save not found" |
+| `y_offset=15` on the Load Game item | the OCR box centre | at 3840x2160 the menu rows are 38 px apart, so a +15 nudge lands in the gap or on 创建游戏 - it opened the Create Game screen and the load reported "Save not found" |
 | nine-point grid for the continue button | colour match, one candidate at a time | the grid covers y 75-88% and the control is at (44%, 64%); OCR never reads it, and clicking nine positions in a row can land inside a game that is already running |
 | "FireTuner port is open" = success | read the turn from the game | that port is open at the main menu too, so a load that never left the leader screen was reported as successful |
-| continue control hunted by ranking teal blobs by area | the globe above the ribbon, found by shape, with the ranking kept as fallback | the control is a bar with a ring-shaped globe above its centre, and only the globe responds 鈥?clicking "the most teal thing" is not the same as clicking the control. Measured on a recorded leader screen: globe x 1664-1736 y 260-330, bar y 340-370, and the shape finder lands at (1699,308) inside the globe |
+| continue control hunted by ranking teal blobs by area | the globe above the ribbon, found by shape, with the ranking kept as fallback | the control is a bar with a ring-shaped globe above its centre, and only the globe responds —clicking "the most teal thing" is not the same as clicking the control. Measured on a recorded leader screen: globe x 1664-1736 y 260-330, bar y 340-370, and the shape finder lands at (1699,308) inside the globe |
 | positional clicks that could land inside a running game | read the screen first; an in-game HUD means no click at all | a click on the map is a **move order** when a unit is selected, and the OCR-timeout fallbacks reach the positional click assuming the leader screen without ever confirming it |
-| "Single Player" clicked, then "Continue Game" searched for | look for 缁х画娓告垙 **first**, and click the parent only if the submenu is closed | clicking the parent again closes an open submenu, and the parent itself moves ~95px left while it is open (1862 鈫?1759 on 2026-09-20), so a coordinate read beforehand misses the item entirely |
+| "Single Player" clicked, then "Continue Game" searched for | look for 继续游戏 **first**, and click the parent only if the submenu is closed | clicking the parent again closes an open submenu, and the parent itself moves ~95px left while it is open (1862 →1759 on 2026-09-20), so a coordinate read beforehand misses the item entirely |
 | "no teal blob on the leader screen, start clicking candidates" | wait up to 120s for the globe and bar to be **drawn**, then click once | the leader screen is readable about 26s before its control exists (measured: 715 teal samples on the whole screen at detection, 7639 around the control once drawn). Clicking blind in that window produced seven stray clicks over 98s |
 | "the click worked" = the turn is readable within 15s | the leader screen going away is the signal | the turn is readable minutes later, so the 15s check declared a good click a miss and clicked seven more times. Confirmed by log: click at 17:26:38, screen changed at 17:26:43, turn 80 verified moments later |
 
-**Measured end to end (2026-09-20, kill 鈫?launch 鈫?turn 80):** 77s and 76s on two runs -
+**Measured end to end (2026-09-20, kill →launch →turn 80):** 77s and 76s on two runs -
 launch 15s (process 2s, FireTuner 6s), menu 24s, waiting for the control 25-26s, one
 click, 5s to see the screen change, load 52-53s. The same procedure before these fixes
 took 142s with eight clicks, and the run before that 304s. A later run took 179s purely
@@ -1460,7 +1460,7 @@ running, and app 289070 resolves through the `D:\SteamLibrary` entry in
 `libraryfolders.vdf` (`_find_game_exe_win32` reads that file, so a non-default library is
 fine). Under the confined mode this launch is not a "sometimes flaky" operation - it cannot
 work, and the escalation prompt is the intended path.
-| exact screen signatures | a tolerant one (`涓庤兘鍔沗) | Windows OCR reads 鐗瑰緛涓庤兘鍔?as 姣忓緛涓庤兘鍔? so an exact match fails on the one screen the load must end on |
+| exact screen signatures | a tolerant one (`与能力`) | Windows OCR reads `特征与能力` as `每征与能力`, so an exact match fails on the one screen the load must end on |
 
 `CIV_MCP_PRINTWINDOW_CAPTURE=1` restores PrintWindow for an occluded or minimised
 window, accepting the renderer risk that comes with it.
@@ -1479,7 +1479,7 @@ dsh: MISSING_CREDENTIAL: llm-deepseek: no API key for provider route "deepseek-o
 ```
 
 That failure leaves a stub `session-*` directory and a `"phase": "starting"`
-heartbeat behind 鈥?the residue `scripts/civ6-clean.ps1` exists to remove. Note the
+heartbeat behind —the residue `scripts/civ6-clean.ps1` exists to remove. Note the
 launcher's own warning about the variable is easy to read past, because the launch
 proceeds for several seconds before it fails.
 
@@ -1502,7 +1502,7 @@ The `file sha256` line is the evidence the text survived intact, and the two
 launchers compute it by completely independent means (.NET `SHA256` over the
 decoded text vs coreutils `sha256sum` over the file's bytes with any BOM
 skipped). They must agree, and `.tools/test-taskfile.sh` asserts that for both
-prompts rather than leaving it to someone eyeballing a console 鈥?a console can
+prompts rather than leaving it to someone eyeballing a console —a console can
 still render the text badly even when the string itself is correct, and a *file*
 can too if the viewer guesses the wrong encoding. It is also the digest to compare
 against what the agent reports reading, so the check spans the whole path from
@@ -1525,7 +1525,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .tools\test-taskfile.ps1   #
 
 Ctrl+C on the dsh console stops the agent but leaves three things behind: the game
 process holding the tuner ports, any MCP server still attached to that tuner, and
-`heartbeat.json` describing a run that no longer exists 鈥?which is exactly what
+`heartbeat.json` describing a run that no longer exists —which is exactly what
 makes a stopped game read as a live one. `scripts/civ6-clean.ps1` stops them in the
 right order and then verifies the result instead of assuming it:
 
@@ -1553,10 +1553,10 @@ from.
   sample was not enough and reported a successful kill as a failure.
 
 It exits 0 only when the environment is actually clean: no game, no tuner listener,
-no MCP, no heartbeat. Sessions, diaries, archives and autosaves are never touched 鈥?only live processes and the stale heartbeat.
+no MCP, no heartbeat. Sessions, diaries, archives and autosaves are never touched —only live processes and the stale heartbeat.
 
-To get a Git Bash prompt: **Start menu 鈫?Git Bash**, or right-click a folder in
-Explorer 鈫?**Git Bash Here**, or just run
+To get a Git Bash prompt: **Start menu →Git Bash**, or right-click a folder in
+Explorer →**Git Bash Here**, or just run
 `"C:\Program Files\Git\bin\bash.exe"` from any Windows shell.
 
 If an exported key still seems ignored, remember DSH freezes its environment at
@@ -1582,7 +1582,7 @@ Bypass -File scripts\use-strategy.ps1 ...`): this machine's execution policy blo
 
 Both scripts now signal failure as **exit 2** on every error path. They previously
 used `Write-Error`, which throws under `$ErrorActionPreference = 'Stop'` and
-surfaced as exit 1 鈥?indistinguishable from a crash. Verified after the fix: an
+surfaced as exit 1 —indistinguishable from a crash. Verified after the fix: an
 unknown preset exits 2 without touching `SKILL.md`, and a preset missing a required
 phrase exits 2 with the offending file named.
 
@@ -1593,8 +1593,8 @@ bash scripts/use-strategy.sh science
 | Preset | Victory path |
 |---|---|
 | `balanced` | upstream default, no bias |
-| `expansion` | wide opening: 4鈥? cities and universal growth before committing to a victory type; **trade routes may never sit idle**; idle capacity (gold, faith, Great People, envoys) surfaced every turn |
-| `science` | Campuses, tall 4鈥? cities, Research Alliances, watch rival Spaceports |
+| `expansion` | wide opening: 4— cities and universal growth before committing to a victory type; **trade routes may never sit idle**; idle capacity (gold, faith, Great People, envoys) surfaced every turn |
+| `science` | Campuses, tall 4— cities, Research Alliances, watch rival Spaceports |
 | `domination` | one front at a time, siege vs walls, strategic resources, war weariness |
 | `religion` | Great Prophet deadline, Holy Sites, theological combat, conversion count |
 
@@ -1610,14 +1610,14 @@ Design notes:
 
 - **Fail-closed.** The switcher validates every file *before* touching
   `prompts/workers/`, then runs the static gate. A preset missing a required
-  phrase is rejected with exit 2 and the live prompts are left untouched 鈥?  verified by deliberately stripping a phrase and confirming `prompts/workers/`
+  phrase is rejected with exit 2 and the live prompts are left untouched —  verified by deliberately stripping a phrase and confirming `prompts/workers/`
   was unmodified.
 - **Active preset is detected by SHA-256 comparison**, not a marker file, so a
   hand-edited `prompts/workers/` correctly reports as matching no preset.
 - **The roster stays at four roles.** `contracts/worker-proposal.schema.json`
   fixes the `worker` enum and the static gate enforces it, so a fifth advisor is
   not possible without changing both. Strategy is expressed by reweighting the
-  four existing roles, including via each proposal's `priority` (0鈥?00).
+  four existing roles, including via each proposal's `priority` (0—00).
 - **Verified restore.** `balanced` holds a byte-identical copy of the upstream
   prompts (551/576/543/541 bytes), confirmed by hash after a switch cycle.
 
@@ -1635,7 +1635,7 @@ work and are recorded so upstream updates do not silently undo them.
 `AGENTS.md` documents the diary as *"your persistent memory across sessions"*,
 and the skill tells the agent to call `get_diary` when resuming. In practice
 `diary_path()` included the run id (`diary_{civ}_{seed}_{run_id}.jsonl`), and the
-run id is the per-session logger id 鈥?so **every orchestrator restart began with
+run id is the per-session logger id —so **every orchestrator restart began with
 an empty diary** and the agent resumed blind. Evidence: five diary files for one
 game, one per run, none aware of the others.
 
@@ -1649,7 +1649,7 @@ Fixed in two places that must agree:
 Existing per-run diaries were merged once into the per-game files (old files left
 in place), giving the current game **568 rows covering turns 1-72, 71 of them
 agent reflections**. `scripts/convex_sync.py` already accepted the game-only
-filename form 鈥?its own tests use `diary_india_123.jsonl` 鈥?so nothing downstream
+filename form —its own tests use `diary_india_123.jsonl` —so nothing downstream
 needed changing.
 
 Verified: `diary_path()` and the telemetry sink resolve to the same file, the
@@ -1666,7 +1666,7 @@ eleven kinds. For `ENDTURN_BLOCKING_UNITS` upstream auto-skips **only when every
 unit already has zero moves**; if any unit still has a move, it declares a hard
 blocker and hands the turn back. That is safe in principle, but the consequence
 in practice was the ~9-minute poll budget being burned while the game waited for
-a unit order that never came 鈥?repeatedly, and each time looking exactly like an
+a unit order that never came —repeatedly, and each time looking exactly like an
 AI-processing hang.
 
 Diagnosis evidence: the session log's final event was a `tool/call` for
@@ -1676,8 +1676,8 @@ matching completion, the heartbeat frozen on the same turn, and the game alive a
 entire session.
 
 Changed in `src/civ_mcp/end_turn.py`: the units blocker is now **resolved** the
-same way the tool does it 鈥?fortify combat units, then skip whatever still has
-moves 鈥?with a `log.warning` recording that it happened, instead of bouncing the
+same way the tool does it —fortify combat units, then skip whatever still has
+moves —with a `log.warning` recording that it happened, instead of bouncing the
 turn.
 
 Trade-off, stated plainly: the adapter now orders units the agent left un-ordered.
@@ -1688,7 +1688,7 @@ too much autonomy.
 ### Strategy can now be changed mid-game
 
 The strategy lives in the skill's `DIRECTIVE` block, and a skill is read once when
-the agent loads it 鈥?so for a while every strategy change cost a restart, and the
+the agent loads it —so for a while every strategy change cost a restart, and the
 running session was found to be playing with **no strategy directive at all**
 (a session-wide search for the directive's unique phrase returned zero hits).
 
@@ -1710,7 +1710,7 @@ with "running scripts is disabled":
 
 | Entry point | Use when |
 |---|---|
-| `scripts\set-strategy.cmd -Text "..."` | any Windows shell 鈥?wraps PowerShell with `-ExecutionPolicy Bypass` |
+| `scripts\set-strategy.cmd -Text "..."` | any Windows shell —wraps PowerShell with `-ExecutionPolicy Bypass` |
 | `bash scripts/set-strategy.sh -Text "..."` | Git Bash; also safest for non-ASCII text |
 | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\set-strategy.ps1 -Text "..."` | explicit form, no wrapper |
 
@@ -1735,14 +1735,14 @@ Note that an ad-hoc injection is overwritten by the next `use-strategy.ps1 <name
 ### World Congress votes no longer stall into an empty ballot
 
 `end_turn` has always blocked when the World Congress fires without registered vote
-preferences 鈥?the session opens and closes *inside* `ACTION_ENDTURN`, so preferences
+preferences —the session opens and closes *inside* `ACTION_ENDTURN`, so preferences
 have to be stored before it is sent. The block itself is correct (it stops a blind
 vote), but it had two failure modes:
 
 - a full round trip is spent on every WC, and
 - `server.py`'s safety net force-calls `submit_congress()` after the blocker fires
   **three times on the same turn**. With nothing registered, that submits an empty
-  ballot 鈥?the free vote is simply lost.
+  ballot —the free vote is simply lost.
 
 `end_turn.py` now registers a **free-vote-only fallback** before it blocks, so the
 ballot is never empty even if the agent never comes back:
@@ -1751,14 +1751,14 @@ ballot is never empty even if the agent never comes back:
 |---|---|
 | What it votes | option A, first possible target, for every resolution |
 | How many votes | exactly 1 per resolution |
-| Favor cost | **0** 鈥?see below |
+| Favor cost | **0** —see below |
 | Overridable | yes; `queue_wc_votes` removes the stale handler and replaces it |
 
 Why one vote is free: `lua/congress.py`'s handler initialises
 `local votesForThis = 1 / local costForThis = 0` and only raises them by walking
 `for v = 2, min(maxWanted, maxV)`. Requesting `votes = 1` makes that loop body
 unreachable, so the vote is cast at zero cost. `tests/test_world_congress_fallback.py`
-pins that invariant 鈥?if the loop ever starts at 1, the "free" vote silently starts
+pins that invariant —if the loop ever starts at 1, the "free" vote silently starts
 spending favor.
 
 Option A is chosen because in `DLC/Expansion2/Data/Expansion2_Congress.xml` option A
@@ -1846,7 +1846,7 @@ else:
 ```
 
 On T167 seven attacks against St. Petersburg all read
-`Est damage to defender: ~0` while the walls were going 13 鈫?3. That reads as
+`Est damage to defender: ~0` while the walls were going 13 →3. That reads as
 "this attack does nothing", and the real progress sits in a different field of
 the same line. The estimate now detects a city on the target tile, says so, and
 replaces the meaningless zero with `n/a` plus a pointer at `city walls` /
@@ -1860,7 +1860,7 @@ replaces the meaningless zero with `n/a` plus a pointer at `city walls` /
 | `src/civ_mcp/narrate.py` | city target: state what actually takes damage, suppress the `~0`, no spurious "LIKELY KILL" |
 | `tests/test_siege_fixes.py` | 14 tests covering both, including the 9-field backward-compatibility case |
 
-The city probe uses `Cities.GetCityInPlot(x, y)` 鈥?the call the game's own UI Lua
+The city probe uses `Cities.GetCityInPlot(x, y)` —the call the game's own UI Lua
 uses (`UnitFlagManager.lua:941`, `WorldInput.lua:456`), read out of the installed
 game rather than guessed. It is wrapped in `pcall`, so a failure degrades to the
 old behaviour instead of breaking the estimate.
@@ -1868,14 +1868,14 @@ old behaviour instead of breaking the estimate.
 **Caveat:** there is no Lua interpreter on this machine (`lua`, `luac` and
 `luajit` are all absent, and the game ships none), so the generated Lua could not
 be syntax-checked mechanically. It was checked by dumping the generated source
-and reading it 鈥?`{{}}` escaping, `end end` pairing, and `gsub` returning a single
+and reading it —`{{}}` escaping, `end end` pairing, and `gsub` returning a single
 value in that assignment. The Python side is covered by tests.
 
 ### A World Congress special session stalled the turn until a human voted
 
 Observed live on 2026-09-20, T169 of the China game. China captured **St.
-Petersburg 鈥?Russia's original capital** 鈥?and the game's own notification read
-`- 棣栭兘琚崰棰哷 ("capital captured"), with `* 涓栫晫璁細鍗冲皢鍙紑` one turn earlier.
+Petersburg —Russia's original capital** —and the game's own notification read
+`- 首都被占领 ("capital captured"), with `* 世界议会即将召开` one turn earlier.
 That convenes a **special session of the World Congress** (an emergency), and the
 session opened *during* `ACTION_ENDTURN`.
 
@@ -1892,15 +1892,15 @@ reads the turn number, so nothing noticed:
 
 | Evidence | Value |
 |---|---|
-| `get_world_congress` at T169 12:29 | `Next session in 12 turns` 鈥?the *regular* counter, which does not include special sessions |
-| `end_turn` T169鈫扵170 | `duration_ms = 592953` (593 s, the full budget) |
+| `get_world_congress` at T169 12:29 | `Next session in 12 turns` —the *regular* counter, which does not include special sessions |
+| `end_turn` T169→扵170 | `duration_ms = 592953` (593 s, the full budget) |
 | `queue_wc_votes` calls in that run | **0** |
-| How it finally advanced | a **manual vote in the game UI** 鈥?the turn moved at the edge of the HANG threshold |
+| How it finally advanced | a **manual vote in the game UI** —the turn moved at the edge of the HANG threshold |
 
 So the answer to "can the agent handle this?" was no, and it very nearly cost a
 kill-and-reload.
 
-**Fix:** `end_turn.py` now probes for an open session from the poll loop 鈥?`_check_mid_turn_world_congress(gs)` 鈥?starting 90 s in and then every 120 s, with
+**Fix:** `end_turn.py` now probes for an open session from the poll loop —`_check_mid_turn_world_congress(gs)` —starting 90 s in and then every 120 s, with
 a backstop in Phase 3. On finding one it casts **one free vote per resolution**
 and calls `submit_congress()`. Unlike the `WorldCongressStage1` handler, which
 only fires during the stage that has already passed, this uses the direct
@@ -1922,7 +1922,7 @@ which is why the existing diplomacy probe is a single call.
 non-empty resolution list are what the fix keys on; the regular T151 session
 behaved that way, but no special session has been exercised against the new code
 yet. If it turns out emergencies use a different path, the probe will simply find
-nothing and the old behaviour stands 鈥?it cannot make things worse.
+nothing and the old behaviour stands —it cannot make things worse.
 
 ### The turn-regression guard fought deliberate rollbacks
 
@@ -1940,13 +1940,13 @@ Use load_game_save("0_MCP_0171") to recover.
 Both times the rollback was intentional (T165, then T59), and both times the
 message instructed the agent to undo it. The in-process `_high_water_turn` cannot
 be reset from outside, so a fresh MCP process is the only way to make a rollback
-"stick" 鈥?which is a heavy price for changing your mind about a save.
+"stick" —which is a heavy price for changing your mind about a save.
 
 Two changes:
 
 | | |
 |---|---|
-| **Advisory wording** | the message now states both readings 鈥?"if that was deliberate, carry on; if not, the newest position is X" 鈥?and ends with "Do not reload by reflex". It comes from `_turn_regression_message()`, a pure function, so the wording is testable |
+| **Advisory wording** | the message now states both readings —"if that was deliberate, carry on; if not, the newest position is X" —and ends with "Do not reload by reflex". It comes from `_turn_regression_message()`, a pure function, so the wording is testable |
 | **`CIV_MCP_ALLOW_TURN_REGRESSION`** | set to `1` to suppress the warning entirely for a planned rollback. Wired into `dsh/civ6.cordis.yml` as `'0'` so it is discoverable |
 
 It also **adopts the new turn as the baseline** in both cases. Previously the
@@ -1980,7 +1980,7 @@ On 2026-09-20 the game was rolled back to **T59**, so the split was done for rea
 ```
 
 Live file afterwards: 464 rows, turns 1..59 (cities: 665 rows, 1..59). The split
-is verified by read-back 鈥?`464 + 943 = 1407` rows accounted for 鈥?and the backup
+is verified by read-back —`464 + 943 = 1407` rows accounted for —and the backup
 makes it reversible.
 
 | File | Purpose |

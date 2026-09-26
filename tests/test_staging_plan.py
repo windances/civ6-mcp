@@ -1,6 +1,6 @@
 """The staging plan: distinct tiles, different movement, and no queueing in the corridor.
 
-Human instruction, 2026-09-26: 鍦ㄩ泦缁撳墠锛岃鍒掗泦缁撴柟妗堬紝涓嶈兘琚牭浣忥紝涓嶅悓閮ㄩ槦绉诲姩鍔涗笉涓€鏍凤紝鎵惧埌鏈€浼橀泦缁?鏂规鍚庯紝鎵嶅紑濮嬫墽琛? The game supplies the ring and the paths (`lua/units.py`); this file decides the
+Human instruction, 2026-09-26: 在集结前，规划集结方案，不能被堵住，不同部队移动力不一样，找到最优集结方案后，才开始执行. The game supplies the ring and the paths (`lua/units.py`); this file decides the
 assignment, and these tests cover that decision without a game.
 """
 
@@ -22,7 +22,7 @@ def plan(units, options, ring=None):
         m.StagingRingTile(x=56, y=42, distance=1),
         m.StagingRingTile(x=55, y=42, distance=2),
     ]
-    return m.StagingPlan(target="鍦ｅ郊寰楀牎", ring=ring, units=units, options=options)
+    return m.StagingPlan(target="圣彼得堡", ring=ring, units=units, options=options)
 
 
 def unit(uid, kind, role, x=50, y=50, moves=2):
@@ -79,7 +79,7 @@ class TestAssignment:
 
 
 class TestTheSurplusHasAJob:
-    """Human instruction: 鏀诲煄閮ㄩ槦纭畾鍚庯紝濡傛灉杩樻湁澶氫綑閮ㄩ槦锛屽浣曞畨鎺掞紵
+    """Human instruction: 攻城部队确定后，如果还有多余部队，如何安排？
 
     The assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged. Everything above it
     takes the supply hexes of the ring first -each unit cuts the hex it stands on plus its ring
@@ -142,7 +142,7 @@ class TestTheSurplusHasAJob:
         assert "DEPTH" in st.render(result, plan(units, options, ring))
 
     def test_a_surplus_unit_advances_toward_the_next_objective(self):
-        """Human instruction 2026-09-26: 澶氫綑閮ㄩ槦杩樺彲浠ュ悜涓嬩竴涓煄甯傜洰鏍?铔棌钀ュ湴闆嗙粨鎺ㄨ繘.
+        """Human instruction 2026-09-26: 多余部队还可以向下一个城市目标/蛮族营地集结推进.
 
         The march is what the last deadline was lost to, so a surplus unit that cannot help the
         current siege -no supply hex in reach, no depth slot -is pushed toward the next target's

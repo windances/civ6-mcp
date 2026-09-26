@@ -82,3 +82,82 @@ def fix(root: str | pathlib.Path) -> list[pathlib.Path]:
         path.write_bytes(BOM + text.encode("utf-8"))
         fixed.append(path)
     return fixed
+
+
+# --------------------------------------------------------------------------------------
+# Content integrity: a BOM says nothing about whether the text inside is still the text
+# --------------------------------------------------------------------------------------
+#
+# Measured 2026-09-26: a `Get-Content | Set-Content` round trip had decoded five files as GBK and
+# re-encoded them as UTF-8, so `在集结前` became `鍦ㄩ泦缁撳墠` and every em dash became `鈥?`. The bytes
+# were valid UTF-8 and the BOMs were in place, so `offenders()` was silent and 843 tests passed. These
+# lines were in source files, docstrings and `SETUP-WINDOWS.md` - including the game's own menu
+# labels - so a rule that cannot see this is a rule that misses the failure that actually happened.
+
+SOURCE_SUFFIXES = frozenset({".py", ".md", ".txt", ".lua", ".ps1"})
+
+# Characters that arriving through the GBK round trip is the signature of the damage. A line carrying
+# three of them is not Chinese prose; the true positives measured on this repo carried dozens.
+_MOJIBAKE_MARKERS = frozenset(
+    "锛鐨娴鍦閿閸缁鏄銆鐢鍑涓鏂鍚鎴鎾鏌浜浣鍙閫鏃绋搴骞鍘鐜閭濮鎵鐩镐綅鑳芥垜浠粬璇村ソ"
+)
+
+# A line that *discusses* the artefact shows it on purpose: the recovery notes in `docs/`, the
+# docstring in this module, `SETUP-WINDOWS.md`'s "the prefix is missing" example, and the loyalty
+# test's U+FFFD sample. A checker that cannot tell an example from an accident is one somebody
+# switches off, so the mention of the artefact is the exemption.
+_SELF_REFERENTIAL = ("mojibake", "u+fffd", "prefix is missing", "gbk", "codepage 936")
+
+
+def source_files(root: str | pathlib.Path) -> list[pathlib.Path]:
+    """Every file a reader is expected to read as text, source included, in a stable order."""
+    base = pathlib.Path(root)
+    found = []
+    for path in base.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in SOURCE_SUFFIXES:
+            continue
+        parts = path.relative_to(base).parts
+        if any(part in SKIP_PARTS or part.startswith("_kb_env_") for part in parts):
+            continue
+        found.append(path)
+    return sorted(found)
+
+
+def looks_corrupt(line: str) -> bool:
+    """One line, judged on its own: the four shapes the GBK round trip leaves behind."""
+    if any(0xE000 <= ord(ch) <= 0xF8FF or ch == "\ufffd" for ch in line):
+        return True
+    if any(ch == "?" and i and ord(line[i - 1]) > 0x7F for i, ch in enumerate(line)):
+        return True
+    return sum(1 for ch in line if ch in _MOJIBAKE_MARKERS) >= 3
+
+
+def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str]]:
+    """(path, line number, text) for every line that still carries the GBK round trip's damage.
+
+    A line is exempt when the file *is talking about* the artefact within five lines of it - the
+    recovery notes, the docstring here, `SETUP-WINDOWS.md`'s "the prefix is missing" example, the
+    retrospective that quotes a mangled advice string, the loyalty test's U+FFFD sample - and the
+    marker table itself is exempt because those characters are its data.
+    """
+    found = []
+    for path in source_files(root):
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except (UnicodeDecodeError, OSError):
+            continue
+        lines = text.splitlines()
+        notes = {
+            i
+            for i, line in enumerate(lines)
+            if any(word in line.lower() for word in _SELF_REFERENTIAL)
+        }
+        for i, line in enumerate(lines):
+            if "_MOJIBAKE_MARKERS" in line:
+                continue
+            if not looks_corrupt(line):
+                continue
+            if any(abs(i - j) <= 5 for j in notes):
+                continue
+            found.append((path, i + 1, line.strip()))
+    return found

@@ -91,6 +91,45 @@ class TestEveryDocumentIsUnambiguous:
         assert text_encoding.offenders(ROOT) == [p for p in text_encoding.documents(ROOT) if text_encoding.needs_bom(p)]
 
 
+class TestTheTextItselfIsStillText:
+    """A BOM is a display hint; it says nothing about whether the characters are still the ones
+    somebody wrote. Measured 2026-09-26: a `Get-Content | Set-Content` round trip decoded five files
+    as GBK and re-encoded them as UTF-8, so `在集结前` became `鍦ㄩ泦缁撳墠` and every em dash became
+    `鈥?` - in source files, docstrings, and the game's own menu labels. Every BOM was in place and
+    843 tests passed, which is why this check exists."""
+
+    # The shapes a GBK round trip leaves behind; `looks_corrupt` has to recognise every one.
+    CORRUPT_SAMPLES = [
+        "\u9366\u3129\u6ce6\u7f01\u64b3\u58a0\u951b\u5c83",       # 在集结前, decoded as GBK
+        "\u4e00\u4e2a em dash \u9225? left behind",                # a dash that lost a byte
+        "a private-use byte \ue585 in the middle",
+        "a lost byte \u5728\ufffd\u96c6",
+    ]
+
+    def test_the_damaged_shapes_are_recognised(self):
+        for sample in self.CORRUPT_SAMPLES:
+            assert text_encoding.looks_corrupt(sample), f"not recognised as damage: {sample!r}"
+
+    def test_clean_chinese_and_english_are_not_flagged(self):
+        clean = [
+            "在集结前，规划集结方案，不能被堵住，不同部队移动力不一样",
+            "the pre-war analysis, the staging and the assault apply to every camp",
+            "中文里正常的问号是全角的，而不是半角字符。",
+            "\u6e29\u99a8\u7684\u5efa\u8bae\uff1a\u4fdd\u6301\u6b63\u5e38",   # 温馨的建议：保持正常
+        ]
+        for line in clean:
+            assert not text_encoding.looks_corrupt(line), f"false positive: {line!r}"
+
+    def test_no_file_in_the_repository_still_carries_the_damage(self):
+        found = text_encoding.corrupt_lines(ROOT)
+        shown = [f"{p.relative_to(ROOT)}:{n}" for p, n, _ in found]
+        assert not found, (
+            "valid UTF-8, BOM in place, and still not the text somebody wrote (a GBK round trip - "
+            "`Get-Content | Set-Content` is the usual cause). Repair with "
+            f"`.tools/repair-mojibake.py --apply` and `.tools/cleanup-artefacts.py --apply`: {shown}"
+        )
+
+
 class TestTheLauncherToleratesTheBom:
     def test_the_reader_strips_a_leading_bom(self):
         text = LAUNCHER.read_text(encoding="utf-8-sig")

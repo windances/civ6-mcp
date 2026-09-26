@@ -32,7 +32,14 @@ def main() -> int:
         for path in missing:
             print(f"missing BOM  {path.relative_to(root) if path.is_relative_to(root) else path}")
         print(f"{len(missing)} document(s) would show as mojibake in a GBK viewer")
-        return 1 if missing else 0
+        # The BOM is only a display hint: a file can carry one and still hold a decoded-as-GBK round
+        # trip's leavings (measured 2026-09-26 in five files, source included). Check that too.
+        corrupt = text_encoding.corrupt_lines(root)
+        for path, number, line in corrupt:
+            shown = path.relative_to(root) if path.is_relative_to(root) else path
+            print(f"corrupt text  {shown}:{number}: {line[:120]}")
+        print(f"{len(corrupt)} line(s) carry GBK round-trip damage")
+        return 1 if (missing or corrupt) else 0
 
     fixed = text_encoding.fix(root)
     for path in fixed:
