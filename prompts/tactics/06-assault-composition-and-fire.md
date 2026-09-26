@@ -91,7 +91,7 @@ a re-siege. Both failures above cost a full turn each.
      *behind* the Archers while an enemy Swordsman killed two of them. The same units, attacking
      from the adjacent tile, would have shortened the siege and been the target the city shot at.
 3. **Ranged shoots the city's HP** - not the garrison, and not the walls you already have siege
-   for. The manual (`GARRISON UNITS IN CITIES`) is explicit: a garrisoned unit's combat strength
+   for. The manual (`GARRISON UNITS IN CITIES`, `manual:1052-1065`) is explicit: a garrisoned unit's combat strength
    is partly *added to the city's*, and **the garrison takes no damage while the city is
    attacked** - it dies only when the city falls. The city is what has an HP pool to remove;
    walls come first, then that pool. A garrison that steps outside is a target like any unit, and
@@ -123,7 +123,7 @@ a re-siege. Both failures above cost a full turn each.
 ## Stop the healing at the source: the supply line
 
 A city's healing is **conditional**, and the condition is one the army can remove. The manual
-(`HEALING DAMAGE TO CITIES`): "A city heals a small amount every turn, even during combat, **as
+(`HEALING DAMAGE TO CITIES`, `manual:1066-1085`): "A city heals a small amount every turn, even during combat, **as
 long as it has a supply line**. A supply line is any hex adjacent to the city that is not within
 an enemy unit's Zone of Control."
 

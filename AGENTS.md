@@ -99,6 +99,20 @@ repair is one command, not a promise. The MCP reads these files as `utf-8-sig`
 (`turn_checks.py`, `knowledge.py`, `strategy_directive.py`), so a BOM never reaches a prompt or a
 parsed rule.
 
+**A batch of document edits leaves two derived things stale, and both are one command.** Run them in
+this order, every time a batch of documents changes:
+
+```
+python scripts/fix-text-encoding.py     # the BOM the edit tools strip
+python .tools/kb.py index               # the knowledge index (measured 2026-09-26: 311 documents,
+                                        # 6401 chunks, 3 seconds - manual + game install included)
+```
+
+The index is a *derived* file: a query against a stale one answers confidently with text that no
+longer exists. Its corpus is the repository's own writing, the extracted manual, and whatever
+`.tools/kb/extra-sources.txt` adds for this checkout (the game install's `Gameplay/Data` and
+`Text/en_US`, which is where the rules the manual excerpt omits are written down verbatim).
+
 ## Coordinate System
 
 **Hex grid: (X, Y) where higher Y = visually south.**
@@ -155,7 +169,9 @@ Each turn in order:
    them), and `finish-the-wounded` fires when an enemy within two tiles is at 20 HP or less and
    nothing attacked — a wounded enemy comes back, and **how fast depends on where it stands**: the
    manual's healing rates are 20 HP/turn in a city, 15 in friendly territory, 10 neutral, 5 in
-   enemy territory (naval 2, friendly only). The one that must not be left alive is the enemy
+   enemy territory (naval 2, friendly only). Those numbers come from `manual:1066-1085`
+   §HEALING DAMAGE TO CITIES — `search_knowledge("city heals a small amount supply line",
+   doc="manual")` prints the lines if one of them is ever in doubt. The one that must not be left alive is the enemy
    inside a city; the one to compare against is the enemy in the field at 5–10. The same numbers
    are the reason to rotate **our own** damaged units back across the border: 15/turn at home
    against 5/turn where they were hit. Once a
@@ -463,7 +479,7 @@ Military Engineers (requires Encampment + Armory): `build_route` builds a railro
 - **Research/Civic**: completed — choose next
 - **Governor**: point available — `get_governors` → `appoint_governor` / `assign_governor(governor_type, city_id)` / `promote_governor(governor_type, promotion_type)`
 - **Promotion**: unit has XP — `get_unit_promotions` → `promote_unit`. **A promotion consumes the
-  unit's whole turn** (manual, `EXPENDING XPS`), so promote after it has attacked, or while it is
+  unit's whole turn** (manual, `EXPENDING XPS`, `manual:704-713`), so promote after it has attacked, or while it is
   out of range or healing — never instead of an attack. Match it to the job: melee taking cities
   want the anti-garrison/damage line, ranged want the ranged-strength line.
 - **Policy Slot**: empty — `get_policies` → `set_policies`

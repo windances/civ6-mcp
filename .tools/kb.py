@@ -1,7 +1,8 @@
 """Build and query the local knowledge base (SQLite FTS5) from the command line.
 
     python .tools/kb.py index                          # prompts/, docs/, AGENTS.md, SETUP-WINDOWS.md
-    python .tools/kb.py index --source .tools/manuals/manual.clean.txt
+                                                       # + the extracted manual + .tools/kb/extra-sources.txt
+    python .tools/kb.py index --source .tools/manuals/manual.clean.txt   # --source REPLACES the corpus
     python .tools/kb.py search "how does a city heal" -k 3
     python .tools/kb.py search "城墙" --doc manual
     python .tools/kb.py stats
@@ -28,11 +29,14 @@ from civ_mcp import knowledge  # noqa: E402
 
 
 def cmd_index(args: argparse.Namespace) -> int:
-    sources = tuple(args.source) if args.source else knowledge.DEFAULT_SOURCES
+    sources = tuple(args.source) if args.source else knowledge.default_sources()
     summary = knowledge.build(sources, db=args.db)
     print(
         f"indexed {summary['docs']} document(s), {summary['chunks']} chunk(s) -> {summary['db']}"
     )
+    extras = knowledge.extra_sources()
+    if extras and not args.source:
+        print(f"local extra sources ({knowledge.EXTRA_SOURCES_FILE}): {', '.join(extras)}")
     missing = [str(s) for s in sources if not pathlib.Path(s).exists()]
     if missing:
         print(f"note: source(s) not found and skipped: {', '.join(missing)}")

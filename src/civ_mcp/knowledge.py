@@ -45,9 +45,44 @@ DEFAULT_SOURCES = (
     "SETUP-WINDOWS.md",
     ".tools/manuals/manual.clean.txt",
 )
+
+# Extra corpus locations, one path per line, `#` for comments. Git-ignored on purpose: the biggest
+# useful one is machine-specific - the Civilization VI install's gameplay data
+# (`Base/Assets/Gameplay/Data/*.xml`) and its English text (`Base/Assets/Text/en_US/*.xml`, where the
+# `LOC_*` strings live). Those files are the authority for what the manual excerpt does not cover -
+# `UNITCOMMAND_CONDEMN_HERETIC` and `LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION` were
+# found there by hand on 2026-09-26 - so a checkout that knows where the game lives can index them
+# with a line in this file instead of a hard-coded path in the source.
+EXTRA_SOURCES_FILE = ".tools/kb/extra-sources.txt"
+
+
+def extra_sources(path: str | pathlib.Path | None = None) -> tuple[str, ...]:
+    """The local extra corpus paths, or ``()`` when the file is absent or unreadable."""
+    candidate = pathlib.Path(path or EXTRA_SOURCES_FILE)
+    try:
+        text = candidate.read_text(encoding="utf-8-sig")
+    except OSError:
+        return ()
+    found: list[str] = []
+    for line in text.splitlines():
+        entry = line.strip()
+        if entry and not entry.startswith("#"):
+            found.append(entry)
+    return tuple(found)
+
+
+def default_sources(path: str | pathlib.Path | None = None) -> tuple[str, ...]:
+    """`DEFAULT_SOURCES` plus whatever this checkout added locally, de-duplicated in order."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for source in DEFAULT_SOURCES + extra_sources(path):
+        if source not in seen:
+            seen.add(source)
+            out.append(source)
+    return tuple(out)
 DEFAULT_DB = ".tools/kb/knowledge.sqlite"
 
-_TEXT_SUFFIXES = (".md", ".txt", ".yml", ".yaml", ".json")
+_TEXT_SUFFIXES = (".md", ".txt", ".yml", ".yaml", ".json", ".xml")
 # Directories that are never part of a corpus. `.tools` is deliberately *not* here: the extracted
 # manual lives in `.tools/manuals/`, and the sandbox only lets tests write under `.tools/`, so
 # skipping it would make the index unbuildable exactly where it is needed.
@@ -184,11 +219,17 @@ def connect(db: str | pathlib.Path | None = None) -> sqlite3.Connection:
 
 
 def build(
-    sources=DEFAULT_SOURCES,
+    sources: tuple[str, ...] | list[str] | None = None,
     db: str | pathlib.Path | None = None,
     extra_texts: dict | None = None,
 ) -> dict:
-    """(Re)build the index over ``sources`` (plus ``{name: text}`` extras). Returns a summary."""
+    """(Re)build the index over ``sources`` (plus ``{name: text}`` extras). Returns a summary.
+
+    ``sources=None`` means the checkout's full default corpus: the repository's own writing, the
+    extracted manual, and whatever this checkout added in ``.tools/kb/extra-sources.txt``.
+    """
+    if sources is None:
+        sources = default_sources()
     path = db_path(db)
     if path.exists():
         path.unlink()  # a rebuild, not an append: stale chunks are worse than none

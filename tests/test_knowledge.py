@@ -58,6 +58,30 @@ class TestTheDefaultCorpusIncludesTheManual:
         files = knowledge.iter_files((".tools/does-not-exist-anywhere",))
         assert files == []
 
+    def test_xml_is_indexable(self):
+        # The game's own gameplay data and `LOC_*` text are XML; without the suffix they cannot be
+        # added to the corpus at all.
+        assert ".xml" in knowledge._TEXT_SUFFIXES
+
+    def test_extra_sources_are_read_and_appended(self):
+        path = scratch() / "extra-sources.txt"
+        path.write_text(
+            "# a comment\n\nD:\\games\\Civ6\\Data\n  D:\\games\\Civ6\\Text  \n",
+            encoding="utf-8",
+        )
+        assert knowledge.extra_sources(path) == ("D:\\games\\Civ6\\Data", "D:\\games\\Civ6\\Text")
+        combined = knowledge.default_sources(path)
+        assert combined[: len(knowledge.DEFAULT_SOURCES)] == knowledge.DEFAULT_SOURCES
+        assert "D:\\games\\Civ6\\Data" in combined
+
+    def test_no_extra_sources_file_is_not_an_error(self):
+        assert knowledge.extra_sources(scratch() / "absent.txt") == ()
+
+    def test_duplicate_sources_are_collapsed(self):
+        path = scratch() / "extra-sources.txt"
+        path.write_text("prompts\nprompts\n", encoding="utf-8")
+        assert knowledge.default_sources(path).count("prompts") == 1
+
 
 MANUAL_LIKE = """\
 71
