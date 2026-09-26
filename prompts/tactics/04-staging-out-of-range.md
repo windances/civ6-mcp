@@ -114,6 +114,17 @@ order of march, written down, and it is what the 10-turn review quotes back.
 | role | screen / melee / capture / siege / ranged |
 | fires | yes / no / **unknown until a shot is ordered** — count only `yes` when you state the turn's expected shots |
 
+**The target may be an enemy city or a barbarian camp, and the table is the same table** (human
+instruction 2026-09-26: 战前分析、攻城前集结、攻城执行适用于所有城市和蛮族营地). Give
+`get_staging_plan` the camp's tile exactly as you give it a city's: the ring, the paths and the
+distinct-tile assignment do not depend on what stands on the target, and the reply names which
+object it planned (`STAGING PLAN for the camp at x,y`) and says `WALK-IN OPENS` instead of
+`ASSAULT OPENS`. What changes is the last step, not the staging: a camp has no HP, no walls and no
+supply line — one military unit **moves** onto its tile — so the row that matters is the unspent
+walk-in, and the guard within two tiles is the enemy the shooters are there for. A camp four or more
+tiles from the nearest city with no unit nearby is a job for a unit already out there (file 7, C4),
+not for the main army: say so rather than marching the train across the map.
+
 Build it, then hold it to these three rules:
 
 1. **No two units may be sent to the same tile.** A second order onto an occupied tile is refused

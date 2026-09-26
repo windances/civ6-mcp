@@ -1,4 +1,4 @@
-﻿"""MCP server for Civilization VI 鈥?lets LLM agents read game state and play.
+"""MCP server for Civilization VI 鈥?lets LLM agents read game state and play.
 
 Uses FastMCP with the lifespan pattern to maintain a persistent TCP connection
 to the running game via FireTuner protocol.
@@ -806,6 +806,13 @@ async def get_staging_plan(
     the ring, every fighting unit's path to each ring tile (the game's own pathfinding), and one
     assignment: distinct tiles, shooters on the distance-2 tiles, melee on the adjacent one, and
     the conflicts named so nobody is ordered onto an occupied tile (`STACKING_CONFLICT`).
+
+    Pass a **barbarian camp's** tile exactly as you pass a city's: the ring, the paths and the
+    assignments are the same plan, and the reply says which object it planned (`STAGING PLAN for the
+    camp at x,y`, `WALK-IN OPENS`, and no supply line to cut). The pre-war analysis, the staging and
+    the assault apply to **every city and every camp** (human instruction 2026-09-26); what differs
+    for a camp is only the last step, because one military unit moving onto its tile destroys it -
+    the guard, not the camp, is the enemy, and the walk-in must arrive unspent.
 
     Pass the **next** objective's tile (`next_city_x`/`next_city_y` 鈥?the next city or a
     barbarian camp) and the surplus that is not needed for the supply line is pushed toward it

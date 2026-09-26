@@ -238,6 +238,34 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   and do not feed the siege train in piecemeal - stage it adjacent to the target
   before the declaration, not after.
 
+**Three phases, on every city and every barbarian camp (human instruction 2026-09-26).**
+No target is attacked on the turn it is noticed, and none is attacked from wherever the army happens
+to stand. Every objective — an enemy city, a levied raid, or a barbarian camp — goes through the same
+three phases, in this order, and the diary says which phase the turn was in:
+
+1. **战前分析 — `prompts/tactics/07-pre-war-analysis.md`.** Read the target in its own numbers before
+   committing (a city: garrison / walls / HP pool / ring; a camp: the guard within two tiles, the
+   ground, the approach) and run the gates — five for a city, C1–C6 for a camp. The trigger is the
+   target **being attacked**: 不用获取所有城市信息才开战 still holds, and reading every city on the map
+   is not a gate.
+2. **攻城前集结 — `prompts/tactics/04-staging-out-of-range.md` step 3b, built by
+   `get_staging_plan(x, y)` on the target's own tile.** A camp's tile exactly as a city's: the ring,
+   the paths and the distinct-tile assignment are the same, the reply names the object (`STAGING PLAN
+   for the camp at x,y`, `WALK-IN OPENS`), one row per unit, arrival turns from the game's own
+   pathfinding, and the turn the **last** shooter is in place is the timetable. In a corridor one unit
+   wide, issue one move per call and re-read `get_units` between them.
+3. **攻城执行 — `prompts/tactics/05-formation-and-screening.md` and
+   `prompts/tactics/06-assault-composition-and-fire.md`.** Siege knocks the walls, ranged shoots the
+   pool, melee and cavalry take the tile, front line in front and siege behind at range 2. For a camp
+   the last step is a walk-in against an object with no HP, no walls and no supply line — one military
+   unit **moves** onto the tile, and the guard, not the camp, is the enemy.
+
+The phases are not optional and not re-orderable, and their cost is measured: T159 issued eight
+grouped move orders and put **one** unit of eight on 喀山's ring, and no Trebuchet ever fired at that
+city because the train was never staged — the phases exist because skipping one is what that looks
+like from the inside. Task files in `prompts/tasks/tmp/` add the *objective* for a target that needs
+one; they never replace a phase.
+
 **Development.**
 
 - Four to six cities, then stop expanding. Never train a Settler in a city of

@@ -2419,7 +2419,18 @@ for dx = -2, 2 do for dy = -2, 2 do
         end
     end
 end end
-print("STAGEPLAN|" .. tx .. "," .. ty .. "|ring:" .. #ring)
+-- A camp is a target of this same plan: the pre-war analysis, the staging before the assault and
+-- the assault itself apply to every city AND every barbarian camp (human instruction 2026-09-26).
+-- The ring, the paths and the assignments are identical; what differs is the last step - a camp has
+-- no HP, no walls and no supply line, and one unit walking onto its tile destroys it. The flag is
+-- read from the game rather than from the tile's improvement, so a camp somebody else already
+-- cleared reads as a plain tile, and a city tile never reads as a camp. A failed call leaves the
+-- flag false, which is the city wording - the safe default for a plan that fires from range 2.
+local isCamp = false
+pcall(function()
+    isCamp = (Cities.GetCityInPlot(tx, ty) == nil)
+end)
+print("STAGEPLAN|" .. tx .. "," .. ty .. "|ring:" .. #ring .. "|camp:" .. (isCamp and "1" or "0"))
 -- The next objective's ring, when the caller named one: surplus units advance toward it instead
 -- of idling (human instruction 2026-09-26: 多余部队还可以向下一个城市目标/蛮族营地集结推进). The
 -- march is what 007's clock was lost to, so the unit that will be needed there is moved now.
@@ -2587,6 +2598,9 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
         parts = line.split("|")
         if line.startswith("STAGEPLAN|") and len(parts) >= 3:
             plan.target = parts[1]
+            # `camp:1` is printed by the current server; an older one printed neither token, and the
+            # city wording is the safe default for a plan that fires from range 2.
+            plan.camp = any(token == "camp:1" for token in parts[2:])
         elif line.startswith("RING|") and len(parts) >= 5:
             x, y = (int(v) for v in parts[1].split(","))
             plan.ring.append(

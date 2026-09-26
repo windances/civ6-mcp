@@ -64,6 +64,9 @@ class Assignment:
 class StagingPlanResult:
     target: str = ""
     ring_size: int = 0
+    # A camp is the same plan against a different object (no HP, no walls, no supply line): only the
+    # surplus labels and the closing line change. See `lua/models.StagingPlan.camp`.
+    camp: bool = False
     placed: list[Assignment] = field(default_factory=list)
     unplaced: list[m.StagingUnit] = field(default_factory=list)
     surplus: list[Assignment] = field(default_factory=list)
@@ -137,6 +140,7 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
     before the screen does, because the screen has more tiles that will do.
     """
     result = StagingPlanResult(target=plan.target, ring_size=len(plan.ring))
+    result.camp = getattr(plan, "camp", False)
     by_pos = {(t.x, t.y): t for t in plan.ring}
     taken: dict[tuple[int, int], str] = {}
 
@@ -344,8 +348,9 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
 def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
     """The plan as the table the doctrine asks for, one row per unit."""
     units = {u.unit_id: u for u in (plan.units if plan else [])}
+    what = f"the camp at {result.target}" if result.camp else (result.target or "the target")
     lines = [
-        f"STAGING PLAN for {result.target or 'the target'} — {result.ring_size} ring tile(s),"
+        f"STAGING PLAN for {what} — {result.ring_size} ring tile(s),"
         f" {len(result.placed)} unit(s) placed, {len(result.unplaced)} unplaced"
     ]
     for a in result.placed:
@@ -383,10 +388,17 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             " everything else has a job, and it is not a firing tile):"
         )
         for a in on_supply:
-            lines.append(
-                f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
-                f"  CUT THE SUPPLY LINE (stands on a hex the city heals from)"
-            )
+            if result.camp:
+                lines.append(
+                    f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
+                    f"  HOLD THE RING (a camp has no supply line to cut — this is where the second"
+                    f" attacker stands and where the guard is stopped from stepping onto the camp)"
+                )
+            else:
+                lines.append(
+                    f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
+                    f"  CUT THE SUPPLY LINE (stands on a hex the city heals from)"
+                )
         for a in killing:
             lines.append(
                 f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where}"
@@ -408,7 +420,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                 f" the city's two-tile strike — replace a screen casualty, or take the road the"
                 f" enemy's reinforcements use"
             )
-        if result.supply_total:
+        if result.supply_total and not result.camp:
             lines.append(
                 f"    supply hexes cut after this plan: {result.supply_cut}/{result.supply_total}"
                 + (
@@ -452,20 +464,40 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
         lines.append(
             "  SPARE RING TILES: "
             + ", ".join(f"({t.x},{t.y}) d{t.distance}" for t in result.idle_tiles[:8])
-            + " — take them with the unplaced units: occupying the ring stops the city's"
-            " ~20/turn heal"
+            + (
+                " — take them with the unplaced units: occupying the ring keeps the guard from"
+                " stepping into it"
+                if result.camp
+                else " — take them with the unplaced units: occupying the ring stops the city's"
+                " ~20/turn heal"
+            )
         )
     shooters = [a for a in result.placed if a.unit.role in ("siege", "ranged") and a.tile]
-    lines.append(
-        f"  ASSAULT OPENS on {('this turn' if result.opens_on == 0 else f'T+{result.opens_on}')}"
-        f" with {len(shooters)} shooter(s) in position."
-        + (
-            " A shooter that moves two tiles, crosses a river or climbs a hill fires NEXT turn —"
-            " if you want it firing the turn it lands, it must arrive with a movement point left."
-            if shooters
-            else " No shooter reaches a ring tile in time: the plan is the march, not the fire."
+    when = "this turn" if result.opens_on == 0 else f"T+{result.opens_on}"
+    if result.camp:
+        lines.append(
+            f"  WALK-IN OPENS on {when} with {len(shooters)} shooter(s) in position."
+            + (
+                " A camp has no HP, no walls and no supply line — one military unit MOVES onto its"
+                " tile and it is gone, so the pair that matters is a shooter and an **unspent**"
+                " walk-in; the guard, not the camp, is the enemy."
+                " A shooter that moves two tiles, crosses a river or climbs a hill fires NEXT turn."
+                if shooters
+                else " No shooter reaches a ring tile in time: the plan is the march, and the"
+                " walk-in must arrive with movement left — never a Scout, Builder or Trader."
+            )
         )
-    )
+    else:
+        lines.append(
+            f"  ASSAULT OPENS on {when}"
+            f" with {len(shooters)} shooter(s) in position."
+            + (
+                " A shooter that moves two tiles, crosses a river or climbs a hill fires NEXT turn —"
+                " if you want it firing the turn it lands, it must arrive with a movement point left."
+                if shooters
+                else " No shooter reaches a ring tile in time: the plan is the march, not the fire."
+            )
+        )
     if units:
         pass
     return "\n".join(lines)

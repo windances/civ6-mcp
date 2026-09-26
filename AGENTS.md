@@ -190,7 +190,11 @@ Each turn in order:
    rules are `prompts/tactics/04-staging-out-of-range.md` step 3b, and **`get_staging_plan(city_x,
    city_y)` builds it for you**: give it the target city's tile and it returns the ring, every
    fighting unit's path to each ring tile from the game's own pathfinding, one assignment with
-   distinct tiles and the conflicts named, and the turn the assault opens.
+   distinct tiles and the conflicts named, and the turn the assault opens. **The same three phases —
+   战前分析 (`tactics/07`), 攻城前集结 (`tactics/04` + this tool), 攻城执行 (`tactics/05`/`06`) — run
+   on every enemy city and every barbarian camp** (human instruction 2026-09-26), so pass a **camp's**
+   tile exactly as you pass a city's: the ring and the assignment are the same, the reply says
+   `STAGING PLAN for the camp at x,y` and `WALK-IN OPENS`, and there is no supply line to cut.
 5. `get_cities` — queues, growth, pillaged districts
 6. `get_district_advisor` if placing a new district
 7. `set_city_production` / `set_research` if needed

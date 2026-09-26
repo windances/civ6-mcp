@@ -340,3 +340,68 @@ class TestTheParser:
         assert "GetReachableMovement" in query and "GetMoveToPath" in query
         assert "STAGEPLAN|" in query and "OPTION|" in query
         assert "{" not in query.split("--")[0] or True  # the template must not raise on format
+
+
+class TestACampIsTheSamePlanAgainstADifferentObject:
+    """Human instruction 2026-09-26: the pre-war analysis, the staging and the assault apply to
+    every city AND every barbarian camp.
+
+    The ring, the paths and the assignments are the same plan for both; what differs is the last
+    step. A camp has no HP, no walls and no supply line - one military unit moving onto its tile
+    destroys it - so the plan has to say `WALK-IN OPENS` rather than `ASSAULT OPENS`, must not
+    offer to cut a supply line that does not exist, and must keep the walk-in unspent.
+    """
+
+    def _ring(self):
+        return [
+            m.StagingRingTile(x=59, y=41, distance=1),
+            m.StagingRingTile(x=60, y=41, distance=1),
+            m.StagingRingTile(x=60, y=42, distance=1),
+            m.StagingRingTile(x=59, y=43, distance=1),
+            m.StagingRingTile(x=58, y=42, distance=2),
+            m.StagingRingTile(x=61, y=42, distance=2),
+        ]
+
+    def _force(self, camp: bool):
+        """One ranged unit and four melee: the fourth melee is surplus and takes a supply hex."""
+        units = [unit(1, "UNIT_CROSSBOWMAN", "ranged", x=50, y=50)]
+        units += [unit(10 + i, "UNIT_MAN_AT_ARMS", "melee", x=50 + i, y=51) for i in range(4)]
+        ring = self._ring()
+        options = [
+            m.StagingOption(unit_id=u.unit_id, x=t.x, y=t.y, turns=0, this_turn=True)
+            for u in units
+            for t in ring
+        ]
+        built = m.StagingPlan(target="60,29", ring=ring, units=units, options=options, camp=camp)
+        return built, st.assign(built)
+
+    def test_a_camp_walks_in_and_has_no_supply_line_to_cut(self):
+        built, result = self._force(camp=True)
+        text = st.render(result, built)
+        assert "the camp at 60,29" in text
+        assert "WALK-IN OPENS" in text and "ASSAULT OPENS" not in text
+        assert "HOLD THE RING" in text and "CUT THE SUPPLY LINE" not in text
+        assert "supply hexes cut" not in text
+        assert "unspent" in text and "guard, not the camp" in text
+
+    def test_a_city_keeps_the_siege_wording(self):
+        built, result = self._force(camp=False)
+        text = st.render(result, built)
+        assert "ASSAULT OPENS" in text and "WALK-IN OPENS" not in text
+        assert "CUT THE SUPPLY LINE" in text and "HOLD THE RING" not in text
+        assert "supply hexes cut after this plan" in text
+
+    def test_the_flag_comes_from_the_game_and_defaults_to_a_city(self):
+        from civ_mcp import lua as lq
+
+        assert lq.parse_staging_plan_response(["STAGEPLAN|60,29|ring:18|camp:1"]).camp is True
+        assert lq.parse_staging_plan_response(["STAGEPLAN|58,39|ring:18|camp:0"]).camp is False
+        # An older server prints neither token: the city wording is the safe default.
+        assert lq.parse_staging_plan_response(["STAGEPLAN|58,39|ring:18"]).camp is False
+
+    def test_the_query_asks_the_game_which_object_the_tile_holds(self):
+        from civ_mcp import lua as lq
+
+        query = lq.build_staging_plan_query(60, 29)
+        assert "GetCityInPlot" in query and '|camp:' in query
+

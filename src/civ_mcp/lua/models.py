@@ -632,6 +632,11 @@ class StagingPlan:
     ``next_ring`` / ``next_options`` are the same thing for the *next* objective, when the caller
     named one — surplus units advance toward it rather than idling (human instruction 2026-09-26:
     多余部队还可以向下一个城市目标/蛮族营地集结推进).
+
+    ``camp`` says the target tile holds a **barbarian camp** rather than an enemy city: the ring,
+    the paths and the assignments are the same, but a camp has no HP, no walls and no supply line,
+    so only the last step (one unit walks onto the tile) and the closing line change. The flag is
+    read from the game (`Cities.GetCityInPlot`) and not inferred from the tile's improvement.
     """
 
     target: str = ""
@@ -640,6 +645,7 @@ class StagingPlan:
     options: list[StagingOption] = field(default_factory=list)
     next_ring: list[StagingRingTile] = field(default_factory=list)
     next_options: list[StagingOption] = field(default_factory=list)
+    camp: bool = False
     # A unit to eliminate (in practice a missionary): the ring around it is the job, because a
     # religious unit dies to one attack — the work is getting adjacent and blocking its escape.
     kill_ring: list[StagingRingTile] = field(default_factory=list)

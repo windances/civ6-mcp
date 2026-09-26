@@ -11,6 +11,25 @@ camp** is a *raid*: no HP, no walls, no declaration — and the human made it a 
 北京 produced the Spearman that cost 160 gold at T65. A camp is not a footnote to the city procedure;
 it is the second object that procedure is run on.
 
+**And this analysis is the first of three phases that run on every target** (human instruction
+2026-09-26: 战前分析、攻城前集结、攻城执行适用于所有城市和蛮族营地). One target at a time, in this
+order, whichever class it is:
+
+1. **战前分析 — this file.** Read the target in its own numbers and run the gates (five for a city,
+   C1–C6 for a camp). The trigger is the target **being attacked**, not every target on the map:
+   不用获取所有城市信息才开战 still holds, and reading the rest is not a gate.
+2. **攻城前集结 — `prompts/tactics/04-staging-out-of-range.md`**, whose step 3b table is built by
+   `get_staging_plan(x, y)` on the **target's own tile**: a camp's tile exactly as a city's. The
+   reply names the object (`STAGING PLAN for the camp at x,y`, `WALK-IN OPENS`) and the ring, the
+   paths and the distinct-tile assignment are the same for both.
+3. **攻城执行 — `prompts/tactics/05-formation-and-screening.md`** and
+   **`prompts/tactics/06-assault-composition-and-fire.md`**: formation, order of work, capture. For a
+   camp the last step is a walk-in against an object with no HP and no walls, so the pair that
+   matters is a shooter and an **unspent** military unit — never a Scout, Builder or Trader.
+
+A raid that skips a phase is how this war lost turns: T159's eight grouped move orders put one of
+eight units on 喀山's ring, and no Trebuchet ever fired at it.
+
 The directive's gate is "declare only when the army in place can take the cities". That is a
 judgement, and this file is how to make it from numbers rather than from hope. It is **one
 procedure in seven steps**, and every step names the query that answers it:
@@ -100,9 +119,11 @@ must be that move. Never send a Scout, a Builder or a Trader: a civilian cannot 
 be captured instead.
 
 **C4 — the approach.** The same rule as a city: choose a rally tile about two tiles out, outside the
-guard's reach, reachable in one turn, and hold it the turn before. A camp four or more tiles from the
-nearest city with no unit nearby is a job for a unit that is already out there, not a march — say so
-rather than moving the army.
+guard's reach, reachable in one turn, and hold it the turn before. **`get_staging_plan(camp_x,
+camp_y)` builds exactly this ring** — pass the camp's tile, the reply says `STAGING PLAN for the camp
+at x,y` and `WALK-IN OPENS`, and the row that must arrive **unspent** is the walk-in. A camp four or
+more tiles from the nearest city with no unit nearby is a job for a unit that is already out there,
+not a march — say so rather than moving the army.
 
 **C5 — what it is worth.** A cleared camp pays gold, a little era score, and — if `CIVIC_MILITARY_TRADITION`
 is not yet inspired — **the inspiration that halves that civic** (its boost is "clear a barbarian
