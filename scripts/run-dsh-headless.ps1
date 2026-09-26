@@ -4,11 +4,16 @@
 # resolves to WSL and the README explicitly warns against running civ6-mcp from
 # WSL. This script performs the same steps with native Windows paths.
 #
-# Usage:
-#   pwsh -File scripts/run-dsh-headless.ps1
-#   pwsh -File scripts/run-dsh-headless.ps1 "Play one complete turn using the civ6-orchestrator skill."
-#   pwsh -File scripts/run-dsh-headless.ps1 -TaskFile prompts/tasks/continue-from-t59.zh.txt
-#   pwsh -File scripts/run-dsh-headless.ps1 -TaskFile prompts/tasks/continue-from-t59.zh.txt -DryRun
+# Usage (PowerShell 5.1, which is what this box has - `pwsh` is not installed here,
+# so the documented command must be `powershell`, not `pwsh`):
+#   powershell -NoProfile -File scripts\run-dsh-headless.ps1
+#   powershell -NoProfile -File scripts\run-dsh-headless.ps1 "Play one complete turn using the civ6-orchestrator skill."
+#   powershell -NoProfile -File scripts\run-dsh-headless.ps1 -TaskFile prompts\tasks\continue-current.zh.txt
+#   powershell -NoProfile -File scripts\run-dsh-headless.ps1 -TaskFile prompts\tasks\continue-current.en.txt -DryRun
+#
+# From inside a PowerShell session `& .\scripts\run-dsh-headless.ps1 -TaskFile <file>`
+# is the same thing. -DryRun prints everything and launches nothing, so it is safe
+# while a game is being played.
 #
 # Startup prompts live in prompts/tasks/ as a .zh.txt / .en.txt pair. -TaskFile
 # does NOT pass the file's text as the task: it passes a one-line pointer to it,
