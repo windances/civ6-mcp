@@ -103,3 +103,66 @@ The four numbers as read, with the turn and the query that produced each; which 
 fired from and which were refused `NO_LOS`; the turn the Ram stood adjacent and the wall damage the
 next melee attack did; the supply hexes cut; and the turn the pool reached 0 with the unit that walked
 in. If it expires, say what the train's city-distance was on the last read and what blocked it.
+
+## T163 replay notes — read this before the first move (appended after the process died mid-turn)
+
+added: T163. The process holding FireTuner **died during T163** (the second such death; the first was
+T159), before `end_turn`, so T163 never completed and **its orders are gone** — the match resumes at the
+T163 autosave and every order has to be re-issued. What follows was measured live during that lost turn.
+
+**The four numbers, as read on T163** — from result lines, not estimates:
+
+| # | Number | Reading | Source |
+|---|---|---|---|
+| 1 | Garrison | **none** — a Russian Builder is the only unit on the tile; the attacking melee took ~0 retaliation | `get_map_area(61,42,3)`; `MELEE_ATTACK` lines |
+| 2 | Walls | **100 → 0 in ONE turn** | `MELEE_ATTACK|…|walls: 100/100 → 90/100 → 41/100 → 0/100` |
+| 3 | HP pool | **200 → 169** | the same three result lines |
+| 4 | Ring | d1 `(60,41) (60,42) (60,43) (61,41) (61,43) (62,42)`; d2 `(59,42) (59,43) (60,40) (60,44) (61,40) (61,44) (62,40) (62,41) (62,43) (62,44)` | `get_staging_plan(61,42)` |
+
+So this file's reading clause (`walls` strictly below 100, from a result line) **is satisfied**; only the
+diary line is missing, because the turn never ended.
+
+**The three things that cost the T163 attempt, and what to do instead.**
+
+1. **(59,42) has NO LOS.** The plan lists it as a spare d2 ring tile, but `attack(3342347, 61,42)` from
+   there returned `NO_LOS`. **(60,44) is a proven range-2 firing tile** (Crossbowman 2228242 fired from
+   it, `range:2 dist:2`). Fire one shooter before posting the others — that is this file's own Gate 2,
+   working as written.
+2. **The plan posts Trebuchet 3342347 at (60,42) d1 — never execute that.** A siege unit adjacent to the
+   city dies. Trust the plan's `FIRE from here` marks ((59,43), (61,44)), not its d1 postings.
+3. **A melee unit attacks a city MANY times per turn while it has movement points.** This is the finding
+   that matters: Man-at-Arms #2424835 at d1 `(60,41)`, with the Battering Ram at d1 `(60,43)`, attacked
+   诺夫哥罗德 four times in a single turn for `walls 100 → 90 → 41 → 0` and `hp 200 → 199 → 194 → 169`,
+   at roughly one movement point per attack (3/3 → 2/3 after the first). **The 100-point wall phase this
+   file budgeted 1–2 Trebuchet volleys for collapses into one turn of melee attacks**, after which the
+   Trebuchets belong to the HP pool. The 20/turn heal is then the only clock.
+
+**Three more readings that correct the doctrine as written.**
+
+- **Ranged fire on a walled city is worth about one point**: the Crossbowman's shot took the city
+  `200/200 → 199/200` and left `walls 100/100`. Do not spend bolts on walls.
+- **The Ram cannot stack with the melee**: `move(1441804, 60,41)` returned
+  `STACKING_CONFLICT|Friendly UNIT_MAN_AT_ARMS already on (60,41). Cannot stack same formation class.`
+  It works from `(60,43)`, already d1 adjacent — the game's own text is *"When adjacent to a city,
+  attacking melee units do full damage to Walls"*.
+- **`get_diplomacy`'s `walls N` is a static maximum, not a live pool**: it still read `walls 100` while
+  the walls stood at 0. Read walls and HP from a combat result line, never from the diplomacy line.
+
+**Task 008's tool answer, recorded as its `done when` requires.** A Russian Missionary is annotated on
+`(61,31)` alongside our Builder and an Egyptian Trader, and 成都's Warrior at `(60,31)` is adjacent:
+`unit_action(1245193, "condemn")` → `ERR:NO_RELIGIOUS_TARGET|No adjacent enemy religious unit to
+condemn`; `unit_action(2097162, "attack", 61,31)` from `(59,31)` → `NO_ENEMY|No hostile unit or city at
+(61,31)`. Both verbs refuse it, so that Missionary is not removable through this interface — 008 and 011
+should be read as `count == 0` of **actionable** hostile religious units, or the objectives must be
+retired as unreachable, not as unmet.
+
+**The 成都 ring is nearly clear.** 成都's own 43-damage strike killed the 31 HP levied Man-at-Arms at
+`(59,33)` on T163; the radius-2 map of `(60,31)` then holds **no military unit at all**. 011's "ring
+empty" is one un-removable religious unit away, not three levied Man-at-Arms.
+
+**Also true at the crash**, for the replay: `CIVIC_DIVINE_RIGHT` was set (the civic slot was empty);
+Crossbowman #2228242 was given `PROMOTION_SUPPRESSION` and its estimate then read CS 62 with
+VOLLEY/ARROW_STORM/EMPLACEMENT; the barbarian Spearman at `(61,46)` was killed by that Crossbowman; the
+Builder #3407876 stands on the pillaged mine at `(61,32)` with 3 charges and needs one turn to `repair`
+— note that **010/011's "pillaged mine at (60,32)" is wrong**: `(60,32)` is intact, the pillaged mine is
+`(61,32)`.
