@@ -65,14 +65,15 @@ def in_force_list() -> set[str]:
         return {n for n in re.findall(r"`([^`]+\.md)`", line) if n not in NON_TASKS}
 
     names = names_on(lines[start])
-    if not names:
-        for line in lines[start + 1:]:
-            if not line.strip() or line.startswith("("):
-                break
-            found = names_on(line)
-            if not found:
-                break
-            names |= found
+    # The list may continue on the lines directly below the header whether or not the header itself
+    # carried names - a long list is allowed to wrap, and only the following blank line ends it.
+    for line in lines[start + 1:]:
+        if not line.strip() or line.startswith("("):
+            break
+        found = names_on(line)
+        if not found:
+            break
+        names |= found
     return names
 
 
