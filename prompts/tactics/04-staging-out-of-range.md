@@ -139,6 +139,44 @@ hexes the city still draws its supply line from (the `SIEGE PROGRESS` block coun
 `3/6`, 喀山 `1/6`). That is how the same army both cuts the ~20/turn heal and stops queueing behind
 itself.
 
+### 3b-2 — what the surplus does (human instruction 2026-09-26: 攻城部队确定后，如果还有多余部队，如何安排)
+
+One city's assault needs **3 siege, 2 melee, 4 ranged and 1 cavalry** (the directive's
+establishment; `get_staging_plan` counts the cavalry inside the melee bucket, because both are
+capture-capable front-line units). Everything above that is surplus, and surplus is spent in this
+order — it is a ladder, not a preference:
+
+1. **The supply hexes.** The manual's rule is that a city heals while *any* adjacent hex is outside
+   our zone of control, and a hex is cut when one of our fighting units stands **on it or beside
+   it** — so one unit covers up to three hexes and **three units close a six-hex ring**. Measured:
+   our sieges left it at `3/6` and `1/6`, and both cities healed back to full. This is first because
+   it is the only job that makes the siege's own fire count.
+2. **The road the enemy's reinforcements use.** Russia rebuilt from 13 military to 105 during this
+   war and produced a Man-at-Arms that took our Knight from 52 to 6 in one blow (T151). A unit on
+   the approach kills them one at a time instead of letting them arrive together.
+3. **Depth behind the ring, out of the city's two-tile strike.** Not decoration: the stack loses a
+   screen unit every few turns (T154: our only Horseman died attacking the city), and a replacement
+   already standing behind the ring keeps the shooters at full fire.
+4. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
+   it is what `hold-what-you-take` asks for. 阿斯特拉罕 needed it at −23.5 loyalty/turn; 成都 was
+   raided precisely because it had none (T153–T155).
+5. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
+   the enemy's Lavra, mines and roads behind the front. Russia's faith comes from its Lavra:
+   pillaging it stops the stream at source, worth more than any number of missionary kills.
+6. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
+   it is re-tasked to the next objective. “Fortified in place because the corridor is jammed”
+   (T155, verbatim) is a queue, not a plan.
+
+**Who may take a ring hex, and who may not.** Those hexes are *adjacent* to the city, so they are
+inside its ranged strike: send **melee, anti-cavalry or cavalry** — units that can take a hit, and
+whose presence is also what creates the zone of control that does the cutting. Never send ranged or
+siege units to a supply hex (a walled city's strike destroyed a 55 HP Horseman outright at T154),
+and never send a Builder, Settler or Trader near an enemy city. Two operational notes: a unit
+standing on a supply hex that also holds the enemy garrison can be listed by `use-your-attacks` (the
+adapter counts the city tile's unit as a target) — attack if there is a legal attack, otherwise
+record the refusal in the diary; and walking to a supply hex spends the move, so the hex is taken
+**before** the turn the fire matters, never during it.
+
 ## Step 4 — the march
 
 - Move in formation, not in a queue: the screen leads, the ranged and siege follow within one

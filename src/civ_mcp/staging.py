@@ -38,6 +38,12 @@ _PREFERRED_DISTANCE = {
 # Ordered by what the assault needs first when two units want the same tile.
 _ROLE_PRIORITY = {"siege": 0, "melee": 1, "short-ranged": 2, "ranged": 3}
 
+# What one city's assault actually needs (the directive's establishment): 3 siege, 2 melee,
+# 4 ranged - and the cavalry is counted in the melee bucket, because both are capture-capable
+# front-line units and the plan does not need to tell them apart. Everything above these caps
+# is surplus, and surplus has a job: see the ladder in `render`.
+_ESTABLISHMENT = {"siege": 3, "melee": 3, "ranged": 3, "short-ranged": 1}
+
 
 @dataclass
 class Assignment:
@@ -60,9 +66,12 @@ class StagingPlanResult:
     ring_size: int = 0
     placed: list[Assignment] = field(default_factory=list)
     unplaced: list[m.StagingUnit] = field(default_factory=list)
+    surplus: list[Assignment] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
     idle_tiles: list[m.StagingRingTile] = field(default_factory=list)
     opens_on: int = 0  # the turn the last shooter is in position (0 = this turn)
+    supply_cut: int = 0
+    supply_total: int = 0
 
     @property
     def shooters_in_place(self) -> int:
@@ -73,6 +82,43 @@ def _distance_rank(unit: m.StagingUnit, tile: m.StagingRingTile) -> int:
     """How well this tile suits this unit; lower is better."""
     preferred = _PREFERRED_DISTANCE.get(unit.role, (2, 1))
     return preferred.index(tile.distance) if tile.distance in preferred else len(preferred)
+
+
+def _supply_hexes(ring: list[m.StagingRingTile]) -> list[m.StagingRingTile]:
+    """The hexes the city draws its supply line from: every adjacent hex.
+
+    The manual's rule (`manual:1066-1085`): a city heals while **any** adjacent hex is outside
+    our zone of control, and a hex is cut when one of our fighting units stands on it or beside
+    it. So the distance-1 ring tiles are the ones that matter, and one unit covers up to three
+    of them - which is why closing a six-hex ring takes about three units, not six.
+    """
+    return [t for t in ring if t.distance == 1 and not t.blocked]
+
+
+def supply_coverage(ring: list[m.StagingRingTile], units: list[m.StagingUnit]) -> tuple[int, int]:
+    """(hexes cut, hexes total) if the listed units stand where they are.
+
+    Mirrors the coverage test in `build_capture_check_query`: a hex counts as cut when one of
+    our fighting units stands on it or on a tile adjacent to it.
+    """
+    hexes = _supply_hexes(ring)
+    if not hexes:
+        return 0, 0
+    positions = {(u.x, u.y) for u in units}
+    cut = 0
+    for tile in hexes:
+        if (tile.x, tile.y) in positions:
+            cut += 1
+            continue
+        neighbours = {
+            (tile.x + dx, tile.y + dy)
+            for dx in (-1, 0, 1)
+            for dy in (-1, 0, 1)
+            if (dx, dy) != (0, 0)
+        }
+        if positions & neighbours:
+            cut += 1
+    return cut, len(hexes)
 
 
 def _candidates(plan: m.StagingPlan, unit: m.StagingUnit) -> list[m.StagingOption]:
@@ -96,7 +142,20 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2) -> StagingPlanResult:
         plan.units,
         key=lambda u: (_ROLE_PRIORITY.get(u.role, 9), -u.moves, u.unit_id),
     )
+    # The assault force first, and only as many as the city needs: the directive's establishment
+    # is 3 siege, 2 melee + 1 cavalry, 4 ranged. Everyone above that is surplus, and surplus
+    # does not take a firing tile from a unit that needs one.
+    left = dict(_ESTABLISHMENT)
+    assault: list[m.StagingUnit] = []
+    surplus_units: list[m.StagingUnit] = []
     for unit in ordered:
+        if left.get(unit.role, 0) > 0:
+            left[unit.role] -= 1
+            assault.append(unit)
+        else:
+            surplus_units.append(unit)
+
+    for unit in assault:
         options = [
             o
             for o in _candidates(plan, unit)
@@ -130,6 +189,38 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2) -> StagingPlanResult:
             Assignment(unit=unit, tile=tile, turns=chosen.turns, this_turn=chosen.this_turn)
         )
 
+    # The surplus, in the order the employment ladder in `render` gives: the supply hexes of
+    # the ring first (each unit cuts the hex it stands on plus its ring neighbours), then depth
+    # behind the ring for whoever is left.
+    supply_tiles = [t for t in _supply_hexes(plan.ring) if (t.x, t.y) not in taken]
+    supply_positions = {(t.x, t.y) for t in supply_tiles}
+    for unit in surplus_units:
+        chosen = None
+        for option in sorted(
+            (o for o in _candidates(plan, unit) if o.turns <= turns_ahead),
+            key=lambda o: (o.turns, 0 if (o.x, o.y) in supply_positions else 1),
+        ):
+            if (option.x, option.y) in taken:
+                continue
+            if (option.x, option.y) in supply_positions:
+                chosen = option
+                break
+        if chosen is None:
+            result.surplus.append(Assignment(unit=unit, tile=None, turns=0, this_turn=False))
+            continue
+        tile = by_pos[(chosen.x, chosen.y)]
+        taken[(chosen.x, chosen.y)] = f"{unit.unit_type} #{unit.unit_id} (supply)"
+        supply_positions.discard((chosen.x, chosen.y))
+        result.surplus.append(
+            Assignment(
+                unit=unit, tile=tile, turns=chosen.turns, this_turn=chosen.this_turn, note="SUPPLY"
+            )
+        )
+
+    cut, total = supply_coverage(
+        plan.ring, [a.unit for a in result.placed + result.surplus]
+    )
+    result.supply_cut, result.supply_total = cut, total
     result.idle_tiles = [t for t in plan.ring if (t.x, t.y) not in taken and not t.blocked]
     shooters = [a for a in result.placed if a.unit.role in ("siege", "ranged") and a.tile]
     result.opens_on = max((a.turns for a in shooters), default=0)
@@ -155,6 +246,39 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             f"  {unit.unit_type:<22} #{unit.unit_id} ({unit.x},{unit.y}) moves {unit.moves}"
             f"  NO TILE IN REACH within {2} turns — send it to the rear of the ring to cut the"
             f" supply line, do not queue it in the corridor"
+        )
+    if result.surplus:
+        on_supply = [a for a in result.surplus if a.note == "SUPPLY"]
+        depth = [a for a in result.surplus if a.note != "SUPPLY"]
+        lines.append(
+            "  SURPLUS (the assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged —"
+            " everything else has a job, and it is not a firing tile):"
+        )
+        for a in on_supply:
+            lines.append(
+                f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
+                f"  CUT THE SUPPLY LINE (stands on a hex the city heals from)"
+            )
+        for a in depth:
+            lines.append(
+                f"    {a.unit.unit_type:<20} #{a.unit.unit_id}  DEPTH: hold behind the ring, out of"
+                f" the city's two-tile strike — replace a screen casualty, or take the road the"
+                f" enemy's reinforcements use"
+            )
+        if result.supply_total:
+            lines.append(
+                f"    supply hexes cut after this plan: {result.supply_cut}/{result.supply_total}"
+                + (
+                    " — the city stops healing"
+                    if result.supply_cut >= result.supply_total
+                    else " — it still heals ~20/turn, so the uncut hexes are the next units' work"
+                )
+            )
+        lines.append(
+            "    Ladder if there are more: supply hexes > the reinforcement road > depth behind the"
+            " ring > the garrison of a city we just took > pillage (cavalry ignores ZOC) >"
+            " nothing. Never stack them on the ring: our own units are the usual thing blocking"
+            " our own firing tiles."
         )
     if result.conflicts:
         lines.append("  CONFLICTS (one unit per tile — a second order is STACKING_CONFLICT):")

@@ -79,6 +79,85 @@ class TestAssignment:
         assert "SPARE RING TILES" in st.render(result, plan(units, options))
 
 
+class TestTheSurplusHasAJob:
+    """Human instruction: 攻城部队确定后，如果还有多余部队，如何安排？
+
+    The assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged. Everything above it
+    takes the supply hexes of the ring first — each unit cuts the hex it stands on plus its ring
+    neighbours, so closing six hexes takes about three units — then depth behind the ring.
+    """
+
+    def _units(self, siege=4, melee=3):
+        units = [
+            unit(100 + i, "UNIT_TREBUCHET", "siege", x=50 + i, y=40)
+            for i in range(siege)
+        ]
+        units += [
+            unit(200 + i, "UNIT_MAN_AT_ARMS", "melee", x=50 + i, y=41) for i in range(melee)
+        ]
+        return units
+
+    def _options(self, units, ring):
+        return [
+            m.StagingOption(unit_id=u.unit_id, x=t.x, y=t.y, turns=0, this_turn=True)
+            for u in units
+            for t in ring
+        ]
+
+    def test_the_extra_siege_unit_cuts_the_supply_line_instead_of_taking_a_firing_tile(self):
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=56, y=41, distance=2),
+            m.StagingRingTile(x=55, y=42, distance=2),
+            m.StagingRingTile(x=56, y=42, distance=1),
+            m.StagingRingTile(x=57, y=42, distance=1),
+            m.StagingRingTile(x=57, y=43, distance=1),
+        ]
+        units = self._units(siege=4, melee=1)
+        result = st.assign(plan(units, self._options(units, ring), ring))
+        assert len(result.placed) == 4, "3 siege + 1 melee is the establishment"
+        assert len(result.surplus) == 1, "the fourth siege unit is surplus"
+        assert result.surplus[0].note == "SUPPLY"
+        assert result.surplus[0].tile.distance == 1, "supply hexes are the adjacent ring"
+        text = st.render(result, plan(units, self._options(units, ring), ring))
+        assert "CUT THE SUPPLY LINE" in text
+        assert "supply hexes cut after this plan:" in text
+
+    def test_a_surplus_unit_that_can_reach_no_supply_hex_becomes_depth(self):
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=56, y=42, distance=1),
+        ]
+        units = self._units(siege=4, melee=0)
+        # only the first unit can reach a tile at all, and it is not surplus
+        options = [m.StagingOption(unit_id=units[0].unit_id, x=55, y=41, turns=0, this_turn=True)]
+        result = st.assign(plan(units, options, ring))
+        assert len(result.placed) == 1
+        assert [a.note for a in result.surplus] == [""], "the fourth siege unit is surplus"
+        assert result.surplus[0].tile is None, "nothing in reach, so it holds behind the ring"
+        assert "DEPTH" in st.render(result, plan(units, options, ring))
+
+    def test_the_ladder_is_printed_with_the_answer(self):
+        ring = [m.StagingRingTile(x=56, y=42, distance=1)]
+        units = self._units(siege=4, melee=0)
+        result = st.assign(plan(units, self._options(units, ring), ring))
+        text = st.render(result, plan(units, self._options(units, ring), ring))
+        for step in ("supply hexes", "reinforcement road", "depth behind the ring", "pillage"):
+            assert step in text
+        assert "Never stack them on the ring" in text
+
+    def test_supply_coverage_counts_a_unit_standing_beside_a_hex(self):
+        ring = [
+            m.StagingRingTile(x=56, y=42, distance=1),
+            m.StagingRingTile(x=57, y=42, distance=1),
+            m.StagingRingTile(x=58, y=42, distance=1),
+        ]
+        # one unit beside the middle hex cuts all three (it touches each of them)
+        cut, total = st.supply_coverage(ring, [m.StagingUnit("UNIT_MAN_AT_ARMS", 1, 57, 41, 2, "melee")])
+        assert (cut, total) == (3, 3)
+        assert st.supply_coverage(ring, [m.StagingUnit("UNIT_MAN_AT_ARMS", 1, 40, 40, 2, "melee")]) == (0, 3)
+
+
 class TestTheParser:
     def test_it_reads_the_three_line_shapes(self):
         from civ_mcp import lua as lq
