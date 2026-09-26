@@ -11,7 +11,13 @@ can express, and it only works if three things hold, each of which has burned a 
    plus `scope:`, because that is what lets an agent start a task, know when it is finished, and
    retire it without asking;
 3. the retirement is a **move** out of the directory (`done/`), so a finished task cannot be
-   re-executed on the next turn.
+   re-executed on the next turn;
+4. `AGENTS.md` itself stays the **procedure**: since 2026-09-26 the section says how to find the tasks,
+   how to read one, how to tell which are in force and where the detail lives, and names no task's
+   content or retirement outside the single `IN FORCE NOW` line — the live status is
+   `prompts/tasks/tmp/current_tasks.md` and the history is `docs/task-history.md`. A task's status
+   written into `AGENTS.md` is a line that goes stale in the one file that is re-injected whole on
+   every change (measured: 6 re-injections of 55-61 KB in one session drove it to stop after 4 turns).
 
 These tests are the guard rail on the protocol itself, not on any one task.
 """
@@ -27,34 +33,52 @@ sys.path.insert(0, str(ROOT / "src"))
 
 TMP = ROOT / "prompts" / "tasks" / "tmp"
 AGENTS = ROOT / "AGENTS.md"
+REGISTER = TMP / "current_tasks.md"
 HEADER_FIELDS = ("added:", "expires:", "done when:", "overrides:", "scope:")
+# Neither of these is a task: `README.md` documents the directory, `current_tasks.md` is the register.
+NON_TASKS = frozenset({"README.md", "current_tasks.md"})
 
 
 def task_files() -> list[pathlib.Path]:
-    return sorted(p for p in TMP.glob("*.md") if p.name != "README.md")
+    return sorted(p for p in TMP.glob("*.md") if p.name not in NON_TASKS)
+
+
+def named_tasks(text: str) -> set[str]:
+    """Every backticked `NNN-*.md` name in `text`, which is how a task is written down anywhere."""
+    return set(re.findall(r"`(\d{3}-[^`]+\.md)`", text))
 
 
 def in_force_list() -> set[str]:
-    """The file names under AGENTS.md's "IN FORCE NOW" line.
+    """The file names on AGENTS.md's "IN FORCE NOW" line.
 
-    The list is prose, so the shape is fixed instead: the names are backticked `*.md` on the lines
-    directly below the header, the parenthetical note that follows them starts a line with `(`, and
-    an empty list is written as `none` (however it is emphasised - `(none)`, `*none.*`), which is the
-    state a fully retired directory is in. `README.md` is never a task.
+    That line is the one-line channel that tells a running session a task file has arrived, so its
+    shape is fixed: the names are backticked `*.md` on the line itself (the list may continue on the
+    lines directly below it), and an empty list is written as `none` (however it is emphasised), which
+    is the state a fully retired directory is in. `README.md` and `current_tasks.md` are never tasks.
     """
     lines = AGENTS.read_text(encoding="utf-8-sig").splitlines()
     start = next(i for i, line in enumerate(lines) if "IN FORCE NOW" in line)
-    names: set[str] = set()
-    for line in lines[start + 1 :]:
+
+    def names_on(line: str) -> set[str]:
         if line.strip().strip("*_` ").lower().startswith("none"):
             return set()
-        if not line.strip() or line.startswith("("):
-            break
-        found = {n for n in re.findall(r"`([^`]+\.md)`", line) if n != "README.md"}
-        if not found:
-            break
-        names |= found
+        return {n for n in re.findall(r"`([^`]+\.md)`", line) if n not in NON_TASKS}
+
+    names = names_on(lines[start])
+    if not names:
+        for line in lines[start + 1:]:
+            if not line.strip() or line.startswith("("):
+                break
+            found = names_on(line)
+            if not found:
+                break
+            names |= found
     return names
+
+
+def register_list() -> set[str]:
+    """The task names in `current_tasks.md`, the live register of what is in force."""
+    return named_tasks(REGISTER.read_text(encoding="utf-8-sig"))
 
 
 class TestTheProtocolIsAdvertised:
@@ -83,7 +107,8 @@ class TestTheListAndTheDirectoryAgree:
     is playing reaches that session only when the list names it (003 and 004 sat unread for five turns
     until it did), and a file retired *without* editing the list is an instruction that never dies
     (measured T95: `002-focus-fire-scouts` was moved to `done/` as expired while the list still named
-    it, and this was found by the suite, not by a reader). Both directions are cheap to check.
+    it, and this was found by the suite, not by a reader). Both directions are cheap to check, and the
+    register in the directory is a third place the same fact is written down.
     """
 
     def test_the_in_force_list_is_exactly_the_directory(self):
@@ -95,6 +120,42 @@ class TestTheListAndTheDirectoryAgree:
             f"on disk but not listed: {sorted(on_disk - listed)}. "
             "Update the list in the same commit that adds or retires a task."
         )
+
+    def test_the_register_is_exactly_the_directory(self):
+        registered = register_list()
+        on_disk = {path.name for path in task_files()}
+        assert registered == on_disk, (
+            "prompts/tasks/tmp/current_tasks.md and the directory disagree: "
+            f"registered but not on disk: {sorted(registered - on_disk)}; "
+            f"on disk but not registered: {sorted(on_disk - registered)}. "
+            "The register is maintained in the same commit that adds or retires a task."
+        )
+
+    def test_agents_md_names_no_task_outside_the_in_force_line(self):
+        """The section is the procedure; status and history live in the directory.
+
+        A task's content or retirement written into `AGENTS.md` is status in the one file that is
+        re-injected whole every time it changes, and it is what the 2026-09-26 split moved out: the
+        live register is `current_tasks.md` and the record is `docs/task-history.md`.
+        """
+        lines = AGENTS.read_text(encoding="utf-8-sig").splitlines()
+        start = next(i for i, line in enumerate(lines) if "IN FORCE NOW" in line)
+        offenders = [
+            (number, line.strip())
+            for number, line in enumerate(lines, start=1)
+            if number != start + 1 and named_tasks(line)
+        ]
+        assert not offenders, (
+            "AGENTS.md names a temporary task outside its IN FORCE NOW line: "
+            + "; ".join(f"line {n}: {text[:80]}" for n, text in offenders)
+        )
+
+    def test_the_history_doc_is_a_record_and_not_an_instruction(self):
+        """The prose that left `AGENTS.md` is kept, and kept clearly out of force."""
+        history = (ROOT / "docs" / "task-history.md").read_text(encoding="utf-8-sig")
+        assert "not an instruction" in history
+        assert named_tasks(history)          # the retired tasks are still written down somewhere
+        assert "current_tasks.md" in history  # and it points at where the live status is
 
 
 class TestEveryTaskFileIsRetirable:

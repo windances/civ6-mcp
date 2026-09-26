@@ -65,9 +65,11 @@ save name for exactly that reason: those go stale within a turn.
    `queue_wc_votes` before it).
 
 2. **Read the temporary tasks before planning**: every `*.md` in `prompts/tasks/tmp/` (not
-   `README.md`, not `done/`). Those files are instructions in force, each with its own `done when:`,
-   `overrides:` and `expires:`, and nothing else in the loop knows they exist. A finished or expired
-   one is retired by moving it into `done/` with the turn in its name.
+   `README.md`, not `current_tasks.md`, not `done/`). Those files are instructions in force, each with
+   its own `done when:`, `overrides:` and `expires:`, and nothing else in the loop knows they exist.
+   `current_tasks.md` is the live register of what is in force, and `docs/task-history.md` is what the
+   retired ones measured. A finished or expired one is retired by moving it into `done/` with the turn
+   in its name.
 
 3. Decide only after that, then work the turn loop: `get_game_overview`, clear whatever `end_turn`
    reports as a blocker, order every unit, set city production, then `end_turn`. **Verify state after

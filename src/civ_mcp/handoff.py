@@ -465,9 +465,10 @@ def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = Fals
         "   turn: `get_pending_diplomacy`, `get_pending_trades`, `get_world_congress` - votes\n"
         "   must be queued with `queue_wc_votes` before `end_turn`, which fires the congress\n"
         "   synchronously.",
-        "2. Read every `*.md` in `prompts/tasks/tmp/` (not `README.md`, not `done/`). Those\n"
-        "   files are instructions in force, each with its own `done when:`, `overrides:` and\n"
-        "   `expires:`.",
+        "2. Read every `*.md` in `prompts/tasks/tmp/` (not `README.md`, not `current_tasks.md`,\n"
+        "   not `done/`). Those files are instructions in force, each with its own `done when:`,\n"
+        "   `overrides:` and `expires:`. `current_tasks.md` is the register of what is in force;\n"
+        "   `docs/task-history.md` is what the retired ones measured and is not an instruction.",
         f"3. Play the turn loop - `get_game_overview`, clear whatever `end_turn` reports as a\n"
         f"   blocker, order every unit, set city production, `end_turn` - for at most {turns}\n"
         f"   turns, then stop and report. Verify state after a mutation that reports failure: a\n"

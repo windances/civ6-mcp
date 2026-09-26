@@ -6,7 +6,8 @@ editing the strategy directive and without waiting for a restart.
 ## For the human: how to add one
 
 1. Drop a file in here, e.g. `002-buy-the-barbarian-off.md`. The name is the id; the number orders
-   them. Any `*.md` in this directory (except this `README.md`) is an instruction **in force**.
+   them. Any `*.md` in this directory (except this `README.md` and `current_tasks.md`) is an
+   instruction **in force**.
 2. Give it the four header lines every task file has — `added:`, `expires:`, `done when:`,
    `overrides:` — and a `scope:` line. They are what lets an agent start, finish and retire it
    without asking:
@@ -20,7 +21,8 @@ editing the strategy directive and without waiting for a restart.
 ## For the agent: how to consume one
 
 - **Read every `*.md` in this directory at the start of every turn** (with `get_game_overview`), and
-  again whenever the turn takes a decision the task touches. Not `README.md`, and not `done/`.
+  again whenever the turn takes a decision the task touches. Not `README.md`, not `current_tasks.md`,
+  and not `done/`.
 - **Nothing else in the loop knows these files exist.** They are not checkable rules, they carry no
   metric, and the MCP cannot see the filesystem — so a task file is only ever executed because the
   turn loop looked here. An empty directory is the normal state and means no temporary tasks.
@@ -39,5 +41,19 @@ editing the strategy directive and without waiting for a restart.
 `AGENTS.md` is re-injected into a running session when it changes, which is what makes it a live
 channel — but every temporary instruction written there has to be *deleted again* by hand, and a
 reference full of one-off instructions stops being a reference. A file has a lifecycle instead:
-present means in force, moved to `done/` means retired, and the standing text in `AGENTS.md` is a
-single unchanging pointer to this directory.
+present means in force, moved to `done/` means retired, and the standing text in `AGENTS.md` is the
+procedure plus a single `IN FORCE NOW` line naming what is in force.
+
+**The split of 2026-09-26 made that literal.** `AGENTS.md`'s section is now the *procedure* only —
+how to find the tasks, how to read one, how to tell which are in force, where the detail lives — and it
+names no task's content or retirement. The three places a task fact lives are:
+
+| file | what it is |
+|---|---|
+| `prompts/tasks/tmp/<nnn>-<slug>.md` | the task itself; the only authority on its content |
+| `prompts/tasks/tmp/current_tasks.md` | the **live register**: one line per in-force task with its `expires:` |
+| `docs/task-history.md` | the prose that used to sit in `AGENTS.md`: the retired tasks and what they measured; **a record, not an instruction** |
+
+The reason is measured: a task's status written into `AGENTS.md` is a line in the one file that is
+re-injected whole every time it changes, and one session received six such re-injections of 55–61 KB —
+about 405 KB of reference text — and stopped after four turns believing its context was spent.

@@ -51,9 +51,11 @@
    `get_world_congress`（**世界议会在 `end_turn` 内部同步触发**，所以任何投票都必须先用
    `queue_wc_votes` 排队）。
 
-2. **规划之前先读临时任务**：`prompts/tasks/tmp/` 下每一个 `*.md`（不读 `README.md`，不读 `done/`）。
-   那些文件是**在效指令**，各自带有 `done when:`、`overrides:`、`expires:`，而循环里没有别的东西知道
-   它们存在。已完成或已过期的任务，通过把它移进 `done/` 并在文件名里带上回合号来退役。
+2. **规划之前先读临时任务**：`prompts/tasks/tmp/` 下每一个 `*.md`（不读 `README.md`，不读
+   `current_tasks.md`，不读 `done/`）。那些文件是**在效指令**，各自带有 `done when:`、`overrides:`、
+   `expires:`，而循环里没有别的东西知道它们存在。`current_tasks.md` 是当前在效任务的登记表，
+   `docs/task-history.md` 记录已退役任务测到了什么。已完成或已过期的任务，通过把它移进 `done/`
+   并在文件名里带上回合号来退役。
 
 3. 查完再决定，然后按回合循环推进：`get_game_overview` → 清掉 `end_turn` 报出的阻塞项 → 给每一支部队
    下令 → 设定城市生产 → `end_turn`。**报失败的变更之后要复核局面**——被拒绝的指令也可能已经生效
