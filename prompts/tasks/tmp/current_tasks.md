@@ -21,3 +21,4 @@ ones measured.
 |---|---|---|---|---|
 | `013-upgrade-and-scout.md` | 2026-09-26 | turn 195 | 攒钱升级部队，侦察兵找下一个战前分析目标 — the gold is earmarked for a named upgrade list and the scouts find the target that list exists for | the war upgrades are paid for and a candidate is read in (x,y) |
 | `014-destroy-missionaries-everywhere.md` | 2026-09-26 | turn 200 | 全域消灭传教士 — every hostile religious unit on the map; at peace only the sweep is possible | no hostile religious unit is left anywhere we can see — `count == 0` |
+| `017-attack-thebes.md` | 2026-09-27 | turn 204 | 攻打底比斯，做好战前分析和战前集结，然后开打 — the human named the objective, and the train already stands in range of Thebes (68,34) | Thebes (68,34) is ours |

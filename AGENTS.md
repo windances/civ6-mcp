@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`.
+**IN FORCE NOW:** `013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`, `017-attack-thebes.md`.
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
