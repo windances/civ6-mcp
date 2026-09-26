@@ -7,7 +7,8 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`007-destroy-russia.md`, `008-destroy-missionaries.md`, `009-city-near-niter.md`.
+`010-rescue-chengdu.md`, `007-destroy-russia.md`, `008-destroy-missionaries.md`,
+`009-city-near-niter.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -41,6 +42,15 @@ tool or human (`ERR:REQUIRES_WAR`). Record the reply either way in the diary's `
 is **not** the war city, an escort out of the garrison rotation, and nothing pulled off the staging row
 or the declaration. Its expiry (T175) is counted from the queue, because 005 expired unused by being
 counted from the calendar.
+
+**010 is the defensive exception, and it outranks 007 for the units it needs** (human instruction
+2026-09-26: 救援成都). A levied Yerevan Man-at-Arms and a levied Horseman are on 成都's ring —
+Yerevan is Russia's suzerain city-state, so the raid is Russia's war by proxy — 成都 had no garrison
+until T155 and no walls until ~T157, and the raid has already **pillaged 成都's IRON mine at (60,32)**,
+which is the resource every melee upgrade in this war runs on. Unit survival comes before the war
+aim: lift the raid with the city's own ranged strike, the garrison and the nearest ranged unit, then
+repair the mine. It authorizes **no** peace with Russia, **no** attack on Yerevan itself, and **no**
+pulling of the siege train off 圣彼得堡's wall phase.
 
 **Expiries must be reachable.** 004 and 005 originally expired at T95, in the same batch as the raid
 tasks — but a Settler line alone runs to ~T95, so a T95 expiry made both impossible by design and the
