@@ -640,6 +640,10 @@ class StagingPlan:
     options: list[StagingOption] = field(default_factory=list)
     next_ring: list[StagingRingTile] = field(default_factory=list)
     next_options: list[StagingOption] = field(default_factory=list)
+    # A unit to eliminate (in practice a missionary): the ring around it is the job, because a
+    # religious unit dies to one attack — the work is getting adjacent and blocking its escape.
+    kill_ring: list[StagingRingTile] = field(default_factory=list)
+    kill_options: list[StagingOption] = field(default_factory=list)
 
 
 @dataclass

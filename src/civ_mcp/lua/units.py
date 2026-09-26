@@ -2438,6 +2438,25 @@ if ntx ~= -9999 then
         end
     end end
 end
+-- A unit to eliminate, when the caller named one (in practice a missionary: human instruction
+-- 2026-09-26: 多余部队里机动性高的部队还可以集火消灭传教士). The ring around it is what matters,
+-- not the tile: a religious unit that is attacked dies, so the job is getting a military unit
+-- ADJACENT to it (condemn is one command from there) and occupying its neighbours so it cannot
+-- step away.
+local killRing = {}
+local ktx, kty = __KX__, __KY__
+if ktx ~= -9999 then
+    for dx = -1, 1 do for dy = -1, 1 do
+        local px, py = ktx + dx, kty + dy
+        local p = Map.GetPlot(px, py)
+        if p and (dx ~= 0 or dy ~= 0) then
+            if Map.GetPlotDistance(ktx, kty, px, py) == 1 then
+                killRing[#killRing + 1] = {x = px, y = py, idx = p:GetIndex()}
+                print("KILLRING|" .. px .. "," .. py)
+            end
+        end
+    end end
+end
 for _, u in Players[me]:GetUnits():Members() do
     local ux, uy = u:GetX(), u:GetY()
     if ux ~= -9999 then
@@ -2485,6 +2504,27 @@ for _, u in Players[me]:GetUnits():Members() do
                     end
                 end
             end
+            if ktx ~= -9999 and moves > 0 then
+                for _, t3 in ipairs(killRing) do
+                    local path3 = UnitManager.GetMoveToPath(u, t3.idx)
+                    if path3 and #path3 > 0 then
+                        local last3 = Map.GetPlotByIndex(path3[#path3])
+                        if last3:GetX() == t3.x and last3:GetY() == t3.y then
+                            local rc3 = 0
+                            for _, pIdx in ipairs(path3) do
+                                if reachSet[pIdx] then rc3 = rc3 + 1 end
+                            end
+                            local turns3
+                            if rc3 >= #path3 then turns3 = 0
+                            else turns3 = math.ceil((#path3 - rc3) / math.max(rc3, 1)) end
+                            if turns3 <= 3 then
+                                print("KILLOPTION|" .. u:GetID() .. "|" .. t3.x .. "," .. t3.y
+                                    .. "|" .. turns3 .. "|" .. (reachSet[t3.idx] and 1 or 0))
+                            end
+                        end
+                    end
+                end
+            end
             if moves > 0 then
                 for _, t in ipairs(ring) do
                     local path = UnitManager.GetMoveToPath(u, t.idx)
@@ -2513,7 +2553,14 @@ print("__SENTINEL__")
 """
 
 
-def build_staging_plan_query(target_x: int, target_y: int, next_x: int | None = None, next_y: int | None = None) -> str:
+def build_staging_plan_query(
+    target_x: int,
+    target_y: int,
+    next_x: int | None = None,
+    next_y: int | None = None,
+    kill_x: int | None = None,
+    kill_y: int | None = None,
+) -> str:
     """GameCore/InGame: the ring around a target city and every unit's path to each ring tile.
 
     One query instead of one per (unit, tile): the ring is at most ~18 tiles and the army is
@@ -2527,6 +2574,8 @@ def build_staging_plan_query(target_x: int, target_y: int, next_x: int | None = 
         .replace("__TY__", str(int(target_y)))
         .replace("__NX__", str(int(next_x) if next_x is not None else -9999))
         .replace("__NY__", str(int(next_y) if next_y is not None else -9999))
+        .replace("__KX__", str(int(kill_x) if kill_x is not None else -9999))
+        .replace("__KY__", str(int(kill_y) if kill_y is not None else -9999))
         .replace("__SENTINEL__", SENTINEL)
     )
 
@@ -2569,6 +2618,20 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     strength=strength,
                     hp=hp,
                     max_hp=max_hp,
+                )
+            )
+        elif line.startswith("KILLRING|") and len(parts) >= 2:
+            x, y = (int(v) for v in parts[1].split(","))
+            plan.kill_ring.append(StagingRingTile(x=x, y=y, distance=1))
+        elif line.startswith("KILLOPTION|") and len(parts) >= 5:
+            x, y = (int(v) for v in parts[2].split(","))
+            plan.kill_options.append(
+                StagingOption(
+                    unit_id=int(parts[1]),
+                    x=x,
+                    y=y,
+                    turns=int(parts[3]),
+                    this_turn=parts[4] == "1",
                 )
             )
         elif line.startswith("NEXTRING|") and len(parts) >= 3:

@@ -277,6 +277,36 @@ class TestTheParser:
         assert result.rotation == []
         assert [a.unit.unit_id for a in result.placed] == [1]
 
+    def test_only_mobile_surplus_units_hunt_the_missionary(self):
+        """Human instruction 2026-09-26: 多余部队里机动性高的部队还可以集火消灭传教士.
+
+        The damage is not the problem — a missionary has no combat strength and dies to one
+        attack, or to a single `condemn` from an adjacent military unit while at war. Catching it
+        is: a religious unit steps away from a column, so the job goes to the units with 3+ moves
+        (cavalry above all, which ignores zones of control), never to a Catapult that would spend
+        two turns walking.
+        """
+        units = [
+            m.StagingUnit("UNIT_TREBUCHET", 1, 55, 40, 2, "siege", distance=3, hp=100, max_hp=100),
+            m.StagingUnit("UNIT_TREBUCHET", 2, 54, 40, 2, "siege", distance=4, hp=100, max_hp=100),
+            m.StagingUnit("UNIT_TREBUCHET", 3, 53, 40, 2, "siege", distance=5, hp=100, max_hp=100),
+            m.StagingUnit("UNIT_TREBUCHET", 4, 52, 40, 2, "siege", distance=6, hp=100, max_hp=100),
+            m.StagingUnit("UNIT_HORSEMAN", 5, 60, 32, 4, "melee", distance=9, hp=100, max_hp=100),
+        ]
+        plan_ = plan(units, [m.StagingOption(unit_id=1, x=58, y=41, turns=0, this_turn=True)],
+                     [m.StagingRingTile(x=58, y=41, distance=2)])
+        plan_.kill_ring = [m.StagingRingTile(x=59, y=32, distance=1)]
+        plan_.kill_options = [m.StagingOption(unit_id=5, x=59, y=32, turns=0, this_turn=True)]
+        result = st.assign(plan_)
+        hunts = [a for a in result.surplus if a.note == "KILL"]
+        assert len(hunts) == 1 and hunts[0].unit.unit_type == "UNIT_HORSEMAN"
+        # the fourth Trebuchet is surplus too, but it has 2 moves and no kill option: it must not
+        # be the one sent after a unit that can outrun it
+        assert all(a.unit.unit_type != "UNIT_TREBUCHET" for a in hunts)
+        text = st.render(result, plan_)
+        assert "HUNT THE MISSIONARY" in text
+        assert "mobile unit only" in text
+
     def test_it_reads_the_three_line_shapes(self):
         from civ_mcp import lua as lq
 

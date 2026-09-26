@@ -267,6 +267,36 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
         )
         return True
 
+    def place_kill(unit: m.StagingUnit) -> bool:
+        """Send a MOBILE surplus unit to a tile beside the unit we are eliminating.
+
+        Human instruction 2026-09-26: 多余部队里机动性高的部队还可以集火消灭传教士. The damage is
+        not the problem — a missionary has no combat strength and dies to one attack, or to a
+        single `condemn` command from an adjacent military unit while at war. The problem is
+        **catching** it: a religious unit that sees the column steps away, so the units sent are
+        the ones with the movement to close (3+ moves: cavalry above all, which ignores zones of
+        control) and the extras take its other neighbours so it has nowhere to step.
+        """
+        if unit.moves < 3 or not plan.kill_options:
+            return False
+        candidates = sorted(
+            (o for o in plan.kill_options if o.unit_id == unit.unit_id and (o.x, o.y) not in taken),
+            key=lambda o: (o.turns, not o.this_turn, o.x, o.y),
+        )
+        if not candidates:
+            return False
+        option = candidates[0]
+        tile = next((t for t in plan.kill_ring if (t.x, t.y) == (option.x, option.y)), None)
+        if tile is None:
+            return False
+        taken[(option.x, option.y)] = f"{unit.unit_type} #{unit.unit_id} (kill)"
+        result.surplus.append(
+            Assignment(
+                unit=unit, tile=tile, turns=option.turns, this_turn=option.this_turn, note="KILL"
+            )
+        )
+        return True
+
     for unit in surplus_units:
         chosen = None
         if unit.role == "melee":
@@ -289,11 +319,15 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
                 )
             )
             continue
+        if place_kill(unit):
+            continue
         if place_forward(unit):
             continue
         result.surplus.append(Assignment(unit=unit, tile=None, turns=0, this_turn=False))
 
     for unit in no_tile:
+        if place_kill(unit):
+            continue
         if not place_forward(unit):
             result.unplaced.append(unit)
 
@@ -342,7 +376,8 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
     if result.surplus:
         on_supply = [a for a in result.surplus if a.note == "SUPPLY"]
         advancing = [a for a in result.surplus if a.note == "ADVANCE"]
-        depth = [a for a in result.surplus if a.note not in ("SUPPLY", "ADVANCE")]
+        killing = [a for a in result.surplus if a.note == "KILL"]
+        depth = [a for a in result.surplus if a.note not in ("SUPPLY", "ADVANCE", "KILL")]
         lines.append(
             "  SURPLUS (the assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged —"
             " everything else has a job, and it is not a firing tile):"
@@ -351,6 +386,14 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             lines.append(
                 f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
                 f"  CUT THE SUPPLY LINE (stands on a hex the city heals from)"
+            )
+        for a in killing:
+            lines.append(
+                f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where}"
+                f"  HUNT THE MISSIONARY{' this turn' if a.this_turn else f' in {a.turns} turn(s)'}"
+                f" — mobile unit only: one attacker kills it, and the extras take its other"
+                f" neighbours so it cannot step away; `condemn` is one command from adjacent"
+                f" (while at war, task 008)"
             )
         for a in advancing:
             lines.append(

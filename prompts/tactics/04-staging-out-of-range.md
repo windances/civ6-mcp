@@ -169,10 +169,28 @@ order — it is a ladder, not a preference:
    **Rotation outranks taking another tile.** Replacing a 27 HP Man-at-Arms with a fresh one is worth
    more than one more shooter on the ring, because the alternative is losing the unit and its tile
    together.
-4. **Depth behind the ring, out of the city's two-tile strike.** Not decoration: the stack loses a
+4. **The mobile surplus hunts the missionary** (human instruction 2026-09-26: 多余部队里机动性高的部队
+   还可以集火消灭传教士). Give the plan the religious unit's tile (`--kill x,y`,
+   `get_staging_plan`'s `kill_x/kill_y`) and the **units with 3+ moves** take it — cavalry above
+   all, which ignores zones of control and can therefore cut the corner the missionary would use.
+   **The damage is not the problem; catching it is.** A missionary has no combat strength: one
+   attack kills it, and while at war a single `condemn` from an adjacent military unit destroys it
+   outright (task 008 — the game refuses `condemn` against a civ we are not at war with). What
+   fails is walking a 2-move Catapult after a unit that steps away every turn, so:
+   - **never send a siege or low-move unit** — it arrives after the missionary has gone and hands
+     the enemy a free turn of conversion;
+   - **send two when you can**: one attacks, the second stands on another neighbour so it has
+     nowhere to step (the tool assigns whichever of its ring tiles are reachable this turn);
+   - **it is surplus-only work**: nothing comes off the assault ring, and the screen is not
+     re-tasked. If nothing can reach the missionary this turn or next, the answer is the scout
+     network, not the army.
+   Two constraints from task 008 stand: this is lane-clearing, not a second war, and it never
+   justifies a declaration by itself. And the durable answer to a missionary flood is the faith
+   behind it — Russia's Lavra, which cavalry can pillage (rung 8).
+5. **Depth behind the ring, out of the city's two-tile strike.** Not decoration: the stack loses a
    screen unit every few turns (T154: our only Horseman died attacking the city), and a replacement
    already standing behind the ring keeps the shooters at full fire.
-5. **Forward staging toward the next objective** (human instruction 2026-09-26: 多余部队还可以向下一个
+6. **Forward staging toward the next objective** (human instruction 2026-09-26: 多余部队还可以向下一个
    城市目标/蛮族营地集结推进). Pass the next city's tile — or a barbarian camp's — to the plan
    (`get_staging_plan`'s `next_city_x/next_city_y`, `staging-plan.py --next x,y`), and the surplus
    that is not needed on this ring is pushed toward it: outside this city's strike, on the shortest
@@ -181,13 +199,13 @@ order — it is a ladder, not a preference:
    and a unit that arrives three turns after the current city falls costs exactly those three turns.
    When the next objective is still in fog, forward staging means advancing along the road toward
    the nearest unexplored ground, which is also the reconnaissance the task needs.
-6. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
+7. **The garrison of a city we have just taken** — one unit, no more (`one-garrison-per-city`), and
    it is what `hold-what-you-take` asks for. 阿斯特拉罕 needed it at −23.5 loyalty/turn; 成都 was
    raided precisely because it had none (T153–T155).
-7. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
+8. **Pillage, with cavalry.** Cavalry ignores zones of control, so it is the one unit that can reach
    the enemy's Lavra, mines and roads behind the front. Russia's faith comes from its Lavra:
    pillaging it stops the stream at source, worth more than any number of missionary kills.
-8. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
+9. **Nothing is last.** A unit with none of the above is still not parked: it joins the depth line or
    it is re-tasked to the next objective. “Fortified in place because the corridor is jammed”
    (T155, verbatim) is a queue, not a plan.
 
