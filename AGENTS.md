@@ -7,7 +7,7 @@ An MCP server connecting to a live Civilization VI game via FireTuner. You can r
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
 **IN FORCE NOW — read each of these files before planning the turn:**
-`013-upgrade-and-scout.md`.
+`013-upgrade-and-scout.md`, `014-destroy-missionaries-everywhere.md`.
 (`001-clear-the-camp` was retired at T84, `003-two-scouts-explore` at T93, `002-focus-fire-scouts`
 expired at T95, `004-city-near-iron` was **done at T101** — 成都 stands at (60,31) with the iron at
 (60,32) inside its first ring — `006-prepare-for-russia` was retired at **T110**, its assault
@@ -79,6 +79,20 @@ civs first (no unit moves), then the two Scouts and the Knight into the fog that
 civilisations** and all five cities of the civ that has denounced us — and it ends in either a
 candidate read in its four numbers or an explicit `no candidate visible` report. It authorizes no
 declaration, no peace and no raid; it produces the *input* to the next 战前分析.
+
+**014 is the missionary task, map-wide** (human instruction 2026-09-26: 全域消灭传教士), and it
+generalises the retired 008 from "our territory and the army's roads" to **the whole map** — while
+keeping 008's measured legality in front of the reader, because that is what decides the shape of the
+task: at peace a religious unit **cannot be touched at all** (`condemn` answers `ERR:REQUIRES_WAR`,
+`attack` answers `ERR:NOT_AT_WAR`, a city strike returns `NO_ENEMY`), and `condemn` needs an
+**adjacent** military unit, so two tiles away is `ERR:NO_RELIGIOUS_TARGET` — the two attempts this game
+made were adjacency facts, not tool failures. The kill is therefore a **war-time** action and the
+peacetime half is the sweep: a religious unit is `FORMATION_CLASS_RELIGIOUS` with `Combat = 0`, so every
+contact metric and every rule is blind to it and **the tile's unit list in `get_map_area` is the only
+detector**. It ends in `count == 0` with the tiles swept, or in an expiry that says the owners were all
+at peace; the chase, when a war comes, is `get_staging_plan(kill_x, kill_y)`'s mobile-only `KILL`
+bucket, and the thing worth more than any single kill is the **faith source** — pillage the Holy Site
+that produces it.
 
 **010 and 011 retired together at T166, and their one durable correction is a coordinate.** Both files
 named **成都's IRON mine at (60,32)** as the pillaged tile; the tool proved otherwise — `repair` there

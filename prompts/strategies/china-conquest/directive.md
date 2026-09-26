@@ -516,15 +516,19 @@ is the binding constraint in every assault in this game.
 **Foreign missionaries.**
 
 - China has no religion of its own: one Holy Site and roughly 1 faith per turn
-  cannot buy Apostles or Inquisitors, and the adapter exposes no Condemn Heretics
-  action. Assume no religious counterplay is available and never plan around
-  religious units you cannot purchase.
-- At peace you cannot attack a religious unit at all. Target selection treats a
-  Combat-0 unit as a valid target, but the war check then rejects the attack with
-  ERR:NOT_AT_WAR. Never declare war over missionaries alone.
-- While at war with the owner (currently Russia) any adjacent military unit can
-  attack one. Treat that as opportunistic: one unit, no chase, one tile of
-  movement at most. A missionary is never worth pulling a unit off the front.
+  cannot buy Apostles or Inquisitors. The **Condemn Heretic** verb now exists —
+  `unit_action(action="condemn")` implements the game's own
+  `UNITCOMMAND_CONDEMN_HERETIC`, one command from an **adjacent** military unit —
+  but the same text that defines it also requires a war declaration
+  (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`), so it is a
+  war-time verb. Never plan around religious units you cannot purchase.
+- At peace you cannot touch a religious unit at all. `attack` answers
+  `ERR:NOT_AT_WAR`, `condemn` answers `ERR:REQUIRES_WAR`, and a city strike
+  returns `NO_ENEMY` against one. Never declare war over missionaries alone.
+- While at war with its owner, an adjacent military unit can `condemn` it (one
+  command, no charges) or attack it. Treat that as opportunistic: one unit, no
+  chase, one tile of movement at most. A missionary is never worth pulling a unit
+  off the front - and the sweep that finds them is task 014's job, not the army's.
 - The real threat is a rival religious victory, not one missionary. Call
   get_religion_spread every ~20 turns - it has never been called in this game, so
   the religious picture is currently unknown. A single civ holding a majority in
