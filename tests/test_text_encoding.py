@@ -21,7 +21,9 @@ this visible in the first place.
 
 from __future__ import annotations
 
+import importlib.util
 import pathlib
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -32,6 +34,15 @@ from civ_mcp import text_encoding  # noqa: E402
 PROMPTS = ROOT / "prompts"
 LAUNCHER = ROOT / "scripts" / "run-dsh-headless.ps1"
 BOM = text_encoding.BOM
+
+
+def repair_module():
+    """`scripts/repair-text.py` has a hyphen in its name, so it is loaded by path."""
+    spec = importlib.util.spec_from_file_location("repair_text", ROOT / "scripts" / "repair-text.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["repair_text"] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def variants(infix: str) -> list[pathlib.Path]:
@@ -126,8 +137,61 @@ class TestTheTextItselfIsStillText:
         assert not found, (
             "valid UTF-8, BOM in place, and still not the text somebody wrote (a GBK round trip - "
             "`Get-Content | Set-Content` is the usual cause). Repair with "
-            f"`.tools/repair-mojibake.py --apply` and `.tools/cleanup-artefacts.py --apply`: {shown}"
+            f"`python scripts/repair-text.py --apply`, then `python scripts/fix-text-encoding.py`: {shown}"
         )
+
+
+class TestTheGateIsMandatory:
+    """The check is not advice: it runs before every commit, and the repair never guesses."""
+
+    HOOK = ROOT / ".githooks" / "pre-commit"
+    INSTALLER = ROOT / "scripts" / "install-hooks.py"
+
+    def test_the_hook_runs_the_check(self):
+        text = self.HOOK.read_text(encoding="utf-8")
+        assert "fix-text-encoding.py" in text and "--check" in text, (
+            ".githooks/pre-commit no longer runs the text-integrity check"
+        )
+        assert "repair-text.py" in text, "the hook names the failure but not the repair"
+
+    def test_the_installer_points_git_at_the_hook(self):
+        assert self.INSTALLER.is_file(), "scripts/install-hooks.py is the documented way in"
+        text = self.INSTALLER.read_text(encoding="utf-8")
+        assert "core.hooksPath" in text and ".githooks" in text
+
+    def test_this_clone_has_the_hook_installed(self):
+        result = subprocess.run(
+            ["git", "config", "--get", "core.hooksPath"],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        if result.returncode not in (0, 1):
+            return  # no git here: the hook cannot be enforced, and that is not this test's business
+        assert result.stdout.strip() == ".githooks", (
+            "the commit gate is not installed in this clone - run `python scripts/install-hooks.py`"
+        )
+
+
+class TestTheRepairDoesNotGuess:
+    """A repair that mangles a clean file is worse than no repair, and the failure is silent."""
+
+    def test_a_clean_line_is_left_alone(self):
+        module = repair_module()
+        # `‹`/`›` and a check mark are outside GBK: encoding them with errors="replace" would turn
+        # them into '?' and the reversal would look successful while eating the characters.
+        for line in ("Agent \u2039Claude\u203a", "DONE \u2713", "在集结前，规划集结方案"):
+            assert module.repair_line(line) == line, f"a clean line was rewritten: {line!r}"
+
+    def test_a_damaged_line_is_repaired(self):
+        module = repair_module()
+        # A two-character word corrupts to a whole number of GBK pairs, so the reversal is exact.
+        sample = "\u5317\u4eac".encode("utf-8").decode("gbk")     # 北京 -> 鍖椾含
+        assert module.repair_line(sample) == "\u5317\u4eac"
+        assert module.repair_line("a \u9225? b") == "a \u2014 b"
+
+    def test_the_repair_is_idempotent(self):
+        module = repair_module()
+        once = module.repair_line("a \u9225? b and " + "\u5317\u4eac".encode("utf-8").decode("gbk"))
+        assert module.repair_line(once) == once
 
 
 class TestTheLauncherToleratesTheBom:

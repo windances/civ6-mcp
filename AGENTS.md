@@ -130,18 +130,39 @@ python scripts/fix-text-encoding.py            # put the BOM back
 python scripts/fix-text-encoding.py --check     # report only; exit 1 when one is missing
 ```
 
-`tests/test_text_encoding.py` checks the same rule, so the suite goes red until it is run — the
-repair is one command, not a promise. The MCP reads these files as `utf-8-sig`
-(`turn_checks.py`, `knowledge.py`, `strategy_directive.py`), so a BOM never reaches a prompt or a
-parsed rule.
+**The check is mandatory, and it is more than the BOM.** A BOM is a display hint; it says nothing
+about whether the characters are still the ones somebody wrote. Measured 2026-09-26: a PowerShell
+`Get-Content | Set-Content` round trip decoded five files as GBK and wrote them back as UTF-8 — valid
+UTF-8, every BOM in place, **278 corrupted characters** (in `units.py`, `server.py`, a test, a script
+and `SETUP-WINDOWS.md`, the game's own menu labels among them) and 843 green tests. So the gate now
+checks content as well, and it is enforced rather than remembered:
+
+* **`git commit` runs it** — `.githooks/pre-commit` blocks the commit when a document is missing its
+  BOM or any file carries the round trip's damage (`scripts/install-hooks.py` installs it; a fresh
+  clone needs that one command, and the suite fails without it);
+* **the repair is two commands, and neither guesses**: `python scripts/repair-text.py --apply`
+  rewrites the punctuation artefacts and every run that reverses exactly, and *reports* what needs an
+  authoritative source (the game's own `Vanilla_zh_Hans_CN.xml` for a game label, a clean copy
+  elsewhere in the repository for a quoted instruction); `python scripts/fix-text-encoding.py` puts
+  the BOMs back;
+* **a line that documents the damage is exempt** — three places show mojibake on purpose
+  (`SETUP-WINDOWS.md`'s "the prefix is missing" example, a retrospective quoting a mangled advice
+  string, and the loyalty test's U+FFFD sample), and the checker leaves them alone because a checker
+  that cannot tell an example from an accident is one somebody switches off.
+
+`tests/test_text_encoding.py` runs the same check, so the suite goes red until it is run — the
+repair is one command, not a promise. **Never edit these files through a `Get-Content | Set-Content`
+round trip**: that is what caused the damage above, and it is the one thing the gate exists to stop.
+The MCP reads these files as `utf-8-sig` (`turn_checks.py`, `knowledge.py`, `strategy_directive.py`),
+so a BOM never reaches a prompt or a parsed rule.
 
 **A batch of document edits leaves two derived things stale, and both are one command.** Run them in
 this order, every time a batch of documents changes:
 
 ```
-python scripts/fix-text-encoding.py     # the BOM the edit tools strip
-python .tools/kb.py index               # the knowledge index (measured 2026-09-26: 311 documents,
-                                        # 6401 chunks, 3 seconds - manual + game install included)
+python scripts/fix-text-encoding.py --check   # the mandatory gate: BOMs + GBK round-trip damage
+python .tools/kb.py index                     # the knowledge index (measured 2026-09-26: 313
+                                              # documents, 6440 chunks, 3 seconds - manual included)
 ```
 
 The index is a *derived* file: a query against a stale one answers confidently with text that no

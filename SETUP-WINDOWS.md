@@ -653,6 +653,30 @@ suites assert it, so a dropped BOM turns a suite red instead of reaching a user.
 `scripts\fix-text-encoding.py` is the same repair for the whole tree, and it is what
 the agent's own edit tools make necessary.
 
+**The check is enforced before every commit, and it covers more than the BOM.**
+
+```powershell
+python scripts\install-hooks.py        # once per clone: core.hooksPath = .githooks
+python scripts\fix-text-encoding.py --check   # what the hook runs: BOMs + GBK round-trip damage
+```
+
+`.githooks/pre-commit` refuses the commit when a document has no BOM **or** any file holds
+the leavings of a `Get-Content | Set-Content` round trip. That second half was measured on
+2026-09-26: five files - two source modules, a test, a script and this document - had been
+decoded as GBK and written back as UTF-8, which left valid UTF-8, every BOM in place, 278
+corrupted characters (the game's own menu labels among them) and 843 green tests. Repair with
+`python scripts\repair-text.py --apply`, which rewrites the punctuation artefacts and every run
+that reverses exactly and *reports* anything that needs an authority (the game's own
+`Vanilla_zh_Hans_CN.xml`, or a clean copy elsewhere in the repository) rather than guessing.
+
+**In a sandboxed session the hook cannot run, and that is a sandbox fact rather than a bug.** A
+confined process cannot create the signal pipe msys needs, so `git commit` dies with
+`sh.exe: *** fatal error - couldn't create signal pipe, Win32 error 5` before the hook's first line
+(measured 2026-09-26 in this checkout). There the rule becomes: run
+`python scripts\fix-text-encoding.py --check` **first**, and commit with `--no-verify` only with that
+output in hand - the check and the hook are the same command, so nothing is skipped, only relocated.
+On an ordinary shell the hook runs and no flag is needed.
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run-dsh-headless.ps1 `
   -TaskFile prompts\tasks\continue-current.en.txt

@@ -132,14 +132,27 @@ def looks_corrupt(line: str) -> bool:
     return sum(1 for ch in line if ch in _MOJIBAKE_MARKERS) >= 3
 
 
-def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str]]:
-    """(path, line number, text) for every line that still carries the GBK round trip's damage.
+def self_referential(lines: list[str]) -> set[int]:
+    """Indices of lines a checker must not judge: the artefact's own documentation and examples.
 
-    A line is exempt when the file *is talking about* the artefact within five lines of it - the
-    recovery notes, the docstring here, `SETUP-WINDOWS.md`'s "the prefix is missing" example, the
-    retrospective that quotes a mangled advice string, the loyalty test's U+FFFD sample - and the
-    marker table itself is exempt because those characters are its data.
+    A line is exempt when the file *is talking about* the damage within five lines of it - the
+    recovery notes, this module's docstring, `SETUP-WINDOWS.md`'s "the prefix is missing" example,
+    the retrospective that quotes a mangled advice string, the loyalty test's U+FFFD sample - and
+    the marker table is exempt because those characters are its data. A checker that cannot tell an
+    example from an accident is one somebody switches off.
     """
+    notes = {
+        i for i, line in enumerate(lines) if any(word in line.lower() for word in _SELF_REFERENTIAL)
+    }
+    exempt = set(notes)
+    for i in notes:
+        exempt.update(range(max(0, i - 5), min(len(lines), i + 6)))
+    exempt.update(i for i, line in enumerate(lines) if "_MOJIBAKE_MARKERS" in line)
+    return exempt
+
+
+def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str]]:
+    """(path, line number, text) for every line that still carries the GBK round trip's damage."""
     found = []
     for path in source_files(root):
         try:
@@ -147,17 +160,10 @@ def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str
         except (UnicodeDecodeError, OSError):
             continue
         lines = text.splitlines()
-        notes = {
-            i
-            for i, line in enumerate(lines)
-            if any(word in line.lower() for word in _SELF_REFERENTIAL)
-        }
+        exempt = self_referential(lines)
         for i, line in enumerate(lines):
-            if "_MOJIBAKE_MARKERS" in line:
+            if i in exempt:
                 continue
-            if not looks_corrupt(line):
-                continue
-            if any(abs(i - j) <= 5 for j in notes):
-                continue
-            found.append((path, i + 1, line.strip()))
+            if looks_corrupt(line):
+                found.append((path, i + 1, line.strip()))
     return found

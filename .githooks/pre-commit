@@ -1,0 +1,31 @@
+#!/bin/sh
+# Mandatory text-integrity gate, run by `git commit` (installed via `python scripts/install-hooks.py`).
+#
+# A BOM is a display hint, not proof that the characters are still the ones somebody wrote. Measured
+# 2026-09-26: a PowerShell `Get-Content | Set-Content` round trip decoded five files as codepage 936
+# and wrote them back as UTF-8 - valid UTF-8, every BOM in place, 278 corrupted characters (including
+# the game's own menu labels), and 843 green tests. This hook blocks that commit instead.
+set -e
+
+root=$(git rev-parse --show-toplevel)
+py="$root/.venv/Scripts/python.exe"
+[ -x "$py" ] || py="$root/.venv/bin/python"
+if [ ! -x "$py" ]; then
+    py=$(command -v python || command -v python3 || true)
+fi
+if [ -z "$py" ]; then
+    echo "pre-commit: no python interpreter found." >&2
+    echo "pre-commit: run these by hand before committing: python scripts/fix-text-encoding.py --check" >&2
+    exit 1
+fi
+
+if ! "$py" "$root/scripts/fix-text-encoding.py" --check; then
+    echo "" >&2
+    echo "pre-commit BLOCKED: text integrity failed - a document is missing its BOM, or a file" >&2
+    echo "  carries GBK round-trip damage (valid UTF-8, wrong characters)." >&2
+    echo "  repair:  python scripts/fix-text-encoding.py      # BOMs, and report content damage" >&2
+    echo "           python scripts/repair-text.py --apply    # the general reversal + punctuation" >&2
+    echo "  then re-stage and commit." >&2
+    exit 1
+fi
+exit 0
