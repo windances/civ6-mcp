@@ -314,8 +314,9 @@ answer `NO_ENEMY` on the declaration turn.
 A city with walls can fire at an enemy within 2 tiles (`city_action(city_id, "attack", target_x,
 target_y)`) - measured 43 damage, no retaliation, which is the cheapest damage in the empire - and a
 captured city is resolved with `city_action` (`keep`, `raze`, `liberate_founder`, `liberate_previous`)
-or the turn will not end. **Peace is not an option**: the directive forbids `propose_peace` outright and
-every offer is refused, so a war ends only when its cities are yours.
+or the turn will not end. **Peace is the directive's business, not this reference's**: it forbids
+`propose_peace` outright, and every offer that arrives is refused, so under that strategy a war ends
+only when its cities are yours.
 
 ### Military readiness
 `get_diplomacy` carries rival military strength, and a neighbor at twice your strength that is
@@ -329,8 +330,8 @@ garrison bonus, one military unit moving onto its tile destroys it", Spearmen ar
 convert an adjacent barbarian before the raid. What is only here is the tooling.
 
 - **Locate the camp from the map every time.** A camp can be cleared by someone else and respawn
-  nearby, and a coordinate copied from an old diary has already been wrong once (T65's note said
-  (60,30); the T83 map read put it at (60,29)).
+  nearby, and a coordinate copied from an old diary has already been wrong once (measured: a diary
+  note and the next map read put it on different tiles).
 - **The raid has a one-command entry point:** `scripts\run-dsh-headless.ps1 -TaskFile
   prompts\tasks\clear-the-camp.zh.txt` (English: `clear-the-camp.en.txt`) - one raid end to end, without
   declaring war and without changing the development plan.
@@ -347,7 +348,7 @@ convert an adjacent barbarian before the raid. What is only here is the tooling.
 ### Religion - the one fact no metric can see
 A religious unit is `FORMATION_CLASS_RELIGIOUS` with `Combat = 0`, so **every contact metric and
 every rule is blind to it, and the tile's unit list in `get_map_area` is the only detector**. The
-strategy on them is the directive's and is blunt: China buys **no** religious unit, at peace one
+strategy on them is the directive's (`prompts/strategies/china-conquest/directive.md`): at peace one
 cannot be touched at all (`condemn` answers `ERR:REQUIRES_WAR`, `attack` answers `ERR:NOT_AT_WAR`, a
 city strike returns `NO_ENEMY`), and faith income is attacked at its source instead. The
 `get_religion_spread` cadence is in **Strategic Checkpoints** below.
@@ -431,10 +432,11 @@ engineer per turn.
   attack that reports `STOPPED_SHORT` or `STOPPED_MID_PATH` may still have taken effect** - measured
   T141, a Horseman's attack reported "could not reach target" while the target was left at 26 HP.
   Re-read with `get_units` before re-ordering anything that reports a short or partial movement.
-- **A post-combat city read is an estimate, not a fact.** Measured T140-T142 on Astrakhan: the city
-  read `200/200` after two connections that had landed, then `85`, then `55`. Judge progress from
-  the `SIEGE PROGRESS` block and from a *later* estimate, never from the immediate reply - and do
-  not conclude from one stale number that the attack did nothing.
+- **A post-combat city read is an estimate, not a fact** (measured). The result line can report
+  `read unchanged`, or the pool unmoved, **after the damage has landed** - including on the blow
+  that takes the city. Judge progress from the `SIEGE PROGRESS` block and from a *later* read, never
+  from the immediate reply - and do not conclude from one stale number that the attack did nothing.
+  The case record is `docs/retrospectives/2026-09-27-thebes-alexandria-T194-T218.md`.
 - **A turn that will not advance is usually waiting for an answer, not for a popup.** `end_turn`
   answers `Turn paused ...` when an AI diplomacy session or an incoming trade deal is open, and both
   are yours to settle: `get_pending_diplomacy` then `respond_to_diplomacy`, and `get_pending_trades`
