@@ -225,6 +225,13 @@ require: metric(siege_upgrades_available) <= 0
 message: A siege unit can be upgraded with the gold in hand and the war is on. A Catapult does 45 against a city where a Trebuchet does 55, and the window in which a Catapult is the best you have is exactly the window an assault is being decided: live T105-T121 the army fired Catapults from T106 and Trebuchets only from T120 - eleven turns of the campaign at the lower number, and the same three cities took 64 attacks. Call upgrade_unit on it before the next attack, or say in the diary why the gold is being kept.
 -->
 
+<!-- check
+id: upgrade-the-unwatched
+when: metric(at_war) >= 1 and metric(uncovered_upgrades_available) >= 1 and metric(gold) >= metric(min_uncovered_upgrade_cost) * 2
+require: metric(uncovered_upgrades_available) <= 0
+message: An affordable upgrade for a ranged, cavalry or anti-cavalry unit is waiting while the war is on, and the treasury can pay for it twice over. No other rule watches this class - match-their-melee covers the melee and anti-cavalry tiers, upgrade-the-siege covers siege - so nothing else will say it. Measured T204-T215: the treasury went 621 -> 768 while a Knight -> Cuirassier (230g) and two Crossbowman -> Field Cannon (310g each) sat unbought for twelve turns, and at T216-T217 two of them were bought at the doubled price the T201 policy window had created when it traded POLICY_PROFESSIONAL_ARMY ('50% discount on all unit upgrades') for housing - 540g where 270g would have done. Upgrade the cheapest one, or say in the diary why the gold is being kept.
+-->
+
 ## Holding what you take
 
 A captured city is not safe because the enemy is gone. Loyalty takes it back with no battle: live
