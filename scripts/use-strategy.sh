@@ -36,6 +36,25 @@ strip_bom() {
   sed '1s/^\xEF\xBB\xBF//' "$1"
 }
 
+# A document holding a non-ASCII byte carries a BOM and a pure-ASCII one does not
+# (scripts/fix-text-encoding.py). The .ps1 counterpart decides this from the content
+# before it writes; without the same step here the two switchers would disagree about
+# the same preset, and the .sh would leave an offender for the gate to catch.
+ensure_bom() {
+  local file="$1" nonascii
+  # Strip a leading BOM before counting, or the BOM's own three bytes make every file look
+  # non-ASCII and the removal branch below can never run (measured on the fixture: an ASCII
+  # preset left the BOM in place).
+  nonascii="$(sed '1s/^\xEF\xBB\xBF//' "$file" | LC_ALL=C tr -d '\000-\177' | wc -c | tr -d ' ')"
+  if [ "$nonascii" -gt 0 ]; then
+    if [ "$(head -c 3 "$file" | od -An -tx1 | tr -d ' \n')" != "efbbbf" ]; then
+      sed -i '1s/^/\xEF\xBB\xBF/' "$file"
+    fi
+  else
+    sed -i '1s/^\xEF\xBB\xBF//' "$file"
+  fi
+}
+
 # The directive body SKILL.md carries right now, BOM stripped. Empty when SKILL.md or
 # its marker block is missing.
 skill_block() {
@@ -174,6 +193,7 @@ else
     /<!-- DIRECTIVE:END -->/ { skip=0 }
     !skip { print }
   ' "$skill" > "$tmp" && mv "$tmp" "$skill"
+  ensure_bom "$skill"
   rm -f "$body"
   # Read it back: a write that did not land would otherwise be reported as success, and
   # "which preset is active" is computed from the file.

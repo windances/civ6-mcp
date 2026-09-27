@@ -75,6 +75,13 @@ if ($PSCmdlet.ParameterSetName -eq 'File') {
 
 if (-not $body) { Fail 'Strategy text is empty; refusing to inject an empty directive.' }
 
+# The skill is an English-only DSH document (human instruction 2026-09-28): the model reads English,
+# and text_encoding.ASCII_ONLY holds this file to pure ASCII, so a Chinese block would fail the gate a
+# moment after it was written. The Chinese copy belongs in SKILL.cn.md beside it.
+if ($body -match '[^\x00-\x7F]') {
+    Fail 'the strategy text is not ASCII: the skill is English only - write it in English and put the Chinese wording in .dsh\skills\civ6-orchestrator\SKILL.cn.md'
+}
+
 # Mark the block as ad-hoc before it is written. Without the line it is
 # indistinguishable from a preset whose text drifted, which is the state
 # tests/test_strategy_block.py exists to fail on; with it, a deliberate override and a
@@ -88,10 +95,11 @@ $skill = [regex]::Replace(
     $marker,
     { param($m) $m.Groups[1].Value + "`n" + $body + "`n" + $m.Groups[2].Value }
 )
-# Write with a BOM: `WriteAllText` without an encoding emits plain UTF-8 and strips the
-# BOM this file needs to stay readable in a zh-CN editor (see scripts/fix-text-encoding.py).
-# This script had that bug - every ad-hoc directive left SKILL.md BOM-less.
-[IO.File]::WriteAllText($skillPath, $skill, (New-Object System.Text.UTF8Encoding($true)))
+# Write a BOM only when the document holds a non-ASCII byte. The check above means it cannot here,
+# but the encoding rule is content-based and this keeps the two writers identical. `WriteAllText` with
+# no encoding at all was the original bug: every ad-hoc directive left SKILL.md BOM-less.
+$encoding = New-Object System.Text.UTF8Encoding ([regex]::IsMatch($skill, '[^\x00-\x7F]'))
+[IO.File]::WriteAllText($skillPath, $skill, $encoding)
 
 # Read it back: a write that did not land would otherwise be reported as success, and
 # the block is what the running session is handed.

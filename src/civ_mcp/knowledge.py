@@ -92,6 +92,11 @@ _SKIP_DIRS = {
 }
 _CHUNK_CHARS = 1200
 _MAX_TEXT_CHARS = 400_000  # a single huge file (a log dump) would drown the index
+
+# A `.cn.md` file is the Chinese mirror of the document beside it (human instruction 2026-09-28, see
+# `tests/test_dsh_documents.py`), not a second source: indexing both would answer one question with
+# two hits for the same fact, one of them a translation. The English file is the one to cite.
+_MIRROR_SUFFIX = ".cn.md"
 _HEADING = re.compile(r"^\s{0,3}#{1,4}\s+(.*\S)\s*$")
 _PAGE_NUMBER = re.compile(r"^\s*(\d{1,4})\s*$")
 _CAPS_HEADING = re.compile(r"^\s*([A-Z][A-Z0-9 ,:&'()/-]{6,60})\s*$")
@@ -138,6 +143,8 @@ def iter_files(sources) -> list[pathlib.Path]:
             continue
         for child in sorted(path.rglob("*")):
             if not child.is_file() or child.suffix.lower() not in _TEXT_SUFFIXES:
+                continue
+            if child.name.endswith(_MIRROR_SUFFIX):
                 continue
             if any(part in _SKIP_DIRS for part in child.parts):
                 continue

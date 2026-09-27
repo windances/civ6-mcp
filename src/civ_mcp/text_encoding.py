@@ -174,17 +174,30 @@ def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str
 
 
 # --------------------------------------------------------------------------------------
-# English only: `AGENTS.md` is pure ASCII, and the marks are converted rather than argued about
+# English only: every document DSH serves the model is pure ASCII
 # --------------------------------------------------------------------------------------
 #
-# Human instruction 2026-09-27 (AGENT.md全用英文): the agent reference is English, and English here
-# means the bar the `.en.` files are already held to - **pure ASCII**, the one encoding no viewer can
-# guess wrong. Two kinds of non-ASCII turn up in practice, and they need different treatment: the
-# typographic marks (`—`, `→`, `…`, `≤`) are a mechanical substitution, and CJK prose is a sentence
-# somebody has to write in English. `ascii_fix` does the first, `ascii_lines` reports the second, and
-# the pre-commit hook runs both, so the file cannot drift back into a half-translated state.
-
-ASCII_ONLY = ("AGENTS.md",)
+# Human instruction 2026-09-27 (AGENT.md全用英文), extended 2026-09-28 to every document DSH hands
+# the model: the agent reference is English, and English here means the bar the `.en.` files are
+# already held to - **pure ASCII**, the one encoding no viewer can guess wrong. Two kinds of
+# non-ASCII turn up in practice, and they need different treatment: the typographic marks
+# (`—`, `→`, `…`, `≤`) are a mechanical substitution, and CJK prose is a sentence somebody has to
+# write in English. `ascii_fix` does the first, `ascii_lines` reports the second, and the pre-commit
+# hook runs both, so the file cannot drift back into a half-translated state.
+#
+# The three names below are matched on `path.name`, and each is a file DSH actually reads:
+#
+# * `AGENTS.md` - injected by the harness every session (deepseek-harness,
+#   `packages/context/agent-instructions/src/config.ts`: the candidates are `AGENTS.md`/`CLAUDE.md`).
+# * `SKILL.md` - the orchestrator skill, served by the `skill` tool. The loader requires exactly this
+#   file name in a skill directory (`packages/skill/skill-filesystem/src/index.ts`, `segments[1] ===
+#   'SKILL.md'`), which is also why a Chinese mirror can never be loaded - see `test_dsh_documents`.
+# * `directive.md` - `scripts/use-strategy.ps1` copies one into the DIRECTIVE block of `SKILL.md`, so
+#   a preset holding Chinese re-injects it on the next switch: it is the same defect one step earlier.
+#
+# The Chinese copy of each lives beside it as `<name>.cn.md` (human instruction 2026-09-28), which no
+# DSH search pattern matches.
+ASCII_ONLY = ("AGENTS.md", "SKILL.md", "directive.md")
 
 # Applied to ASCII-only documents by `ascii_fix`, longest mark first so `—` never eats a `–`.
 ASCII_MARKS = (

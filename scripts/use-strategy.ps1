@@ -207,9 +207,11 @@ if (-not (Test-Path $directivePath)) {
         # Script-block replacement so that a '$' inside the directive is never
         # interpreted as a regex substitution token.
         $skill = [regex]::Replace($skill, $marker, { param($m) $block })
-        # Write with a BOM: `WriteAllText` without an encoding emits plain UTF-8, which strips the
-        # BOM this file needs to stay readable in a zh-CN editor (see scripts/fix-text-encoding.py).
-        [IO.File]::WriteAllText($skillPath, $skill, (New-Object System.Text.UTF8Encoding($true)))
+        # Write a BOM only when the document holds a non-ASCII byte. A pure-ASCII file carries none -
+        # that is the bar AGENTS.md, the skill and the presets are held to - and a file with Chinese
+        # in it needs one to stay readable in a zh-CN editor (see scripts/fix-text-encoding.py).
+        $encoding = New-Object System.Text.UTF8Encoding ([regex]::IsMatch($skill, '[^\x00-\x7F]'))
+        [IO.File]::WriteAllText($skillPath, $skill, $encoding)
         # Read it back: a write that did not land (a sandbox denial, a stale handle)
         # would otherwise be reported as success, and "which preset is active" is
         # computed from the file, so a silent failure shows up as no preset at all.

@@ -82,6 +82,13 @@ scripts\use-strategy.ps1 domination   # the agent sees this on the next end_turn
 | `domination` | Domination | One front at a time, siege against walls, strategic resources, war weariness |
 | `religion` | Religious | Great Prophet deadline, Holy Sites everywhere, theological combat, conversion count |
 
+Every preset also has a Chinese mirror, `<preset>/directive.cn.md` — as the skill has
+`.dsh/skills/civ6-orchestrator/SKILL.cn.md` and the agent reference has `AGENTS.cn.md`.
+**The English file is what DSH serves the model; the mirror is for a human reader** (human
+instruction 2026-09-28). `tests/test_dsh_documents.py` holds that split: the served files are
+pure ASCII with no BOM, a mirror is Chinese with a BOM, and no mirror is named something DSH
+would load.
+
 Each preset briefs all four advisors, not just `strategy`, because the roles have
 fixed responsibilities: the `military-map` advisor in a science game should
 propose only defensive and escort actions, while in a domination game it is the

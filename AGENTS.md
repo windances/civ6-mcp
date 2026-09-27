@@ -91,6 +91,17 @@ python scripts/fix-text-encoding.py             # put the BOM back, normalise th
 python scripts/fix-text-encoding.py --check     # report only; exit 1 when one is missing
 ```
 
+**Every document DSH hands the model is English only** (human instruction 2026-09-28): this reference,
+`.dsh/skills/civ6-orchestrator/SKILL.md`, and the preset `prompts/strategies/<name>/directive.md` that
+`scripts/use-strategy.ps1` copies into that skill's DIRECTIVE block. All three are pure ASCII with no
+BOM, and `civ_mcp.text_encoding.ASCII_ONLY` is what holds them there, so `--check` fails on a Chinese
+line in any of them. **Translate the change into English before writing it, and put the Chinese
+wording in the `<name>.cn.md` mirror beside the file** (`AGENTS.cn.md`, `SKILL.cn.md`,
+`directive.cn.md`), which no DSH search pattern matches: the harness reads `AGENTS.md` / `CLAUDE.md`,
+and a skill has to be a file named exactly `SKILL.md`. `scripts/set-strategy.ps1 -Text` refuses
+non-ASCII input for the same reason, and `tests/test_dsh_documents.py` fails if a mirror appears
+somewhere DSH would load it.
+
 **The check is mandatory, and it is more than the BOM**: a BOM says nothing about whether the
 characters are still the ones somebody wrote, so the gate also greps every file for the damage a GBK
 round trip leaves behind. It runs in `git commit` (`.githooks/pre-commit`, installed once per clone

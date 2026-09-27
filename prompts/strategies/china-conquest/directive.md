@@ -1,4 +1,4 @@
-﻿China, Qin (Unifier). Play the two abilities this leader actually has, not a
+China, Qin (Unifier). Play the two abilities this leader actually has, not a
 generic domination plan.
 
 **Dynastic Cycle (civilisation ability).** Eurekas and Inspirations are worth 60%
@@ -39,7 +39,7 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   to our cities. That spawning is the reason to clear it, and it is measured: the camp at (60,30)
   produced the Spearman at (60,29) that forced a 160-gold Warrior purchase at T65. Do not walk past a
   camp that is within three tiles of a city or of a Builder's work.
-- The leader ability 三十六计 Three-Six Stratagems converts an adjacent barbarian, but only from the
+- The leader ability Three-Six Stratagems converts an adjacent barbarian, but only from the
   game UI - the adapter exposes no action. So **before destroying a camp, report any barbarian standing
   next to one of our melee units whose type is worth converting**, so the human can play the conversion
   first. Do not let that delay the raid, and do not keep a camp alive as a conversion farm: the human's
@@ -75,22 +75,22 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   outright is worth more than a unit we can only dent.
 - **Prefer the counter unit when there is one** (`enemies_cavalry_within_2` and
   friends come from the game's own `PROMOTION_CLASS_*`, not from a name list):
-  - **anti-cavalry** (Spearman from Bronze Working, Pikeman) against **cavalry**
+ - **anti-cavalry** (Spearman from Bronze Working, Pikeman) against **cavalry**
     (Horseman, Knight, Heavy Chariot). Cavalry ignores the front line and eats
     the siege train and the ranged line behind it - a Spearman is the cheapest
     answer that exists.
-  - **ranged** against **melee**: it takes no retaliation, so a ranged unit can
+ - **ranged** against **melee**: it takes no retaliation, so a ranged unit can
     grind a melee stack down without healing turns.
-  - **cavalry** of our own against **ranged, siege and civilians**: it reaches
+ - **cavalry** of our own against **ranged, siege and civilians**: it reaches
     past the screen instead of trading with it.
-  - **melee** against **anti-cavalry**; **siege** against cities only. A siege
+ - **melee** against **anti-cavalry**; **siege** against cities only. A siege
     unit is nearly helpless against units - never let it hold the front tile.
-  - Do not spend a ranged attack on a full-health unit you cannot kill while a
+ - Do not spend a ranged attack on a full-health unit you cannot kill while a
     wounded one is in range.
 - **During the assembly the contact has a cost beyond the fight, so give it to the
   right unit.** The enemy declares on the column, not after it: T103 Russia
   declared while our army was two turns short of its rally row, and T104-T106 went
-  on clearing the field in contact - a 那烂陀 Warrior walked onto a launch pad and
+  on clearing the field in contact - a Nalanda Warrior walked onto a launch pad and
   took three turns and four attackers to remove - so the first volley on Moscow
   moved from T105 to **T107**. What that means in practice: **the screen (melee,
   anti-cavalry, cavalry) answers the contact; a shooter fires from the tile it is
@@ -161,10 +161,10 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   or siege unit attacking beside them gets nothing, so a tower sitting next to
   your Crossbowmen is doing no work at all. **Both go obsolete at
   `CIVIC_CIVIL_ENGINEERING`**, and **we build neither** (human instruction
-  2026-09-26: 不用锤，用投石车) — but **the ram we already own comes along**: it is a
+  2026-09-26: no ram, use the Catapult) - but **the ram we already own comes along**: it is a
   support unit, so it travels with the melee and stands on the tile adjacent to
   the target city, where it makes their attacks do full damage against walls
-  (human instruction 2026-09-26: 已经有攻城锤，就参战). An owned asset is used, a second
+  (human instruction 2026-09-26: if a ram is already ours, it joins the fight). An owned asset is used, a second
   one is not bought and no tower is built. It is worth carrying only where there
   are walls to break: read the target's `walls` first (the city line prints
   `walls none` or the pool), because on the abandoned branch every Russian city
@@ -212,16 +212,16 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
 - An enemy city with **no garrison unit** in it is still a legal target: attack
   the tile as normal (the adapter resolves the city itself). An empty city is not
   a city that cannot be hit - it is a city that can be entered.
-- What one city needs: **3 Catapults (一城3投石车, human instruction 2026-09-26)**, 2 melee,
+- What one city needs: **3 Catapults (three Catapults per city, human instruction 2026-09-26)**, 2 melee,
   4 ranged
   (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry for
-  survivors. **No Battering Ram and no Siege Tower** (same instruction: 不用锤，用投石车) -
+  survivors. **No Battering Ram and no Siege Tower** (same instruction: no ram, use the Catapult) -
   the Catapult is the wall-breaker: it does 45-52 against a city,
   garrisoned or not, where an Archer does 9-11 into a CS 35 garrison, and the melee
   walks in after the walls are down. Three of them fired together measured **~260 a
   turn** against a city (Moscow T123: two Catapults did 174 in one turn), which is what
   keeps a siege bounded against a city that heals about twenty a turn. The ram we
-  already own **joins the assault** (human instruction 2026-09-26: 已经有攻城锤，就参战)
+  already own **joins the assault** (human instruction 2026-09-26: if a ram is already ours, it joins the fight)
   as a support unit for the melee when the target has walls; it is not a
   requirement, a second one is never built, and no tower is built. Every Crouching
   Tiger needs a melee unit holding the tile in front of it.
@@ -240,29 +240,29 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
 
 **Three phases, on every city and every barbarian camp (human instruction 2026-09-26).**
 No target is attacked on the turn it is noticed, and none is attacked from wherever the army happens
-to stand. Every objective — an enemy city, a levied raid, or a barbarian camp — goes through the same
+to stand. Every objective - an enemy city, a levied raid, or a barbarian camp - goes through the same
 three phases, in this order, and the diary says which phase the turn was in:
 
-1. **战前分析 — `prompts/tactics/07-pre-war-analysis.md`.** Read the target in its own numbers before
+1. **Pre-war analysis - `prompts/tactics/07-pre-war-analysis.md`.** Read the target in its own numbers before
    committing (a city: garrison / walls / HP pool / ring; a camp: the guard within two tiles, the
-   ground, the approach) and run the gates — five for a city, C1–C6 for a camp. The trigger is the
-   target **being attacked**: 不用获取所有城市信息才开战 still holds, and reading every city on the map
+   ground, the approach) and run the gates - five for a city, C1-C6 for a camp. The trigger is the
+   target **being attacked**: we do not need every city's information before attacking, still holds, and reading every city on the map
    is not a gate.
-2. **攻城前集结 — `prompts/tactics/04-staging-out-of-range.md` step 3b, built by
+2. **Staging before the assault - `prompts/tactics/04-staging-out-of-range.md` step 3b, built by
    `get_staging_plan(x, y)` on the target's own tile.** A camp's tile exactly as a city's: the ring,
    the paths and the distinct-tile assignment are the same, the reply names the object (`STAGING PLAN
    for the camp at x,y`, `WALK-IN OPENS`), one row per unit, arrival turns from the game's own
    pathfinding, and the turn the **last** shooter is in place is the timetable. In a corridor one unit
    wide, issue one move per call and re-read `get_units` between them.
-3. **攻城执行 — `prompts/tactics/05-formation-and-screening.md` and
+3. **Assault execution - `prompts/tactics/05-formation-and-screening.md` and
    `prompts/tactics/06-assault-composition-and-fire.md`.** Siege knocks the walls, ranged shoots the
    pool, melee and cavalry take the tile, front line in front and siege behind at range 2. For a camp
-   the last step is a walk-in against an object with no HP, no walls and no supply line — one military
+   the last step is a walk-in against an object with no HP, no walls and no supply line - one military
    unit **moves** onto the tile, and the guard, not the camp, is the enemy.
 
 The phases are not optional and not re-orderable, and their cost is measured: T159 issued eight
-grouped move orders and put **one** unit of eight on 喀山's ring, and no Trebuchet ever fired at that
-city because the train was never staged — the phases exist because skipping one is what that looks
+grouped move orders and put **one** unit of eight on Kazan's ring, and no Trebuchet ever fired at that
+city because the train was never staged - the phases exist because skipping one is what that looks
 like from the inside. Task files in `prompts/tasks/tmp/` add the *objective* for a target that needs
 one; they never replace a phase.
 
@@ -327,7 +327,7 @@ the board.
   remaining nineteen turns. The two lines are not in tension: **the production
   compounds and the income pays for the army.** What a war costs the home front is
   units and gold, not districts - and the counter-example is on the same ledger, with
-  长沙 sitting on a free district slot for thirty turns and the capital reaching the
+  Changsha sitting on a free district slot for thirty turns and the capital reaching the
   Medieval era with no Campus.
 - **The units the war does not need still have jobs.** Builders keep coming and stay
   away from the front (a builder has zero combat strength) - +10 improvements during
@@ -366,8 +366,8 @@ rather than a turn number:
 1. A named target whose walls and garrison can be broken in a bounded number of
    turns.
 2. The siege train already staged adjacent to it - **3 Catapults per city**, 2 melee, 4 ranged,
-   1 cavalry, **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车, 一城3投石车)
-   - **before** the declaration, not queued after it.
+   1 cavalry, **no ram or tower** (human instruction 2026-09-26: no ram, use the Catapult, three Catapults per city)
+ - **before** the declaration, not queued after it.
 3. Amenities positive. War weariness decays 50 per turn at war against 200 at
    peace, and 400 points cost an amenity, so a long war suppresses the very
    production that pays for it.
@@ -382,7 +382,7 @@ cost Builder charges rather than city production, which weakens the "I need a bi
 army to feel safe" argument; and units and districts leave the same queue, so every
 unit is a district not built. `CIVIC_CIVIL_ENGINEERING` obsoleting the ram and the
 tower is a **deadline for a toolkit we do not carry** - the siege train is the answer
-at every era, and no ram or tower is built (human instruction 2026-09-26: 不用锤，用投石车).
+at every era, and no ram or tower is built (human instruction 2026-09-26: no ram, use the Catapult).
 
 What development bought on that same empire: improvements 2 -> 25 and science 7.8
 -> 28.1 between T59 and T120, with gold per turn never below +17. Protect that
@@ -396,27 +396,26 @@ Governor points come from civics and cannot be respent cheaply, so each one shou
 buy the phase you are actually in - and the governor should move when the phase
 ends.
 
-- **平伽拉 / Pingala (GOVERNOR_THE_EDUCATOR) in the highest-population city while
-  developing.** Base: +15% science *and* culture in that city. Promotion 研究员
-  Researcher adds **+1 science per citizen**; 鉴赏家 Connoisseur is the culture
+- **Pingala (GOVERNOR_THE_EDUCATOR) in the highest-population city while
+  developing.** Base: +15% science *and* culture in that city. Promotion Researcher adds **+1 science per citizen**; Connoisseur is the culture
   twin. On a 9-science empire one pop-4 city adds about +4 science per turn, more
   than any building available at this stage.
-- **马格努斯 / Magnus (GOVERNOR_THE_RESOURCE_MANAGER) in the city building the
-  Settler, promoted to 给养保障 Provision**: Settlers trained there do not consume
+- **Magnus (GOVERNOR_THE_RESOURCE_MANAGER) in the city building the
+  Settler, promoted to Provision**: Settlers trained there do not consume
   a population point. He must be established first - an unestablished governor
   grants nothing - and the promotion has to land before the Settler does.
-- **梁 / Liang (GOVERNOR_THE_BUILDER) in the city producing Builders.** Her *base*
+- **Liang (GOVERNOR_THE_BUILDER) in the city producing Builders.** Her *base*
   ability gives every Builder trained there **+1 charge**, with no promotion
-  needed, and 规划委员 Zoning Commissioner adds +20% production toward districts.
+  needed, and Zoning Commissioner adds +20% production toward districts.
   A builder wave is the cheapest yield in the game; this multiplies it.
-- **维克多 / Victor (GOVERNOR_THE_DEFENDER) when a war is near or a city must
-  hold.** 驻军司令 Garrison Commander gives +5 combat strength to units defending
+- **Victor (GOVERNOR_THE_DEFENDER) when a war is near or a city must
+  hold.** Garrison Commander gives +5 combat strength to units defending
   in his city's territory and +4 loyalty per turn to other cities within 9 tiles;
-  射击孔 Embrasure gives every military unit built there a free promotion. Loyalty
+  Embrasure gives every military unit built there a free promotion. Loyalty
   is what flips a captured city, so a governor plus a garrison is the cheapest way
   to keep one - far cheaper than taking it twice.
-- **阿玛尼 / Amani (GOVERNOR_THE_AMBASSADOR) is a city-state tool.** Posted to a
-  city-state she counts as 2 envoys, and 幕后主脑 Puppeteer doubles them. That is
+- **Amani (GOVERNOR_THE_AMBASSADOR) is a city-state tool.** Posted to a
+  city-state she counts as 2 envoys, and Puppeteer doubles them. That is
   how suzerainty is defended without spending envoy tokens, and suzerainty pays +1
   favour per turn on top of the city-state bonus itself.
 
@@ -516,9 +515,9 @@ is the binding constraint in every assault in this game.
 **Foreign missionaries.**
 
 - China has no religion of its own: one Holy Site and roughly 1 faith per turn
-  cannot buy Apostles or Inquisitors. The **Condemn Heretic** verb now exists —
+  cannot buy Apostles or Inquisitors. The **Condemn Heretic** verb now exists - 
   `unit_action(action="condemn")` implements the game's own
-  `UNITCOMMAND_CONDEMN_HERETIC`, one command from an **adjacent** military unit —
+  `UNITCOMMAND_CONDEMN_HERETIC`, one command from an **adjacent** military unit - 
   but the same text that defines it also requires a war declaration
   (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`), so it is a
   war-time verb. Never plan around religious units you cannot purchase.
@@ -545,7 +544,7 @@ is the binding constraint in every assault in this game.
 **Incoming offers.**
 
 Diplomacy arrives while the AI is processing. `end_turn` either pauses and reports
-it ("Turn paused — AI diplomatic proposal from ...") or blocks outright ("Cannot end
+it ("Turn paused - AI diplomatic proposal from ...") or blocks outright ("Cannot end
 turn: diplomacy encounter pending"). War declarations against you are auto-dismissed.
 
 - **Peace: always refuse.** A deal goes to respond_to_trade(other_player_id,
@@ -561,11 +560,11 @@ turn: diplomacy encounter pending"). War declarations against you are auto-dismi
 - Expect the offer to repeat: while at war an AI re-proposes peace roughly every
   3 turns. Refusing is cheap; finishing the war is what stops it.
 - **Everything that is not peace: judge on merit, never reflexively.**
-  - Sell surplus luxury copies - a second copy of a luxury gives no amenities, so
+ - Sell surplus luxury copies - a second copy of a luxury gives no amenities, so
     take gold or GPT for it.
-  - Refuse joint-war requests: a second front breaks "one front at a time".
-  - Refuse demands, tribute, and requests to declare on a third party.
-  - Buy a strategic resource only when it cannot be mined at home; the deal ends
+ - Refuse joint-war requests: a second front breaks "one front at a time".
+ - Refuse demands, tribute, and requests to declare on a third party.
+ - Buy a strategic resource only when it cannot be mined at home; the deal ends
     the moment you declare war.
 - If a session cannot be closed with the tools, say so in plain text so the human
   player can answer it in the game window. Do not let it stall the turn, and do not

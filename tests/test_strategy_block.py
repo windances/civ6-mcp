@@ -269,12 +269,6 @@ class TestAnAdHocDirectiveDeclaresItself:
                 f"{path.name} reports the injection as done without reading the block back"
             )
 
-    def test_the_powershell_ad_hoc_writer_keeps_the_bom(self):
-        # WriteAllText with no encoding emits plain UTF-8 and drops the BOM.
-        assert "New-Object System.Text.UTF8Encoding($true)" in SET_SWITCHER.read_text(
-            encoding="utf-8-sig"
-        ), "set-strategy.ps1 writes SKILL.md without an encoding, which strips its BOM"
-
     def test_the_bash_ad_hoc_writer_strips_a_source_bom(self):
         assert "sed '1s/^\\xEF\\xBB\\xBF//' \"$value\"" in SET_SH_SWITCHER.read_text(
             encoding="utf-8-sig"
@@ -285,6 +279,26 @@ class TestAnAdHocDirectiveDeclaresItself:
             assert "ad-hoc directive" in path.read_text(encoding="utf-8-sig"), (
                 f"{path.name} reports an ad-hoc block as if it were a stale preset"
             )
+
+    def test_the_writers_pick_the_bom_from_the_content(self):
+        # The encoding rule is content-based: a document holding a non-ASCII byte carries a BOM, a
+        # pure-ASCII one must not. The skill is ASCII (text_encoding.ASCII_ONLY), so a writer that
+        # always added a BOM left a stray one on every switch - measured 2026-09-28.
+        pattern = "New-Object System.Text.UTF8Encoding ([regex]::IsMatch($skill, '[^\\x00-\\x7F]'))"
+        for path in (SWITCHER, SET_SWITCHER):
+            assert pattern in path.read_text(encoding="utf-8-sig"), (
+                f"{path.name} decides the BOM by hand instead of from the content it writes"
+            )
+
+    def test_the_ad_hoc_writers_refuse_chinese(self):
+        # The mirror is where Chinese belongs; the block DSH serves is English (human instruction
+        # 2026-09-28), and a Chinese block would fail the gate a moment after it was written.
+        assert "the strategy text is not ASCII" in SET_SWITCHER.read_text(encoding="utf-8-sig")
+        sh = SET_SH_SWITCHER.read_text(encoding="utf-8-sig")
+        assert "the strategy text is not ASCII" in sh
+        assert "tr -d '\\000-\\177'" in sh, (
+            "set-strategy.sh does not count non-ASCII bytes, so a Chinese -File would be injected"
+        )
 
 
 class TestTheReadmeListsEveryPreset:

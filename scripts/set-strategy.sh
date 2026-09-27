@@ -19,6 +19,23 @@ fail() { echo "error: $*" >&2; exit 2; }
 # The first line of an ad-hoc block: see scripts/set-strategy.ps1 (same literal).
 ad_hoc_marker='<!-- ad-hoc directive from the human, not a preset: switching presets replaces it -->'
 
+# A document holding a non-ASCII byte carries a BOM and a pure-ASCII one does not
+# (scripts/fix-text-encoding.py); the refusal below keeps this block ASCII, so the step
+# is here to drop a BOM an earlier non-ASCII write left behind.
+ensure_bom() {
+  local file="$1" nonascii
+  # Strip a leading BOM before counting, or the BOM's own three bytes make every file look
+  # non-ASCII and the removal branch below can never run.
+  nonascii="$(sed '1s/^\xEF\xBB\xBF//' "$file" | LC_ALL=C tr -d '\000-\177' | wc -c | tr -d ' ')"
+  if [ "$nonascii" -gt 0 ]; then
+    if [ "$(head -c 3 "$file" | od -An -tx1 | tr -d ' \n')" != "efbbbf" ]; then
+      sed -i '1s/^/\xEF\xBB\xBF/' "$file"
+    fi
+  else
+    sed -i '1s/^\xEF\xBB\xBF//' "$file"
+  fi
+}
+
 # The directive body SKILL.md carries right now, with any stray BOM stripped.
 skill_block() {
   awk '/<!-- DIRECTIVE:BEGIN/{f=1;next} /<!-- DIRECTIVE:END -->/{f=0} f' "$skill" | sed '1s/^\xEF\xBB\xBF//'
@@ -59,6 +76,15 @@ else
   printf '%s\n' "$value" > "$tmp_text"
 fi
 
+# The skill is an English-only DSH document (human instruction 2026-09-28): the model reads English,
+# and civ_mcp.text_encoding.ASCII_ONLY holds this file to pure ASCII, so a Chinese block would fail
+# the gate a moment after it was written. The Chinese copy belongs in SKILL.cn.md beside it. Bytes,
+# not characters: `tr -d` removes every ASCII byte, so what is left can only be non-ASCII.
+nonascii="$(LC_ALL=C tr -d '\000-\177' < "$tmp_text" | wc -c | tr -d ' ')"
+if [ "$nonascii" -ne 0 ]; then
+  fail 'the strategy text is not ASCII: the skill is English only - write it in English and put the Chinese wording in .dsh/skills/civ6-orchestrator/SKILL.cn.md'
+fi
+
 # The marker makes a deliberate override distinguishable from a preset whose text
 # drifted (tests/test_strategy_block.py); re-applying a preset rewrites the whole block
 # and so removes it.
@@ -69,6 +95,7 @@ awk -v dfile="$tmp_body" '
   /<!-- DIRECTIVE:END -->/ { skip=0 }
   !skip { print }
 ' "$skill" > "$tmp_out" && mv "$tmp_out" "$skill"
+ensure_bom "$skill"
 
 # Read it back: a write that did not land would otherwise be reported as success, and
 # the block is what the running session is handed.
