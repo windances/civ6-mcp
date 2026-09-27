@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `021-siege-legion-overseas.md` (a siege legion overseas - form it, sail it, land on another civilization's continent, analyse the city found there, and assault only if it can be won; at most four new builds).
+**IN FORCE NOW:** `021-siege-legion-overseas.md` (a siege legion overseas - form it, sail it, land on another civilization's continent, analyse the city found there, and assault only if it can be won; at most four new builds) and `022-take-haarlem-locate-the-dutch-city-analyse-it-stage-and-concentrate-fire.md` (take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
