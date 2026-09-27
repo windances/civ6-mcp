@@ -331,7 +331,8 @@ convert an adjacent barbarian before the raid. What is only here is the tooling.
 
 - **Locate the camp from the map every time.** A camp can be cleared by someone else and respawn
   nearby, and a coordinate copied from an old diary has already been wrong once (measured: a diary
-  note and the next map read put it on different tiles).
+  note and the next map read put it on different tiles - the case is
+  `prompts/tasks/tmp/done/001-clear-the-camp-done-T84.md`).
 - **The raid has a one-command entry point:** `scripts\run-dsh-headless.ps1 -TaskFile
   prompts\tasks\clear-the-camp.zh.txt` (English: `clear-the-camp.en.txt`) - one raid end to end, without
   declaring war and without changing the development plan.
