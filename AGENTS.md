@@ -12,7 +12,8 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** none.
+**IN FORCE NOW:** `019-two-scouts-to-sea.md` - two Scouts to sea, to find the civilizations nobody has
+met; it expires on turn 250 and the default strategy resumes with it.
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and

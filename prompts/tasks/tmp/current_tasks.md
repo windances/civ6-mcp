@@ -19,4 +19,7 @@ ones measured.
 
 | task file | added | expires | why it exists, in one line | done when (first line) |
 |---|---|---|---|---|
-| *(none in force)* | — | — | the directory is empty; task 018 was retired on T216 (see done/, docs/task-history.md) | — |
+| `019-two-scouts-to-sea.md` | 2026-09-27 | turn 250 | two Scouts to sea, to find the civilizations nobody has met (T220: 32% of the map explored, four living majors `not met`) | two SCOUT units are alive and each stands on a water tile, and >= 1 newly met major civilization |
+
+The directory was empty from T216 (task 018 retired) to T220; that retirement and its measurements are
+in `done/` and `docs/task-history.md`.
