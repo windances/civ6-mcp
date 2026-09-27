@@ -271,3 +271,48 @@ ending.**
   and not enough to *find* anything, because the search space is the whole map and the clock is counted
   in turns of sailing. 021's escort and cavalry inherit the search.
 
+## `021-siege-legion-overseas` — expired at T270
+
+The file is `prompts/tasks/tmp/done/021-siege-legion-overseas-expired-T270.md`. It was added on
+2026-09-27 from the human instruction to build a siege legion, sail it, land on another civilization's
+continent, run a pre-war analysis on the city found there, and concentrate fire on it if it could be
+won. **It retired on its hard stop with the verdict written and the legion back on the sea lane.**
+
+- **The target was found late and it was the wrong one.** Sumer was met at T252, twenty-eight turns
+  after the task began, and its nearest city **西巴尔 (27,24)** was read from `get_map_area` with
+  **walls 400** from `get_diplomacy`'s city list. The legion's leading four units reached the Sumerian
+  water at T262 and one Line Infantry was **ashore on the unowned land at (29,22)** - the task's first
+  condition, met once.
+- **The four numbers could not be completed, and that is the finding.** Walls came from
+  `get_diplomacy` (a static maximum of 400); the **ring** came from `get_map_area` - (28,22) a
+  Commercial Hub, (26,23) a Diplomatic Quarter, (26,25) a Campus, (28,24) AMBER fishing boats; but the
+  **pool and the garrison were never read**, because the city tile prints `[CENTER] ... [fog]` even
+  from two tiles away at (29,22), and the only other route - our own attack list, which is how
+  布鲁塞尔's Builder garrison was found at T235 - requires a war declaration that the verdict had not
+  authorised.
+- **The verdict is "cannot take it inside the window", and the numbers are distance, not walls.**
+  Four Bombards and two Field Cannons do roughly 300 a turn against a city, so 400 walls and a
+  200-point pool are a two-to-three-turn problem once staged. What could not be done was the staging:
+  `get_staging_plan(27,24)` reported nine units `TOO FAR` with the nearest siege **35 tiles** out and
+  closed with "ASSAULT OPENS on this turn with 0 shooter(s) in position"; the artillery was still
+  13-22 tiles east when the file expired.
+- **The lesson is about the clock, not the army.** The task's own `expires:` was counted from the
+  queue - "forming the legion 4-10, the voyage and the landing 6-18" - but nobody measured the voyage
+  before the deadline was set: the target turned out to be thirty to forty tiles away across a
+  landmass that pushed the land units onto roads and the embarked ones into a bay. **A distance is a
+  measurement, and this file assumed a short voyage.**
+- **What the sea leg actually cost**: two Frigates bought for 1120 gold each (one for this task, one
+  for 022), a 310-gold anti-cavalry upgrade, and a carrying-capacity failure that reached **bankruptcy
+  at T265** - gold hit zero, the turn result printed `DEFICIT: Gold -48/t ... bankrupt in ~0 turns`,
+  and two units were disbanded. It was repaired inside one turn by policy (`商队旅馆` and `统治`), by
+  activating three Great People and by deleting a retired Ranger. **Two overseas expeditions at once
+  is what the gold/turn line cannot carry**, which is the directive's own ceiling rule.
+- **The withdrawal and the retirement.** On T263 a Sumerian Cuirassier appeared one tile from the
+  beachhead, and the four landed units were ordered east rather than reinforced; by T270 they were
+  back on the lane at (38,22)-(46,24). The file was retired with
+  `scripts/temp-task.py retire 021 --expired --turn 270`, the register and the IN FORCE NOW line were
+  rewritten, `tests/test_temp_tasks.py` passed 15/15 and the text gate was clean.
+- **One measured trap from this task is worth carrying forward**: a city's own tile can stay `[fog]`
+  at two tiles' range while its whole ring is visible, so **the four numbers are only ever three**
+  until a probe attack lands - and a probe attack means a war.
+

@@ -19,7 +19,6 @@ ones measured.
 
 | task file | added | expires | why it exists, in one line | done when (first line) |
 |---|---|---|---|---|
-| `021-siege-legion-overseas.md` | 2026-09-27 | turn 270 | a siege legion overseas - form it, sail it, land on another civilization's continent, analyse the city found there, and assault only if it can be won; at most four new builds | a legion ashore on another landmass, a major civ's city read in its four numbers with the `tactics/07` verdict written, and then either that city is ours or the verdict is "cannot take it" |
 | `022-take-haarlem.md` | 2026-09-28 | turn 288 | take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration | **Haarlem is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
 
 Task 020 was retired as `done/020-take-brussels-done-T237.md`: 布鲁塞尔 fell on T237 to
@@ -30,3 +29,5 @@ from (69,28), after a wall probe on T235 read `walls: 200/200` and the capture r
 `docs/task-history.md`.
 
 Task 019 was retired as `done/019-two-scouts-to-sea-expired-T250.md`.
+
+Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.
