@@ -2026,3 +2026,45 @@ Two things worth remembering about the tooling:
 - Output goes to `.tools/_branch_compare.txt` in UTF-8 and stdout stays ASCII:
   this console is cp936 and mangles both CJK city names and em dashes. Same
   reason `set-strategy.sh` exists.
+
+---
+
+## 11. 临时任务：一条命令
+
+`prompts/tasks/tmp/` 里的临时任务是**文件**：文件在 = 指令在force，移进 `done/` = 退役。
+协议本身写在 `AGENTS.md`（"Temporary tasks are files"），由 `tests/test_temp_tasks.py` 强制。
+
+手工维护要**同时**改三处——任务文件、`current_tasks.md` 登记表、`AGENTS.md` 的 `IN FORCE NOW` 行——
+再跑编码闸门与测试，最后必须是同一个提交。这件事已经手工做错过两次（一次把带反引号的纯任务名
+写进登记表备注，测试因此变红；一次退役了却没提交），所以现在是一条命令：
+
+```powershell
+scripts\temp-task.cmd status
+scripts\temp-task.cmd add --title "take Brussels: analysis, staging, assault" ^
+    --instruction @.tmp\instruction.txt ^
+    --why "take the city-state Brussels on the human's instruction" ^
+    --done-when @.tmp\done-when.txt --overrides @.tmp\overrides.txt --scope @.tmp\scope.txt ^
+    --body-file .tmp\body.md
+scripts\temp-task.cmd retire 021 --done --turn 270 --note "..."
+```
+
+（等价形式：`python scripts/temp-task.py <子命令>`；`.cmd` 只是替你找到 `.venv` 里的解释器。）
+
+| 子命令 | 它做什么 |
+|---|---|
+| `status` | 打印当前游戏回合（从最新存档读，和测试同一个时钟）、在force任务与剩余回合、以及**目录 / 登记表 / AGENTS.md 三者是否一致** |
+| `add` | 自动取下一个编号；写任务文件（UTF-8 **带 BOM**，人类指令原文写进 `added:` 行）、插入登记表行，并**从登记表重建** `IN FORCE NOW` 那一行；然后跑编码闸门 + `tests/test_temp_tasks.py`，**只有全绿才提交** |
+| `retire <编号>` | 把文件移进 `done/`（`-done-T<N>.md` / `-expired-T<N>.md`），删掉登记表行、留一条退役备注，重建 `IN FORCE NOW`，再跑闸门并提交 |
+
+要注意的几点：
+
+- **中文指令请用 `--instruction @文件`**。Windows 命令行会把非 ASCII 按控制台代码页重编码，
+  写在命令行上可能到不了脚本里；`--done-when` / `--overrides` / `--scope` / `--body-file` 同样支持 `@文件`。
+- **`--why` 必须是纯 ASCII**：它要进 `AGENTS.md`，而那个文件是纯 ASCII 门槛（`text_encoding.ASCII_ONLY`）。
+  中文原因写在任务文件里，`added:` 行就是给它留的位置。登记表里哪一行含中文，脚本会点名报错而不是让它烂在后面。
+- **到期回合**默认 = 当前游戏回合 + `--turns`（30），也可以用 `--expires-turn` 指定；给一个已经过去的回合会被拒绝。
+- 三个 `--done-when` / `--overrides` / `--scope` 是**必填**的：协议要求五个头行齐全，而 `done when:` 的第一行
+  必须能**被游戏查到**（坐标、`turn N`、`>=`、`count ==` 之类）。写得含糊，脚本会当场拒绝并说明原因。
+- 脚本**不写**两样东西，仍要你自己写：日记里的 `tooling` 行（记录退役/新增的回合）、以及
+  `docs/task-history.md` 的散文记录。它会提醒你这两处。
+- 不改动游戏、不调用 MCP：这是文件操作工具，可以在游戏没跑的时候用。
