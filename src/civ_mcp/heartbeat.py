@@ -44,13 +44,27 @@ def bind_eval(model_id: str, scenario_id: str) -> None:
     _scenario_id = scenario_id
 
 
+def _turn_number(value: object) -> int:
+    """The turn as an int, because this file is read by other processes.
+
+    A caller passed the log line's "?" placeholder here once, and the heartbeat then held
+    ``"turn": "?"`` while a reader that does ``int(turn)`` (``handoff.verdict``, and therefore
+    ``scripts/resume-game.ps1``) raised ValueError before it printed anything (measured 2026-09-28).
+    A heartbeat is a hint: an unreadable turn is 0, never a crash for whoever reads it.
+    """
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0
+
+
 def write(phase: str, turn: int = 0) -> None:
     """Write heartbeat.json atomically (tmp + rename)."""
     try:
         HEARTBEAT_PATH.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "phase": phase,
-            "turn": turn,
+            "turn": _turn_number(turn),
             "ts": time.time(),
             "pid": os.getpid(),
             "run_id": _run_id,

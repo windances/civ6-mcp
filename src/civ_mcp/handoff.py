@@ -274,6 +274,21 @@ def recommend_save(facts: dict) -> dict | None:
     return (facts.get("saves") or {}).get("newest")
 
 
+def _heartbeat_turn(value: object) -> int | None:
+    """A turn read out of a passive file, or None when it does not name one.
+
+    The heartbeat is written by another process, so this reader has to expect anything in it. A
+    value that is not a number is "unknown", not a reason to fail the check: a heartbeat holding
+    ``"turn": "?"`` (the log line's placeholder, which ``server.py`` used to pass to
+    ``heartbeat.write``) made this module raise ValueError and ``scripts/resume-game.ps1`` die
+    before it printed a single line - measured 2026-09-28.
+    """
+    try:
+        return int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
 def verdict(facts: dict) -> dict:
     """One state, who has to act, and the command that acts. Pure."""
     saves = facts.get("saves") or {}
@@ -315,7 +330,7 @@ def verdict(facts: dict) -> dict:
         out["ready"] = True
         out["turn"] = int(probe["turn"])
         out["next_command"] = "scripts\\resume-game.ps1"
-        if facts.get("last_turn") and int(facts["last_turn"]) != out["turn"]:
+        if facts.get("last_turn") and _heartbeat_turn(facts["last_turn"]) not in (None, out["turn"]):
             out["warnings"].append(
                 f"the last session's heartbeat says T{facts['last_turn']}, the loaded game "
                 f"says T{out['turn']}: the notes in the diary belong to another position"
@@ -354,9 +369,13 @@ def render(facts: dict, result: dict) -> str:
     if facts.get("run_id"):
         match += f", last run {facts['run_id']}"
     if heartbeat:
+        # The turn in the heartbeat is a number or nothing: a file written before 2026-09-28 can hold
+        # the log line's "?" (see `_heartbeat_turn`), and a report should say "unknown", not "T?".
+        beat_turn = _heartbeat_turn(heartbeat.get("turn"))
         match += (
             f", heartbeat {heartbeat.get('age_seconds', 0) / 3600:.1f}h old "
-            f"(phase {heartbeat.get('phase')}, T{heartbeat.get('turn')}, "
+            f"(phase {heartbeat.get('phase')}, "
+            f"{f'T{beat_turn}' if beat_turn is not None else 'turn unknown'}, "
             f"pid {heartbeat.get('pid')} {'alive' if heartbeat.get('pid_alive') else 'gone'})"
         )
     lines.append(f"  MATCH      {match}")
@@ -457,9 +476,9 @@ def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = Fals
             f"   turn-regression warning or a newer autosave as a position to recover - the line\n"
             f"   that was played before this point has been abandoned on purpose."
         )
-    elif facts.get("last_turn"):
+    elif (last_turn := _heartbeat_turn(facts.get("last_turn"))) is not None:
         parts.append(
-            f"   The previous session stopped at T{facts['last_turn']}. If the game reports a\n"
+            f"   The previous session stopped at T{last_turn}. If the game reports a\n"
             f"   **lower** turn, a rollback happened: take the position from the game and treat\n"
             f"   the diary's plan as belonging to another branch. If it reports a higher turn, the\n"
             f"   game was played on past the session - read the diary as history, not as the plan."

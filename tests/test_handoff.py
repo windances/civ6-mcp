@@ -155,6 +155,17 @@ class TestVerdict:
         assert result["ready"] is True
         assert any("T142" in note and "T150" in note for note in result["warnings"])
 
+    def test_a_heartbeat_turn_that_is_not_a_number_is_unknown_not_a_crash(self):
+        # The measured failure of 2026-09-28: server.py wrote the log line's "?" placeholder into
+        # the heartbeat, this verdict did int("?") on it, and scripts/resume-game.ps1 died with a
+        # traceback before printing the report it exists to print.
+        result = h.verdict(
+            facts(probe={"connected": True, "ingame": True, "turn": 142}, last_turn="?")
+        )
+        assert result["ready"] is True
+        assert result["turn"] == 142
+        assert result["warnings"] == [], "a heartbeat that names no turn cannot disagree with one"
+
     def test_the_newest_save_is_the_one_continue_game_would_load(self):
         saves = inventory(
             save("AutoSave_0150", 149, "autosave", mtime=2_000.0),
@@ -222,3 +233,12 @@ class TestReport:
         text = h.render(f, h.verdict(f))
         assert "BLOCKED" in text
         assert "fix the blocker above" in text
+
+    def test_a_heartbeat_without_a_turn_is_reported_as_unknown(self):
+        # The file can hold the log line's "?" (written before 2026-09-28): the report says so in
+        # words, and never prints a placeholder as if it were a turn.
+        f = facts(probe={"connected": True, "ingame": True, "turn": 142}, last_turn="?")
+        text = h.render(f, h.verdict(f))
+        assert "turn unknown" in text
+        assert "T?" not in text
+        assert "VERDICT    IN_GAME, T142" in text

@@ -34,6 +34,21 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+# The report carries Chinese save names - the manual save is named after the leader, in Chinese, and
+# that name is part of every line about it. A python child writes its stdout in the *locale* encoding
+# (gbk on this machine) while PowerShell 5.1 decodes a child's output with [Console]::OutputEncoding
+# (utf-8 in Windows Terminal, cp936 in a legacy console), so the name arrived as garbled bytes
+# (measured 2026-09-28, reported as a failed scripts\resume-game.ps1). Make the child speak the
+# encoding the host is listening in: the report is the whole point of this script, and one that
+# cannot name the save is a report nobody can act on. `:replace` so a character outside that code
+# page prints as '?' instead of raising in the middle of the report.
+#
+# This file stays pure ASCII, like every other script here: PowerShell 5.1 reads a BOM-less file as
+# the ANSI code page, so a Chinese character in it would be read as mojibake.
+if (-not $env:PYTHONIOENCODING) {
+    $env:PYTHONIOENCODING = "cp$([Console]::OutputEncoding.CodePage):replace"
+}
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $python = Join-Path $projectRoot '.venv\Scripts\python.exe'
 $handoff = Join-Path $projectRoot 'scripts\handoff.py'

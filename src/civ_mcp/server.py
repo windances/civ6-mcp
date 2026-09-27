@@ -429,7 +429,13 @@ async def _logged(
 ) -> str:
     """Run a tool function with timing, error handling, and logging."""
     logger = _get_logger(ctx)
-    turn = logger._turn or "?"
+    # The turn as a *number*, and the label the log line prints when there is none. These used to be
+    # one variable - `logger._turn or "?"` - and the placeholder then travelled into the data path:
+    # the `heartbeat.write("playing", turn=...)` below writes the file that
+    # `handoff.verdict`/`scripts/resume-game.ps1` read, so the heartbeat held `"turn": "?"` and the
+    # handoff check died on `int("?")` before it printed anything (measured 2026-09-28).
+    turn = int(logger._turn or 0)
+    turn_label = turn or "?"
     start = time.monotonic()
     try:
         result = await fn()
@@ -438,7 +444,7 @@ async def _logged(
         ms = int((time.monotonic() - start) * 1000)
         log.info(
             "[T%s] %s(%s) ERR %dms: %s",
-            turn,
+            turn_label,
             tool_name,
             _param_summary(params),
             ms,
@@ -451,7 +457,7 @@ async def _logged(
         ms = int((time.monotonic() - start) * 1000)
         log.info(
             "[T%s] %s(%s) ERR %dms: %s",
-            turn,
+            turn_label,
             tool_name,
             _param_summary(params),
             ms,
@@ -496,11 +502,11 @@ async def _logged(
         return result
     # Success —reset connection error counter + refresh heartbeat
     _logged._conn_errors = 0
-    heartbeat.write("playing", turn=turn or 0)
+    heartbeat.write("playing", turn=turn)
     ms = int((time.monotonic() - start) * 1000)
     log.info(
         "[T%s] %s(%s) OK %dms: %s",
-        turn,
+        turn_label,
         tool_name,
         _param_summary(params),
         ms,
