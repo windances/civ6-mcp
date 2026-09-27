@@ -110,8 +110,9 @@ treasury went on instead and whether any candidate had appeared.
 
 ## Outcome — both halves held at T195
 
-**The upgrade half is complete and its five calls are in the session logs** (the `added:` line's
-count — two Man-at-Arms and all three Trebuchets — is exactly what was bought):
+**The upgrade half is complete and its five calls are in the session logs** (the `done when:` line's
+count — both Man-at-Arms and all three Trebuchets, 5 x 85g = the 425g it named — is exactly what was
+bought):
 
 | turn | unit id | upgrade | log |
 |---|---|---|---|
