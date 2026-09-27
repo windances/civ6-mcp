@@ -49,6 +49,7 @@ _CONTACT_METRIC_KEYS = (
     "min_siege_upgrade_cost",
     "uncovered_upgrades_available",
     "min_uncovered_upgrade_cost",
+    "upgrades_gated_by_discount",
     "cities_low_loyalty",
     "lowest_loyalty",
     "low_loyalty_without_governor",
@@ -1149,7 +1150,7 @@ async def _check_turn_checks(
             events.append(lq.TurnEvent(priority=2, category="combat", message=capture_text))
         try:
             gold = float((now or {}).get("gold", 0) or 0)
-            upgrade_text = _upgrade_event(units, gold, turn)
+            upgrade_text = _upgrade_event(units, gold, turn, (now or {}).get("policies"))
         except Exception:
             log.debug("upgrade report failed", exc_info=True)
             upgrade_text = None
@@ -1547,12 +1548,44 @@ def _uncovered_upgrade_metrics(units: dict | None) -> dict:
     return metrics
 
 
-def _upgrade_event(units: dict | None, gold: float, turn: int) -> str | None:
+# The one policy whose presence halves the price of every upgrade. The game's own text for it is
+# "50% discount on all unit upgrades"; `GameState.UPGRADE_DISCOUNT_POLICY` is the same string, used
+# by the warning that fires when a policy change *drops* it, and a test pins the two together.
+_UPGRADE_DISCOUNT_POLICY = "POLICY_PROFESSIONAL_ARMY"
+
+
+def _gated_by_discount(units: dict | None, gold: float, policies) -> list[tuple[str, str, int]]:
+    """Offers the treasury could afford at the discount price and not at the quoted one.
+
+    Measured T201-T217: the free policy window traded `POLICY_PROFESSIONAL_ARMY` for housing, which
+    doubled every offer (115 -> 230, 155 -> 310, 190 -> 380), and nothing said so. `_upgrade_event`
+    lists only what the treasury can already pay, so a doubled price did not make an offer loud - it
+    made it *silent*. This is the case worth reporting: the halved price is affordable, the quoted
+    one is not, and the missing card is therefore the only reason the upgrade is not being bought.
+    `policies` of None means the snapshot did not carry them, and then nothing is claimed.
+    """
+    if policies is None:
+        return []
+    if _UPGRADE_DISCOUNT_POLICY in {str(policy) for policy in policies}:
+        return []
+    gated: list[tuple[str, str, int]] = []
+    for unit in (units or {}).values():
+        if not getattr(unit, "can_upgrade", False):
+            continue
+        cost = int(getattr(unit, "upgrade_cost", 0) or 0)
+        if cost > 0 and cost // 2 <= gold < cost:
+            target = (getattr(unit, "upgrade_target", "") or "?").replace("UNIT_", "")
+            gated.append((str(getattr(unit, "unit_type", "?")), target, cost))
+    return gated
+
+
+def _upgrade_event(units: dict | None, gold: float, turn: int, policies=None) -> str | None:
     """The upgrades the treasury can already pay for, named one by one.
 
     A rule can say "an upgrade is waiting"; only the unit list can say *which* unit and for how
     much, which is the difference between a nudge and an order. Unaffordable upgrades are left
-    out when the gold is known: a reminder the treasury cannot satisfy is noise.
+    out when the gold is known: a reminder the treasury cannot satisfy is noise - unless the
+    missing discount card is why it cannot be satisfied, which `_gated_by_discount` answers.
     """
     ready: list[str] = []
     for unit in (units or {}).values():
@@ -1566,20 +1599,28 @@ def _upgrade_event(units: dict | None, gold: float, turn: int) -> str | None:
             f"  {getattr(unit, 'unit_type', '?')} {getattr(unit, 'unit_id', '?')}"
             f" -> {target} (cost {cost}g)"
         )
-    if not ready:
+    gated = _gated_by_discount(units, gold, policies)
+    if not ready and not gated:
         return None
-    return "\n".join(
-        [
-            f"UPGRADE AVAILABLE (T{turn}) - the treasury holds {gold:.0f}; one `upgrade_unit`"
-            " call each:"
-        ]
-        + ready
-        + [
+    header = f"UPGRADE AVAILABLE (T{turn}) - the treasury holds {gold:.0f};"
+    lines = [header + (" one `upgrade_unit` call each:" if ready else " nothing is affordable at the quoted price:")]
+    lines += ready
+    if ready:
+        lines.append(
             "  A Catapult does 45 against a city where a Trebuchet does 55, and a Warrior (CS 20)"
             " loses every trade with a Man-at-Arms (CS 45): paying for the upgrade before the"
             " next assault is cheaper than replacing the unit during it."
-        ]
-    )
+        )
+    if gated:
+        unit_type, target, cost = min(gated, key=lambda row: row[2])
+        lines.append(
+            f"  NOTE: {unit_type} -> {target} is {cost}g against a treasury of {gold:.0f}g, and"
+            f" {cost // 2}g with {_UPGRADE_DISCOUNT_POLICY} ('50% discount on all unit upgrades') in"
+            " the government - a card the free window at T201 traded for housing. Every offer has"
+            " cost double since (115 -> 230, 155 -> 310, 190 -> 380), and T216-T217 paid 540g where"
+            " 270g would have done: a free policy change puts it back for nothing."
+        )
+    return "\n".join(lines)
 
 
 def _loyalty_metrics(readiness: list) -> dict:
@@ -1867,6 +1908,10 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
     firing them.
     """
     capture_readiness = await _capture_for_checks(gs, turn)
+    # Gold and the slotted policies come from the same agent diary row the upgrade report uses: it is
+    # the snapshot the turn's own plan was written against, and reading it costs no round trip.
+    now = _latest_at_or_before(await _agent_diary_rows(gs), turn)
+    gold = float((now or {}).get("gold", 0) or 0)
     metrics = {
         "enemies_within_1": 0,
         "enemies_within_2": 0,
@@ -1894,6 +1939,14 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         **_capture_metrics(capture_readiness),
         **_siege_upgrade_metrics(units),
         **_uncovered_upgrade_metrics(units),
+        # The melee keys were listed in `_CONTACT_METRIC_KEYS` (and zero-filled for a historical row)
+        # but nothing computed them, so a rule naming them would have been silently always-zero rather
+        # than loudly un-evaluable. Wiring them here closes that trap.
+        **_melee_upgrade_metrics(units),
+        # Offers the missing upgrade-discount card is the only obstacle to: see `_gated_by_discount`.
+        "upgrades_gated_by_discount": len(
+            _gated_by_discount(units, gold, (now or {}).get("policies"))
+        ),
         **_loyalty_metrics(await _loyalty_for_checks(gs, turn)),
         # A camp beside a city is a target the turn result used to be silent about.
         "camps_within_3": await _camps_within_3(gs),

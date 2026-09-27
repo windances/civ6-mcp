@@ -34,6 +34,7 @@ from civ_mcp.game_state import GameState  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PENDING = ROOT / "prompts" / "checks" / "pending" / "upgrade-the-unwatched.md"
+PENDING_DISCOUNT = ROOT / "prompts" / "checks" / "pending" / "keep-the-upgrade-discount.md"
 LIVE = ROOT / "prompts" / "checks" / "turn-checks.md"
 
 
@@ -141,6 +142,94 @@ class TestTheRuleIsLive:
         live = LIVE.read_text(encoding="utf-8-sig")
         assert "id: match-their-melee" in live
         assert "id: upgrade-the-siege" in live
+
+
+class TestTheDiscountGate:
+    """T201 traded Professional Army for housing and every price doubled; nothing said so.
+
+    The change-time warning covers the moment the card is dropped. This covers the *state*: the card
+    is absent and an upgrade is one policy change away from being affordable - which is the case
+    `UPGRADE AVAILABLE` used to answer by saying nothing at all (measured T224: 208 gold against a
+    310g offer).
+    """
+
+    def test_only_the_offers_the_card_would_make_affordable_are_counted(self):
+        units = {
+            1: unit("UNIT_CROSSBOWMAN", cost=310),  # 155 affordable at 208 gold, 310 is not
+            2: unit("UNIT_BOMBARD", cost=200),  # affordable either way: the card is not the obstacle
+            3: unit("UNIT_SPEARMAN", cost=900),  # affordable neither way: gold is the obstacle
+        }
+        gated = et._gated_by_discount(units, gold=208.0, policies=["POLICY_MEDINA_QUARTER"])
+        assert [row[0] for row in gated] == ["UNIT_CROSSBOWMAN"]
+
+    def test_the_card_in_the_government_switches_it_off(self):
+        units = {1: unit("UNIT_CROSSBOWMAN", cost=310)}
+        assert et._gated_by_discount(units, 208.0, ["POLICY_PROFESSIONAL_ARMY"]) == []
+
+    def test_a_snapshot_without_policies_claims_nothing(self):
+        units = {1: unit("UNIT_CROSSBOWMAN", cost=310)}
+        assert et._gated_by_discount(units, 208.0, None) == []
+
+    def test_the_constant_is_the_one_the_change_warning_uses(self):
+        assert et._UPGRADE_DISCOUNT_POLICY == GameState.UPGRADE_DISCOUNT_POLICY
+
+    def test_the_block_reports_an_upgrade_nobody_can_afford_yet(self):
+        text = et._upgrade_event(
+            {1: unit("UNIT_CROSSBOWMAN", cost=310)}, 208.0, 224, ["POLICY_MEDINA_QUARTER"]
+        )
+        assert text, "the silent case is exactly the one the block has to speak about"
+        assert "nothing is affordable at the quoted price" in text
+        assert "155g" in text and "POLICY_PROFESSIONAL_ARMY" in text
+
+    def test_the_block_stays_quiet_with_the_card_in_the_government(self):
+        text = et._upgrade_event(
+            {1: unit("UNIT_CROSSBOWMAN", cost=310)}, 208.0, 224, ["POLICY_PROFESSIONAL_ARMY"]
+        )
+        assert text is None, "with the discount slotted the offer is simply not affordable yet"
+
+    def test_a_listed_offer_needs_no_note(self):
+        # The note is for the silent case; a price that is on the page is its own signal, and the
+        # class rules (`upgrade-the-unwatched`, `upgrade-the-siege`) nag about buying it.
+        text = et._upgrade_event(
+            {1: unit("UNIT_CROSSBOWMAN", cost=310)}, 400.0, 224, ["POLICY_MEDINA_QUARTER"]
+        )
+        assert text and "cost 310g" in text
+        assert "NOTE:" not in text
+
+
+class TestTheUpgradeMetricsAreWired:
+    def test_every_upgrade_metric_is_computed_by_the_context(self):
+        # The melee keys sat in `_CONTACT_METRIC_KEYS` - and were zero-filled for a historical row -
+        # while nothing computed them, so a rule naming them would have been silently always-zero
+        # rather than loudly un-evaluable, which is the failure the staging convention exists for.
+        source = inspect.getsource(et._contact_metrics)
+        for helper in ("_siege_upgrade_metrics", "_uncovered_upgrade_metrics", "_melee_upgrade_metrics"):
+            assert f"{helper}(units)" in source, f"{helper} is never called: its keys are always 0"
+        assert '"upgrades_gated_by_discount"' in source
+
+
+class TestTheDiscountRuleIsStaged:
+    """Cut in only once a session running the metric's code has started (`pending/README.md`)."""
+
+    def test_the_staged_file_names_the_metric_and_the_code(self):
+        text = PENDING_DISCOUNT.read_text(encoding="utf-8-sig")
+        assert "id: keep-the-upgrade-discount" in text
+        assert "upgrades_gated_by_discount" in text, "the rule depends on this metric"
+        assert "_gated_by_discount" in text, "the staged file names the code that must ship first"
+
+    def test_it_is_not_live_yet(self):
+        # The running session's metric set lacks the key, and a rule naming a metric no server
+        # computes reports `un-evaluable` every turn: alive-looking and unsatisfiable.
+        assert "keep-the-upgrade-discount" not in LIVE.read_text(encoding="utf-8-sig")
+
+    def test_the_staged_expression_evaluates_in_this_build(self):
+        rule = turn_checks.parse_checks(PENDING_DISCOUNT.read_text(encoding="utf-8-sig"))[0]
+        assert rule.check_id == "keep-the-upgrade-discount"
+        fired = context(upgrades_gated_by_discount=1)
+        quiet = context(upgrades_gated_by_discount=0)
+        assert bool(turn_checks.evaluate(rule.when, fired)) is True
+        assert bool(turn_checks.evaluate(rule.require, fired)) is False
+        assert bool(turn_checks.evaluate(rule.require, quiet)) is True
 
 
 class TestTheDiscountNote:
