@@ -76,33 +76,153 @@ _CONTACT_METRIC_KEYS = (
 # ``for v = 2, min(maxWanted, maxV)``, so requesting exactly one vote costs
 # nothing while still casting the free vote.
 #
-# The fallback is deliberately blind: option A and the first possible target.
-# In Expansion2_Congress.xml option A is the "add / improve / buff" side of most
-# resolutions (it adds diplomatic victory points, improves a luxury, buffs arms
-# control), but not all of them - WC_RES_MERCENARY_COMPANIES and
-# WC_RES_GLOBAL_ENERGY_TREATY put the ban on option A and the buff on option B.
-# So a single vote on A is a least-bad default rather than a correct one, which
-# is precisely why it is capped at the free vote and never allowed to spend
-# favour: the half of the decision that costs something stays with the agent.
-WC_FREE_VOTE_OPTION = 1  # 1 = option A
-WC_FREE_VOTE_TARGET = 0  # 0-based index into PossibleTargets
+# The fallback used to be deliberately blind - option A and the first possible
+# target - because option A is the "add / improve / buff" side of most
+# resolutions. It is not the buff side of all of them, and the two tables below
+# are what that costs. Both are read from the game's own
+# ``DLC/Expansion2/Data/Expansion2_Congress.xml`` (``Resolutions`` gives
+# ``Effect1Description`` for A and ``Effect2Description`` for B, resolved
+# through ``DLC/Expansion2/Text/en_US/Expansion2_CongressText.xml``), so every
+# entry here can be checked against a file rather than against taste.
+#
+# Neither table may ever cost favor: ``votes`` stays at 1, which is the free
+# vote, and the half of the decision that costs something stays with the agent.
+WC_FREE_VOTE_OPTION = 1  # the default option, A
+WC_FREE_VOTE_TARGET = 0  # the default target, index 0 into PossibleTargets
+WC_FREE_VOTE_OPTION_BY_TYPE: dict[str, int] = {
+    # A = "Producing, or purchasing military units ... is +100% of the cost",
+    # B = "-50% of the cost". A is the penalty side here.
+    "WC_RES_MERCENARY_COMPANIES": 2,
+    # A = "Ban the production of buildings of this type", B = "50% discount".
+    "WC_RES_GLOBAL_ENERGY_TREATY": 2,
+    # A = "Prohibits chopping or clearing Features of the chosen type",
+    # B = "Clearing Features ... yields Gold ... and Food". We clear features
+    # with builders constantly, so A would tax our own routine.
+    "WC_RES_DEFORESTATION_TREATY": 2,
+    # A = "Spies executing the chosen Operation function 2 levels higher",
+    # B = "The chosen Operation is unavailable". We have no spies at all, so A
+    # buys a capability we cannot use.
+    "WC_RES_ESPIONAGE_PACT": 2,
+    # B = "The target player loses all of their Weapons of Mass Destruction";
+    # A instead raises every player's arsenal to the target's. Read with the
+    # "not_self" target rule below.
+    "WC_RES_ARMS_CONTROL": 2,
+    # B = "This player's borders will not grow via Culture"; A is "New districts
+    # built by this player act as Culture bombs", which is border growth handed
+    # to whoever the vote names. Read with the "not_self" target rule below.
+    "WC_RES_BORDER_CONTROL": 2,
+}
+# Which target the free vote names. This only applies to PLAYER-kind
+# resolutions: every other kind's list holds resources, districts, beliefs and
+# the like, where "us" is not a member and the entry is a 0-based index.
+#   "self"     - the effect is a gain, so aim it at ourselves
+#   "not_self" - the effect is a loss, so never aim it at ourselves
+#   "first"    - unchanged: leave it at index 0
+WC_FREE_VOTE_TARGET_BY_TYPE: dict[str, str] = {
+    # A = "Chosen Player gains 2 Diplomatic Victory points" - at 2/20 with the
+    # rivals on 4 and 3, the only self-serving target for a gain is us.
+    "WC_RES_DIPLOVICTORY": "self",
+    # B = "The target player loses all of their Weapons of Mass Destruction";
+    # A instead raises everyone's arsenal to the target's, so B on anyone else
+    # is the safe reading and B on us is never.
+    "WC_RES_ARMS_CONTROL": "not_self",
+    # A = "New districts built by this player act as Culture bombs" (a rival
+    # expanding at our expense), B = "This player's borders will not grow via
+    # Culture" (a rival stops expanding). B on anyone but us.
+    "WC_RES_BORDER_CONTROL": "not_self",
+}
 
 
-def build_free_vote_fallback(resolutions: list) -> list[dict]:
-    """One free vote per resolution, spending zero favor.
+def _target_player_ids(resolution) -> list[int]:
+    """The player ids in a PLAYER-kind resolution's target list.
+
+    ``lua/congress.py`` prints each target as ``<id>:<name>``, and the id is a
+    player id only for PlayerType resolutions - every other kind prints a
+    0-based index there, which is why the caller checks ``target_kind`` first.
+    An unreadable entry is dropped rather than guessed at.
+    """
+    if (getattr(resolution, "target_kind", "") or "").upper() != "PLAYER":
+        return []
+    ids = []
+    for entry in getattr(resolution, "possible_targets", None) or []:
+        head = str(entry).split(":", 1)[0].strip()
+        if head.lstrip("-").isdigit():
+            ids.append(int(head))
+    return ids
+
+
+def free_vote_choice(resolution, local_player_id: int = 0) -> tuple[int, int]:
+    """The (option, target) one resolution's free vote uses.
+
+    The option comes from ``WC_FREE_VOTE_OPTION_BY_TYPE``; the target rule from
+    ``WC_FREE_VOTE_TARGET_BY_TYPE``. A rule only moves the vote off the defaults
+    when the id it needs is really in the target list, and each rule has a
+    defined reading for the case where it is not:
+
+    * ``"self"`` (the effect is a gain for the chosen player) takes the gain for
+      us when we are on the ballot. When we are not, the same resolution's other
+      side is the only useful one - "the chosen player loses X" - so it becomes
+      that, aimed at the first player who is not us. Voting the gain for a rival
+      would be worse than the untouched default.
+    * ``"not_self"`` (the effect is a loss) takes the first player who is not
+      us, and falls back to the untouched default when we are the only candidate,
+      because there the loss would land on us.
+    """
+    resolution_type = getattr(resolution, "resolution_type", "") or ""
+    option = WC_FREE_VOTE_OPTION_BY_TYPE.get(resolution_type, WC_FREE_VOTE_OPTION)
+    rule = WC_FREE_VOTE_TARGET_BY_TYPE.get(resolution_type, "first")
+    if rule == "first":
+        return option, WC_FREE_VOTE_TARGET
+
+    ids = _target_player_ids(resolution)
+    others = [pid for pid in ids if pid != local_player_id]
+    if rule == "self":
+        if local_player_id in ids:
+            return option, local_player_id
+        if others:
+            # The opposite side of the same resolution: gain becomes loss.
+            return (2 if option == 1 else 1), others[0]
+    elif rule == "not_self" and others:
+        return option, others[0]
+    # The rule's target is not on the ballot at all, so the table's option would
+    # land on us: leave the untouched defaults to the Lua handler instead.
+    return WC_FREE_VOTE_OPTION, WC_FREE_VOTE_TARGET
+
+
+def _voted_option_names(options) -> str:
+    """'option A' / 'option B' / 'options A and B', for the mid-turn report.
+
+    The report used to hard-code "(option A, first target)", which became a lie
+    the moment the free vote started choosing per resolution.
+    """
+    names = sorted({1: "A", 2: "B"}.get(option, str(option)) for option in options)
+    if not names:
+        return "no vote cast"
+    if len(names) == 1:
+        return f"option {names[0]}"
+    return "options " + " and ".join(names)
+
+
+def build_free_vote_fallback(
+    resolutions: list, local_player_id: int = 0
+) -> list[dict]:
+    """One free vote per resolution, aimed by ``free_vote_choice``, zero favor.
 
     Returns the preference list ``queue_wc_votes`` expects. An empty list
     means there was nothing to vote on.
     """
-    return [
-        {
-            "hash": res.resolution_hash,
-            "option": WC_FREE_VOTE_OPTION,
-            "target": WC_FREE_VOTE_TARGET,
-            "votes": 1,
-        }
-        for res in resolutions or []
-    ]
+    fallback = []
+    for res in resolutions or []:
+        option, target = free_vote_choice(res, local_player_id)
+        fallback.append(
+            {
+                "hash": res.resolution_hash,
+                "option": option,
+                "target": target,
+                "votes": 1,
+            }
+        )
+    return fallback
 
 
 def _turn_regression_allowed() -> bool:
@@ -168,13 +288,15 @@ async def _check_mid_turn_world_congress(gs: GameState) -> str | None:
     if not wc.is_in_session:
         return None
 
+    local_player_id = getattr(gs, "local_player_id", 0)
     cast = 0
+    cast_options: set[int] = set()
     for res in wc.resolutions or []:
+        option, target = free_vote_choice(res, local_player_id)
         try:
-            await gs.vote_world_congress(
-                res.resolution_hash, WC_FREE_VOTE_OPTION, WC_FREE_VOTE_TARGET, 1
-            )
+            await gs.vote_world_congress(res.resolution_hash, option, target, 1)
             cast += 1
+            cast_options.add(option)
         except Exception:
             log.debug(
                 "Mid-turn World Congress vote failed (res %s)",
@@ -190,8 +312,8 @@ async def _check_mid_turn_world_congress(gs: GameState) -> str | None:
 
     return (
         f"World Congress session was open mid-turn - cast {cast} free vote(s) "
-        f"(option A, first target, 0 favour) and submitted it, so the turn could "
-        f"advance. Review what passed with get_world_congress()."
+        f"({_voted_option_names(cast_options)}, 0 favour) and submitted it, so the "
+        f"turn could advance. Review what passed with get_world_congress()."
     )
 
 
@@ -2334,22 +2456,33 @@ async def execute_end_turn(gs: GameState) -> str:
                     # if the agent never comes back, or the three-strike
                     # auto-submit fires, the session still casts one vote per
                     # resolution at zero favor cost instead of casting nothing.
-                    fallback = build_free_vote_fallback(wc_status.resolutions or [])
+                    fallback = build_free_vote_fallback(
+                        wc_status.resolutions or [],
+                        getattr(gs, "local_player_id", 0),
+                    )
                     fallback_note = "no votes registered"
                     if fallback:
                         try:
                             reg = await gs.queue_wc_votes(fallback)
+                            picks = ", ".join(
+                                f"{res.name or res.resolution_type} -> "
+                                f"{'A' if entry['option'] == 1 else 'B'}"
+                                f"/target {entry['target']}"
+                                for res, entry in zip(
+                                    wc_status.resolutions or [], fallback
+                                )
+                            )
                             log.info(
                                 "WC: free-vote fallback registered for %d "
-                                "resolution(s) (option A, target 0, 1 vote, 0 "
-                                "favor): %s",
+                                "resolution(s), 1 vote each at 0 favor (%s): %s",
                                 len(fallback),
+                                picks,
                                 reg,
                             )
                             fallback_note = (
                                 f"a free-vote fallback is now registered "
-                                f"({len(fallback)} resolution(s): 1 vote each on "
-                                f"option A / first target, spending 0 favor)"
+                                f"({len(fallback)} resolution(s): 1 vote each, "
+                                f"0 favor - {picks})"
                             )
                         except Exception:
                             log.debug("WC fallback registration failed", exc_info=True)

@@ -11,6 +11,44 @@ from civ_mcp.connection import GameConnection
 log = logging.getLogger(__name__)
 
 
+# Phase 1: the InGame-context batch. These are hidden with SetHide(true), which
+# is enough for a control that does not hold the ExclusivePopupManager lock.
+#
+# This list and spectator.PopupWatcher._NONCRITICAL_POPUPS are two halves of one
+# mechanism: the watcher *detects* a visible popup and calls dismiss_popup() to
+# clear it. A name in the watcher's list but not in either list here is detected
+# for ever and never dismissed - which is what happened to GreatWorkShowcase
+# before it was added. tests/test_popup_lists.py pins the two together.
+POPUP_NAMES = [
+    "InGamePopup",
+    "GenericPopup",
+    "PopupDialog",
+    "BoostUnlockedPopup",
+    "GreatWorkShowcase",
+    "WorldCongressPopup",
+    "WorldCongressIntro",
+]
+
+# ExclusivePopupManager popups: these need Close() in their own Lua state, so
+# Phase 1 must not SetHide them (that breaks Phase 2's IsHidden check without
+# releasing the lock). Phase 2 discovers the states by name keyword, so every
+# name below has to contain one of EXCLUSIVE_POPUP_KEYWORDS or the state scan
+# cannot reach it - tests/test_popup_lists.py checks that.
+EXCLUSIVE_POPUP_KEYWORDS = ("Popup", "Wonder", "Moment", "Era", "Disaster")
+EXCLUSIVE_POPUP_NAMES = [
+    "TechCivicCompletedPopup",
+    "NaturalWonderPopup",
+    "NaturalDisasterPopup",
+    "WonderBuiltPopup",
+    "EraCompletePopup",
+    "HistoricMoments",
+    "MomentPopup",
+    "ProjectBuiltPopup",
+    "RockBandPopup",
+    "RockBandMoviePopup",
+]
+
+
 async def dismiss_popup(conn: GameConnection) -> str:
     """Dismiss any blocking popup or UI overlay in the game.
 
@@ -32,15 +70,7 @@ async def dismiss_popup(conn: GameConnection) -> str:
     # WonderBuilt, EraComplete, RockBand, ProjectBuilt) are handled ONLY in
     # Phase 2 via Close() in their own Lua state.  Phase 1's SetHide() breaks
     # Phase 2's IsHidden check without releasing the PopupManager lock.
-    popup_names = [
-        "InGamePopup",
-        "GenericPopup",
-        "PopupDialog",
-        "BoostUnlockedPopup",
-        "GreatWorkShowcase",
-        "WorldCongressPopup",
-        "WorldCongressIntro",
-    ]
+    popup_names = POPUP_NAMES
     checks = []
     for name in popup_names:
         checks.append(
@@ -115,18 +145,7 @@ async def dismiss_popup(conn: GameConnection) -> str:
     # popups.  Phase 2 scans ~30 Lua states individually (~450ms each = ~13.5s)
     # to find these.  This pre-check costs one round-trip (~500ms) and skips
     # Phase 2+3 entirely when no ExclusivePopups are active (>99% of calls).
-    exclusive_popup_names = [
-        "TechCivicCompletedPopup",
-        "NaturalWonderPopup",
-        "NaturalDisasterPopup",
-        "WonderBuiltPopup",
-        "EraCompletePopup",
-        "HistoricMoments",
-        "MomentPopup",
-        "ProjectBuiltPopup",
-        "RockBandPopup",
-        "RockBandMoviePopup",
-    ]
+    exclusive_popup_names = EXCLUSIVE_POPUP_NAMES
     any_exclusive_visible = False
     try:
         precheck_lua = (
@@ -149,7 +168,7 @@ async def dismiss_popup(conn: GameConnection) -> str:
         # Phase 2: Close ExclusivePopupManager popups in their own Lua states.
         # These need Close() in their OWN state to release the engine lock —
         # Phase 1's SetHide() does NOT release this lock.
-        popup_keywords = ("Popup", "Wonder", "Moment", "Era", "Disaster")
+        popup_keywords = EXCLUSIVE_POPUP_KEYWORDS
         popup_states = {
             idx: n
             for idx, n in conn.lua_states.items()

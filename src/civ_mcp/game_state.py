@@ -37,6 +37,17 @@ SKIP_REFUSED = "REFUSED|"
 class GameState:
     """High-level async API for Civ 6 game state + actions."""
 
+    @property
+    def local_player_id(self) -> int:
+        """Our own player id, for anything that has to name us as a target.
+
+        The World Congress free-vote fallback is the caller that needs it: a
+        resolution whose effect grants something to "the chosen player" is only
+        worth a vote when the chosen player is us. Read-only on purpose - the
+        id comes from the game, never from a caller.
+        """
+        return self._local_player_id
+
     def __init__(self, connection: GameConnection):
         self.conn = connection
         self.spatial: SpatialTracker | None = None

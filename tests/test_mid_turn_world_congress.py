@@ -22,8 +22,11 @@ from civ_mcp.end_turn import (
 
 
 class _Res:
-    def __init__(self, h):
+    def __init__(self, h, resolution_type="", target_kind="", possible_targets=()):
         self.resolution_hash = h
+        self.resolution_type = resolution_type
+        self.target_kind = target_kind
+        self.possible_targets = list(possible_targets)
 
 
 class _Status:
@@ -114,6 +117,7 @@ class TestNeverSpendsFavour:
         assert gs.votes, "expected votes"
         for _hash, option, target, num_votes in gs.votes:
             assert num_votes == 1, "more than one vote would spend diplomatic favour"
+            # These stubs carry no resolution_type, so they take the defaults.
             assert option == WC_FREE_VOTE_OPTION == 1
             assert target == WC_FREE_VOTE_TARGET == 0
 
@@ -121,6 +125,34 @@ class TestNeverSpendsFavour:
         gs = FakeGS(_Status(True, [_Res(1)]), fail_submit=True)
         assert run(gs) is None
         assert gs.submits == 0
+
+
+class TestTheProbeAimsItsFreeVotes:
+    """The mid-turn probe aims each free vote the same way end_turn does."""
+
+    def test_a_typed_resolution_is_voted_on_its_own_side(self):
+        gs = FakeGS(
+            _Status(
+                True,
+                [
+                    _Res(
+                        11,
+                        "WC_RES_DIPLOVICTORY",
+                        "PLAYER",
+                        ["0:Us", "7:Egypt"],
+                    ),
+                    _Res(22, "WC_RES_MERCENARY_COMPANIES"),
+                ],
+            )
+        )
+        note = run(gs)
+        assert note is not None
+        assert [v[1] for v in gs.votes] == [1, 2]  # A for the gain, B for the ban
+        assert [v[2] for v in gs.votes] == [0, 0]  # the gain is aimed at us
+        assert "options A and B" in note, (
+            "the report has to name the sides it actually cast, or the agent "
+            "cannot tell what the fallback did"
+        )
 
 
 @pytest.mark.parametrize("count", [1, 4])

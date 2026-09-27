@@ -435,6 +435,18 @@ engineer per turn.
   read `200/200` after two connections that had landed, then `85`, then `55`. Judge progress from
   the `SIEGE PROGRESS` block and from a *later* estimate, never from the immediate reply - and do
   not conclude from one stale number that the attack did nothing.
+- **A turn that will not advance is usually waiting for an answer, not for a popup.** `end_turn`
+  answers `Turn paused ...` when an AI diplomacy session or an incoming trade deal is open, and both
+  are yours to settle: `get_pending_diplomacy` then `respond_to_diplomacy`, and `get_pending_trades`
+  then `respond_to_trade`. Reach for `dismiss_popup` only after those two come back empty. It clears
+  the popup layer - wonder, era, boost and disaster screens, a leader scene, a cinematic camera left
+  running - and answers `PENDING|DiplomacyActionView` or `PENDING|DiplomacyDealView` instead of
+  closing either, because closing a session from Lua hangs turn processing and dismissing a deal
+  view silently rejects an offer you never saw. Most popups never need the call at all: a background
+  watcher dismisses the non-critical ones about a second after they appear, and the Windows crash
+  dialogs are clicked away for you. **Nothing in Lua can see a dialog outside the game** - if
+  `dismiss_popup` reports nothing and the turn is still stuck, read the screen with
+  `.tools/whats-on-screen.py` before concluding the game is hung (`docs/game-recovery.md`).
 
 ## Diplomacy
 
@@ -546,6 +558,12 @@ WC fires synchronously inside `end_turn()` - register votes **before** calling e
 - `hash`: from `get_world_congress`; `option`: 1=A / 2=B; `target`: player_id resolved to list index
   at runtime; `votes`: max to spend
 - 1 free vote per resolution (costs nothing - worth casting)
+- **If you register no votes at all, `end_turn` casts the free ones for you** - one vote per
+  resolution, 0 favor, with the option and the target chosen per resolution from the game's own
+  resolution data (which side is the ban and which is the buff, and whether the target should be
+  you) - and its result names what it cast. That is a net, not a decision: the fallback is capped at
+  the free vote on purpose, so when the session matters call `queue_wc_votes` yourself, because only
+  you can rank the targets and only votes beyond the free one spend favor.
 - Extra votes cost 6/18/36/60/90/126... cumulative favor
 - Keeping 50-100 favor in reserve between sessions provides flexibility for the next session
 - DVP resolutions: read what each option actually awards before voting. Concentrate favor on the
