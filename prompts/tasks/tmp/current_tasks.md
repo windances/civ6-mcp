@@ -19,4 +19,4 @@ ones measured.
 
 | task file | added | expires | why it exists, in one line | done when (first line) |
 |---|---|---|---|---|
-| `018-take-alexandria.md` | 2026-09-27 | turn 235 | 占领亚历山大，先进行侦察，进行战前分析，攻城集结后攻城 — the capital Domination needs, never yet seen, so the search is the first phase | Alexandria is ours (its (x,y) read at capture) |
+| *(none in force)* | — | — | the directory is empty; task 018 was retired on T216 (see done/, docs/task-history.md) | — |

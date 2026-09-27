@@ -165,3 +165,56 @@ metric carries is **which city is the objective and that it must be found first*
 the capital has never been seen, the two units that could find it have other errands, and a plan that
 optimises locally will keep taking the nearest Egyptian city instead. That choice, and the search that
 has to precede it, is what this file exists to hold.
+
+## Outcome — taken at T216, nineteen turns inside the deadline
+
+The `done when:` held: **亚历山大 (72,36) is ours**, taken at **T216**, and the tile read immediately
+afterwards leaves nothing to argue about —
+`(72,36): PLAINS River (Road) [CITY_CENTER] (owned by 中国) [my: CAVALRY]`. It was resolved with
+`city_action keep`: city id **1179665**, pop 8, loyalty 50/100 (+0.6/turn), Monument queued the same
+turn. The game's own notifications carry the rest: `夺得外国首都` and `首都被占领 at (72,36)`.
+
+**The four numbers, each named with where it came from** (all read at war):
+
+| # | Number | Reading | Source |
+|---|---|---|---|
+| 1 | Location | **(72,36)**, pop 11 | T213, `get_diplomacy`: `Cities (2): 亚历山大 pop 11 (72,36) walls 200 + 1 in fog` — the city appeared the moment the Cavalry's eastward sweep came within sight. **Gate 0 was passed by a unit move, not by a new tool.** |
+| 2 | Walls | **200/200** (the static maximum) — ground to **4/200** by the T216 volley | T213, `get_diplomacy` |
+| 3 | Garrison | **`UNIT_GREAT_WRITER`** — a civilian, nothing that fights | T214, and **not** from the city tile: that tile printed `[fog]`, so `get_map_area` could show no unit there at all. It came from our own attack list: `>> CAN ATTACK: UNIT_GREAT_WRITER@72,36(100hp)` |
+| 4 | Pool | **200/200**, at **14** when the city fell | T215, the first shot's own result line |
+| 5 | Ring | Government Plaza (71,36), Campus (71,37), Sphinxes, river | T213, `get_map_area` |
+
+**The fire order that took it**, in the sequence the log has it (T216): Bombard #4325376 from
+(71,34) d2 → Bombard #4980745 from (70,36) d2 → **Bombard #4128794 moved (69,33)→(70,35) and its
+shot answered `NO_MOVES`** (both movement points spent arriving — the trap this file warns about) →
+Line Infantry #5111819 melee from (71,35) d1, taking the walls to 4/200 → **Cavalry #5177368,
+(73,34)→(73,36) d1 for the supply hex, whose attack took the city**. Cost: two turns of fire; one
+Builder captured at T212 and recaptured at T214 (`CAPTURE_MOVE` on (70,36)); 10 damage on a Bombard
+and 2 on the Cavalry from the city's strike; **no unit lost**.
+
+**Two traps this capture measured, both new:**
+
+1. **The capturing blow's own pool read lies.** The Cavalry's attack reported
+   `city HP:14 -> 14/200` — unchanged — and the city fell anyway; the damage it took (74 → 62) and
+   its presence on the tile are what say the attack landed. The same stale immediate read as T194's
+   `200/200`, now on the capture itself.
+2. **A second attack on the same tile after the capture hits our own city.** The Line Infantry's
+   follow-up attack was accepted and answered `city HP:-187 -> -187/-1` with
+   `Post-combat: (yours) UNIT_CAVALRY 62/100` — the attacker cannot know the tile flipped between
+   the two calls. **One capture attack per tile per turn**, then read the city.
+
+**The DOMINATION proof this file demanded.** Before: `get_victory_progress` read
+`埃及: holds own capital` (T195). After: the T218 block lists only 中国 and 荷兰 — Egypt no longer
+holds its own capital. That line, not the city's name, is what says the capital changed hands.
+
+**Staging was written by hand** because `get_staging_plan` crashed on a fractional movement value
+(`invalid literal for int() with base 10: '1.5'`, T212); the seven-column table is in the T213 diary
+entry and the tool defect is fixed separately (commit `b295c3d`).
+
+**A stale ledger ran alongside the capture**, recorded here as a defect rather than as state: the
+`SIEGE PROGRESS` line still reported `亚历山大: city hp 100/200 (-62 over 1 turn(s))` on **T216 and
+again on T217**, after the city was ours. It is the same class of false report as the `cut-the-supply`
+failures and it should be fixed at the scan, not worked around.
+
+Deadline check: `expires: turn 235`, and it fell on **T216** — 19 turns inside it. From Gate 0 (T213)
+to the capture was **4 turns**, of which two were fire.

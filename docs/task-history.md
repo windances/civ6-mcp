@@ -199,3 +199,38 @@ number in its name, and the list above is updated to match.
   `prompts/checks/turn-checks.md` instead: the engine retires that one itself the turn it is
   satisfied (it prints `CHECK ACHIEVED … retired` and deletes the block). A file is for what no metric
   can express.
+
+## `018-take-alexandria` — done at T216
+
+The file is `prompts/tasks/tmp/done/018-take-alexandria-done-T216.md`. It was the last temporary task in
+force and the directory is now empty.
+
+- **Its `done when:` held in full.** Alexandria is at **(72,36)** (read from the Egyptian city list at
+  capture: `亚历山大 pop 11 (72,36) walls 200`), a unit stands on the tile — the Cavalry that took it,
+  garrisoning it — and `get_victory_progress`'s DOMINATION block moved from `埃及: holds own capital` to
+  **`埃及: CAPITAL LOST`**. That line, not the city's name, is the proof the city taken was the capital:
+  it was, and Egypt is now down to one city (塞纳 (74,32) pop 5, walls 200).
+- **The four numbers at war**: location (72,36); walls **200** static (T213 `get_diplomacy`); pool
+  **199/200** after the first T215 volley; garrison **`UNIT_GREAT_WRITER`** — a non-combatant, and the
+  only way to read it was our own attack lists, because the city tile itself printed `[fog]` in
+  `get_map_area`; ring read at radius 3 (Government Plaza (71,36), Campus (71,37), Sphinxes, river, the
+  NITER farm at (72,34)).
+- **What the T216 volley measured**: Bombard #4325376 from (71,34) `walls 95/200`; Bombard #4980745 from
+  (70,36) `walls 43/200`; Line Infantry #5111819 melee from (71,35) `walls 4/200`. **Walls and pool both
+  fall to the same shots** — the pools moved in step (`city hp 162 -> 130 -> 94`), so a walled city is not
+  a two-stage problem once three siege pieces bear on it.
+- **A melee attack that zeroes the pool captures outright** — this is the second time the game has said
+  so (the first was 诺夫哥罗德 at T165). The Cavalry #5177368 attacked from (73,36) at d1 and the city
+  was ours, with the game reporting `夺得外国首都` / `首都被占领 at (72,36)` and the Cavalry standing on
+  the tile at 62/100. **No separate walk-in move was issued and none was needed.**
+- **`get_staging_plan` works again** — the T213 crash (`invalid literal for int() with base 10: '1.5'`)
+  did not recur once no unit carried a fractional movement point. It assigned distinct ring tiles, named
+  the supply hexes (`4/6 cut`) and warned that a shooter which spends its movement cannot fire. It was
+  still wrong about one thing: it posted Bombard #4128794 to (70,35) as "arrive this turn - FIRE from
+  here", and the move consumed both movement points, so the shot answered `NO_MOVES`. **The plan's
+  `FIRE from here` is a proposal, not a promise.**
+- **The city-heal arithmetic is real and the supply cut is what beats it**: 6 adjacent hexes, and the
+  city heals about twenty a turn while any is open.
+- **Cost**: two turns of marching (T213-T215), one Builder captured and recaptured (`CAPTURE_MOVE` at
+  (70,36)), and 11 damage on a Bombard plus 11 on the Cavalry from the city's strike. No unit was lost.
+
