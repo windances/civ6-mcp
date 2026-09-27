@@ -17,8 +17,12 @@ function check(condition, message) {
 // line endings are normalised once here instead of writing \r? into every pattern - seen live:
 // a fresh clone's `npm run bootstrap:win` failed four overlay checks this way while the same
 // commit passed on an LF checkout.
+// A leading UTF-8 BOM is likewise an artefact: JSON.parse rejects U+FEFF, so a BOM that reaches
+// baseline/manifest.json (a PowerShell text cmdlet put one there twice - SETUP-WINDOWS.md, "Do not
+// edit repo files with PowerShell text cmdlets") made every later check in this gate read
+// `undefined` and fail with a message about a tool count, not about the BOM that caused it.
 function normalize(text) {
-  return text.replace(/\r\n/g, '\n')
+  return text.replace(/\r\n/g, '\n').replace(/^\uFEFF/, '')
 }
 
 function read(relativePath) {

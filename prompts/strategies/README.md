@@ -21,6 +21,19 @@ that would break `npm run qualify` is rejected rather than silently applied.
 "Active" is determined by comparing file hashes, not by a marker file, so a
 hand-edited `prompts/workers/` correctly reports as matching no preset.
 
+**Both destinations are compared, not just `prompts/workers/`.** A preset that
+arrived in one of them is not active, it is stale: measured 2026-09-27,
+`prompts/workers/` matched `china-conquest` while the `SKILL.md` block was 38 lines
+behind it, and the switcher still called it active. `-List` now names that state and
+prints the command that resynchronises it, and `tests/test_strategy_block.py` fails
+on it.
+
+**A one-off change does not need a preset:** `scripts\set-strategy.ps1 -Text "..."`
+(`-File <path>`, `-Show`; `scripts/set-strategy.sh` from Git Bash) writes the block with
+the text you give it and puts an `ad-hoc` line first, so a deliberate override is not
+mistaken for a preset that drifted. Re-applying a preset rewrites the whole block and
+removes that line.
+
 ## How a preset is actually applied
 
 Two destinations, and only one of them is read by the running agent:
@@ -63,6 +76,7 @@ scripts\use-strategy.ps1 domination   # the agent sees this on the next end_turn
 | Preset | Victory path | Emphasis |
 |---|---|---|
 | `balanced` | none — upstream default | No bias. The pristine four prompts. |
+| `china-conquest` | Domination | Qin (Unifier): Dynastic Cycle eurekas and wonders, Crouching Tiger paired with melee, Three-Six Stratagems for the human, one siege at a time, no peace ever. **The preset the current match plays.** |
 | `expansion` | none yet — wide opening | Four to six cities and universal growth before committing to a victory type; **trade routes may never sit idle**; every form of idle capacity surfaced each turn |
 | `science` | Science | Campus adjacency, tall 4–6 cities, Research Alliances, watch rival Spaceports |
 | `domination` | Domination | One front at a time, siege against walls, strategic resources, war weariness |

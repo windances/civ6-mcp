@@ -11,7 +11,9 @@
 #   scripts\set-strategy.ps1 -Show
 #
 # Unlike a preset this is a one-off: the next `use-strategy.ps1 <name>` will
-# overwrite the block with that preset's directive.
+# overwrite the block with that preset's directive. The block therefore carries a
+# first line saying that it is ad-hoc, so the state is visible rather than looking
+# like a preset whose text drifted (tests/test_strategy_block.py).
 #
 # If PowerShell refuses to run it ("running scripts is disabled"), invoke it as:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\set-strategy.ps1 ...
@@ -41,6 +43,10 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $skillPath   = Join-Path $projectRoot '.dsh\skills\civ6-orchestrator\SKILL.md'
 $marker      = '(?s)(<!-- DIRECTIVE:BEGIN -->).*?(<!-- DIRECTIVE:END -->)'
 $blockOnly   = '(?s)<!-- DIRECTIVE:BEGIN -->(.*?)<!-- DIRECTIVE:END -->'
+# The first line of an ad-hoc block. Read by both switchers (which report it as
+# neither a preset nor a stale preset) and by tests/test_strategy_block.py. The exact
+# same literal is in scripts/set-strategy.sh.
+$adHocMarker = '<!-- ad-hoc directive from the human, not a preset: switching presets replaces it -->'
 
 if (-not (Test-Path $skillPath)) { Fail "SKILL.md not found at $skillPath" }
 
@@ -69,6 +75,12 @@ if ($PSCmdlet.ParameterSetName -eq 'File') {
 
 if (-not $body) { Fail 'Strategy text is empty; refusing to inject an empty directive.' }
 
+# Mark the block as ad-hoc before it is written. Without the line it is
+# indistinguishable from a preset whose text drifted, which is the state
+# tests/test_strategy_block.py exists to fail on; with it, a deliberate override and a
+# silent drift are two different things.
+$body = $adHocMarker + "`n`n" + $body
+
 # Script-block replacement so a '$' in the strategy is never read as a regex
 # substitution token.
 $skill = [regex]::Replace(
@@ -76,7 +88,17 @@ $skill = [regex]::Replace(
     $marker,
     { param($m) $m.Groups[1].Value + "`n" + $body + "`n" + $m.Groups[2].Value }
 )
-[IO.File]::WriteAllText($skillPath, $skill)
+# Write with a BOM: `WriteAllText` without an encoding emits plain UTF-8 and strips the
+# BOM this file needs to stay readable in a zh-CN editor (see scripts/fix-text-encoding.py).
+# This script had that bug - every ad-hoc directive left SKILL.md BOM-less.
+[IO.File]::WriteAllText($skillPath, $skill, (New-Object System.Text.UTF8Encoding($true)))
+
+# Read it back: a write that did not land would otherwise be reported as success, and
+# the block is what the running session is handed.
+$check = [regex]::Match([IO.File]::ReadAllText($skillPath), $blockOnly)
+if (-not $check.Success -or $check.Groups[1].Value.Trim() -ne $body) {
+    Fail 'SKILL.md was written, but its directive block does not read back as the injected text.'
+}
 
 Write-Host 'Ad-hoc strategy injected into the directive block.'
 Write-Host 'The agent sees it on the next end_turn - no restart needed.'
