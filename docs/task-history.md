@@ -234,3 +234,40 @@ force and the directory is now empty.
 - **Cost**: two turns of marching (T213-T215), one Builder captured and recaptured (`CAPTURE_MOVE` at
   (70,36)), and 11 damage on a Bombard plus 11 on the Cavalry from the city's strike. No unit was lost.
 
+## `019-two-scouts-to-sea` — expired at T250
+
+The file is `prompts/tasks/tmp/done/019-two-scouts-to-sea-expired-T250.md`. It was added on 2026-09-27
+from the human instruction to send two Scouts to sea, find more civilizations, end the exploration task
+after thirty turns and return to the default strategy, with a hard stop at T250 counted from the T220
+clock. **It retired half-done, and the task file's own `expires:` line is what makes that the correct
+ending.**
+
+- **The instrument was two Rangers, not two Scouts.** `UNIT_SCOUT` is CS 10 and dies to the first thing
+  afloat, so the T223 session took the Scout line's upgrade instead and the file was amended at T229 to
+  name the line rather than the unit: 上海's Ranger #7077923 and 阿拜多斯's #7143460, both due about
+  T238.
+- **The first half held from T240.** Both Rangers were verified on water tiles by their own tile lines
+  in `get_map_area` - #7077923 on a COAST REEF at (49,21), #7143460 on COAST at (75,32) - and they were
+  afloat on the T244-T249 turns as well. An embarked unit keeps a naval movement allowance: under the
+  Industrial-era Exploration dedication they read **7/7 moves**, about four to seven tiles a turn.
+- **The second half never came.** Four living majors (Georgia, Sumer, Phoenicia, India) were `not met`
+  at T220 and all four were still `not met` at T250. Across six turns of sweeping, explored land went
+  34% to 34%.
+- **What actually blocked it, measured.** The **east bearing is closed by 威尼斯**, the Trade city-state
+  whose suzerain is the Netherlands: moves to (84,34), (84,35), (84,36), (85,14) and (86,40) all came
+  back `BLOCKED`, and the first named the reason - `tile is enemy territory` - which is how (88,36)
+  revealed 威尼斯's city centre at (90,36) and its Commercial Hub at (89,37) without a unit entering
+  its borders. **A refusal is a reconnaissance read.** Only the north along x=82 stayed open, and it
+  ran to (82,9) with nothing in it.
+- **The west bearing found land but no civilization**: a desert coast at (34,18)-(36,22) carrying
+  ALUMINUM at (36,18) and ANTIQUITY_SITEs at (35,18) and (36,22). That is the west Ranger's real
+  deliverable to 021's escort.
+- **`use-your-attacks` outranks this task.** 019's own `overrides:` line keeps `use-your-attacks` in
+  force, so when the west Ranger disembarked onto the desert at (35,20) beside a barbarian MAN_AT_ARMS
+  at (35,19) it fired - twice, across T247-T248, taking it from 100 to about 7/100 and clearing the
+  tile - rather than staying a pure observer. `mass-on-contact` could not be met either time (one unit
+  in contact, nothing within two turns of it), which is the rule's own withdrawal case.
+- **The lesson for a task of this shape**: two embarked reconnaissance units are enough to cross water
+  and not enough to *find* anything, because the search space is the whole map and the clock is counted
+  in turns of sailing. 021's escort and cavalry inherit the search.
+
