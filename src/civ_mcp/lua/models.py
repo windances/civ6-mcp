@@ -595,7 +595,10 @@ class StagingUnit:
     unit_id: int
     x: int
     y: int
-    moves: int
+    # Movement the game reports, which can be fractional: a unit holding 1.5 of 3
+    # points is normal (measured 2026-09-27), and parsing it as an int is what
+    # killed `get_staging_plan` on the Alexandria assault.
+    moves: float
     role: str = "melee"  # siege / ranged / short-ranged / melee / recon
     distance: int = 0  # tiles to the target city
     strength: int = 0  # combat strength, for ordering units within a role
@@ -795,6 +798,11 @@ class CaptureReadiness:
     # the T139-T159 war, the cities that healed back were exactly the ones whose ring stayed at
     # 1/6 or 3/6 cut while spare units sat queued in the corridor.
     idle_within_3: int = 0
+    # The open hexes themselves, as "x,y" strings. The count above says a city is healing; this
+    # says *where to walk*, which is the difference between a metric and an order (measured
+    # T215: 亚历山大 sat at `supply line 3/6 cut` and healed 20 a turn while the report named no
+    # hex at all).
+    supply_open_hexes: list[str] = field(default_factory=list)
 
     @property
     def supply_open(self) -> int:

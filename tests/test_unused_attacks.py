@@ -80,6 +80,44 @@ class TestParsing:
         assert "shoots" in query
 
 
+class TestPhantomAttacksAreNotReported:
+    """An entry that cannot be executed is not an unused attack.
+
+    Measured T213-T215: `skip_remaining_units(force=True)` discarded three entries per turn -
+    two Bombards (siege units cannot attack units at all, `ERR:SIEGE_CANNOT_ATTACK_UNITS`) and
+    two melee units that had just entered a Zone of Control - and `use-your-attacks` failed on
+    the same entries. A report that is wrong that often stops being read, so each cause is
+    excluded in the query itself.
+    """
+
+    def test_a_siege_unit_is_not_scanned_against_unit_targets(self):
+        query = lq.build_unused_attack_query()
+        assert "can_hit_units" in query, "the unit-target scan must be gated on RangedCombat"
+        assert "(rs > 0) or not shoots" in query
+
+    def test_a_unit_with_no_attacks_left_is_skipped(self):
+        # GetAttacksRemaining is the API SelectedUnit.lua uses to decide the same thing.
+        query = lq.build_unused_attack_query()
+        assert "GetAttacksRemaining" in query
+        assert "attacks_left(unit) > 0" in query
+
+    def test_a_missing_attack_count_api_keeps_the_unit(self):
+        # Conservative default: a false alarm beats a lost attack.
+        query = lq.build_unused_attack_query()
+        assert "pcall(function() return u:GetAttacksRemaining() end)" in query
+        assert "return 1" in query
+
+    def test_a_unit_locked_by_a_zone_of_control_is_skipped(self):
+        query = lq.build_unused_attack_query()
+        assert "HasMovedIntoZOC()" in query
+
+    def test_the_engine_is_asked_at_every_shooting_distance(self):
+        # The old gate was `if shoots and d > 1`, so a range-1 shooter was never checked.
+        query = lq.build_unused_attack_query()
+        assert "if shoots and d > 1 then" not in query
+        assert "if shoots then" in query
+
+
 class FakeGS:
     """Only what the metric helper touches."""
 

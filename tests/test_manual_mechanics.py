@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import pathlib
 import sys
+from types import SimpleNamespace
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
@@ -72,6 +73,57 @@ class TestTheSupplyLine:
         cut = CITY_LINE.replace("supply:4/6", "supply:6/6")
         row = lq.parse_capture_readiness_response([cut])[0]
         assert row.supply_open == 0 and not row.supplied
+
+    @staticmethod
+    def _with_open_hexes(cut: str = "supply:3/6") -> str:
+        return CITY_LINE.replace("supply:4/6", cut).replace(
+            "|UNIT_SPEARMAN", "|idle3:2|open:71,35;71,37;73,36|UNIT_SPEARMAN"
+        )
+
+    def test_the_open_hexes_are_carried_through(self):
+        """The count says a city heals; the hexes say where to walk.
+
+        Measured T215: 亚历山大 sat at `supply line 3/6 cut` and healed about twenty a turn, and
+        nothing in the turn result named a single hex to stand on.
+        """
+        row = lq.parse_capture_readiness_response([self._with_open_hexes()])[0]
+        assert row.supply_open_hexes == ["71,35", "71,37", "73,36"]
+        assert row.melee_unit == "UNIT_SPEARMAN", "open: must not shift the unit name"
+        assert (row.supply_covered, row.supply_total) == (3, 6)
+
+    def test_a_line_without_open_hexes_reads_as_empty(self):
+        row = lq.parse_capture_readiness_response([CITY_LINE])[0]
+        assert row.supply_open_hexes == []
+
+    def test_the_scan_prints_the_open_hexes(self):
+        lua = lq.build_capture_check_query()
+        assert 'table.insert(openHexes, nx .. "," .. ny)' in lua
+        assert '.. "|open:" .. table.concat(openHexes, ";")' in lua
+
+    def test_the_note_names_where_to_walk(self):
+        row = lq.parse_capture_readiness_response([self._with_open_hexes()])[0]
+        note = et._supply_hex_note([row])
+        assert "Moscow" in note
+        assert "71,35" in note and "71,37" in note
+        assert "2 of our fighting units within 3 tiles" in note
+
+    def test_a_fully_cut_city_makes_no_note(self):
+        row = lq.parse_capture_readiness_response(
+            [self._with_open_hexes("supply:6/6")]
+        )[0]
+        assert et._supply_hex_note([row]) is None
+        assert et._supply_hex_note([]) is None
+
+    def test_the_failed_line_carries_the_where(self):
+        check = SimpleNamespace(check_id="cut-the-supply", message="A city is healing.")
+        text = et._failed_check_message(check, "metric(x) == 0", "Moscow heals: 71,35")
+        assert text.startswith("CHECK FAILED [cut-the-supply]")
+        assert "WHERE: Moscow heals: 71,35" in text
+
+    def test_other_rules_get_no_where_line(self):
+        check = SimpleNamespace(check_id="ranged-mass", message="Fewer than 4 ranged units.")
+        text = et._failed_check_message(check, "units(...) >= 4", "Moscow heals: 71,35")
+        assert "WHERE" not in text
 
     def test_a_line_without_the_field_still_parses(self):
         row = lq.parse_capture_readiness_response([OLD_CITY_LINE])[0]

@@ -332,6 +332,36 @@ class TestTheParser:
 
         assert lq.parse_staging_plan_response(["", "garbage", "RING|bad"]).ring == []
 
+    def test_fractional_movement_does_not_kill_the_parser(self):
+        """Regression, measured 2026-09-27 T212: the whole tool died on this.
+
+        A unit can hold a fraction of a movement point (a Line Infantry stood at
+        1.5/3), and `parse_staging_plan_response` read that field with `int()`:
+        `get_staging_plan` answered `invalid literal for int() with base 10: '1.5'`
+        and the Alexandria assault lost the table it needed. Whole numbers must
+        still arrive as ints, because the renderer and the sorter both use them.
+        """
+        from civ_mcp import lua as lq
+
+        plan = lq.parse_staging_plan_response(
+            [
+                "STAGEPLAN|72,36|ring:18",
+                "UNIT|UNIT_LINE_INFANTRY|5111819|69,35|1.5|melee|d2|cs65|hp100/100",
+                "UNIT|UNIT_BOMBARD|4325376|67,34|2|siege|d3|cs45|hp100/100",
+                "OPTION|5111819|71,35|0|1|1",
+            ]
+        )
+        fractional, whole = plan.units
+        assert fractional.moves == 1.5
+        assert whole.moves == 2 and isinstance(whole.moves, int)
+        assert plan.options[0].turns == 0 and isinstance(plan.options[0].turns, int)
+
+    def test_a_fractional_query_argument_does_not_kill_the_builder(self):
+        from civ_mcp import lua as lq
+
+        query = lq.build_staging_plan_query(56.0, "43")
+        assert "local tx, ty = 56, 43" in query
+
     def test_the_query_carries_the_target_and_the_sentinel(self):
         from civ_mcp import lua as lq
 
@@ -404,4 +434,83 @@ class TestACampIsTheSamePlanAgainstADifferentObject:
 
         query = lq.build_staging_plan_query(60, 29)
         assert "GetCityInPlot" in query and '|camp:' in query
+
+
+class TestTheAssemblyLeg:
+    """The plan must show the rally tile, not only the tile a unit fires from.
+
+    `tactics/04` step 1: assemble **three tiles or more** from the target, because a city's
+    strike and a Catapult both reach two; then advance as one body. The tool used to print only
+    the ring assignment, so following it literally walked the train onto d2 - measured T194
+    (2/3 shooters in position when the assault opened) and T215 (2/5, one Bombard still 21 tiles
+    away). These tests pin the missing first leg.
+    """
+
+    def _plan(self):
+        units = [
+            unit(1, "UNIT_BOMBARD", "siege", x=60, y=36, moves=2),
+            unit(2, "UNIT_MAN_AT_ARMS", "melee", x=60, y=37, moves=2),
+        ]
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=56, y=42, distance=1),
+            m.StagingRingTile(x=53, y=40, distance=3),
+        ]
+        options = [
+            m.StagingOption(unit_id=1, x=55, y=41, turns=1, this_turn=False, path_len=5),
+            m.StagingOption(unit_id=1, x=53, y=40, turns=2, this_turn=False, path_len=9),
+            m.StagingOption(unit_id=2, x=56, y=42, turns=0, this_turn=True, path_len=3),
+        ]
+        return plan(units, options, ring)
+
+    def test_a_unit_gets_a_rally_tile_outside_the_citys_reach(self):
+        built = self._plan()
+        result = st.assign(built)
+        text = st.render(result, built)
+        assert "ASSEMBLY FIRST" in text
+        assert "RALLY (53,40) d3 T+2" in text
+
+    def test_a_ring_tile_is_never_offered_as_its_own_rally(self):
+        built = self._plan()
+        text = st.render(st.assign(built), built)
+        # The Bombard's firing tile is (55,41) d2; (53,40) d3 is the only assembly tile.
+        assert text.count("RALLY (") == 1
+
+    def test_a_unit_already_on_the_ring_gets_no_rally_leg(self):
+        units = [unit(2, "UNIT_MAN_AT_ARMS", "melee", x=60, y=37, moves=2)]
+        ring = [m.StagingRingTile(x=56, y=42, distance=1)]
+        options = [m.StagingOption(unit_id=2, x=56, y=42, turns=0, this_turn=True)]
+        built = plan(units, options, ring)
+        text = st.render(st.assign(built), built)
+        assert "RALLY (" not in text
+        assert "ASSEMBLY FIRST" not in text, "no assembly leg exists, so the note is noise"
+
+    def test_the_rally_leg_is_kept_out_of_the_firing_line(self):
+        built = self._plan()
+        text = st.render(st.assign(built), built)
+        for line in text.splitlines():
+            if "RALLY" in line and "UNIT_" in line:
+                assert "FIRE from here" in line  # it is still the firing row
+                assert line.index("->") < line.index("RALLY")
+
+    def test_a_rally_tile_is_not_also_offered_as_spare(self):
+        # Two distance-3 tiles: one is the assembly tile, the other really is spare. Listing
+        # both as "spare" would contradict the row that just claimed one of them.
+        units = [unit(1, "UNIT_BOMBARD", "siege", x=60, y=36, moves=2)]
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=53, y=40, distance=3),
+            m.StagingRingTile(x=52, y=39, distance=3),
+        ]
+        options = [
+            m.StagingOption(unit_id=1, x=55, y=41, turns=1, this_turn=False, path_len=5),
+            m.StagingOption(unit_id=1, x=53, y=40, turns=2, this_turn=False, path_len=9),
+        ]
+        built = plan(units, options, ring)
+        text = st.render(st.assign(built), built)
+        assert "RALLY (53,40) d3" in text
+        spare = [line for line in text.splitlines() if "SPARE RING TILES" in line]
+        assert spare, "the untouched distance-3 tile is still spare"
+        assert "(53,40)" not in spare[0]
+        assert "(52,39)" in spare[0]
 

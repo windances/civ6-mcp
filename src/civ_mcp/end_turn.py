@@ -1027,6 +1027,19 @@ async def _evaluate_checks(gs, turn: int, units: dict | None, now: dict | None):
     return run, achieved, retired, path, swept, backup
 
 
+def _failed_check_message(check, reason: str, supply_note: str | None = None) -> str:
+    """One ``CHECK FAILED`` line, with the *place* a place-shaped rule is about.
+
+    ``cut-the-supply`` is the rule this exists for: its metric is a count of open hexes, and a
+    count does not tell the agent which unit to walk where. Measured T215 - 亚历山大 healed about
+    twenty points a turn at `supply line 3/6 cut` while the report named no hex.
+    """
+    text = f"CHECK FAILED [{check.check_id}]: {check.message} (require: {reason})"
+    if check.check_id == "cut-the-supply" and supply_note:
+        text += f"\n  WHERE: {supply_note}"
+    return text
+
+
 async def _check_turn_checks(
     gs, turn: int, units: dict | None, now: dict | None
 ) -> list[lq.TurnEvent]:
@@ -1056,11 +1069,16 @@ async def _check_turn_checks(
         len(run.failures),
         len(retired),
     )
+    # A rule whose lever is a place, not a count, is only actionable with the place named. The
+    # supply line is the one that cost the most: measured T215, 亚历山大 healed twenty a turn at
+    # `supply line 3/6 cut` and the report gave no hex to walk onto.
+    supply_note = getattr(gs, "_supply_open_note", None)
+
     events = [
         lq.TurnEvent(
             priority=1 if check.level == "error" else 2,
             category="check",
-            message=f"CHECK FAILED [{check.check_id}]: {check.message} (require: {reason})",
+            message=_failed_check_message(check, reason, supply_note),
         )
         for check, reason in run.failures
         if check.check_id not in retired
@@ -1321,6 +1339,32 @@ def _capture_metrics(readiness: list) -> dict:
             if int(getattr(entry, "melee_adjacent", 0) or 0) > 0:
                 metrics["capture_ready"] += 1
     return metrics
+
+
+def _supply_hex_note(readiness: list) -> str | None:
+    """Which hexes each still-healing enemy city is feeding from, by coordinate.
+
+    The rule can only see a count ("an enemy city has open adjacent hexes"), and a count is not
+    an order. Measured T215: 亚历山大 sat at `supply line 3/6 cut`, healed about twenty points a
+    turn, and every report about it named no hex at all - so the agent had nothing to walk onto.
+    Returns None when nothing is healing from an open hex.
+    """
+    notes: list[str] = []
+    for entry in readiness or []:
+        open_count = int(getattr(entry, "supply_open", 0) or 0)
+        if open_count <= 0:
+            continue
+        notes.append(
+            f"{getattr(entry, 'city_name', '?')} heals while {open_count} adjacent hex(es) stay open"
+            + (f": {', '.join(getattr(entry, 'supply_open_hexes', None) or [])}" if getattr(entry, "supply_open_hexes", None) else "")
+            + (
+                f" - {int(getattr(entry, 'idle_within_3', 0) or 0)} of our fighting units within"
+                f" 3 tiles still have movement"
+                if int(getattr(entry, "idle_within_3", 0) or 0)
+                else ""
+            )
+        )
+    return "; ".join(notes) or None
 
 
 def _capture_event(readiness: list, turn: int) -> str | None:
@@ -1784,6 +1828,7 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
     with each era. Missing data yields zeros, which switches the rules off rather than
     firing them.
     """
+    capture_readiness = await _capture_for_checks(gs, turn)
     metrics = {
         "enemies_within_1": 0,
         "enemies_within_2": 0,
@@ -1808,12 +1853,14 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         "damaged_this_turn": len(getattr(gs, "_damaged_last_turn", None) or []),
         **_garrison_metrics(gs, units),
         **_siege_metrics(await _siege_posture_for_checks(gs, turn)),
-        **_capture_metrics(await _capture_for_checks(gs, turn)),
+        **_capture_metrics(capture_readiness),
         **_siege_upgrade_metrics(units),
         **_loyalty_metrics(await _loyalty_for_checks(gs, turn)),
         # A camp beside a city is a target the turn result used to be silent about.
         "camps_within_3": await _camps_within_3(gs),
     }
+    # The supply rule can only report a count; this is the coordinate list it is turned into.
+    gs._supply_open_note = _supply_hex_note(capture_readiness)
     threats = await _threats_for_checks(gs, turn)
     metrics.update(_matchup_metrics(threats, units))
     if not threats:

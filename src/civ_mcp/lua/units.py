@@ -1191,10 +1191,29 @@ def build_unused_attack_query() -> str:
     The legality test mirrors the units query exactly (adjacency for melee, LOS through
     `CanStartOperation` for ranged beyond one tile, barbarians always hostile, war required
     otherwise), so this report can never contradict the `CAN ATTACK` hints.
+
+    Three things that are *not* attacks are excluded, because a report that cries wolf gets
+    ignored - measured T213-T215, `skip_remaining_units(force=True)` was discarding three
+    phantom entries per turn while `use-your-attacks` failed on them:
+
+    * a **siege unit** cannot attack units at all (`ERR:SIEGE_CANNOT_ATTACK_UNITS`), so it is
+      not scanned against unit targets;
+    * a unit with **no attacks left** (`GetAttacksRemaining`, the same test the game's own
+      SelectedUnit.lua uses) is not holding an attack;
+    * a unit that **entered a Zone of Control this turn** cannot attack until next turn
+      (`HasMovedIntoZOC`, the check `unit_action` already enforces).
+
+    If the game's attack-count API is missing, the unit is reported rather than silently
+    dropped: a false alarm is cheaper than a lost attack.
     """
     return """
 local me = Game.GetLocalPlayer()
 local out = {}
+local function attacks_left(u)
+    local ok, n = pcall(function() return u:GetAttacksRemaining() end)
+    if ok and n ~= nil then return n end
+    return 1
+end
 for _, unit in Players[me]:GetUnits():Members() do
     local x = unit:GetX()
     local y = unit:GetY()
@@ -1209,7 +1228,11 @@ for _, unit in Players[me]:GetUnits():Members() do
         -- Catapult standing at distance 2 from Moscow came back with an empty target list.
         local bomb = entry and entry.Bombard or 0
         local shoots = (rs > 0) or (bomb > 0)
-        if cs > 0 or shoots then
+        -- ...but the same Bombard value means it cannot touch a *unit*: only RangedCombat
+        -- units may. Its unused shot at a city is SIEGE FIRE's business, not this scan's.
+        local can_hit_units = (rs > 0) or not shoots
+        if (cs > 0 or shoots) and can_hit_units
+            and attacks_left(unit) > 0 and not unit:HasMovedIntoZOC() then
             local rng = shoots and (entry and entry.Range or 1) or 1
             local hits = {}
             for dy = -rng, rng do
@@ -1223,7 +1246,9 @@ for _, unit in Players[me]:GetUnits():Members() do
                                 local otherOwner = other:GetOwner()
                                 if otherOwner ~= me and (otherOwner == 63 or Players[me]:GetDiplomacy():IsAtWarWith(otherOwner)) then
                                     local losOK = true
-                                    if shoots and d > 1 then
+                                    -- Ask the engine at every distance, not only beyond one tile:
+                                    -- a range-1 shooter (Crouching Tiger) can be refused too.
+                                    if shoots then
                                         local lp = {}
                                         lp[UnitOperationTypes.PARAM_X] = tx
                                         lp[UnitOperationTypes.PARAM_Y] = ty
@@ -1487,6 +1512,7 @@ for pid = 0, 63 do
                         -- adjacent hex cut does not heal at all. That is a lever the army can
                         -- pull; out-damaging the healing is only the fallback.
                         local covered, total = 0, 0
+                        local openHexes = {}
                         for sdx = -1, 1 do for sdy = -1, 1 do
                             if sdx ~= 0 or sdy ~= 0 then
                                 local nx, ny = cx + sdx, cy + sdy
@@ -1525,7 +1551,8 @@ for pid = 0, 63 do
                                             end
                                         end end
                                     end
-                                    if cut then covered = covered + 1 end
+                                    if cut then covered = covered + 1
+                                    else table.insert(openHexes, nx .. "," .. ny) end
                                 end
                             end
                         end end
@@ -1554,6 +1581,7 @@ for pid = 0, 63 do
                             .. "|melee_adjacent:" .. adj .. "|melee_within_2:" .. near
                             .. "|supply:" .. covered .. "/" .. total
                             .. "|idle3:" .. idle
+                            .. "|open:" .. table.concat(openHexes, ";")
                             .. "|" .. who)
                     end
                 end
@@ -1594,7 +1622,10 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
         # `supply:C/T` was added after the melee counts; a line from an older build simply has the
         # unit name there, so both shapes are accepted. `idle3:N` came later again, and is looked
         # for by name so a line without it is read as zero rather than shifting the unit name.
+        # `open:x,y;x,y` names the hexes the city is still healing from, which is what turns the
+        # supply-line metric into an order the agent can execute.
         supply_covered, supply_total, unit_name, idle_within_3 = 0, 0, "", 0
+        open_hexes: list[str] = []
         if len(parts) > 9 and parts[9].startswith("supply:"):
             try:
                 covered, total = parts[9].split(":", 1)[1].split("/", 1)
@@ -1605,7 +1636,13 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
             for token in rest:
                 if token.startswith("idle3:"):
                     idle_within_3 = number(token)
-            unit_name = next((t for t in rest if not t.startswith("idle3:")), "")
+                elif token.startswith("open:"):
+                    open_hexes = [
+                        hex_ for hex_ in token.split(":", 1)[1].split(";") if hex_
+                    ]
+            unit_name = next(
+                (t for t in rest if not t.startswith(("idle3:", "open:"))), ""
+            )
         elif len(parts) > 9:
             unit_name = parts[9]
         out.append(
@@ -1621,6 +1658,7 @@ def parse_capture_readiness_response(lines: list[str]) -> list[CaptureReadiness]
                 melee_within_2=number(parts[8]) if len(parts) > 8 else 0,
                 supply_covered=supply_covered,
                 supply_total=supply_total,
+                supply_open_hexes=open_hexes,
                 idle_within_3=idle_within_3,
                 melee_unit=unit_name,
             )
@@ -2564,6 +2602,22 @@ print("__SENTINEL__")
 """
 
 
+def _number(text: str, default: float = 0) -> float:
+    """A number the game printed: an int when it is whole, a float when it is not.
+
+    The staging query prints movement straight from the game, and a unit can be
+    holding a fraction of a point. Measured 2026-09-27: `get_staging_plan` died on
+    `invalid literal for int() with base 10: '1.5'` while a Line Infantry stood at
+    1.5/3, which cost the Alexandria assault the one table it needed most. Whole
+    values keep their int shape, so nothing downstream changes for the normal case.
+    """
+    try:
+        value = float(text)
+    except (TypeError, ValueError):
+        return default
+    return int(value) if value.is_integer() else value
+
+
 def build_staging_plan_query(
     target_x: int,
     target_y: int,
@@ -2581,12 +2635,20 @@ def build_staging_plan_query(
     paid twice for computing that by hand.
     """
     return (
-        _STAGING_TEMPLATE.replace("__TX__", str(int(target_x)))
-        .replace("__TY__", str(int(target_y)))
-        .replace("__NX__", str(int(next_x) if next_x is not None else -9999))
-        .replace("__NY__", str(int(next_y) if next_y is not None else -9999))
-        .replace("__KX__", str(int(kill_x) if kill_x is not None else -9999))
-        .replace("__KY__", str(int(kill_y) if kill_y is not None else -9999))
+        _STAGING_TEMPLATE.replace("__TX__", str(int(_number(target_x))))
+        .replace("__TY__", str(int(_number(target_y))))
+        .replace(
+            "__NX__", str(int(_number(next_x)) if next_x is not None else -9999)
+        )
+        .replace(
+            "__NY__", str(int(_number(next_y)) if next_y is not None else -9999)
+        )
+        .replace(
+            "__KX__", str(int(_number(kill_x)) if kill_x is not None else -9999)
+        )
+        .replace(
+            "__KY__", str(int(_number(kill_y)) if kill_y is not None else -9999)
+        )
         .replace("__SENTINEL__", SENTINEL)
     )
 
@@ -2605,7 +2667,11 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             x, y = (int(v) for v in parts[1].split(","))
             plan.ring.append(
                 StagingRingTile(
-                    x=x, y=y, distance=int(parts[2]), blocked=parts[3] != "ok", water=parts[4] == "water"
+                    x=x,
+                    y=y,
+                    distance=int(_number(parts[2])),
+                    blocked=parts[3] != "ok",
+                    water=parts[4] == "water",
                 )
             )
         elif line.startswith("UNIT|") and len(parts) >= 6:
@@ -2614,19 +2680,20 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             hp = max_hp = 0
             for token in parts[6:]:
                 if token.startswith("d"):
-                    distance = int(token[1:] or 0)
+                    distance = int(_number(token[1:]))
                 elif token.startswith("cs"):
-                    strength = int(token[2:] or 0)
+                    strength = int(_number(token[2:]))
                 elif token.startswith("hp") and "/" in token:
                     cur, _, total = token[2:].partition("/")
-                    hp, max_hp = int(cur or 0), int(total or 0)
+                    hp, max_hp = int(_number(cur)), int(_number(total))
             plan.units.append(
                 StagingUnit(
                     unit_type=parts[1],
                     unit_id=int(parts[2]),
                     x=x,
                     y=y,
-                    moves=int(parts[4]),
+                    # Fractional on purpose: the game reports 1.5 of 3 moves.
+                    moves=_number(parts[4]),
                     role=parts[5],
                     distance=distance,
                     strength=strength,
@@ -2644,13 +2711,15 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     unit_id=int(parts[1]),
                     x=x,
                     y=y,
-                    turns=int(parts[3]),
+                    turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
                 )
             )
         elif line.startswith("NEXTRING|") and len(parts) >= 3:
             x, y = (int(v) for v in parts[1].split(","))
-            plan.next_ring.append(StagingRingTile(x=x, y=y, distance=int(parts[2])))
+            plan.next_ring.append(
+                StagingRingTile(x=x, y=y, distance=int(_number(parts[2])))
+            )
         elif line.startswith("NEXTOPTION|") and len(parts) >= 5:
             x, y = (int(v) for v in parts[2].split(","))
             plan.next_options.append(
@@ -2658,7 +2727,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     unit_id=int(parts[1]),
                     x=x,
                     y=y,
-                    turns=int(parts[3]),
+                    turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
                 )
             )
@@ -2669,9 +2738,9 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     unit_id=int(parts[1]),
                     x=x,
                     y=y,
-                    turns=int(parts[3]),
+                    turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
-                    path_len=int(parts[5]),
+                    path_len=int(_number(parts[5])),
                 )
             )
     return plan

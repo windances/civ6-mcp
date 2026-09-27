@@ -345,20 +345,64 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
     return result
 
 
+def _rally_option(plan: m.StagingPlan | None, unit: m.StagingUnit, ring_tiles: dict):
+    """The unit's best ring tile **outside** the city's reach, if the plan found one.
+
+    The doctrine stages outside the enemy's reach and then advances as one body - ``tactics/04``
+    step 1 puts the rally *three tiles or more* from the target, because a city's strike and a
+    Catapult both reach two. The ring assignment below is the tile a unit **fires from**; this is
+    the tile it should form up on first, and it comes from the same game pathing as everything
+    else here.
+
+    It exists because the plan was followed literally and the cost is measured: at 底比斯 the
+    assault opened with 2 of 3 shooters in position and at 亚历山大 with **2 of 5**, the rest still
+    walking. Returns ``None`` when no tile at distance >= 3 is in reach, which is itself worth
+    printing - a unit already standing on the ring has no assembly step left.
+    """
+    if plan is None:
+        return None
+    best = None
+    for option in plan.options:
+        if option.unit_id != unit.unit_id:
+            continue
+        tile = ring_tiles.get((option.x, option.y))
+        if tile is None or tile.distance < 3:
+            continue
+        key = (option.turns, option.path_len, tile.distance)
+        if best is None or key < best[0]:
+            best = (key, option, tile)
+    return best
+
+
 def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
     """The plan as the table the doctrine asks for, one row per unit."""
     units = {u.unit_id: u for u in (plan.units if plan else [])}
+    ring_tiles = {(t.x, t.y): t for t in (plan.ring if plan else [])}
     what = f"the camp at {result.target}" if result.camp else (result.target or "the target")
     lines = [
         f"STAGING PLAN for {what} — {result.ring_size} ring tile(s),"
         f" {len(result.placed)} unit(s) placed, {len(result.unplaced)} unplaced"
     ]
+    if any(_rally_option(plan, a.unit, ring_tiles) for a in result.placed):
+        lines.append(
+            "  ASSEMBLY FIRST: `RALLY x,y dN` is a tile outside the city's two-tile strike to form"
+            " up on, before the ring tile it fires from. Walking straight onto the ring is how an"
+            " assault opens with half the train in position — measured T194 (2/3 shooters) and"
+            " T215 (2/5, one Bombard still 21 tiles away)."
+        )
     for a in result.placed:
         when = "this turn" if a.this_turn else f"T+{a.turns}"
+        rally = _rally_option(plan, a.unit, ring_tiles)
+        leg = (
+            f"  RALLY ({rally[1].x},{rally[1].y}) d{rally[2].distance} T+{rally[1].turns}"
+            if rally
+            else ""
+        )
         lines.append(
             f"  {a.unit.unit_type:<22} #{a.unit.unit_id} ({a.unit.x},{a.unit.y}) moves {a.unit.moves}"
             f" -> {a.where} d{a.tile.distance}  arrive {when}  [{a.unit.role}]"
             f"{' - FIRE from here' if a.unit.role in ('siege', 'ranged') and a.tile.distance == 2 else ''}"
+            f"{leg}"
         )
     for unit in result.unplaced:
         far = unit.distance > 6
@@ -461,17 +505,26 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
         lines.append("  CONFLICTS (one unit per tile — a second order is STACKING_CONFLICT):")
         lines.extend(f"    {c}" for c in result.conflicts)
     if result.idle_tiles:
-        lines.append(
-            "  SPARE RING TILES: "
-            + ", ".join(f"({t.x},{t.y}) d{t.distance}" for t in result.idle_tiles[:8])
-            + (
-                " — take them with the unplaced units: occupying the ring keeps the guard from"
-                " stepping into it"
-                if result.camp
-                else " — take them with the unplaced units: occupying the ring stops the city's"
-                " ~20/turn heal"
+        # A tile a unit is told to assemble on is not spare: the rally leg above already spends
+        # it, and listing it here as free contradicts the row that just claimed it.
+        rally_tiles = {
+            (rally[1].x, rally[1].y)
+            for a in result.placed
+            if (rally := _rally_option(plan, a.unit, ring_tiles))
+        }
+        spare = [t for t in result.idle_tiles if (t.x, t.y) not in rally_tiles]
+        if spare:
+            lines.append(
+                "  SPARE RING TILES: "
+                + ", ".join(f"({t.x},{t.y}) d{t.distance}" for t in spare[:8])
+                + (
+                    " — take them with the unplaced units: occupying the ring keeps the guard from"
+                    " stepping into it"
+                    if result.camp
+                    else " — take them with the unplaced units: occupying the ring stops the city's"
+                    " ~20/turn heal"
+                )
             )
-        )
     shooters = [a for a in result.placed if a.unit.role in ("siege", "ranged") and a.tile]
     when = "this turn" if result.opens_on == 0 else f"T+{result.opens_on}"
     if result.camp:
