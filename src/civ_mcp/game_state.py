@@ -1210,6 +1210,14 @@ class GameState:
         return lq.parse_policies_response(lines)
 
     async def set_policies(self, assignments: dict[int, str]) -> str:
+        # Read the slots before the change. The engine will not tell anyone that a policy which
+        # halves every upgrade just left the government, and the bill for that arrives later.
+        before: set[str] = set()
+        try:
+            existing = await self.get_policies()
+            before = {s.current_policy for s in existing.slots if s.current_policy}
+        except Exception:
+            log.debug("policy pre-read failed", exc_info=True)
         lua = lq.build_set_policies(assignments)
         lines = await self.conn.execute_write(lua)
         result = _action_result(lines)
@@ -1230,7 +1238,35 @@ class GameState:
                     f"\nWARN:SILENT_FAILURE — engine rejected: {', '.join(mismatches)}. "
                     "Try a different policy or retry next turn."
                 )
+            after = {s.current_policy for s in status.slots if s.current_policy}
+            result += self._upgrade_discount_note(before, after)
         return result
+
+    # The one policy whose removal changes the price of every pending upgrade.
+    UPGRADE_DISCOUNT_POLICY = "POLICY_PROFESSIONAL_ARMY"
+
+    def _upgrade_discount_note(self, before: set[str], after: set[str]) -> str:
+        """Warn when a policy change drops the card that halves every unit upgrade.
+
+        Measured T201: the free policy window traded `POLICY_PROFESSIONAL_ARMY` - the game's own
+        text is "50% discount on all unit upgrades" - for `POLICY_MEDINA_QUARTER` (+2 housing in
+        cities with 3+ districts) to clear a housing hard stop in 西安, and every pending offer
+        doubled with it: Knight -> Cuirassier 115g -> 230g, Crossbowman -> Field Cannon 155g ->
+        310g, Spearman -> Pikeman 190g -> 380g. Twelve turns later two of them were bought anyway:
+        540g paid where 270g would have done. The trade may still be right - it just has to be a
+        decision rather than a side effect.
+        """
+        if self.UPGRADE_DISCOUNT_POLICY not in before:
+            return ""
+        if self.UPGRADE_DISCOUNT_POLICY in after:
+            return ""  # still in the government, possibly in a different slot
+        return (
+            f"\nNOTE:UPGRADE_DISCOUNT_LOST — this change takes "
+            f"{self.UPGRADE_DISCOUNT_POLICY} ('50% discount on all unit upgrades') out of the "
+            f"government, so every pending upgrade now costs double. Check `UPGRADE AVAILABLE` "
+            f"before accepting that trade: measured T201-T217, losing it cost 270g on the next "
+            f"two purchases (115 -> 230 and 155 -> 310)."
+        )
 
     # ------------------------------------------------------------------
     # Governor methods (InGame context)

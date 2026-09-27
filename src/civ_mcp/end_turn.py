@@ -46,6 +46,8 @@ _CONTACT_METRIC_KEYS = (
     "min_melee_upgrade_cost",
     "siege_upgrades_available",
     "min_siege_upgrade_cost",
+    "uncovered_upgrades_available",
+    "min_uncovered_upgrade_cost",
     "cities_low_loyalty",
     "lowest_loyalty",
     "low_loyalty_without_governor",
@@ -1431,6 +1433,9 @@ _MELEE_TYPES = (
 # What the matchup rule wants in hand when the enemy fields one of these.
 _UPGRADED_MELEE = ("SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY")
 _SIEGE_TYPES = ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY")
+# Recon is a fighting class with its own job, and its upgrade is not a war spend: a
+# Scout -> Skirmisher is not what a stalled front is waiting for.
+_RECON_TYPES = ("SCOUT", "RANGER", "SKIRMISHER", "EXPLORER")
 
 
 def _matches_type(unit, wanted: tuple[str, ...]) -> bool:
@@ -1506,6 +1511,38 @@ def _siege_upgrade_metrics(units: dict | None) -> dict:
             metrics["min_siege_upgrade_cost"] == 0 or cost < metrics["min_siege_upgrade_cost"]
         ):
             metrics["min_siege_upgrade_cost"] = cost
+    return metrics
+
+
+def _uncovered_upgrade_metrics(units: dict | None) -> dict:
+    """Affordable upgrades of the classes **no rule watches**: ranged and cavalry.
+
+    `match-their-melee` watches melee and anti-cavalry, and `upgrade-the-siege` watches siege.
+    Everything else was reported by `UPGRADE AVAILABLE` and by no rule at all, and the cost of
+    that is measured: over T204-T215 the treasury went 621 -> 768 while a Knight -> Cuirassier
+    (230g) and two Crossbowman -> Field Cannon (310g each) sat there unpriced by any rule and
+    unbought; at T216-T217 two of them were finally bought, at the doubled price the T201 policy
+    swap had created - 540g where 270g would have done.
+
+    Recon is left out on purpose: a Scout -> Skirmisher is not a war spend, and a rule that
+    nags about one is a rule that gets ignored. The classes counted here are the ones that
+    fight in the line.
+    """
+    metrics = {"uncovered_upgrades_available": 0, "min_uncovered_upgrade_cost": 0}
+    for unit in (units or {}).values():
+        if not getattr(unit, "can_upgrade", False):
+            continue
+        if _matches_type(unit, _MELEE_TYPES) or _matches_type(unit, _SIEGE_TYPES):
+            continue
+        if _matches_type(unit, _RECON_TYPES):
+            continue
+        metrics["uncovered_upgrades_available"] += 1
+        cost = int(getattr(unit, "upgrade_cost", 0) or 0)
+        if cost and (
+            metrics["min_uncovered_upgrade_cost"] == 0
+            or cost < metrics["min_uncovered_upgrade_cost"]
+        ):
+            metrics["min_uncovered_upgrade_cost"] = cost
     return metrics
 
 
@@ -1855,6 +1892,7 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         **_siege_metrics(await _siege_posture_for_checks(gs, turn)),
         **_capture_metrics(capture_readiness),
         **_siege_upgrade_metrics(units),
+        **_uncovered_upgrade_metrics(units),
         **_loyalty_metrics(await _loyalty_for_checks(gs, turn)),
         # A camp beside a city is a target the turn result used to be silent about.
         "camps_within_3": await _camps_within_3(gs),
