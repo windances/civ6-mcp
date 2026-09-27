@@ -20,6 +20,7 @@ ones measured.
 | task file | added | expires | why it exists, in one line | done when (first line) |
 |---|---|---|---|---|
 | `019-two-scouts-to-sea.md` | 2026-09-27 | turn 250 | two Scouts to sea, to find the civilizations nobody has met (T220: 32% of the map explored, four living majors `not met`; at T229 the instrument is two Rangers, due ~T238) | two units of the Scout line are alive, each on a water tile, and >= 1 newly met major civilization |
+| `020-take-brussels.md` | 2026-09-27 | turn 248 | take the city-state 布鲁塞尔 (69,29) on the human's instruction - 战前分析, 攻城集结, then 总攻; it overrides the directive's city-state rule for this one city | the tile at (69,29) reads CITY_CENTER owned by us with one of our units on it, and 布鲁塞尔 is no longer a city-state |
 
 The directory was empty from T216 (task 018 retired) to T220; that retirement and its measurements are
 in `done/` and `docs/task-history.md`.
