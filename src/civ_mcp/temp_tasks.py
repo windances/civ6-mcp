@@ -119,7 +119,12 @@ def header_block(
     overrides: str,
     scope: str,
 ) -> str:
-    """The five header lines, each wrapped with the continuation indent the task files use."""
+    """The five header lines, each wrapped with the continuation indent the task files use.
+
+    The field names are padded to eleven columns (`added:     `, `done when: `) because that is the
+    shape every hand-written task file in this repo already has - the tool's output should be
+    indistinguishable from one a person wrote.
+    """
     out: list[str] = []
     for field, value in (
         ("added:", added),
@@ -129,7 +134,7 @@ def header_block(
         ("scope:", scope),
     ):
         lines = _wrap(value)
-        out.append(f"{field} {lines[0]}".rstrip())
+        out.append(f"{field:<11}{lines[0]}".rstrip())
         out.extend(f"{' ' * 11}{line}".rstrip() for line in lines[1:])
     return "\n".join(out)
 

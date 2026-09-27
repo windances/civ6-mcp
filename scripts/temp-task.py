@@ -179,7 +179,12 @@ def cmd_add(args: argparse.Namespace) -> int:
         f"turn {prints} - {args.turns} turn(s) from T{turn if turn is not None else '?'}, the turn the "
         f"match stands on (read from the {source}); a hard stop, retired either way on that turn"
     )
-    body = _value(args.body_file) if args.body_file else (args.body or "")
+    body = ""
+    if args.body_file:
+        # `--body-file` names a file, so it is read; the value flags take `@path` for the same effect.
+        body = pathlib.Path(args.body_file).read_text(encoding="utf-8-sig")
+    elif args.body:
+        body = _value(args.body)
     if not body.strip():
         body = _skeleton(name)
 
@@ -353,8 +358,8 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument("--expires-turn", type=int, help="an explicit expiry turn")
     add.add_argument("--expires", help="the whole 'expires:' sentence, verbatim")
     add.add_argument("--added", help="the date for the 'added:' line (default: today)")
-    add.add_argument("--body", help="the body markdown")
-    add.add_argument("--body-file", help="a UTF-8 file with the body markdown")
+    add.add_argument("--body", help="the body markdown; @file reads UTF-8")
+    add.add_argument("--body-file", help="a UTF-8 file with the body markdown, read directly")
     add.add_argument("--dry-run", action="store_true", help="print the plan, write nothing")
     add.add_argument("--no-commit", action="store_true", help="write the files, do not commit")
     add.add_argument("--no-gate", action="store_true", help="skip the text gate and the protocol suite")

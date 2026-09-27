@@ -323,6 +323,21 @@ class TestTheCliEndToEnd:
         assert "001-first-task.md" in out and "English" in out
         assert not (scratch / "prompts/tasks/tmp" / SECOND_NAME).exists()
 
+    def test_a_body_file_is_read_rather_than_taken_literally(self, scratch, capsys):
+        body = ROOT / ".tmp" / "temp-task-fixture-body.md"
+        body.write_text("## A real body\n\nWith a paragraph and a `done when:` mention.\n", encoding="utf-8")
+        assert tool.main(["--root", str(scratch), *ADD_ARGS, "--body-file", str(body)]) == 0
+        text = (scratch / "prompts/tasks/tmp" / SECOND_NAME).read_text(encoding="utf-8-sig")
+        assert "With a paragraph and a `done when:` mention." in text
+        assert str(body) not in text
+        capsys.readouterr()
+
+    def test_the_default_body_is_a_skeleton_when_none_is_given(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *ADD_ARGS]) == 0
+        text = (scratch / "prompts/tasks/tmp" / SECOND_NAME).read_text(encoding="utf-8-sig")
+        assert "## What to do" in text and "## Report when it is done" in text
+        capsys.readouterr()
+
     def test_status_reports_agreement_and_the_clock(self, scratch, capsys):
         assert tool.main(["--root", str(scratch), "status"]) == 0
         out = capsys.readouterr().out

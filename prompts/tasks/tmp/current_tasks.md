@@ -20,7 +20,7 @@ ones measured.
 | task file | added | expires | why it exists, in one line | done when (first line) |
 |---|---|---|---|---|
 | `021-siege-legion-overseas.md` | 2026-09-27 | turn 270 | a siege legion overseas - form it, sail it, land on another civilization's continent, analyse the city found there, and assault only if it can be won; at most four new builds | a legion ashore on another landmass, a major civ's city read in its four numbers with the `tactics/07` verdict written, and then either that city is ours or the verdict is "cannot take it" |
-| `022-take-haarlem-locate-the-dutch-city-analyse-it-stage-and-concentrate-fire.md` | 2026-09-28 | turn 288 | take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration | **Haarlem is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
+| `022-take-haarlem.md` | 2026-09-28 | turn 288 | take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration | **Haarlem is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
 
 Task 020 was retired as `done/020-take-brussels-done-T237.md`: 布鲁塞尔 fell on T237 to
 the Bombard and Field Cannon fire from (68,31), (69,31), (70,31), (71,30) and a Line Infantry attack
