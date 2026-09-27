@@ -198,14 +198,18 @@ class TestTheDiscountGate:
 
 
 class TestTheUpgradeMetricsAreWired:
-    def test_every_upgrade_metric_is_computed_by_the_context(self):
-        # The melee keys sat in `_CONTACT_METRIC_KEYS` - and were zero-filled for a historical row -
-        # while nothing computed them, so a rule naming them would have been silently always-zero
-        # rather than loudly un-evaluable, which is the failure the staging convention exists for.
-        source = inspect.getsource(et._contact_metrics)
-        for helper in ("_siege_upgrade_metrics", "_uncovered_upgrade_metrics", "_melee_upgrade_metrics"):
-            assert f"{helper}(units)" in source, f"{helper} is never called: its keys are always 0"
-        assert '"upgrades_gated_by_discount"' in source
+    def test_every_upgrade_metric_family_is_computed(self):
+        # A key listed in `_CONTACT_METRIC_KEYS` and never computed is worse than an unknown one: a
+        # historical row zero-fills it, so a rule naming it would be silently always-zero instead of
+        # loudly un-evaluable - which is the failure the staging convention exists to prevent. All
+        # three families are wired: siege and the uncovered classes from the unit list, melee from
+        # `_matchup_metrics` (it also needs the threat scan).
+        contact = inspect.getsource(et._contact_metrics)
+        assert "_siege_upgrade_metrics(units)" in contact
+        assert "_uncovered_upgrade_metrics(units)" in contact
+        assert "_matchup_metrics(threats, units)" in contact, "the melee family has to be called"
+        assert '"upgrades_gated_by_discount"' in contact
+        assert "melee_upgrades_available" in inspect.getsource(et._matchup_metrics)
 
 
 class TestTheDiscountRuleIsStaged:

@@ -1939,10 +1939,6 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         **_capture_metrics(capture_readiness),
         **_siege_upgrade_metrics(units),
         **_uncovered_upgrade_metrics(units),
-        # The melee keys were listed in `_CONTACT_METRIC_KEYS` (and zero-filled for a historical row)
-        # but nothing computed them, so a rule naming them would have been silently always-zero rather
-        # than loudly un-evaluable. Wiring them here closes that trap.
-        **_melee_upgrade_metrics(units),
         # Offers the missing upgrade-discount card is the only obstacle to: see `_gated_by_discount`.
         "upgrades_gated_by_discount": len(
             _gated_by_discount(units, gold, (now or {}).get("policies"))
