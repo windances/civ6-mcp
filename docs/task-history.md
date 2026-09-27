@@ -316,3 +316,46 @@ won. **It retired on its hard stop with the verdict written and the legion back 
   at two tiles' range while its whole ring is visible, so **the four numbers are only ever three**
   until a probe attack lands - and a probe attack means a war.
 
+## `022-take-haarlem` — done at T271
+
+The file is `prompts/tasks/tmp/done/022-take-haarlem-done-T271.md`. It was added on 2026-09-28 from
+the human instruction 增加任务：占领哈勒姆 and retired **fifteen turns early** with its `done when:`
+satisfied in full. It is the only task of the session that ended in a captured city.
+
+- **Gate 0 was one call this session had never made for the Netherlands.** For thirty turns
+  `get_diplomacy` had printed `荷兰: Cities: 7 (all in fog)`; at T258, the turn after 021's Frigate
+  sailed west, it printed **`哈勒姆 pop 6 (71,22) walls 100 + 6 in fog`**. The city turned out to be
+  five tiles north of 布鲁塞尔 across a narrow strait.
+- **The four numbers**: walls **100/100** static from `get_diplomacy`, falling to **0** under fire;
+  pool **200/200** then **20** at the last read before the capture; **garrison `UNIT_BUILDER`** - a
+  non-combatant found through our own attack list, the third time this map has used that route
+  (布鲁塞尔 T235, Alexandria T215); **ring** read at radius 3 - (70,22), (71,23) GRASS MARSH [RICE],
+  (72,23) with an ALCAZAR, (70,21) an incense plantation, (70,20) a road, and 哈图沙's centre at
+  (68,20) two tiles west.
+- **The staging table was built before the first assault order and it was right about the geometry.**
+  `get_staging_plan(71,22)` named 18 ring tiles, posted Frigate #7929900 to (69,23) as a d2 firing
+  tile, and gave the three **d2 LAND** tiles the shooters could use - (69,21), (70,20), (71,20) - so
+  the train never had to fight from d1. It also named the supply hexes, cut **3/6**.
+- **What actually broke the city, in order**: the Frigate alone did ~22 wall points a turn from d2
+  (T261-T266, `walls 100 -> 78 -> 57 -> 41 -> 21 -> 5 -> 0`); the Bombard landed on **d1 at (71,23)**
+  and added ~46 a turn to the pool; and **a siege unit firing from d1 works** - it resolved
+  `RANGE_ATTACK ... dist:1`, which corrects the standing note that a siege unit at d1 is "refused".
+  The pool went 200 -> 189 -> 132 -> 86 -> 60 -> 20 over five turns while the city healed about twenty
+  a turn with three of six hexes cut.
+- **The cost**: two Field Cannons and a third lost to barbarian ships during the operation, a
+  310-gold Battleship upgrade, and the bankruptcy of T265 (gold 0, `DEFICIT: Gold -48/t`, two units
+  disbanded) which was repaired inside one turn by policy and by cashing in three Great People.
+- **The hold is the live risk and it is not solved by the capture.** Haarlem arrived at
+  **loyalty 40/100 losing -10.3 a turn with a four-turn revolt timer**, `HP 120/200`, `Def 0`,
+  production 1, and both its Monument and its Granary pillaged. The turn it fell it was given a
+  garrison (the Infantry that took it), a governor (维克多) and two policies - `边防军` for the
+  garrison and **`殖民地办事处`, which is the one written for exactly this case** (+3 loyalty a turn
+  in a city not on the capital's continent). Whether that out-runs the Dutch population around it is
+  the next window's question.
+- **Two lessons for the next named-city task.** First, **a coastal enemy city five tiles away is
+  cheaper than an inland one thirty tiles away**: 022 succeeded in thirteen turns from Gate 0 while
+  021, given a thirty-three-turn window, never got its artillery into range. Second, **the walls and
+  the pool are separate problems and only the walls are permanent** - the pool heals about twenty a
+  turn and the only cheap answer is the supply cut, so a landing party's first job is the ring, not
+  more fire.
+

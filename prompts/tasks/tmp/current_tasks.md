@@ -19,7 +19,6 @@ ones measured.
 
 | task file | added | expires | why it exists, in one line | done when (first line) |
 |---|---|---|---|---|
-| `022-take-haarlem.md` | 2026-09-28 | turn 288 | take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration | **Haarlem is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
 
 Task 020 was retired as `done/020-take-brussels-done-T237.md`: 布鲁塞尔 fell on T237 to
 the Bombard and Field Cannon fire from (68,31), (69,31), (70,31), (71,30) and a Line Infantry attack
@@ -31,3 +30,5 @@ from (69,28), after a wall probe on T235 read `walls: 200/200` and the capture r
 Task 019 was retired as `done/019-two-scouts-to-sea-expired-T250.md`.
 
 Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.
+
+Task 022 was retired as `done/022-take-haarlem-done-T271.md`.
