@@ -8,21 +8,23 @@ expires:   turn 250 - thirty turns from T220, the turn the match stands on (`.ci
            diary's `tooling` line where the two Scouts stood and what they had seen, and let the default
            strategy resume with no residue. If the `done when:` holds earlier, retire it in that turn as
            `019-two-scouts-to-sea-done-T<turn>.md`.
-done when: **two SCOUT units are alive and each stands on a water tile** (the tile under it reads
-           `COAST` or `OCEAN` in `get_map_area`, which is what 出海 means here) **and >= 1 major
-           civilization is newly met** - at T220 `get_diplomacy` listed four living
-           majors as `not met` (Georgia, Sumer, Phoenicia, India) against one met (the Netherlands), so
-           the `not met` line count reads **<= 3**, i.e. **>= 1 new civilization met**. **Pin that
-           baseline on the first turn**: read `get_diplomacy`, record the `not met` count in that turn's
-           diary, and if it is not 4 then that reading is the baseline and this sentence is the one to
-           correct in the diary. Neither half
-           alone is the task: a Scout in port has not gone to sea, and a larger revealed map with no new
-           contact has not explored *for civilizations*. Or turn 250, whichever comes first.
+done when: **two units of the Scout line are alive, each on a water tile** (`COAST` or `OCEAN` in
+           `get_map_area`, which is what 出海 means here; `UNIT_SCOUT`, or its upgrade `UNIT_RANGER`) **and
+           >= 1 major civilization is newly met** - at T220 `get_diplomacy` listed four living majors as
+           `not met` (Georgia, Sumer, Phoenicia, India) against one met (the Netherlands), so the
+           `not met` line count reads **<= 3**, i.e. **>= 1 new civilization met**. **Pin that baseline
+           on the first turn**: read `get_diplomacy`, record the `not met` count in that turn's diary,
+           and if it is not 4 then that reading is the baseline and this sentence is the one to correct
+           in the diary. Neither half alone is the task: a Scout in port has not gone to sea, and a
+           larger revealed map with no new contact has not explored *for civilizations*. Or turn 250,
+           whichever comes first.
 overrides: **the T220 development plan, and its own closing line.** The T220 10-TURN REVIEW ended the
            conquest half and changed the build order to "housing, the Campus and Industrial lines and
-           wonders first, no new units"; this file puts **exactly two Scouts** ahead of that line in up
+           wonders first, no new units"; this file puts **exactly two units of the Scout line**
+           (`UNIT_SCOUT`, or its upgrade `UNIT_RANGER` - the T223 session's pick, because a Scout is
+           CS 10 and dies to anything afloat) ahead of that line in up
            to two cities whose queues are not the war front, and authorizes **one replacement for each
-           Scout lost**, because two afloat is the task. Gold may buy them (the treasury read 208 at
+           unit lost**, because two afloat is the task. Gold may buy them (the treasury read 208 at
            +34/turn at T220) when production would cost more turns than the gold is worth. It outranks
            queue discipline and the builder backlog **for those two slots only**. **It does not
            override**: the war with the Netherlands (we are already at war - no peace is offered and
@@ -57,6 +59,23 @@ the Netherlands cannot be prosecuted because **their six cities have never been 
 Scouts are the cheapest instrument that can answer it, and they cost two 30-hammer builds against an
 empire producing 19 cities.
 
+## Update at T229 - the file has been picked up, and the instrument is the Scout's upgrade
+
+- **It reached the turn loop**: every planning block from T223 to T229 opens "still under task 019
+  (expires T250)", so the `IN FORCE NOW` line did its job.
+- **The instrument is two Rangers**, in build at 上海 and 阿拜多斯 and due about **T238** - the Scout's
+  upgrade, picked because a Scout at CS 10 dies to the first thing it meets afloat. That is why the
+  `done when:` above names the Scout line rather than `UNIT_SCOUT` alone; the intent (two reconnaissance
+  units, at sea) is unchanged.
+- **The eastern bearing is the productive one, for a second reason now**: the Dutch navy has worked our
+  eastern shore since T223 (T224: five of our units damaged and three farms pillaged around 亚历山大 and
+  塞纳), which is proof that there is reachable land - a Dutch port - out there. The north-west bearing
+  is closed (its barbarian Quadrireme was killed at T227).
+- **The clock is the binding constraint**: `exploration_pct` is 33 at T229 against 32 at T220, and the
+  two Rangers launch about T238, leaving roughly twelve turns of sailing before T250.
+- **This file is the session's only offensive instrument against the Dutch**, whose six cities are still
+  unseen; 塞纳's walls and the coastal Field Cannons are the defensive half of that war.
+
 ## What to do
 
 1. **Build or buy the two Scouts on the turn this file is first read.** The token is `UNIT_SCOUT`
@@ -81,7 +100,12 @@ empire producing 19 cities.
    worth the query: an embarked Scout is CS 10 and dies to anything, and losing one costs the build
    plus its whole voyage. Hills, forest and jungle cost 2 movement and stack; `get_pathing_estimate`
    is the game's own pathfinding - use it rather than assuming a strait is a wall. Two units on one
-   tile is illegal, so the two bearings must not converge on the same staging tile.
+   tile is illegal, so the two bearings must not converge on the same staging tile. **Two traps this
+   session already measured**: a blind `move` can embark a unit with **no warning at all** (T225 - the
+   only sign was the destination tile's own yield line, `F:1 P:0 G:1`), and **an embarked land unit
+   cannot make a ranged attack** (T225: the shot resolved as `MELEE_ATTACK` and did nothing while the
+   unit kept its movement). A Ranger at sea is a passenger, not a shooter - read the destination tile
+   before ordering a coastal move.
 5. **`automate` is allowed for a Scout and is the sane default, but it is not a reason to stop
    looking.** Read the reveal every turn. A Scout that has been circling, standing still, or walking
    back through ground it already uncovered gets a bearing instead - a direct move, one per call.
