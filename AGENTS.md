@@ -75,8 +75,9 @@ record.
   register row and this list together, runs the mandatory text gate and `tests/test_temp_tasks.py`, and
   commits only when both are green; `... retire <nnn> --done` (or `--expired`) `--turn N` moves the file
   into `done/` and re-syncs the register and this list; `... status` prints what is in force, what turn
-  the game stands on and whether the three sources agree. `scripts\temp-task.cmd` is the same command
-  without the interpreter path. What it does **not** write is the diary's `tooling` line and
+  the game stands on and whether the three sources agree. `scripts\temp-task.cmd` (cmd and PowerShell)
+  and `bash scripts/temp-task.sh` (Git Bash and any POSIX shell) are the same command without the
+  interpreter path. What it does **not** write is the diary's `tooling` line and
   `docs/task-history.md` - those stay yours.
 - The `IN FORCE NOW` line and the directory are checked against each other by `tests/test_temp_tasks.py`,
   so a retirement that is not recorded goes red instead of quietly staying in force.

@@ -2048,7 +2048,29 @@ scripts\temp-task.cmd add --title "take Brussels: analysis, staging, assault" ^
 scripts\temp-task.cmd retire 021 --done --turn 270 --note "..."
 ```
 
-（等价形式：`python scripts/temp-task.py <子命令>`；`.cmd` 只是替你找到 `.venv` 里的解释器。）
+```bash
+# Git Bash（或任何 POSIX shell）里的同一件事——注意是正斜杠、行尾用反斜杠续行
+bash scripts/temp-task.sh status
+bash scripts/temp-task.sh add --title "take Brussels: analysis, staging, assault" \
+    --instruction @.tmp/instruction.txt \
+    --why "take the city-state Brussels on the human's instruction" \
+    --done-when @.tmp/done-when.txt --overrides @.tmp/overrides.txt --scope @.tmp/scope.txt \
+    --body-file .tmp/body.md
+bash scripts/temp-task.sh retire 021 --done --turn 270 --note "..."
+```
+
+| 入口 | 用在哪，为什么 |
+|---|---|
+| `scripts\temp-task.cmd ...` | cmd 与 PowerShell。PowerShell 里要写 `.\scripts\temp-task.cmd`（当前目录的程序必须带 `.\`）；它是 `.cmd`，所以**不受 `.ps1` 执行策略限制**。它自己找 `.venv\Scripts\python.exe` |
+| `bash scripts/temp-task.sh ...` | Git Bash 与任何 POSIX shell。同样自己找 `.venv/Scripts/python.exe`（找不到再退回 `python3`/`python`） |
+| `python scripts/temp-task.py ...` | 显式形式：解释器由你自己指定（注意系统 `python` 里可能没有 pytest，`.venv` 里的才有） |
+
+两条包装器的路径都无所谓——它们都 `exec` 同一个 `scripts/temp-task.py`，行为完全一致。
+
+**中文指令走哪条路都有实测：** 用 Git Bash 与 cmd 各写了一次任务，两条路都把 `中文指令测试`
+逐字节写进了 `added:` 行，BOM 也都在。命令行传非 ASCII 在 Windows 上历来是最脆的一环
+（控制台代码页会重编码），所以**最稳的写法仍然是 `--instruction @文件.txt`**：先把指令写进一个
+UTF-8 文件，再让脚本读它。`--done-when` / `--overrides` / `--scope` / `--body-file` 同样支持 `@文件`。
 
 | 子命令 | 它做什么 |
 |---|---|
@@ -2058,8 +2080,6 @@ scripts\temp-task.cmd retire 021 --done --turn 270 --note "..."
 
 要注意的几点：
 
-- **中文指令请用 `--instruction @文件`**。Windows 命令行会把非 ASCII 按控制台代码页重编码，
-  写在命令行上可能到不了脚本里；`--done-when` / `--overrides` / `--scope` / `--body-file` 同样支持 `@文件`。
 - **`--why` 必须是纯 ASCII**：它要进 `AGENTS.md`，而那个文件是纯 ASCII 门槛（`text_encoding.ASCII_ONLY`）。
   中文原因写在任务文件里，`added:` 行就是给它留的位置。登记表里哪一行含中文，脚本会点名报错而不是让它烂在后面。
 - **到期回合**默认 = 当前游戏回合 + `--turns`（30），也可以用 `--expires-turn` 指定；给一个已经过去的回合会被拒绝。
