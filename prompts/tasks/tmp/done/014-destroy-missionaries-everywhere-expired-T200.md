@@ -89,3 +89,16 @@ Every sighting (type, owner, tile, turn) and every kill with the tool's exact re
 spread reading with the turn; the tiles swept on the final pass; and, if it expires, the count, the
 reason it could not act (peace with the owner), and whether any rival was within reach of a religious
 victory when it did.
+
+## Report — expired at T200 with a zero count
+
+The count is **0**: no MISSIONARY, APOSTLE or INQUISITOR belonging to a civilisation we are at war with
+was seen anywhere we could look over the sweep, so there was nothing to condemn and no kill to record;
+the `expires:` line's own retirement condition — "no hostile religious unit has been seen **and** no
+rival is near a religious victory" — is what held, which is why this record is `-expired-` rather than
+`-done-` (the done-when's second arm, the whole map *proved* clean, was never reachable: at peace a
+religious unit cannot be touched at all, `condemn` answering `ERR:REQUIRES_WAR`, so a count of 0 only
+ever means "nothing visible"). The spread reading that came with it: **Hinduism (印度教) leads at 2/7
+civilisations**, well short of the religious victory's majority in all of them, so no rival was within
+reach when the file closed. The sweep itself, the sightings and the final reading are the T200 diary
+entry.

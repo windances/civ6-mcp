@@ -107,3 +107,27 @@ The upgrade ledger: each unit, its target, the price, the treasury before and af
 Then the recon half: the civilisations met, the candidate city with its four numbers and its approach
 distance, or the `no candidate visible` report with the fog boundary. If it expires, say what the
 treasury went on instead and whether any candidate had appeared.
+
+## Outcome — both halves held at T195
+
+**The upgrade half is complete and its five calls are in the session logs** (the `added:` line's
+count — two Man-at-Arms and all three Trebuchets — is exactly what was bought):
+
+| turn | unit id | upgrade | log |
+|---|---|---|---|
+| T172 | #2424835 | `UNIT_MAN_AT_ARMS -> UNIT_MUSKETMAN` | `log_..._roaming-emerald-ziggurat-38.jsonl` seq 129 |
+| T174 | #2949142 | `UNIT_MAN_AT_ARMS -> UNIT_MUSKETMAN` | `log_..._tidal-slate-armada-31.jsonl` seq 31 |
+| T174 | #3211270 | `UNIT_TREBUCHET -> UNIT_BOMBARD` | same log, seq 32 |
+| T176 | #3342347 | `UNIT_TREBUCHET -> UNIT_BOMBARD` | same log, seq 104 |
+| T195 | #3538967 | `UNIT_TREBUCHET -> UNIT_BOMBARD`, 85g, treasury 242 -> 157 | `log_..._silver-scarlet-parapet-72.jsonl` seq 69 |
+
+The last one is the one that closed the file, and it needed two measured facts to land: the upgrade is
+refused **outside friendly territory** (`CANNOT_UPGRADE ... Must be in friendly territory`), so the
+Trebuchet had to withdraw from (66,35) to our own (66,36) first; and **`upgrade_unit` changes the unit
+id** — #3538967 came back as #4980745, so an id carried in notes across an upgrade names a unit that no
+longer exists.
+
+**The reconnaissance half produced a candidate**: `ỉwnw`/Heliopolis **(65,32), pop 6, `walls 100`**, read
+from result lines — the first real siege of this war, and the target the T195 plan named next. The other
+candidate, Thebes (68,34) pop 5 walls `none`, was taken the same turn (task 017). The Netherlands' six
+cities are named by the trade screen but all stand in fog, so they yielded no `(x,y)`.
