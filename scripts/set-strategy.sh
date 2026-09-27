@@ -78,11 +78,12 @@ fi
 
 # The skill is an English-only DSH document (human instruction 2026-09-28): the model reads English,
 # and civ_mcp.text_encoding.ASCII_ONLY holds this file to pure ASCII, so a Chinese block would fail
-# the gate a moment after it was written. The Chinese copy belongs in SKILL.cn.md beside it. Bytes,
-# not characters: `tr -d` removes every ASCII byte, so what is left can only be non-ASCII.
+# the gate a moment after it was written. Translate the text into English and write that - the
+# `.cn.md` backup is generated from the English file and is never a place to write. Bytes, not
+# characters: `tr -d` removes every ASCII byte, so what is left can only be non-ASCII.
 nonascii="$(LC_ALL=C tr -d '\000-\177' < "$tmp_text" | wc -c | tr -d ' ')"
 if [ "$nonascii" -ne 0 ]; then
-  fail 'the strategy text is not ASCII: the skill is English only - write it in English and put the Chinese wording in .dsh/skills/civ6-orchestrator/SKILL.cn.md'
+  fail 'the strategy text is not ASCII: the skill is English only - translate it into English and write that'
 fi
 
 # The marker makes a deliberate override distinguishable from a preset whose text

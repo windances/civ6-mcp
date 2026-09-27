@@ -1,4 +1,6 @@
-﻿---
+﻿> 本文件是 `SKILL.md` 的中文备份（由英文文件翻译而来，供人阅读）：DSH 只读英文文件，请勿在此修改。
+
+---
 name: civ6-orchestrator
 description: Safely play Civilization VI through civ6-mcp using one sole-writer orchestrator and read-only specialist advisors.
 ---

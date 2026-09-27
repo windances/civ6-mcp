@@ -95,12 +95,14 @@ python scripts/fix-text-encoding.py --check     # report only; exit 1 when one i
 `.dsh/skills/civ6-orchestrator/SKILL.md`, and the preset `prompts/strategies/<name>/directive.md` that
 `scripts/use-strategy.ps1` copies into that skill's DIRECTIVE block. All three are pure ASCII with no
 BOM, and `civ_mcp.text_encoding.ASCII_ONLY` is what holds them there, so `--check` fails on a Chinese
-line in any of them. **Translate the change into English before writing it, and put the Chinese
-wording in the `<name>.cn.md` mirror beside the file** (`AGENTS.cn.md`, `SKILL.cn.md`,
-`directive.cn.md`), which no DSH search pattern matches: the harness reads `AGENTS.md` / `CLAUDE.md`,
-and a skill has to be a file named exactly `SKILL.md`. `scripts/set-strategy.ps1 -Text` refuses
-non-ASCII input for the same reason, and `tests/test_dsh_documents.py` fails if a mirror appears
-somewhere DSH would load it.
+line in any of them. **When a change carries Chinese, translate it into English and write the
+English** - a Chinese line in one of these files is a failure, not a draft. **Each one has a Chinese
+backup beside it, `<name>.cn.md`** (`AGENTS.cn.md`, `SKILL.cn.md`, `directive.cn.md`): it is generated
+from the English file for a human reader, never edited and never a source, and DSH cannot load it -
+the harness reads `AGENTS.md` / `CLAUDE.md`, and a skill has to be a file named exactly `SKILL.md`.
+`scripts/set-strategy.ps1 -Text` refuses non-ASCII input for the same reason, and
+`tests/test_dsh_documents.py` fails on a Chinese line, on a backup DSH could load, or on a backup that
+is missing.
 
 **The check is mandatory, and it is more than the BOM**: a BOM says nothing about whether the
 characters are still the ones somebody wrote, so the gate also greps every file for the damage a GBK

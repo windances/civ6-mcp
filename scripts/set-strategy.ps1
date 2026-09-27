@@ -77,9 +77,10 @@ if (-not $body) { Fail 'Strategy text is empty; refusing to inject an empty dire
 
 # The skill is an English-only DSH document (human instruction 2026-09-28): the model reads English,
 # and text_encoding.ASCII_ONLY holds this file to pure ASCII, so a Chinese block would fail the gate a
-# moment after it was written. The Chinese copy belongs in SKILL.cn.md beside it.
+# moment after it was written. Translate the text into English and write that - the `.cn.md` backup is
+# generated from the English file and is never a place to write.
 if ($body -match '[^\x00-\x7F]') {
-    Fail 'the strategy text is not ASCII: the skill is English only - write it in English and put the Chinese wording in .dsh\skills\civ6-orchestrator\SKILL.cn.md'
+    Fail 'the strategy text is not ASCII: the skill is English only - translate it into English and write that'
 }
 
 # Mark the block as ad-hoc before it is written. Without the line it is

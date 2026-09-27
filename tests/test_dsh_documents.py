@@ -1,9 +1,13 @@
-"""The documents DSH serves the model are English, and their Chinese copies cannot be loaded.
+"""The documents DSH serves the model are English, and the Chinese backups beside them are inert.
 
 Human instruction 2026-09-28, extending 2026-09-27's `AGENT.md全用英文`: every `.md` file DSH hands
-the model is English and pure ASCII, and the Chinese copy lives beside it as `<name>.cn.md`. Measured
-2026-09-28, DSH serves exactly three kinds of document in this workspace, and each was read off the
-harness source rather than assumed:
+the model is English and pure ASCII - **a change that arrives in Chinese is translated into English and
+written to the English file** - and each one has a Chinese **backup** `<name>.cn.md` beside it, which
+is generated *from* the English for a human reader. The backup is never a source: nothing writes to it,
+no code path reads it, and DSH cannot load it.
+
+Measured 2026-09-28, DSH serves exactly three kinds of document in this workspace, and each was read
+off the harness source rather than assumed:
 
 | Document | Reaches the model through | Evidence |
 |---|---|---|
@@ -11,11 +15,10 @@ harness source rather than assumed:
 | `.dsh/skills/civ6-orchestrator/SKILL.md` | the `skill` tool | `packages/skill/skill-filesystem/src/index.ts`: for a directory under a skill root the entry must be exactly `SKILL.md` (`segments[1] === 'SKILL.md'`) |
 | `prompts/strategies/<name>/directive.md` | nothing directly - it is copied *into* that skill by `scripts/use-strategy.ps1` | the block invariant in `tests/test_strategy_block.py` |
 
-So a mirror is unreachable in two independent ways: no instruction candidate ends in `.cn.md`, and a
+So a backup is unreachable in two independent ways: no instruction candidate ends in `.cn.md`, and a
 skill has to be a file named exactly `SKILL.md`. The one shape that *would* load is a `.md` file
 sitting directly in a skill root - `discoverRoot` takes any `*.md` entry there as a skill - which is
-what `test_a_mirror_is_not_parked_in_a_skill_root` keeps from happening. The English text is the
-source; a mirror may lag behind it, and nothing enforces the other direction.
+what `test_a_backup_is_not_parked_in_a_skill_root` keeps from happening.
 """
 
 from __future__ import annotations
@@ -31,12 +34,21 @@ from civ_mcp import text_encoding  # noqa: E402
 AGENTS = ROOT / "AGENTS.md"
 SKILL = ROOT / ".dsh" / "skills" / "civ6-orchestrator" / "SKILL.md"
 PRESETS = ROOT / "prompts" / "strategies"
-MIRROR_SUFFIX = ".cn.md"
+BACKUP_SUFFIX = ".cn.md"
 
-# The harness's own loader vocabulary, quoted above. A mirror that matched one of these would be
-# loaded in place of, or alongside, the file it translates.
+# The harness's own loader vocabulary, quoted above. A file named one of these would be injected as
+# workspace instructions, or loaded as the skill, in place of the English file it backs up.
 INSTRUCTION_CANDIDATES = ("AGENTS.md", "CLAUDE.md", "AGENTS.local.md", "CLAUDE.local.md")
 SKILL_FILE_NAME = "SKILL.md"
+
+# Every code path that reads or writes a served document. A backup must appear in none of them.
+READERS_AND_WRITERS = (
+    "scripts/use-strategy.ps1",
+    "scripts/use-strategy.sh",
+    "scripts/set-strategy.ps1",
+    "scripts/set-strategy.sh",
+    "src/civ_mcp/strategy_directive.py",
+)
 
 
 def served_documents() -> list[pathlib.Path]:
@@ -44,12 +56,12 @@ def served_documents() -> list[pathlib.Path]:
     return [AGENTS, SKILL, *sorted(PRESETS.glob("*/directive.md"))]
 
 
-def mirror_of(path: pathlib.Path) -> pathlib.Path:
-    return path.with_name(path.name[: -len(".md")] + MIRROR_SUFFIX)
+def backup_of(path: pathlib.Path) -> pathlib.Path:
+    return path.with_name(path.name[: -len(".md")] + BACKUP_SUFFIX)
 
 
-def mirrors() -> list[pathlib.Path]:
-    return [mirror_of(path) for path in served_documents()]
+def backups() -> list[pathlib.Path]:
+    return [backup_of(path) for path in served_documents()]
 
 
 def cjk_characters(text: str) -> int:
@@ -79,8 +91,7 @@ class TestTheServedDocumentsAreEnglish:
             ]
             assert not bad, (
                 f"{path.relative_to(ROOT)} is English only, so it must be pure ASCII (human instruction "
-                "2026-09-28): translate the line into English before writing it, and put the Chinese "
-                "wording in " + str(mirror_of(path).relative_to(ROOT)) + ". Run "
+                "2026-09-28): translate the line into English and write the English. Run "
                 "`python scripts/fix-text-encoding.py` to normalise the marks first: "
                 + "; ".join(f"line {number}: {line.strip()[:60]}" for number, line in bad[:3])
             )
@@ -100,66 +111,88 @@ class TestTheServedDocumentsAreEnglish:
         assert text_encoding.stray_boms(ROOT) == []
 
 
-class TestTheChineseMirrors:
-    def test_every_served_document_has_a_mirror(self):
-        missing = [str(m.relative_to(ROOT)) for m in mirrors() if not m.is_file()]
+class TestTheChineseBackups:
+    def test_every_served_document_has_a_backup(self):
+        missing = [str(b.relative_to(ROOT)) for b in backups() if not b.is_file()]
         assert not missing, (
-            "every document the model reads has a Chinese copy beside it (human instruction "
+            "every document the model reads has a Chinese backup beside it (human instruction "
             f"2026-09-28); these are missing: {missing}"
         )
 
-    def test_a_mirror_holds_chinese_and_is_not_a_stub(self):
-        for path, mirror in zip(served_documents(), mirrors(), strict=True):
-            text = mirror.read_text(encoding="utf-8")
+    def test_a_backup_holds_chinese_and_is_not_a_stub(self):
+        for path, backup in zip(served_documents(), backups(), strict=True):
+            text = backup.read_text(encoding="utf-8")
             source_lines = len(path.read_text(encoding="utf-8").splitlines())
             # A complete translation carries Chinese on most of the source's lines, so the floor is
             # per source line rather than a flat number: `balanced/directive.md` is two lines long.
             floor = max(20, source_lines * 5)
             assert cjk_characters(text) >= floor, (
-                f"{mirror.relative_to(ROOT)} holds {cjk_characters(text)} CJK characters, under the "
+                f"{backup.relative_to(ROOT)} holds {cjk_characters(text)} CJK characters, under the "
                 f"{floor} a translation of {path.name} ({source_lines} lines) should carry - it is a "
                 "stub, not a translation"
             )
             # Chinese is more compact than English, so the bar is a third of the source's bytes.
             assert len(text.encode("utf-8")) >= len(path.read_bytes()) // 3, (
-                f"{mirror.relative_to(ROOT)} is much shorter than {path.name} - check that it is the "
+                f"{backup.relative_to(ROOT)} is much shorter than {path.name} - check that it is the "
                 "whole document, not a summary"
             )
 
-    def test_a_mirror_is_unambiguous_in_a_zh_cn_viewer(self):
-        for mirror in mirrors():
-            assert mirror.read_bytes().startswith(text_encoding.BOM), (
-                f"{mirror.relative_to(ROOT)} holds Chinese and must carry a BOM - run "
+    def test_a_backup_says_that_it_is_a_backup(self):
+        # The banner is what stops the next reader from editing the translation instead of the source.
+        for path, backup in zip(served_documents(), backups(), strict=True):
+            head = "\n".join(backup.read_text(encoding="utf-8-sig").splitlines()[:5])
+            assert "备份" in head and path.name in head, (
+                f"{backup.relative_to(ROOT)} does not say it is a backup of {path.name}; its first "
+                f"lines are: {head[:160]!r}"
+            )
+
+    def test_a_backup_is_unambiguous_in_a_zh_cn_viewer(self):
+        for backup in backups():
+            assert backup.read_bytes().startswith(text_encoding.BOM), (
+                f"{backup.relative_to(ROOT)} holds Chinese and must carry a BOM - run "
                 "`python scripts/fix-text-encoding.py`"
             )
-            assert not text_encoding.needs_bom(mirror), "the BOM is missing"
+            assert not text_encoding.needs_bom(backup), "the BOM is missing"
 
-    def test_a_mirror_name_is_never_a_name_dsh_looks_for(self):
-        for mirror in mirrors():
-            assert mirror.name not in INSTRUCTION_CANDIDATES, (
-                f"{mirror.name} would be injected as workspace instructions"
+    def test_a_backup_name_is_never_a_name_dsh_looks_for(self):
+        for backup in backups():
+            assert backup.name not in INSTRUCTION_CANDIDATES, (
+                f"{backup.name} would be injected as workspace instructions"
             )
-            assert mirror.name != SKILL_FILE_NAME, f"{mirror.name} would be loaded as the skill"
+            assert backup.name != SKILL_FILE_NAME, f"{backup.name} would be loaded as the skill"
 
-    def test_a_mirror_is_not_parked_in_a_skill_root(self):
-        # `discoverRoot` treats any `*.md` entry directly in a skill root as a skill, so a mirror
-        # dropped into `.dsh/skills/` itself would be served. It belongs beside the file it mirrors.
-        for mirror in mirrors():
-            parts = mirror.relative_to(ROOT).parts
+    def test_a_backup_is_not_parked_in_a_skill_root(self):
+        # `discoverRoot` treats any `*.md` entry directly in a skill root as a skill, so a backup
+        # dropped into `.dsh/skills/` itself would be served. It belongs beside the file it backs up.
+        for backup in backups():
+            parts = backup.relative_to(ROOT).parts
             if "skills" in parts:
                 index = parts.index("skills")
                 assert len(parts) > index + 2, (
-                    f"{mirror.relative_to(ROOT)} sits directly in a skill root, where DSH loads any "
+                    f"{backup.relative_to(ROOT)} sits directly in a skill root, where DSH loads any "
                     "*.md file as a skill"
                 )
 
-    def test_the_knowledge_index_ignores_a_mirror(self):
+    def test_no_code_path_reads_or_writes_a_backup(self):
+        # The direction of the rule, checked where it can break: nothing that produces or delivers a
+        # strategy may name a `.cn.md` file, so a backup can never become the live source. Comments may
+        # mention the convention - a comment is not a path.
+        for name in READERS_AND_WRITERS:
+            source = (ROOT / name).read_text(encoding="utf-8-sig")
+            code = "\n".join(
+                line for line in source.splitlines() if not line.lstrip().startswith("#")
+            )
+            assert BACKUP_SUFFIX not in code, (
+                f"{name} names a {BACKUP_SUFFIX} file; a backup is generated from the English document "
+                "and is never read or written by the tooling"
+            )
+
+    def test_the_knowledge_index_ignores_a_backup(self):
         # The corpus walks `prompts/`, so a `directive.cn.md` would be indexed beside the English
         # directive it translates and `search_knowledge` would cite the translation.
         from civ_mcp import knowledge
 
         indexed = knowledge.iter_files([ROOT / "prompts", ROOT / "docs"])
         assert indexed, "the corpus walk found nothing - this test would pass vacuously"
-        offenders = sorted(str(p.relative_to(ROOT)) for p in indexed if p.name.endswith(MIRROR_SUFFIX))
-        assert not offenders, f"the index would serve a Chinese mirror: {offenders}"
-
+        offenders = sorted(str(p.relative_to(ROOT)) for p in indexed if p.name.endswith(BACKUP_SUFFIX))
+        assert not offenders, f"the index would serve a Chinese backup: {offenders}"

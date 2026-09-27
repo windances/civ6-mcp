@@ -195,8 +195,10 @@ def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str
 # * `directive.md` - `scripts/use-strategy.ps1` copies one into the DIRECTIVE block of `SKILL.md`, so
 #   a preset holding Chinese re-injects it on the next switch: it is the same defect one step earlier.
 #
-# The Chinese copy of each lives beside it as `<name>.cn.md` (human instruction 2026-09-28), which no
-# DSH search pattern matches.
+# The English file is the source: a change that arrives in Chinese is translated into English and
+# written there (human instruction 2026-09-28). `scripts/set-strategy.*` refuses non-ASCII text for the
+# same reason. Each file has a Chinese **backup** beside it, `<name>.cn.md`, generated from the English
+# for a human reader, never edited and never a source - and no DSH search pattern matches it.
 ASCII_ONLY = ("AGENTS.md", "SKILL.md", "directive.md")
 
 # Applied to ASCII-only documents by `ascii_fix`, longest mark first so `—` never eats a `–`.
