@@ -68,6 +68,19 @@ def _parse_save_module():
     return _PARSE_SAVE or None
 
 
+def save_turn(path: pathlib.Path) -> int | None:
+    """The turn the save's **file** holds, or None when it cannot be read.
+
+    The one place a caller should ask this question. The name is not the answer: it is the
+    invariant we aim for, and it has been wrong in the field - measured 2026-09-27, four of the
+    nine newest MCP saves were named one turn low because `end_turn` built the name from the same
+    post-advance read that printed `Turn 203 -> 203` (`0_MCP_0215` holds T216, `0_MCP_0212` holds
+    T213). The game's own `AutoSave_NNNN` is different again: its name runs one ahead of the turn
+    it holds, by design.
+    """
+    return _save_meta(path, parse=True).get("turn")
+
+
 def _save_meta(path: pathlib.Path, parse: bool = True) -> dict:
     """One save: name, family, mtime, the turn in its name, and the turn in the file.
 

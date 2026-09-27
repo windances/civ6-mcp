@@ -19,9 +19,17 @@ Starts with magic bytes `CIV6`. Tagged key-value pairs using 4-byte marker IDs:
 
 | Marker | Field | Type |
 |--------|-------|------|
-| `9D 2C E6 BD` | GAME_TURN | int32 |
+| `9D 2C E6 BD` | GAME_TURN (see note) | int32 |
 | `99 B0 D9 05` | GAME_SPEED | string (e.g. `GAMESPEED_STANDARD`) |
 | `40 5C 83 0B` | MAP_SIZE | string (e.g. `MAPSIZE_SMALL`) |
+
+**Note on GAME_TURN - measured 2026-09-27, and it does not hold in this build.** Six saves
+(T216-T218, both families) were scanned: the marker occurs **once** each, at roughly byte
+88,600, and the int32 that follows it read **`2`** in every one of them. So reading the turn from
+the header is not available, and the turn the tooling reports comes from the decompressed
+timelines instead (`scripts/parse_save.py`: `meta.game_turn = first_tl[-1].turn`). `handoff` and
+`turn-of-save.py` both go through that parser, which is why a save's real turn costs about a
+tenth of a second rather than a full game load.
 
 Type bytes after marker: `1`=bool, `2`=int32, `5`=string, `6`=UTF string, `0x0A`=array.
 

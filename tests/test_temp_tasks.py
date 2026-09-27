@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import pathlib
 import re
+import shutil
 import sys
 
 import pytest
@@ -62,9 +63,16 @@ def game_turn() -> int | None:
 
     The **newest save by mtime** leads, because the saves are the only record that keeps moving while a
     human plays with no session attached - which is exactly the window in which an expiry goes
-    unnoticed (016 sat in the directory from T191 to T193 with `expires: turn 190`). The two save
-    families are named for different turns: `0_MCP_NNNN` holds turn NNNN, and `AutoSave_NNNN` holds
-    NNNN - 1 (measured 2026-09-26), so each name is read for the turn it actually holds.
+    unnoticed (016 sat in the directory from T191 to T193 with `expires: turn 190`).
+
+    **The newest save is then asked what turn it holds, and the name is only the fallback.** The
+    name is not trustworthy on its own: `0_MCP_NNNN holds turn NNNN` is an invariant the server
+    broke whenever its post-advance read was stale - measured 2026-09-27, four of the nine newest
+    MCP saves were named one turn low (`0_MCP_0215` holds T216, `0_MCP_0212` holds T213) - and the
+    clock reading one low is exactly how an expired task stays alive. `AutoSave_NNNN` is different
+    again: its name runs one ahead of the turn it holds (measured 2026-09-26). `handoff.save_turn`
+    parses the file's header/timeline instead (~0.1s for the newest save only), so the fallback is
+    reached only when the parser is unavailable - a fresh clone with no game install.
 
     The heartbeat and the diary are the fallbacks, and they are deliberately not consulted when a save
     is available: both are written *by a session*, so after a rollback they can name a turn the game
@@ -72,6 +80,7 @@ def game_turn() -> int | None:
     """
     try:
         from civ_mcp import game_launcher as gl  # noqa: PLC0415
+        from civ_mcp import handoff  # noqa: PLC0415
 
         saves = []
         for directory in (gl.SAVE_DIR, gl.SINGLE_SAVE_DIR):
@@ -80,9 +89,15 @@ def game_turn() -> int | None:
                 if found:
                     number = int(found.group(2))
                     turn = number if found.group(1) == "0_MCP_" else number - 1
-                    saves.append((path.stat().st_mtime, turn))
+                    saves.append((path.stat().st_mtime, turn, path))
         if saves:
-            return max(saves)[1]
+            newest = max(saves, key=lambda entry: entry[0])
+            try:
+                # The file is the authority; the name is the fallback.
+                real = handoff.save_turn(newest[2])
+            except Exception:  # noqa: BLE001 - an unreadable save falls back to its name
+                real = None
+            return real if isinstance(real, int) and real > 0 else newest[1]
     except Exception:  # a fresh clone has no game install, and that is not a failure
         pass
 
@@ -104,6 +119,48 @@ def game_turn() -> int | None:
         if turns:
             return max(turns)
     return None
+
+
+class TestTheClockAsksTheFileNotTheName:
+    """The name is an invariant the server has broken; the file is the authority.
+
+    Measured 2026-09-27: four of the nine newest `0_MCP_*` saves were named one turn low
+    (`0_MCP_0215` holds T216), and a clock that reads one low is exactly how an expired task stays
+    alive - the failure this whole clock exists for.
+
+    The fixture is built under the checkout's `.tmp/` rather than pytest's `tmp_path`: the sandbox
+    this suite runs in refuses to create or remove `.pytest-tmp`, and a clock test that errors out
+    on its own scaffolding proves nothing.
+    """
+
+    SCRATCH = pathlib.Path(__file__).resolve().parents[1] / ".tmp" / "clock-fixture"
+
+    def _one_save(self, name, monkeypatch, turn):
+        from civ_mcp import game_launcher as gl, handoff
+
+        shutil.rmtree(self.SCRATCH, ignore_errors=True)
+        empty = self.SCRATCH / "empty"
+        single = self.SCRATCH / "single"
+        empty.mkdir(parents=True)
+        single.mkdir()
+        (single / name).write_bytes(b"not really a save")
+        monkeypatch.setattr(gl, "SAVE_DIR", str(empty))
+        monkeypatch.setattr(gl, "SINGLE_SAVE_DIR", str(single))
+        monkeypatch.setattr(handoff, "save_turn", lambda path: turn)
+
+    def test_a_stale_name_does_not_hold_the_clock_back(self, monkeypatch):
+        self._one_save("0_MCP_0215.Civ6Save", monkeypatch, 216)
+        assert game_turn() == 216
+
+    def test_an_unreadable_save_falls_back_to_the_name_rule(self, monkeypatch):
+        self._one_save("0_MCP_0215.Civ6Save", monkeypatch, None)
+        assert game_turn() == 215
+
+    def test_the_autosave_family_keeps_its_own_offset(self, monkeypatch):
+        # `AutoSave_NNNN` holds NNNN - 1. The file answer is ignored here only because the parser
+        # is patched to fail; with a real file it would answer 216 anyway.
+        self._one_save("AutoSave_0217.Civ6Save", monkeypatch, None)
+        assert game_turn() == 216
 
 
 def named_tasks(text: str) -> set[str]:

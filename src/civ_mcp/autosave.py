@@ -63,3 +63,20 @@ def get_autosave_for_turn(turn: int) -> str:
 def saves_work_on_this_platform() -> bool:
     """Whether Network.SaveGame writes custom saves reliably."""
     return not _IS_LINUX
+
+
+def verified_save_name(written: str, real_turn: int | None) -> str | None:
+    """The name an MCP save should carry, given the turn its **file** actually holds.
+
+    `0_MCP_NNNN` is an invariant the recovery verification rests on (`game_launcher._save_turn`,
+    `handoff.save_turn`), and it broke in the field: the name is built from the same post-advance
+    read that sometimes prints `Turn 203 -> 203`, so measured 2026-09-27 four of the nine newest
+    MCP saves held one turn more than their name claimed (`0_MCP_0215` holds T216, `0_MCP_0212`
+    holds T213). Returns None when the name is already right, when the file's turn could not be
+    read, or when the name is not an MCP save - the game's own `AutoSave_NNNN` deliberately runs
+    one ahead of the turn it holds, and renaming it would break that.
+    """
+    if real_turn is None or not written.startswith("0_MCP_"):
+        return None
+    expected = f"0_MCP_{real_turn:04d}"
+    return None if written == expected else expected

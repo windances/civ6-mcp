@@ -35,6 +35,16 @@ loaded. Both families matter and neither is authoritative: "Continue Game" resum
 file is **newest by time**, so that is what the handoff recommends, and a newer file that is
 *not* the furthest position is the rollback smell worth flagging.
 
+**`0_MCP_NNNN` broke that invariant in the field, so the file is asked first.**
+Measured 2026-09-27 on 109 saves: the `AutoSave` family was consistent in 100 of 100 (name = turn
+plus one), while **four of the nine newest `0_MCP` files were named one turn low** —
+`0_MCP_0206` holds T207, `0_MCP_0209` holds T210, `0_MCP_0212` holds T213, `0_MCP_0215` holds T216.
+The cause is in `end_turn`: the name is built from the same post-advance read that sometimes prints
+`Turn 203 -> 203` (T200/203/206/209/212/215 all did). Two things now hold the line: `end_turn`
+reads the saved file's turn and **renames it** when the name disagrees, and both the agent's expiry
+clock (`tests/test_temp_tasks.game_turn`) and the handoff read the turn **from the file**
+(`handoff.save_turn`, about a tenth of a second per save) with the name only as a fallback.
+
 **Ask where the game is before touching anything:**
 ```
 get_game_status   # not_running / starting / in_game / leader_screen / main_menu / loading / tuner_busy

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import pathlib
 import time
 from typing import TYPE_CHECKING
 
@@ -2453,6 +2454,44 @@ def _check_save_scumming(gs: GameState) -> tuple[list[lq.TurnEvent], bool]:
     return events, False
 
 
+def _verify_mcp_save_name(written: str) -> None:
+    """Rename the MCP autosave when its file holds a different turn than its name claims.
+
+    The name is built from `turn_after`, and that read is sometimes stale - it is the same one
+    that prints `Turn 203 -> 203` on a turn that really advanced. Measured 2026-09-27: four of the
+    nine newest `0_MCP_*` saves were named one turn low (`0_MCP_0215` holds T216), while
+    `0_MCP_NNNN holds turn NNNN` is exactly what `docs/game-recovery.md` and the human's
+    `resume-game.ps1` verification rest on. The file is asked, and the name is corrected to match;
+    a save the file cannot be read from is left alone rather than guessed at.
+    """
+    from . import handoff
+    from .autosave import verified_save_name
+    from .game_launcher import SINGLE_SAVE_DIR
+
+    path = pathlib.Path(SINGLE_SAVE_DIR) / f"{written}.Civ6Save"
+    if not path.exists():
+        return
+    try:
+        real_turn = handoff.save_turn(path)
+    except Exception:  # noqa: BLE001 - an unreadable save is left with the name it has
+        log.debug("MCP autosave name check failed for %s", written, exc_info=True)
+        return
+    corrected = verified_save_name(written, real_turn)
+    if corrected is None:
+        return
+    try:
+        path.rename(path.with_name(f"{corrected}.Civ6Save"))
+        log.warning(
+            "MCP autosave %s holds T%s, not T%s - renamed to %s so the name stays an invariant",
+            written,
+            real_turn,
+            written.removeprefix("0_MCP_").lstrip("0"),
+            corrected,
+        )
+    except OSError:
+        log.warning("MCP autosave %s holds T%s but could not be renamed", written, real_turn)
+
+
 async def execute_end_turn(gs: GameState) -> str:
     """End the turn with snapshot-diff event detection."""
     # 0a. Run aborted due to save scumming — refuse to advance
@@ -3545,7 +3584,9 @@ async def execute_end_turn(gs: GameState) -> str:
 
     if turn_after is not None and saves_work_on_this_platform():
         try:
-            await save_game(gs.conn, f"0_MCP_{turn_after:04d}")
+            written = f"0_MCP_{turn_after:04d}"
+            await save_game(gs.conn, written)
+            _verify_mcp_save_name(written)
             cleanup_old_autosaves(keep=8)
         except Exception:
             log.debug("MCP autosave failed for T%s", turn_after, exc_info=True)
