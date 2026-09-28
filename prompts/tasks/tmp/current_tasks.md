@@ -40,6 +40,7 @@ none of those holds: 布鲁塞尔 is a city-state again, 哈勒姆 is still the 
 set at T218 is being rolled back by `.tools/rollback-tasks.py`.
 | `023-dutch-siege-corps.md` | 2026-09-28 | turn 272 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
 | `024-take-brussels.md` | 2026-09-28 | turn 241 | take Brussels - restored by the rollback to turn 218; re-read the file before acting | **Brussels is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
+| `025-two-scouts-to-sea-contact.md` | 2026-09-28 | turn 248 | two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight | **`get_diplomacy` lists a civilization it did not list at turn 220 (it lists five there), and both |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 
