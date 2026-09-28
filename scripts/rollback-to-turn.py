@@ -1,6 +1,6 @@
 """Roll the game back to a chosen turn: archive the future, restore the past, then restart.
 
-A rollback is four jobs, and doing only the first one is how a session ends up confused:
+A rollback is five jobs, and doing only the first one is how a session ends up confused:
 
   1. **Archive the future.** Every autosave after the target turn is copied into a
      timestamped folder with a manifest, so the abandoned branch can be replayed, compared
@@ -9,12 +9,18 @@ A rollback is four jobs, and doing only the first one is how a session ends up c
   2. **Archive the diary.** The diary is keyed per game, so the abandoned branch's rows sit
      in the same file the agent reads as memory. They are split off at the boundary
      (``.tools/archive-branch.py`` does the split; this calls it).
-  3. **Restore the rules the branch retired.** A ``once: true`` goal is *removed* from
+  3. **Roll the temporary tasks back too.** A task retired after the target turn recorded a
+     `done when:` the rollback has just un-done - a captured city is a city-state again - so
+     the file has to come back into force or the human's instruction is silently withdrawn
+     (measured 2026-09-28: the rollback to T218 left 024-take-brussels retired while
+     布鲁塞尔 was a city-state again). ``.tools/rollback-tasks.py`` restores them and rebuilds
+     the register and `AGENTS.md`'s `IN FORCE NOW` line; `--no-tasks` skips it.
+  4. **Restore the rules the branch retired.** A ``once: true`` goal is *removed* from
      ``prompts/checks/turn-checks.md`` when it is met, replaced by a comment naming the
      archived copy. Behind that turn the rule has to come back, or the target position is
      silently missing a directive it was supposed to be following (2026-09-25: T117 -> T99
      left the ram/tower goal retired at a T100 that no longer existed).
-  4. **Restart the right way for the state the game is actually in.** That is not one
+  5. **Restart the right way for the state the game is actually in.** That is not one
      command: with a game in progress the main menu is not on screen, so a bare load would
      wait out its timeouts - the launcher's own guard refuses it - while a game already at
      the main menu needs no restart at all, and a game that is not running needs a launch
@@ -524,6 +530,11 @@ def main() -> int:
     parser.add_argument(
         "--no-checks", action="store_true", help="skip restoring goals the branch achieved"
     )
+    parser.add_argument(
+        "--no-tasks",
+        action="store_true",
+        help="skip rolling the temporary tasks back (they follow the boundary by default)",
+    )
     args = parser.parse_args()
     target = args.turn
 
@@ -617,6 +628,27 @@ def main() -> int:
                 print(f"unretired     {label}")
         else:
             print(f"nothing       no retired goal was recorded after T{target}")
+
+    if not args.no_tasks:
+        print("\n--- task state ---")
+        from civ_mcp import task_rollback as task_rollback_mod
+
+        plan = task_rollback_mod.build_plan(ROOT, target)
+        print(f"tasks retired after T{target}: {len(plan.restores)}")
+        for task in plan.restores:
+            print(f"   restore  {task.name:<34s} retired T{task.retired_at}")
+        for task in plan.added_after:
+            print(f"   keep     {task.name:<34s} added T{task.anchor} - re-read it and re-count "
+                  f"its deadline from T{target}")
+        for first, second in plan.overlaps():
+            print(f"   OVERLAP  {first} and {second} share a done-when: retire one deliberately")
+        report = task_rollback_mod.apply_plan(ROOT, plan)
+        for name, _, source in report.restored:
+            print(f"restored      {name} (why from {source})")
+        if report.backup:
+            print(f"backup        {report.backup.relative_to(ROOT)}")
+        for note in report.notes:
+            print(f"note          {note}")
 
     archive = archive_saves(saves, target, state["turn"], stamp, args.save)
     print(f"\narchived      {archive.relative_to(ROOT)}")

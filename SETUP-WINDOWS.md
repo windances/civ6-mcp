@@ -805,13 +805,17 @@ holds, end the turn - the next turn starts with full moves. Do not restart the g
 ### Rolling back to a chosen turn
 
 `scripts/rollback-to-turn.py TURN` is the whole procedure in one place, because a rollback
-is four jobs and doing only the first is how a session ends up confused:
+is five jobs and doing only the first is how a session ends up confused:
 
 ```
 .venv\Scripts\python.exe scripts\rollback-to-turn.py 59              # plan only, touches nothing
 .venv\Scripts\python.exe scripts\rollback-to-turn.py 59 --apply      # archive + roll back
 .venv\Scripts\python.exe scripts\rollback-to-turn.py 59 --archive-only
 .venv\Scripts\python.exe scripts\rollback-to-turn.py 59 --save "0A_GROUND_CONTROL"
+
+# 任务状态也可单独回退（第三件事单独跑；先看不带 --apply 的计划）
+.venv\Scripts\python.exe .tools\rollback-tasks.py 59
+.venv\Scripts\python.exe .tools\rollback-tasks.py 59 --apply --skip 020
 ```
 
 1. **Archive the future.** Every save after the target turn is copied into
@@ -822,14 +826,24 @@ is four jobs and doing only the first is how a session ends up confused:
    gone - what existed at archive time is what is there.
 2. **Archive the diary.** `.tools/archive-branch.py` splits the per-game diary at the
    boundary, so the abandoned branch's rows stop being read as memory of the current one.
-3. **Un-retire the rules the branch retired.** A `once: true` goal is *removed* from
+3. **Roll the temporary tasks back too.** 临时任务是**文件**，所以它们不会自己跟着回退：一个在
+   目标回合之后退役的任务，它记录的 `done when:` 已经被这次回退撤销了（打下的城又变回城邦、
+   过掉的截止又回到未来），留在 `done/` 里就是把人的指令悄悄撤回。`.tools/rollback-tasks.py`
+   把**退役回合 > 目标回合**的文件移回 `prompts/tasks/tmp/`，并重建登记表与 `AGENTS.md` 的
+   `IN FORCE NOW` 行（`--no-tasks` 跳过）。同一个工具会打印**在目标回合之后才添加**的任务及其
+   `expires:` 锚定回合——那些是人的指令，回退不撤销，但内容和截止都要按新位置复核；`--strict`
+   才会把它们一并撤下（那才是"精确重建 T218 当时的任务集"）。目标回合当时**在 force** 的任务
+   集合 = `added ≤ N < retired`，两个回合都写在各文件自己的表头里（`expires:` 的 `from T<n>` 与
+   文件名里的 `-done-T<n>`/`-expired-T<n>`）。实测 2026-09-28：T301 → T218 那次回退没有这一步，
+   `024-take-brussels` 留在 `done/` 而布鲁塞尔又成了独立城邦，人的「占领布鲁塞尔」无处承载。
+4. **Un-retire the rules the branch retired.** A `once: true` goal is *removed* from
    `prompts/checks/turn-checks.md` when it is met, replaced by
    `<!-- achieved T<turn>: <id> (original in archive/<file>) -->`. Behind that turn the rule
    has to come back or the target position silently loses a directive it was supposed to be
    following (`--no-checks` skips it). Measured 2026-09-25: T117 -> T99 left the
    ram/tower goal retired at a T100 that no longer existed on the branch, and five tests that
    read the shipped file went red for it.
-4. **Restart the way the state calls for.** The script asks the game where it is and picks:
+5. **Restart the way the state calls for.** The script asks the game where it is and picks:
 
 | state | action | why |
 |---|---|---|
@@ -2010,6 +2024,7 @@ makes it reversible.
 | File | Purpose |
 |---|---|
 | `.tools/archive-branch.py` | split a diary at a turn boundary; backs up first, verifies by read-back, `--dry-run` available |
+| `.tools/rollback-tasks.py` | roll the temporary-task state back to a turn: restore every task retired after it, keep (and report the anchor of) ones added after it, rebuild the register and `IN FORCE NOW`; `--strict` and `--skip` for the policy calls |
 | `.tools/compare-branches.py` | `--milestones` for first-appearance targets, `--at N` / no args for side-by-side metrics on overlapping turns |
 | `.tools/test-taskfile.ps1` | 12 checks for the PowerShell launcher: exit codes, the newline and double-quote guards, that a bare argument binds to the task, that the pointer is one ASCII line naming the right file, and that the Chinese prompt still carries its BOM |
 | `.tools/ensure-utf8-bom.ps1` | put back a dropped UTF-8 BOM, or `-Check` for one without writing |
