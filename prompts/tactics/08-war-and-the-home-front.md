@@ -62,6 +62,14 @@ destination: measured T109, **250 gold went to one Archer → Crossbowman upgrad
 went 418 → 188 in a single turn. That was the right purchase — it is the upgrade that takes an
 Archer's 9–11 against a CS 35 garrison to 35 — and holding 300 "for later" would not have been.
 
+**And count the offensives, not only the units.** Two overseas expeditions at once took the treasury
+through zero to **−710 gold** across T264–T273 (`carrying-capacity` red on five of those turns) and
+**two units were disbanded** to stop the bleed — while the army those units came from was besieging a
+city. One offensive and one screen is the affordable shape; a second offensive is a decision to pay
+for the first one with units that already exist, and the diary has to say which of the two it chose
+when they collide (`prompts/tasks/tmp/023-dutch-siege-corps.md` carries the instruction this was
+learned under).
+
 **The war city builds the war, and the other cities build everything else.** Measured T142: four of
 five cities were producing Builders (~320 hammers of civilian production) with a war running, a
 Catapult lost and the Trebuchet upgrade still on the table — and one of those four was 西安, the city

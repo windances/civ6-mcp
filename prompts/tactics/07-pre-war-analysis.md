@@ -405,6 +405,16 @@ For a **city**:
   it takes.
 - **Loyalty pressure**: distance to the nearest *enemy* city and its population.
 - **The approach**: chokepoints, river crossings, and whether siege units have line of sight at all.
+- **Distance and water decide more than the defence does.** A coastal city within a few tiles of a base
+  we hold is the cheap kind of target: 哈勒姆's walls (100) went to 0 under a Frigate alone in six turns
+  (T261-T266, about 22 a turn) and the city fell **thirteen turns from Gate 0**. The other ending is
+  measured too: an inland target thirty to forty tiles away still had its artillery 13-22 tiles out
+  when a thirty-three-turn window expired, with `get_staging_plan` reporting nine units unplaced and
+  "0 shooter(s) in position" (021, T237-T270 - the window, not the enemy, is what ended it). **Run
+  `get_staging_plan` before the siege task's deadline is written and quote its timetable**: the turn
+  the last shooter is in place is the earliest the assault can open, and the march is most of the plan.
+  A target that needs more than about fifteen turns of march is a different task with a different
+  budget, not the same task with a later date.
 - **Who else is watching**: see gate 5.
 
 For a **camp**, the ordering is by what the camp is doing to us, not by geography:

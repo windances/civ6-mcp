@@ -514,3 +514,46 @@ class TestTheAssemblyLeg:
         assert "(53,40)" not in spare[0]
         assert "(52,39)" in spare[0]
 
+
+class TestTheIssueOrder:
+    """Which move call goes first - a fact no single row of the table states.
+
+    A column ordered nearest-first queues behind itself: measured T228-T299, **232
+    `STOPPED_MID_PATH` results across 72 turns** (`T257`-`T259` alone: 15, 17, 19), and every plan
+    left 6-9 units unplaced (T254: 9 of 10, T260: 7 of 10, T283: 6 of 9). The plan now names the
+    order, furthest ring tile first.
+    """
+
+    def _plan(self):
+        units = [
+            unit(11, "UNIT_BOMBARD", "siege", x=60, y=36, moves=2),
+            unit(22, "UNIT_INFANTRY", "melee", x=60, y=37, moves=2),
+        ]
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=56, y=42, distance=1),
+        ]
+        options = [
+            m.StagingOption(unit_id=11, x=55, y=41, turns=1, this_turn=False, path_len=5),
+            m.StagingOption(unit_id=22, x=56, y=42, turns=0, this_turn=True, path_len=3),
+        ]
+        return plan(units, options, ring)
+
+    def test_the_furthest_ring_tile_is_named_first(self):
+        built = self._plan()
+        text = st.render(st.assign(built), built)
+        order = [line for line in text.splitlines() if "ISSUE THE MOVE CALLS" in line]
+        assert order, "the plan has to say which call goes first"
+        # The siege unit holds the d2 firing tile and the melee the d1 tile, so the shooter's
+        # call comes first - the same reason `tactics/04` says to fill the last firing tile first.
+        assert order[0].index("#11") < order[0].index("#22")
+        assert "STOPPED_MID_PATH" in order[0], "the order carries the measurement that produced it"
+
+    def test_one_placed_unit_has_no_order_to_give(self):
+        units = [unit(22, "UNIT_INFANTRY", "melee", x=60, y=37, moves=2)]
+        ring = [m.StagingRingTile(x=56, y=42, distance=1)]
+        options = [m.StagingOption(unit_id=22, x=56, y=42, turns=0, this_turn=True)]
+        built = plan(units, options, ring)
+        text = st.render(st.assign(built), built)
+        assert "ISSUE THE MOVE CALLS" not in text, "one call has only one order"
+

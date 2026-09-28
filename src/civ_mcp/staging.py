@@ -390,6 +390,20 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             " assault opens with half the train in position — measured T194 (2/3 shooters) and"
             " T215 (2/5, one Bombard still 21 tiles away)."
         )
+    # The order the move calls go in, which no single row says. A column ordered nearest-first queues
+    # behind itself: measured T228-T299, 232 `STOPPED_MID_PATH` results across 72 turns, and every
+    # plan that left units unplaced named 6-9 of them.
+    ordered = sorted(
+        (a for a in result.placed if a.tile),
+        key=lambda a: (-a.tile.distance, a.turns, a.unit.unit_id),
+    )
+    if len(ordered) > 1:
+        lines.append(
+            "  ISSUE THE MOVE CALLS IN THIS ORDER - furthest ring tile first, nearest last: "
+            + " -> ".join(f"#{a.unit.unit_id}" for a in ordered)
+            + ". Re-read `get_units` between them: a unit that stops mid-path blocks the one behind"
+            " it, which is how 232 `STOPPED_MID_PATH` results happened over T228-T299."
+        )
     for a in result.placed:
         when = "this turn" if a.this_turn else f"T+{a.turns}"
         rally = _rally_option(plan, a.unit, ring_tiles)

@@ -125,7 +125,7 @@ walk-in, and the guard within two tiles is the enemy the shooters are there for.
 tiles from the nearest city with no unit nearby is a job for a unit already out there (file 7, C4),
 not for the main army: say so rather than marching the train across the map.
 
-Build it, then hold it to these three rules:
+Build it, then hold it to these four rules:
 
 1. **No two units may be sent to the same tile.** A second order onto an occupied tile is refused
    `STACKING_CONFLICT` and the unit spends the turn where it was. A plan with a shared tile is not a
@@ -144,6 +144,35 @@ Build it, then hold it to these three rules:
    screen on the tile nearest the enemy, and move the shooters that have **≥2 movement points left
    after arriving** so they can fire the turn they land. A shooter that spends both points walking
    fires next turn — measured four turns running, T155–T158.
+
+4. **Issue the calls furthest-first.** The tiles are *assigned*, not *ordered*: send the unit holding
+   the furthest ring tile first and the nearest one last, or the column queues behind itself and stops
+   mid-path. Measured T228-T299: **232 `STOPPED_MID_PATH` results across 72 turns** (T257-T259 alone:
+   15, 17, 19), with T234's eight orders producing eight stops one to three tiles short, and every
+   plan leaving 6-9 units unplaced (T254: 9 of 10). `get_staging_plan` now prints the sequence it wants
+   (`ISSUE THE MOVE CALLS IN THIS ORDER`); issue them in that order, re-read `get_units` between calls,
+   and when one stops early, re-issue that unit before moving the next.
+
+### 3b-1 — the six traps that override any plan on this map
+
+Every siege task used to restate these six, and by T271 one of them was **wrong**. They live here now,
+once, so a task can point at them instead of copying them:
+
+1. **A siege unit at d1 fires.** The old note ("a siege unit posted at d1 is refused") is corrected:
+   哈勒姆's Bombard resolved `RANGE_ATTACK ... dist:1` (T266-T271). What is true is narrower — **a d2
+   tile is not a d1 tile for the capture move**: a Cuirassier ordered from (68,30) answered
+   `STOPPED_SHORT ... 2 tiles away` while only (69,28)/(69,30) were real d1 (T237).
+2. **`arrive T+n` does not know our own units jam the corridor.** One move per call, `get_units`
+   between them, furthest-first (rule 4): eight units ordered, eight `STOPPED_MID_PATH` (T234).
+3. **A firing tile is a proposal until a shot from it succeeds** — and a refusal is not a verdict on
+   the tile; re-test a refused tile a turn later (T194).
+4. **A shooter that spends its movement arriving cannot fire** (`NO_MOVES|Ranged attacks require
+   movement`, T194 and T236; `NO_LOS` twice at T292). Check the terrain cost (`[mv:2]`, `[mv:3]`)
+   before posting a 2-move siege unit.
+5. **Entering a Zone of Control costs that turn's attack** (`ZOC|... cannot attack until next turn`,
+   T194, T234, T254, T260, T283).
+6. **A unit id is not durable across an upgrade** — re-read `get_units` after every `upgrade_unit`
+   (T200: an order aimed at an upgraded unit was executed by a different one; T234).
 
 **A unit with no tile in the plan is not left idle.** It is given the rear of the ring: occupying the
 hexes the city still draws its supply line from (the `SIEGE PROGRESS` block counts them — 沃罗涅什

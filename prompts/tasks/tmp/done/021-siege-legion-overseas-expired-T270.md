@@ -164,3 +164,25 @@ a garrison on a tile), and a rule naming a metric the server does not compute re
 every turn. What no rule can hold - and what this file therefore exists for - is the human's
 **conditional**: form the expedition, land it, analyse the target, **and let the analysis decide whether
 the assault happens at all**.
+
+## Outcome - the window closed on the sea lane, not on the walls (expired T270)
+
+The legion never got its artillery into position and never read a target's four numbers, so **neither
+ending in `done when:` holds** and the file was retired as expired. The record, from the session logs
+and the diary:
+
+| fact | reading |
+|---|---|
+| the target | **Sumer, (27,24)** - thirty to forty tiles from the port, inland, across water |
+| the one staging plan that was run | **T254: 18 ring tile(s), 1 unit placed, 9 unplaced** - nine of the ten were out of reach inside two turns |
+| where the artillery was at expiry | **13-22 tiles out**, `0 shooter(s) in position` |
+| the treasury | through zero to **-710 gold** over T264-T273 (`carrying-capacity` red at T264, T265, T272, T273); **two units were disbanded** to stop the bleed |
+| the two fronts it shared the window with | 布鲁塞尔 (T237) and 哈勒姆 (T257-T271) were fought in the same span, and 022's `overrides:` had already ruled that when the two collide **021 keeps its expedition and the home file takes what is left** |
+| what actually blocked it | the **distance and the sea lane**, not the enemy: the Dutch navy owned the approach from T223, the target stayed 30-40 tiles inland, and the window ran out while the train was still walking |
+
+**The lesson, and where it now lives:** a siege task's deadline must be counted from a
+`get_staging_plan` timetable rather than from the plan's own estimate of the march. It is written into
+`prompts/tactics/07-pre-war-analysis.md` ("Target selection": coastal and near beats inland and far) and
+into 023's `expires:` arithmetic. The legion was never lost in battle - it was still on the road when
+the clock ran out, which is the failure mode the next campaign's deadline was changed for.
+

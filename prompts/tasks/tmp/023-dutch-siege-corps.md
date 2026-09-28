@@ -103,11 +103,10 @@ before it is ordered, not paid for.
 
 `get_map_area` radius 3 for the ring and the supply hexes; the four numbers with the source named;
 `get_staging_plan(city_x, city_y)` and the written table **before the first `unit_action`**. The six
-overrides this map has already paid for all still bind: a siege unit posted at d1 is refused for
-*firing* only in the old note (see 3 above, it works); `arrive T+n` does not know our own units jam the
-corridor (one move per call, `get_units` between them); a firing tile is a proposal until a shot from
-it succeeds; a shooter that spends its movement cannot fire; entering a Zone of Control costs that
-turn's attack; a unit id is not durable across an upgrade.
+overrides this map has already paid for live in `prompts/tactics/04-staging-out-of-range.md` step 3b-1 -
+read them there rather than restating them, and note that **the d1 note is corrected**: a siege unit
+firing from d1 works (measured at 哈勒姆, `RANGE_ATTACK ... dist:1`), while a d2 tile is not a d1 tile
+for the capture move.
 
 ## Sequencing - and it is a proposal until the list is read
 
