@@ -1,12 +1,13 @@
 ﻿# TEMP TASK 023 - the Dutch campaign: take every city the Netherlands holds, with the army we have
 
 added:     2026-09-28 (human instruction: 新增任务：利用现有部队，组建攻城兵团，占领所有荷兰的城市)
-expires:   turn 280 - fifty-four turns from T226, where this branch stands (read from the heartbeat on
-           2026-09-28): assemble and upgrade 2-4 turns, then 6-12 turns per city for the **six** the
-           Netherlands holds, the span 021 taught us to measure. A hard stop, and the arithmetic is the
-           point: 021 expired because its deadline was set without measuring the distance. **This is the
-           one number here that is inherited rather than read** - re-count it on the first full turn of
-           the campaign from the real coordinates and say in the diary whether T280 still holds.
+expires:   turn 272 - fifty-four turns from T218, the position this branch was rolled back to (read from
+           the save on 2026-09-28): assemble and upgrade 2-4 turns, then 6-12 turns per city for the
+           **six** the Netherlands holds, the span 021 taught us to measure. A hard stop, and the
+           arithmetic is the point: 021 expired because its deadline was set without measuring the
+           distance. **This is the one number here that is inherited rather than read** - re-count it on
+           the first full turn of the campaign from the real coordinates and say in the diary whether
+           T272 still holds.
 done when: **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists
            `Cities (N): name pop P (x,y) walls W` for every city it holds, so the task ends when
            that line names none - and, if the last one falls, when the Netherlands no longer appears
@@ -44,31 +45,34 @@ scope:     Every Dutch city, in the order the campaign reaches them, their rings
            (they are ours and `hold-what-you-take` owns them), not 俄罗斯 or the west lane, not a
            city-state, not a barbarian camp, and not a second offensive anywhere.
 
-## This file was written on a run that was rolled back - read every state line that way
+## This file was written on runs that were rolled back - read every state line that way
 
-The corps census and the two sieges below were measured while the match stood at **T281 of a run that
-no longer exists** (that run took 哈勒姆 at T271 and 布鲁塞尔 at T237). This branch stands at **T226**,
-where neither of those is true: 哈勒姆 is still theirs, our only conquest on their side is 布鲁塞尔
-(T224), and the Dutch still hold **six** cities.
+Two rollbacks stand behind this file. The corps census and the two sieges below were measured while the
+match stood at **T281 of a run that no longer exists** (that run took 哈勒姆 at T271 and 布鲁塞尔 at
+T237). Then the attempt that started from **this same T218 save** played to T301 and was rolled back to
+T218 as well - and *that* attempt is where the readings in the next table come from; it is also the one
+that took 布鲁塞尔, at T224.
 
-What carries over is the **instruction**, the **shape of the corps**, the **deadline accounting**, and
-the **lessons** (the six staging overrides, the d1 shot, walls-versus-pool, the stale post-combat
-prose). What does **not** carry over is any statement about whose city something is, or what a check
-reads. Every line below that comes from the other run is marked `[rolled-back run]` and is evidence,
-not state - the state is whatever this turn's own reads say, and **the first job is to read them**.
+So at the position this branch now holds: 哈勒姆 is theirs, **布鲁塞尔 is an independent city-state
+again**, and the Dutch hold **six** cities. What carries over is the **instruction**, the **shape of the
+corps**, the **deadline accounting**, and the **lessons** (the six staging overrides, the d1 shot,
+walls-versus-pool, the stale post-combat prose). What does **not** carry over is any statement about
+whose city something is, or what a check reads. Every line below that comes from a run other than this
+one is marked `[rolled-back run]` or `[previous attempt]` and is evidence, not state - the state is
+whatever this turn's own reads say, and **the first job is to read them**.
 
-## What this branch has actually read
+## What has been read at this position - by the attempt that was rolled back
 
 | fact | reading | source |
 |---|---|---|
-| the Netherlands | **6 cities**, military **176** vs our **824** (0.2x), at war with us: `荷兰 (威廉明娜) — WAR (-35) **AT WAR** [player 2]` | `get_diplomacy` at T220, this run |
-| the only Dutch city seen | **乌得勒支 - pop 6, (74,23), walls 200** - and five more still in fog: the line reads `Cities (6): 乌得勒支 pop 6 (74,23) walls 200 + 5 in fog` | `get_diplomacy` at T220, this run |
-| 哈勒姆 | **theirs.** The T271 capture is the rolled-back run's record (`done/022-take-haarlem-done-T271.md`); nothing of theirs has fallen on this branch | this branch's `get_diplomacy` list |
-| our forward base | **布鲁塞尔, ours since T224** - task 024 was retired there, the capture move came from (69,28), the tile north of its centre, and its queue is running (a Water Mill finished T225) | T224/T225 log of this run; `done/024-take-brussels-done-T224.md` |
-| our treasury and size | **289g at +16/t**, 69 units, 19 cities | `get_game_overview` at T219, this run |
+| the Netherlands | **6 cities**, military **176** vs our **824** (0.2x), at war with us: `荷兰 (威廉明娜) — WAR (-35) **AT WAR** [player 2]` | `get_diplomacy` at T220, the previous attempt - re-read it |
+| the only Dutch city seen | **乌得勒支 - pop 6, (74,23), walls 200** - and five more still in fog: the line reads `Cities (6): 乌得勒支 pop 6 (74,23) walls 200 + 5 in fog` | `get_diplomacy` at T220, the previous attempt |
+| 哈勒姆 | **theirs.** The T271 capture is the rolled-back run's record (`done/022-take-haarlem-done-T271.md`); nothing of theirs has fallen at this position | this position's `get_diplomacy` list |
+| a forward base on their side | **none yet.** 布鲁塞尔 was taken at T224 on the previous attempt, the capture move coming from (69,28) - but at this position it is a city-state again, so **the first city taken here becomes the base** | T224 log of the previous attempt; task 024 |
+| our treasury and size | **289g at +16/t**, 69 units, 19 cities | `get_game_overview` at T219, the previous attempt - re-read it |
 | their coast battery | `[rolled-back run]` a Bombard working (70,19)-(70,20) that killed five of our units, fired on by our Battleship and by Haarlem's walls | that run's T276-T281 diary |
 | our corps' standards | **re-read this turn** - `siege-train` and `ranged-mass` are the two checks that decide the shape of the corps. The values the other run recorded (2/3 and 2/4) are that run's, at T281 | this turn's `end_turn` result |
-| their interior | **never read on this branch** - one city is visible and five are not, so the target list, the distances and the deadline are all still measurements to make | `get_diplomacy` at T220 |
+| their interior | **never read at this position** - one city is visible and five are not, so the target list, the distances and the deadline are all still measurements to make | `get_diplomacy` at T220, the previous attempt |
 
 **Gate 0 is one call nobody has made for the whole campaign: `get_diplomacy`'s list for 荷兰.**
 It prints every city the Netherlands holds as `name pop P (x,y) walls W` (`src/civ_mcp/narrate.py:805-814`),
@@ -122,10 +126,11 @@ before it is ordered, not paid for.
    attack list reads the garrison for free, which is how 布鲁塞尔's was found on this branch.
 6. **The post-combat prose is stale; the pooled `walls:` / `city hp:` fields are the record**, and a
    later read is the fact.
-7. **This branch's own capture is the nearest example**: 布鲁塞尔 taken at T224 with the capture move
-   from (69,28) - the tile north of the centre, one tile out - after the train assembled from the T220
-   save. Read its ledger in the diary before planning the next city; it is the only siege on this
-   branch that is not someone else's.
+7. **`[previous attempt]` The nearest worked example is 布鲁塞尔, taken at T224 on the attempt this
+   position was rolled back from**, with the capture move from (69,28) - the tile north of the centre,
+   one tile out - after the train assembled from this same T218 save. Read its ledger in the diary
+   (`docs/task-history.md` has the prose record) before planning the next city: it is the most recent
+   siege of this map, and the city is a city-state again here.
 
 ## Gate 0, per city, as the corps arrives
 
@@ -139,10 +144,11 @@ for the capture move.
 ## Sequencing - and it is a proposal until the list is read
 
 **Nearest and coastal first**, one city at a time, and **each captured city becomes the next forward
-base**: 布鲁塞尔 already is one - it is on their side of the strait, its queue is running, and it is
-where a garrison can heal between phases (read its walls and its strike this turn rather than assuming
-either: a captured city's walls come down with the capture). 乌得勒支 (74,23) is the one city we have
-seen, walls 200 and pop 6, and it is therefore the default first target - but write the planned order from the actual `(x,y)`
+base**: there is none yet - 布鲁塞尔 was the previous attempt's base and is a city-state again at this
+position, so the first city taken here is the one to garrison, queue and heal from (read its walls and
+its strike the turn it falls rather than assuming either: a captured city's walls come down with the
+capture). 乌得勒支 (74,23) is the one city we have seen, walls 200 and pop 6, and it is therefore the
+default first target - but write the planned order from the actual `(x,y)`
 coordinates and the measured distances, not from this file's guess, and re-count the deadline from it
 (below).
 
@@ -163,12 +169,13 @@ there. Then, in order:
 5. **Re-read the city a call later** rather than trusting the immediate reply, and keep the pooled
    fields as the ledger.
 
-## Hold - the half this branch has barely started
+## Hold - the half this position has not started
 
-Only 布鲁塞尔 has been held on this branch, and only since T224, so its loyalty line is the one to
-watch and to report every turn. `[rolled-back run]` 哈勒姆 at T281 read **loyalty 44/100 at -0.5 a
-turn**, with a governor (维克多), an Infantry garrison and the `殖民地办事处` policy already in place -
-that is the shape of the treatment, not this branch's numbers. Every city this campaign takes gets it
+**Nothing of theirs has been held here yet**: the previous attempt held 布鲁塞尔 from T224 until it was
+rolled back, so its loyalty line is the one that attempt watched and this one has to start watching from
+the first capture. `[rolled-back run]` 哈勒姆 at T281 read **loyalty 44/100 at -0.5 a turn**, with a
+governor (维克多), an Infantry garrison and the `殖民地办事处` policy already in place - that is the
+shape of the treatment, not this position's numbers. Every city this campaign takes gets it
 **the turn it falls**: `city_action keep`, its queue set, a governor or a garrison, and the anti-flip
 policy where it fits. A city that flips back is a campaign loss to report with its numbers, not a
 detail to leave out. **The durable answer to Dutch loyalty pressure is another Dutch city**, which is
@@ -176,12 +183,12 @@ also this instruction.
 
 ## The deadline is a measurement, not a hope
 
-`expires: turn 280` is fifty-four turns from T226: assembly and the two upgrades 2-4, then **6-12 turns
+`expires: turn 272` is fifty-four turns from T218: assembly and the two upgrades 2-4, then **6-12 turns
 per city** measured from `[rolled-back run]` 哈勒姆's thirteen (six of them the naval wall phase) for
 the **six** cities the Netherlands holds here. **021 expired because its deadline was set without
 measuring the distance**, and the lesson is written into the task-history for exactly this reason. So:
 **on the first full turn of the campaign, after the city list is read, re-count this deadline from the
-real coordinates and say in the diary whether T280 still holds.** If it does not, report the measured
+real coordinates and say in the diary whether T272 still holds.** If it does not, report the measured
 per-city rate and the cities left - do not slide the deadline silently.
 
 ## Report when it is done
