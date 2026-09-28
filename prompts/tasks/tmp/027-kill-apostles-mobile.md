@@ -82,6 +82,13 @@ mounted units one tile away (the run log of the session that played it, tile lin
 `**[荷兰 APOSTLE]**`). **They shelter inside their own cities**, which is why finding one is a sweep and
 not a look at the threat list.
 
+**And this is where the two have been working.** `get_religion_spread` at T246 puts 新教 (the Dutch
+faith) in the majority in **eight of our own cities** - 阿姆斯特丹 (8 followers), 乌得勒支 (5),
+布鲁塞尔 (5), 成都 (5), 哈勒姆 (4), 赫利奥波利斯 (4), 塞纳 (3), 奈梅亨 (2) - while the Dutch
+themselves are listed with a single city, 埃因霍温 (7). Most of those eight are the cities we have
+just taken from them, so the apostles are not wandering our interior: they follow the army. That
+list is the sweep's target list, and it is one call away.
+
 ## Two facts no tool puts in front of you
 
 - **A religious unit is invisible to every metric.** It is `FORMATION_CLASS_RELIGIOUS` with
