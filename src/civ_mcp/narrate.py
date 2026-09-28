@@ -398,14 +398,31 @@ def narrate_cities(
             growth_str = f"{c.food_stored:.0f}/{c.growth_threshold} food ({c.turns_to_grow}t, {c.food_surplus:+.1f}/t)"
         else:
             growth_str = f"{c.food_stored:.0f}/{c.growth_threshold} food ({c.turns_to_grow}t, {c.food_surplus:+.1f}/t)"
+        power_str = ""
+        if c.power_reported:
+            power_str = (
+                f" | Power {c.power_available:.0f}/{c.power_required:.0f}"
+                + ("" if not c.unpowered else " !! UNPOWERED")
+            )
         lines.append(
             f"  {c.name} (pop {c.population}) at ({c.x},{c.y}) — "
             f"Food {c.food:.0f} Prod {c.production:.0f} Gold {c.gold:.0f} "
             f"Sci {c.science:.0f} Cul {c.culture:.0f} | "
             f"Housing {c.housing:.0f} Amenities {c.amenities} | "
-            f"Growth: {growth_str} | {prod_str}{defense}{loyalty_str} "
+            f"Growth: {growth_str} | {prod_str}{defense}{loyalty_str}{power_str} "
             f"[id:{c.city_id}]"
         )
+        # Power: a city is fully powered or its power-load buildings work at reduced strength, and
+        # the load is real (Research Lab 3, Stock Exchange 3, Factory 2, ...). Nothing in the turn
+        # result could see this before - the fact lived on the city banner only.
+        if c.unpowered:
+            advice = f" — {c.power_advice}" if c.power_advice else ""
+            lines.append(
+                f"    !! UNPOWERED: needs {c.power_required:.0f} power, has "
+                f"{c.power_available:.0f} from its own sources — its power-load buildings are"
+                f" running at reduced strength (a power plant within 6 tiles, or a dam, solar,"
+                f" wind or geothermal source, fixes it){advice}"
+            )
         # Growth warnings
         if c.food_surplus < 0:
             lines.append(

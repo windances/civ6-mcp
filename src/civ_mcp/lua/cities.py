@@ -110,6 +110,19 @@ for _, c in pPlayer:GetCities():Members() do
     end
     local advice = ""
     pcall(function() advice = Locale.Lookup(c:GetLoyaltyAdvice()) end)
+    -- Power, on the same pass as loyalty so the check path pays no extra round trip. Prefixed
+    -- tokens after the free-text advice, so the parser reads them by name and an older server that
+    -- does not send them changes nothing.
+    local pwReq, pwFree, pwTemp, pwFull = -1, -1, -1, ""
+    pcall(function()
+        local pw = c:GetPower()
+        if pw ~= nil then
+            pwReq = pw:GetRequiredPower()
+            pwFree = pw:GetFreePower()
+            pwTemp = pw:GetTemporaryPower()
+            pwFull = pw:IsFullyPowered() and "yes" or "no"
+        end
+    end)
     local name = "unknown"
     pcall(function() name = Locale.Lookup(c:GetName()) end)
     advice = tostring(advice):gsub("|", "/"):gsub(breaks, " ")
@@ -126,7 +139,11 @@ for _, c in pPlayer:GetCities():Members() do
         .. "|" .. advice
         .. "|outcome:" .. outcome
         .. "|transfer:" .. transfer
-        .. "|transfer_name:" .. transferName)
+        .. "|transfer_name:" .. transferName
+        .. "|power_req:" .. string.format("%.1f", pwReq)
+        .. "|power_free:" .. string.format("%.1f", pwFree)
+        .. "|power_temp:" .. string.format("%.1f", pwTemp)
+        .. "|powered:" .. pwFull)
 end
 print("{SENTINEL}")
 """.replace("{SENTINEL}", SENTINEL)
@@ -170,6 +187,22 @@ def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
             transfer = int(text_field("transfer"))
         except ValueError:
             transfer = -1
+        # Power, read by prefix like the three fields above (same reason: the advice in the middle
+        # is free text). A server that does not send these leaves the "not reported" defaults, so
+        # `unpowered` stays False rather than inventing a deficit.
+        def power_number(prefix: str, default: float = 0.0) -> float:
+            raw = text_field(prefix)
+            try:
+                return float(raw)
+            except ValueError:
+                return default
+
+        power_required = max(power_number("power_req", -1.0), -1.0)
+        power_available = max(power_number("power_free", 0.0), 0.0) + max(
+            power_number("power_temp", 0.0), 0.0
+        )
+        powered_token = text_field("powered")
+        powered = powered_token != "no"
 
         out.append(
             CityLoyalty(
@@ -188,6 +221,9 @@ def parse_loyalty_response(lines: list[str]) -> list[CityLoyalty]:
                 conversion_outcome=outcome,
                 transfer_to=transfer,
                 transfer_name=transfer_name,
+                power_required=max(power_required, 0.0),
+                power_available=power_available,
+                powered=powered,
             )
         )
     return out
@@ -356,7 +392,26 @@ for i, c in Players[me]:GetCities():Members() do
             end
         end
     end
-    print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit .. "|" .. loyOutcome)
+    -- Power (Gathering Storm). A city is either fully powered or its power-load buildings work at
+    -- reduced strength - there is no partial state - and the load is real: Research Lab 3, Stock
+    -- Exchange 3, Broadcast Center 3, Factory 2, Stadium 2, Food Market 1. `City:GetPower()` is the
+    -- same table the game's own city panel reads (CityPanelPower.lua), and a build without the
+    -- expansion returns nil, so every call is pcall'd and the fields degrade to -1 / "".
+    local pwReq, pwFree, pwTemp, pwFull, pwAdvice = -1, -1, -1, "", ""
+    pcall(function()
+        local pw = c:GetPower()
+        if pw ~= nil then
+            pwReq = pw:GetRequiredPower()
+            pwFree = pw:GetFreePower()
+            pwTemp = pw:GetTemporaryPower()
+            pwFull = pw:IsFullyPowered() and "yes" or "no"
+        end
+    end)
+    pcall(function()
+        local breaks = "[\r\n]+"
+        pwAdvice = tostring(c:GetPowerAdvice() or ""):gsub("|", "/"):gsub(breaks, " ")
+    end)
+    print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit .. "|" .. loyOutcome .. "|" .. string.format("%.1f|%.1f|%.1f|%s", pwReq, pwFree, pwTemp, pwFull) .. "|" .. pwAdvice)
     if #unimproved > 0 or #pillImprov > 0 then
         print("CITYTILES|" .. c:GetID() .. "|" .. table.concat(unimproved, ",") .. "|" .. table.concat(pillImprov, ","))
     end
@@ -1035,6 +1090,15 @@ def parse_cities_response(lines: list[str]) -> tuple[list[CityInfo], list[str]]:
                 # Appended after everything else: `GAINING_LOYALTY` / `LOSING_LOYALTY` / `STABLE`,
                 # which decides what turns_to_loyalty_flip means.
                 loyalty_outcome=parts[30] if len(parts) > 30 else "",
+                # Power, appended last so a server that does not send it (or a log line written
+                # before it existed) parses exactly as before: no requirement, "not reported".
+                power_required=(
+                    float(parts[31]) if len(parts) > 31 and parts[31] else -1.0
+                ),
+                power_free=float(parts[32]) if len(parts) > 32 and parts[32] else -1.0,
+                power_temporary=float(parts[33]) if len(parts) > 33 and parts[33] else -1.0,
+                power_fully_powered=parts[34] if len(parts) > 34 else "",
+                power_advice=parts[35] if len(parts) > 35 else "",
             )
         )
         city_by_id[cities[-1].city_id] = cities[-1]

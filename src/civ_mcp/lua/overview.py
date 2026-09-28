@@ -1117,6 +1117,20 @@ def build_diary_full_query() -> str:
         "    local amNeed = 0 "
         "    pcall(function() amNeed = g:GetAmenitiesNeeded() end) "
         "    local amTotal = amNeed + g:GetAmenities() "
+        # Power (Gathering Storm), recorded per city per turn: the load its power-hungry buildings
+        # draw, what its own free/temporary sources give it, and the game's own fully-powered flag.
+        # This is the diary's only power record - the turn result has no power block - so it is what
+        # a later review (or a rule) has to read. pcall'd, because a build without the expansion has
+        # no City:GetPower() at all.
+        "    local pwReq, pwAvail, pwFull = -1, -1, \"\" "
+        "    pcall(function() "
+        "      local pw = c:GetPower() "
+        "      if pw ~= nil then "
+        "        pwReq = pw:GetRequiredPower() "
+        "        pwAvail = pw:GetFreePower() + pw:GetTemporaryPower() "
+        "        pwFull = pw:IsFullyPowered() and \"yes\" or \"no\" "
+        "      end "
+        "    end) "
         # Print PCITY
         '    print("PCITY|" .. i .. "|" .. cID '
         '      .. "|" .. cName .. "|" .. cPop '
@@ -1130,7 +1144,8 @@ def build_diary_full_query() -> str:
         '      .. "|" .. amTotal .. "|" .. amNeed '
         '      .. "|" .. dStr .. "|" .. producing '
         '      .. "|" .. string.format("%.1f", loyalty) '
-        '      .. "|" .. string.format("%.1f", loyaltyPT)) '
+        '      .. "|" .. string.format("%.1f", loyaltyPT) '
+        '      .. "|" .. string.format("%.1f|%.1f|%s", pwReq, pwAvail, pwFull)) '
         "  end "
         "end "
         "end "
@@ -1400,6 +1415,11 @@ def parse_diary_full_response(lines: list[str]) -> DiarySnapshot:
         elif line.startswith("PCITY|"):
             p = line.split("|")
             if len(p) >= 18:
+                # Power, appended last: a row written by a server that predates it keeps the
+                # "not reported" reading (0 required, powered) rather than a false deficit.
+                power_required = float(p[18]) if len(p) > 18 and p[18] else -1.0
+                power_available = float(p[19]) if len(p) > 19 and p[19] else -1.0
+                powered_token = p[20] if len(p) > 20 else ""
                 cities.append(
                     CityRow(
                         pid=int(p[1]),
@@ -1419,6 +1439,9 @@ def parse_diary_full_response(lines: list[str]) -> DiarySnapshot:
                         producing=p[15],
                         loyalty=round(float(p[16]), 1),
                         loyalty_per_turn=round(float(p[17]), 1),
+                        power_required=max(power_required, 0.0),
+                        power_available=max(power_available, 0.0),
+                        powered=powered_token != "no",
                     )
                 )
 

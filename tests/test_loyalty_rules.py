@@ -176,6 +176,10 @@ class TestTheMetric:
             "low_loyalty_without_governor": 0,
             "cities_falling_loyalty": 0,
             "nearest_loyalty_flip": 0,
+            # Power rides on the same scan (the loyalty query carries it), so a healthy city
+            # contributes nothing there either.
+            "unpowered_cities": 0,
+            "unpowered_power_gap": 0.0,
         }
 
     def test_nothing_at_all_is_neutral(self):

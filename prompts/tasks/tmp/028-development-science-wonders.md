@@ -10,7 +10,8 @@ done when: **turn 50 of this window - the `expires:` turn the header names - arr
            Campus cities were missing finished, and the development ledger in the diary**: science
            per turn and techs completed against the window's opening reading (361.0 and 53, the last
            snapshot before this file was added, at T266), the wonders finished with their turns and their boosts, the
-           builder charges spent, and **no war started by us inside the window**. The turn is the
+           builder charges spent, **every city's power load against the sources feeding it** (or the
+           dam, renewable or plant queued for the city no plant reaches), and **no war started by us inside the window**. The turn is the
            finish line even when a wonder is still in the queue - the file is a fifty-turn posture,
            not a build order that never ends - and a rival's victory warning, or a war forced on us,
            is reported instead of being absorbed.
@@ -127,6 +128,67 @@ second half of the instruction:
   wonder goes in the city that has production to spare, which is what the "one wonder in the queue"
   rule is for.
 
+## Power: the science push is a power load, and the fuel for it is already being wasted
+
+A city is either **fully powered** or its power-load buildings run at **reduced strength** - there is no
+partial state - and the loads are the buildings this window is queueing: **Research Lab 3 power**,
+Stock Exchange 3, Broadcast Center 3, Film Studio 3, Factory 2, Stadium 2, Aquatics Center 2, Food
+Market 1, Shopping Mall 1, Airport 1 (the game's own `Building_RequiredPower` table). So the fifty-turn
+science plan raises its own electricity bill, and an unpowered Campus city is a science building that
+does not pay.
+
+The sources, with the numbers the game uses:
+
+| source | power | cost to us |
+|---|---|---|
+| Coal Power Plant | **1 Coal → 4 power**, for every city within 6 tiles | we are drowning in coal |
+| Oil Power Plant | 1 Oil → 4 power, within 6 tiles | oil is short - see below |
+| Nuclear Power Plant | 1 Uranium → 16 power, within 6 tiles | needs 核裂变, not researched |
+| Hydroelectric Dam | **+6**, free | 发电机 (Electricity) is done; the district is ~81 production |
+| Geothermal Plant | +4, free | needs a geothermal vent |
+| Solar / Wind / Offshore Wind Farm | +2 each, free | a builder charge each |
+| 商人's `RENEWABLE_ENERGY` promotion | +2 on each renewable in that city | one governor promotion |
+
+**The position this window starts from, read on this branch at T256-T272:**
+
+- **Coal is at the cap and being thrown away** - `COAL 70/70 (+12/t)` with `end_turn` printing
+  `-- RESOURCE CAP: COAL 70/70 (+12/t) — excess is wasted`. A coal plant is the cheapest way to turn a
+  wasted resource into power, and 1 coal buys 4 power.
+- **Oil is the scarce one** - 0-4 of 70 with roughly +1 a turn, and the game refused two upgrades for it
+  (`资源不足。该类型单位的升级需要1点 石油`). **Oil belongs to the units until the wells are up**:
+  (73,10) in 阿纳姆, (73,32) in 塞纳 and (60,44) are unimproved and are what turns the oil line positive.
+  精炼 (Refining) is done, so a Builder can raise them now.
+- **西安 already has a Coal Power Plant** (with Factory + Research Lab, a load of 5). The question is not
+  whether we can make power, it is **which cities the existing plant reaches**: a plant serves cities
+  within **6 tiles**, and this empire spans roughly thirty tiles across, so the work is coverage.
+- 发电机 (Electricity) completed at T264: the **Hydroelectric Dam** and the oil plant are unlocked.
+
+**So the order of work on this front:**
+
+1. **Cover the clusters with coal plants.** A city needs an **Industrial Zone + Factory** before it can
+   take a plant (the plant's prerequisite building is the Factory, and coal/oil/nuclear plants are
+   mutually exclusive in one city). Put one in each cluster that has power-load buildings and no plant
+   within 6 tiles, and spend the capped coal on it. **The 6-tile ring is the planning unit** - write the
+   ring out before queueing, and name the cities it covers.
+2. **Dams for the outliers.** A Hydroelectric Dam is +6 with no fuel and no CO2, and it is the largest
+   free source in the game. Every river city outside a plant's ring gets one; at 81 production in a low
+   -production city it is still a project worth starting early.
+3. **Renewables for the rest**: Geothermal Plant +4 on a vent, Solar/Wind/Offshore Wind +2 per charge.
+   Put the **商人 governor with `RENEWABLE_ENERGY`** in the city with the most renewable sources - it is
+   +2 power and +2 gold on each.
+4. **Leave oil alone until the wells are in.** An oil plant is the same 4 power as coal for a fuel we do
+   not have; the three unimproved wells are the prerequisite, not the plant.
+5. **Record it.** Every ten turns, with the review: each city's **required against available power** and
+   the source that closed a gap, or the dam/renewable that is queued for the city no plant reaches. A
+   power deficit that is never written down is a science building quietly working at half strength for
+   the rest of the window.
+
+**The tool now says so**: `get_cities` prints `Power available/required` per city and a `!! UNPOWERED`
+line when the game reports one, and the per-turn city record carries `power_required`,
+`power_available` and `powered`. **A server started before that change answers nothing about power
+(`Power` absent, not zero) - and in that case the read is the city panel itself, and the diary says
+which city was checked by eye.**
+
 ## The rest of the development half
 
 - **Builders are the cheapest multiplier and this empire is behind**: 63 builder tasks against 151
@@ -159,7 +221,9 @@ second half of the instruction:
 Every turn: what each city was set to and the arithmetic behind it (cost, production per turn, turns),
 which tech or civic was adopted and which boost it had, every purchase in gold or faith and what it
 bought, and any builder that could not be given work. Every ten turns: the review's three answers, the
-Spaceport's re-count, and the wonder line's state. At the window's close: science per turn and techs
+Spaceport's re-count, the wonder line's state, and **the power ledger** - each city's required against
+available power, the source that closed a gap, and the plant or renewable queued for the city that no
+plant's 6-tile ring reaches. At the window's close: science per turn and techs
 against the opening row above, the wonders finished with their turns and their boosts, the space chain's
 position and the turn the first project lands, and the ledger of what the fifty turns bought.
 

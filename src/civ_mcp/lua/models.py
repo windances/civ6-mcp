@@ -115,6 +115,15 @@ class CityRow:
     producing: str
     loyalty: float
     loyalty_per_turn: float
+    # Power (Gathering Storm). `power_required` is what the city's power-load buildings draw each
+    # turn (Research Lab 3, Stock Exchange 3, Factory 2, ...) and `power_available` what its own
+    # free and temporary sources supply; `powered` is the game's own yes/no, because a city is
+    # either fully powered or living with reduced building effects - there is no partial state.
+    # Defaults are the "not reported" reading (0 required, powered), so a row written by a server
+    # that predates these fields never looks like a deficit.
+    power_required: float = 0.0
+    power_available: float = 0.0
+    powered: bool = True
 
 
 @dataclass
@@ -284,6 +293,36 @@ class CityInfo:
     buildings: list[str] = field(
         default_factory=list
     )  # completed buildings (BUILDING_ prefix stripped)
+    # Power (Gathering Storm). `-1` / "" is the "the server did not report it" reading - a build
+    # without the expansion, or a server started before these fields existed - and the rules that
+    # look at power switch off on it rather than reading a missing field as a deficit. The numbers
+    # are the same table the game's own city panel reads (`City:GetPower()`, CityPanelPower.lua):
+    # required is the load of this city's power-hungry buildings, free is what its renewable
+    # sources and dams supply, temporary is what an active project supplies.
+    power_required: float = -1.0
+    power_free: float = -1.0
+    power_temporary: float = -1.0
+    power_fully_powered: str = ""  # "yes" / "no" / "" when unreported
+    power_advice: str = ""  # City:GetPowerAdvice(), the game's own recommendation
+
+    @property
+    def power_reported(self) -> bool:
+        """True when the server answered the power question at all."""
+        return self.power_required >= 0.0 and self.power_fully_powered != ""
+
+    @property
+    def power_available(self) -> float:
+        """Free plus temporary power: what this city generates for itself, fuel excluded."""
+        return max(self.power_free, 0.0) + max(self.power_temporary, 0.0)
+
+    @property
+    def unpowered(self) -> bool:
+        """A city that needs power and whose own sources do not cover it.
+
+        The game's word decides it (`IsFullyPowered`) - a city is either fully powered or its
+        power-load buildings work at reduced strength, so there is no third state to compute.
+        """
+        return self.power_required > 0.0 and self.power_fully_powered.lower() == "no"
 
     @property
     def losing_loyalty(self) -> bool:
@@ -865,6 +904,20 @@ class CityLoyalty:
     conversion_outcome: str = ""
     transfer_to: int = -1
     transfer_name: str = ""
+    # Power (Gathering Storm), read on the same pass as loyalty so the check path pays no extra
+    # round trip: `power_required` is this city's load and `power_available` what its own free and
+    # temporary sources give it, fuel excluded (a Coal Power Plant's 1 coal -> 4 power is a fuel
+    # question, read from `get_empire_resources`). `powered` is the game's own IsFullyPowered, and
+    # defaults to True when a server does not report it, so a pre-power build never reports a
+    # deficit it cannot see.
+    power_required: float = 0.0
+    power_available: float = 0.0
+    powered: bool = True
+
+    @property
+    def unpowered(self) -> bool:
+        """The city needs power and its own sources do not cover it."""
+        return self.power_required > 0.0 and not self.powered
 
     @property
     def losing(self) -> bool:

@@ -32,6 +32,11 @@ _CONTACT_METRIC_KEYS = (
     "unused_attacks",
     "damaged_this_turn",
     "camps_within_3",
+    # Power is read live, from the same scan the loyalty numbers come from; a stored diary row
+    # cannot be asked about it, so a row-based pass sees zero (the rule is gated on `>= 1`, and a
+    # key missing from this tuple would make that rule report `un-evaluable` forever).
+    "unpowered_cities",
+    "unpowered_power_gap",
     "local_superiority",
     "enemies_massed_on",
     "siege_units",
@@ -1671,9 +1676,22 @@ def _loyalty_metrics(readiness: list) -> dict:
         "low_loyalty_without_governor": 0,
         "cities_falling_loyalty": 0,
         "nearest_loyalty_flip": 0,
+        # Power rides on the same scan (the loyalty query carries it), because it is the other fact
+        # that decides whether a city's buildings are actually working: an unpowered city loses the
+        # effect of everything with a power load - Research Lab 3, Stock Exchange 3, Factory 2 and
+        # the rest. It lived on the city banner until now, so no rule and no turn block could see
+        # it. `unpowered_power_gap` is how short the worst city is, in power.
+        "unpowered_cities": 0,
+        "unpowered_power_gap": 0.0,
     }
     for city in readiness or []:
         loyalty = float(getattr(city, "loyalty", 100.0) or 0.0)
+        if getattr(city, "unpowered", False):
+            metrics["unpowered_cities"] += 1
+            gap = float(getattr(city, "power_required", 0.0) or 0.0) - float(
+                getattr(city, "power_available", 0.0) or 0.0
+            )
+            metrics["unpowered_power_gap"] = max(metrics["unpowered_power_gap"], gap)
         if getattr(city, "low", False):
             metrics["cities_low_loyalty"] += 1
             if not getattr(city, "governor", "") and int(getattr(city, "garrison", 0) or 0) <= 0:
