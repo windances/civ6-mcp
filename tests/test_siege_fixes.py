@@ -46,7 +46,11 @@ class TestEstimateKnowsAboutCities:
 
     def test_estimate_line_carries_the_city_name(self):
         lua = build_combat_estimate_query(0, 56, 43)
-        assert '.. "|" .. tCityName)' in lua
+        # The city name is a field of the ESTIMATE line. It is no longer the *last* field - the
+        # defender's domain was appended after it so a melee attack on a unit at sea can be refused
+        # (manual:723) - so this asserts the field is carried, not that it ends the line.
+        assert '.. "|" .. tCityName ..' in lua
+        assert 'ESTIMATE|" .. attType' in lua
 
     def test_city_name_with_a_pipe_cannot_break_the_field_split(self):
         lua = build_combat_estimate_query(0, 56, 43)

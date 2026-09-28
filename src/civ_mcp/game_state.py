@@ -83,6 +83,13 @@ class GameState:
         # Units that were ordered somewhere and stopped short of it this turn. A column ordered
         # nearest-first queues behind itself; measured T228-T299 this happened 232 times in 72 turns.
         self._move_stops_this_turn: int = 0
+        # Attacks that resolved as a melee attack against a unit that is not on land this turn. A
+        # melee land unit cannot attack enemies at sea (manual:723), so such an attack deals nothing
+        # however the engine acknowledges it - it is a no-op the agent reads as a hit. The Lua now
+        # refuses it (`ERR:MELEE_CANNOT_ATTACK_AT_SEA`); this counter exists so the rule engine can
+        # shout if that refusal is ever bypassed again. Measured T222-T237 on this branch: seven of
+        # them, the target's HP unchanged every time, and two of our units sunk in the water.
+        self._attacks_landed_nothing: int = 0
         # Enemy city HP seen from our own attacks, per city name: (turn, hp, max_hp). Read by
         # end_turn's siege-progress report.
         self._city_hp_history: dict[str, list[tuple[int, int, int]]] = {}
@@ -289,6 +296,31 @@ class GameState:
         """
         if any(marker in result for marker in self._STOP_MARKERS):
             self._move_stops_this_turn += 1
+
+    def note_attack_result(self, result: str, est=None) -> str:
+        """Count an attack that could not have landed, and say so in the reply. Returns the warning.
+
+        The one shape that is knowable here without a live read is **a melee attack on a target that
+        is not on land**: manual:723 says a melee land unit cannot attack enemies at sea, so the
+        engine's `OK:MELEE_ATTACK` line is an acknowledgement, not a hit. Measured T222-T237 on this
+        branch: seven such attacks on Dutch Caravels, the target's HP identical every time
+        (57 -> 57 and 100 -> 100 for seventeen turns) and two of our units lost while standing in the
+        water. The Lua refuses the order now, so this is a counter the rules can watch rather than a
+        path the agent should ever reach.
+        """
+        if not result.startswith("MELEE_ATTACK"):
+            return ""
+        domain = getattr(est, "defender_domain", "") if est is not None else ""
+        if domain != "DOMAIN_SEA":
+            return ""
+        self._attacks_landed_nothing += 1
+        return (
+            "!!! ATTACK LANDED NOTHING: this order resolved as a melee attack on a unit at sea, and "
+            "a melee land unit cannot attack enemies at sea (manual:723). The engine acknowledged "
+            "the command and dealt no damage. Fire with a ranged unit from two tiles away (manual:725: "
+            "ranged units always use ranged combat) or use a naval unit - and get the melee unit out "
+            "of the water before their ships answer."
+        )
 
     async def move_unit(self, unit_index: int, target_x: int, target_y: int) -> str:
         # Pre-dismiss any blocking popups that would silently eat the move
@@ -511,6 +543,12 @@ class GameState:
                 result += damage_info + "\n  Post-combat: " + followup_str
             except Exception as e:
                 log.debug("Attack followup formatting failed: %s", e)
+        # A melee attack on a unit at sea cannot have landed (manual:723). The Lua refuses the order
+        # now; if this still happens, the reply says so at the top of the damage report and the turn's
+        # `attacks_landed_nothing` metric counts it, so a rule can shout.
+        warning = self.note_attack_result(result, est)
+        if warning:
+            return estimate_str + result + "\n" + warning
         return estimate_str + result
 
     async def city_attack(self, city_id: int, target_x: int, target_y: int) -> str:

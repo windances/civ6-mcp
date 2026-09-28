@@ -480,6 +480,25 @@ def narrate_pathing_estimate(est: lq.PathingEstimate) -> str:
 def narrate_combat_estimate(est: lq.CombatEstimate) -> str:
     atk_type = "Ranged" if est.is_ranged else "Melee"
     mods_str = ", ".join(est.modifiers) if est.modifiers else "none"
+    # A melee land unit cannot attack a unit at sea, whatever the damage formula says: manual:723
+    # ("MELEE UNITS ... They cannot attack enemies at sea"). Printing "Est damage to defender: ~151"
+    # for an attack that cannot land is how this branch lost two units - the agent read the number,
+    # ordered the attack, the engine accepted it as `MELEE_ATTACK`, the enemy's HP never moved, and
+    # the reply from the AI turn took 22-33 HP off our unit. The number is not optimistic here, it is
+    # meaningless, so it is replaced by the rule and the way out.
+    if est.defender_domain == "DOMAIN_SEA" and not est.is_ranged:
+        return "\n".join(
+            [
+                f"Combat Estimate ({atk_type}) - REFUSED BY THE RULES:",
+                f"  {est.attacker_type} (CS:{est.attacker_cs}, HP:{est.attacker_hp}) vs "
+                f"{est.defender_type} (CS:{est.defender_cs}, HP:{est.defender_hp})",
+                "  ** A melee land unit cannot attack enemies at sea (manual:723), so this attack "
+                "does nothing at all - the engine accepts the order and deals no damage. **",
+                "  Ranged units always use ranged combat, even when adjacent (manual:725): fire from "
+                "two tiles away with a ranged unit, or use a naval unit of our own.",
+                "  Do not walk a melee unit into the water to reach it: that is how a ship kills it.",
+            ]
+        )
     # When the target tile holds a city, the "defender" is just a unit standing
     # in it: the city is what takes the damage. Against a 0-combat-strength unit
     # (a Great Writer, a Missionary) the damage formula short-circuits to 0 and

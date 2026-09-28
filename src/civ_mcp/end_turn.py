@@ -1961,6 +1961,11 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         "attacks_this_turn": int(getattr(gs, "_attacks_this_turn", 0) or 0),
         # Partial moves this turn: the column queueing behind itself, counted where it happens.
         "move_stops_this_turn": int(getattr(gs, "_move_stops_this_turn", 0) or 0),
+        # Melee attacks ordered on a unit at sea this turn. They cannot land (manual:723), so the
+        # number is a count of wasted orders and lost units in the making - measured T222-T237: seven
+        # of them, the target's HP unchanged every time, two of our units sunk in the water. The Lua
+        # refuses the order now; the counter is what lets a rule notice if it stops doing so.
+        "attacks_landed_nothing": int(getattr(gs, "_attacks_landed_nothing", 0) or 0),
         # A unit standing next to a killable enemy with moves left is the failure mode the
         # "attacks_this_turn >= 1" rule cannot see: two Catapults firing at a city satisfy it
         # while a 7 HP Swordsman is ignored one tile away (seen live at T111-T115).
@@ -3850,6 +3855,7 @@ async def execute_end_turn(gs: GameState) -> str:
     if turn_after is not None:
         gs._attacks_this_turn = 0
         gs._move_stops_this_turn = 0
+        gs._attacks_landed_nothing = 0
 
     # Every 10 turns: full victory progress snapshot, and the window review.
     if turn_after is not None and turn_after % 10 == 0:

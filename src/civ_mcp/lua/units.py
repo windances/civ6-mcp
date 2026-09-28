@@ -419,6 +419,20 @@ local unitInfo = GameInfo.Units[unit:GetType()]
 local attRS = unitInfo and unitInfo.RangedCombat or 0
 local attBombard = unitInfo and unitInfo.Bombard or 0
 local attRange = unitInfo and unitInfo.Range or 1
+-- The target's domain decides whether a melee attack is legal at all. manual:723 (MELEE UNITS):
+-- "Melee units are land units which can attack enemies in adjacent land hexes. **They cannot attack
+-- enemies at sea**, nor can they attack enemies more than one hex away." The engine still accepts the
+-- order, resolves it as `MELEE_ATTACK` and deals nothing, so the fallback further down silently
+-- produced a no-op the agent read as a hit. Measured T222-T237 on this branch: seven melee attacks on
+-- Dutch Caravels, the enemy's HP identical every time (57 -> 57, 100 -> 100, seventeen turns running)
+-- and two of our units sunk while standing in the water. The same anomaly was already written down in
+-- three retired task files (018 at T216, 019 and 021 at T225) and never turned into a refusal.
+local enemyIsSea = false
+if enemy ~= nil then
+    local enemyInfo = GameInfo.Units[enemy:GetType()]
+    enemyIsSea = enemyInfo ~= nil and enemyInfo.Domain == "DOMAIN_SEA"
+end
+local attackerIsLand = unitInfo ~= nil and unitInfo.Domain == "DOMAIN_LAND"
 -- A siege unit cannot attack a **unit**. The classification below only reads a Bombard as ranged when
 -- the target is a city, so an order against a unit fell through to the melee branch and the Catapult
 -- WALKED toward the target: measured live T140, one whole turn lost and a misleading STOPPED_SHORT
@@ -487,6 +501,14 @@ if isRanged then
     else
         {_bail_lua(f'"ERR:NO_LOS|Cannot ranged-attack target at ({target_x},{target_y}) from (" .. ux .. "," .. uy .. "). LOS blocked or unit already attacked this turn."')}
     end
+end
+-- A melee land unit versus a unit at sea is not a weak attack, it is not an attack at all
+-- (manual:723). Refuse it by name and point at the manual, instead of letting the engine accept a
+-- command that resolves as a hit and deals nothing. This is also the branch the old ranged-at-d1
+-- fallback above fell into: `CanStartOperation(RANGE_ATTACK)` answers false against a ship at
+-- distance 1, and the fall-through turned a legal shot into an illegal no-op.
+if (not isRanged) and enemyIsSea and attackerIsLand then
+    {_bail_lua('"ERR:MELEE_CANNOT_ATTACK_AT_SEA|" .. enemyName .. " is at sea, and this order resolved as a melee attack: melee land units cannot attack enemies at sea (manual:723). Ranged units always use ranged combat, even when adjacent (manual:725) - fire from two tiles away, or use a naval unit (task 026). Moving a melee unit into the water to reach it only feeds their ships."')}
 end
 if isAir then
     -- Air units (jet bombers, jet fighters, bombers, fighters): use AIR_ATTACK operation.
@@ -694,7 +716,7 @@ if enemy == nil then
     -- city answered "operator .. is not supported for nil .. string" instead of an estimate.
     local myHPNow = unit:GetMaxDamage() - unit:GetDamage()
     print("ESTIMATE|" .. attType .. "|CITY_CENTER|" .. effAttCS .. "|0|" .. (isRanged and "1" or "0")
-        .. "||" .. myHPNow .. "|" .. cHP .. "|" .. cName)
+        .. "||" .. myHPNow .. "|" .. cHP .. "|" .. cName .. "|")
     print("{SENTINEL}")
     return
 end
@@ -713,6 +735,10 @@ end
 local eInfo = GameInfo.Units[enemy:GetType()]
 local defType = eInfo and eInfo.UnitType or "UNKNOWN"
 local defCS = eInfo and eInfo.Combat or 0
+-- The defender's domain travels with the estimate: "melee versus a unit at sea" is not a weak
+-- attack, it is not an attack (manual:723), and the estimate must be able to say so instead of
+-- printing a damage number for a blow that cannot land.
+local defDomain = eInfo and eInfo.Domain or ""
 local enemyHP = enemy:GetMaxDamage() - enemy:GetDamage()
 local myHP = unit:GetMaxDamage() - unit:GetDamage()
 -- Build promotion -> CS bonus lookup table
@@ -884,7 +910,7 @@ local tCity = nil
 pcall(function() tCity = Cities.GetCityInPlot({target_x}, {target_y}) end)
 local tCityName = ""
 if tCity then tCityName = Locale.Lookup(tCity:GetName()):gsub("|", "/") end
-print("ESTIMATE|" .. attType .. "|" .. defType .. "|" .. effAttCS .. "|" .. effDefCS .. "|" .. (isRanged and "1" or "0") .. "|" .. table.concat(mods, ";") .. "|" .. myHP .. "|" .. enemyHP .. "|" .. tCityName)
+print("ESTIMATE|" .. attType .. "|" .. defType .. "|" .. effAttCS .. "|" .. effDefCS .. "|" .. (isRanged and "1" or "0") .. "|" .. table.concat(mods, ";") .. "|" .. myHP .. "|" .. enemyHP .. "|" .. tCityName .. "|" .. defDomain)
 print("{SENTINEL}")
 """
 
@@ -929,6 +955,7 @@ def parse_combat_estimate(
                 defender_hp=enemy_hp,
                 attacker_hp=my_hp,
                 target_city=p[9] if len(p) > 9 else "",
+                defender_domain=p[10] if len(p) > 10 else "",
             )
     return None
 

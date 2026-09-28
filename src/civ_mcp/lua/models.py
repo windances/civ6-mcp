@@ -559,6 +559,10 @@ class CombatEstimate:
     # is set, the named defender is a unit standing in that city and the CITY is
     # what actually takes the damage.
     target_city: str = ""
+    # The defender's domain as the game defines it (`DOMAIN_LAND`, `DOMAIN_SEA`, `DOMAIN_AIR`), or
+    # "" when the target is a city or the game did not say. It is what lets the estimate refuse a
+    # melee attack on a unit at sea (manual:723) instead of printing a damage number for it.
+    defender_domain: str = ""
 
 
 @dataclass
