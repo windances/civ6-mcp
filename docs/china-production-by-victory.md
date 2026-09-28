@@ -5,10 +5,20 @@ the hammers are for**, and therefore which multipliers are worth stacking and wh
 file is the per-goal answer for **China (Qin)**, whose kit bends every one of these plans:
 
 - **Dynastic Cycle** - Eurekas and Inspirations are worth **60%** instead of 50%, and **completing ANY
-  wonder grants a random Eureka *and* Inspiration** from that wonder's era (`directive.md:4-6`). For
-  China a wonder is a *research building*, so a cheap wonder is never a wasted queue.
-- **Great Wall** - built by **Builders, not cities** (`directive.md:14-16`): gold, culture and defence
-  that cost no city production, only builder charges.
+  wonder grants a random Eureka *and* Inspiration** from that wonder's era (`directive.md:4-6`). The
+  ability's own text (`Base\Assets\Text\en_US\Civilizations_Text.xml:296`) reads: *"Eurekas and
+  Inspirations provide 60% of civics and technologies instead of 50%. When completing a wonder receive
+  a random Eureka and Inspiration from the era of the wonder, **if available**."* That last clause
+  matters, and the manual supplies the reason: **boosts do not stack** (`manual:2063`), and a boost is
+  worth "50% of the needed research" or "50% of the needed culture" before China's +10 (`manual:1157`,
+  `1173`). So the wonder's grant is **wasted when the era's techs and civics are already boosted** -
+  complete wonders while the era still has unboosted items, and record whether the grant landed.
+- **Great Wall** - built by **Builders, not cities** (`directive.md:14-16`), and the data adds the
+  constraints: it is **built in a line along the frontier** (`BuildInLine="true"`,
+  `BuildOnFrontier="true"`), it gives **+4 defence and fortification** (`DefenseModifier="4"`,
+  `GrantFortification="2"`), and its yields are **per adjacent Great Wall segment** - **+1 gold** from
+  Masonry and **+1 culture** from Castles (`Improvements.xml:56,384,385`) - with **tourism from Flight**
+  (`:373`). It is a chain, not a scatter, and it costs builder charges rather than city production.
 - **Crouching Tiger** - Medieval ranged, **Range 1**, so it must stand adjacent to its target and
   needs a melee unit holding the tile in front (`directive.md:18-21`).
 - **Thirty-Six Stratagems** - the agent cannot trigger it; report convertible barbarians for the human.
@@ -131,10 +141,14 @@ sake - adjacency is fixed by the ring, so the placement decision is the whole st
 ## 4. Religion
 
 **What the hammers are for**: a **Holy Site in every city, then Shrine, then Temple**
-(`religion/directive.md:6`), and nothing else at the start, because the **Great Prophet pool fills
-early - roughly half the major civilisations - and founding a religion is the game's first
-irreversible deadline** (`religion/directive.md:3-5`). If China is not racing for a Great Prophet, the
-directive's standing rule is the opposite: **do not build a Holy Site at all** (`directive.md:296-300`).
+(`religion/directive.md:6`), and nothing else at the start, because founding a religion is the game's
+first irreversible deadline (`religion/directive.md:3-5`). The manual states the ceiling and the hurry
+in its own words: **"A maximum of 7 religions can ever be created in any game. Try to get one early so
+you don't miss out!"** (`manual:1887`), and **"Great Prophets are no longer available when starting the
+game in the Industrial Era or later"** (`manual:2049`). The preset's "roughly half the major
+civilisations" is the repo's phrasing of the same deadline, not a manual number. If China is not racing
+for a Great Prophet, the directive's standing rule is the opposite: **do not build a Holy Site at all**
+(`directive.md:296-300`).
 
 **The production twist that makes religion pay for itself**: under Gathering Storm, **Work Ethic makes
 the Holy Site's Faith adjacency produce Production as well** (`Expansion2_Beliefs.xml:831-839`). A Holy
@@ -172,11 +186,15 @@ suzerainties that pay the favor).
 ## 6. Score (the fallback)
 
 Score at the turn limit rewards **breadth**: cities, population, techs, civics, wonders, Great People,
-Great Works and territory all feed it, and there is no single thing to rush. So the optimal production
-strategy is the **union of the others**, with the tie broken toward whatever compounds fastest in the
-current snapshot - which is exactly the expansion preset's posture: reach four to six productive
-cities, keep them all growing, catch up housing, amenities and improvements, and *then* commit
-(`expansion/directive.md:1-9`). The two hard rules are the ones that keep you alive to be scored:
+Great Works and territory all feed it, and there is no single thing to rush. The manual confirms the
+shape of it - the score counts "tiles, number of cities, and population" (`manual:2401`), a constructed
+wonder scores for **whoever holds the city it is in** (`manual:2405`), the game simply ends in 2050 and
+the surviving civ's score decides (`manual:2391`), and **an eliminated civ scores zero**
+(`manual:2395`). So the optimal production strategy is the **union of the others**, with the tie broken
+toward whatever compounds fastest in the current snapshot - which is exactly the expansion preset's
+posture: reach four to six productive cities, keep them all growing, catch up housing, amenities and
+improvements, and *then* commit (`expansion/directive.md:1-9`). The two hard rules are the ones that
+keep you alive to be scored:
 **never lose a city**, and **keep amenities positive**.
 
 ## 7. The comparison, on one screen
