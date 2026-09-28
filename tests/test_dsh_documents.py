@@ -68,6 +68,47 @@ def cjk_characters(text: str) -> int:
     return sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
 
 
+def without_fences(text: str) -> str:
+    """The document with its fenced code blocks removed.
+
+    A fence line carries three backticks, not one, so any span-by-span reading that keeps the fences
+    shifts its pairing from there on and starts inventing "spans" out of English prose. The fenced
+    blocks themselves are byte-identical in a faithful translation and are checked by reading the
+    backup, so they are dropped here rather than tokenised.
+    """
+    kept: list[str] = []
+    inside = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            inside = not inside
+            continue
+        if not inside:
+            kept.append(line)
+    return "\n".join(kept)
+
+
+def inline_spans(text: str) -> list[str]:
+    """Every inline ``code span`` in `text`, whitespace-normalised, in order and without repeats.
+
+    A span the source wraps across two lines has its backticks on different lines, so a per-line regex
+    pairs the wrong ones; here a line break *inside* a span is read as a space, and both the span and
+    the backup it is looked up in are whitespace-collapsed, so a wrapped span still matches its
+    verbatim copy. An unterminated final span is dropped rather than reported.
+    """
+    spans: list[str] = []
+    current: list[str] = []
+    inside = False
+    for char in text:
+        if char == "`":
+            if inside:
+                spans.append(" ".join("".join(current).split()))
+                current = []
+            inside = not inside
+        elif inside:
+            current.append(" " if char == "\n" else char)
+    return [span for span in dict.fromkeys(spans) if span]
+
+
 class TestTheServedDocumentsAreEnglish:
     def test_the_set_is_what_the_harness_reads(self):
         found = served_documents()
@@ -135,6 +176,36 @@ class TestTheChineseBackups:
             assert len(text.encode("utf-8")) >= len(path.read_bytes()) // 3, (
                 f"{backup.relative_to(ROOT)} is much shorter than {path.name} - check that it is the "
                 "whole document, not a summary"
+            )
+
+    def test_a_backup_covers_every_identifier_the_english_document_names(self):
+        """A backup is generated, so it drifts silently - and nothing else here notices.
+
+        Measured 2026-09-28: `AGENTS.cn.md` was nineteen hours and three English edits behind - a whole
+        bullet (`python scripts/temp-task.py add ...`, which is how a task is filed) and a rewritten
+        paragraph were missing from it - while every other check in this class stayed green, because
+        "holds Chinese", "is not a stub" and "says it is a backup" are all true of a stale translation.
+
+        The check is coverage, not wording: a path, command, flag, tool name or metric id is never
+        translated, so every inline span of the English document has to appear somewhere in its backup.
+        The `IN FORCE NOW` line is exempt - it is match state, rewritten every time a task is added or
+        retired, and the session filing a task does not owe the backup a retranslation of that line.
+        Measured with this tokenizer: AGENTS 279 spans / SKILL 127 / china-conquest directive 66, none
+        missing; the fence-blind version of the same check reported 260 and 11 "misses" that were all
+        artifacts of a fence line's third backtick.
+        """
+        for path, backup in zip(served_documents(), backups(), strict=True):
+            english = without_fences(path.read_text(encoding="utf-8"))
+            english = "\n".join(
+                line for line in english.splitlines() if "IN FORCE NOW" not in line
+            )
+            haystack = " ".join(backup.read_text(encoding="utf-8-sig").split())
+            missing = [span for span in inline_spans(english) if span not in haystack]
+            assert not missing, (
+                f"{backup.relative_to(ROOT)} does not carry these spans of {path.name}, so it was "
+                f"translated from an older revision: {missing[:8]}"
+                + (f" (and {len(missing) - 8} more)" if len(missing) > 8 else "")
+                + ". Re-translate the file from the current English one."
             )
 
     def test_a_backup_says_that_it_is_a_backup(self):

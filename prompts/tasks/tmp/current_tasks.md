@@ -32,6 +32,11 @@ Task 019 was retired as `done/019-two-scouts-to-sea-expired-T250.md`.
 Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.
 
 Task 022 was retired as `done/022-take-haarlem-done-T271.md`.
-| `023-dutch-siege-corps.md` | 2026-09-28 | turn 335 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
+
+**The retirements above T216-T271 are the record of the run that was rolled back** (the one that
+stood at T281): that run took 布鲁塞尔 at T237 and 哈勒姆 at T271, which is why 022 is retired and why
+task 023's body carries that run's measurements as evidence. **This branch is not that one** - it
+stands at T226, 布鲁塞尔 fell here at T224 (task 024), and 哈勒姆 is still the Netherlands'.
+| `023-dutch-siege-corps.md` | 2026-09-28 | turn 280 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.

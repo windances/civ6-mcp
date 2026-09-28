@@ -1,12 +1,12 @@
 ﻿# TEMP TASK 023 - the Dutch campaign: take every city the Netherlands holds, with the army we have
 
 added:     2026-09-28 (human instruction: 新增任务：利用现有部队，组建攻城兵团，占领所有荷兰的城市)
-expires:   turn 335 - fifty-four turns from T281, where the match stands (read from the save): assemble and
-           upgrade the corps 2-4, then 6-12 turns per city for the six the Netherlands still holds,
-           measured from Haarlem's thirteen turns from Gate 0 - six of them the naval wall phase. A
-           hard stop, and the arithmetic is the point: 021 expired because its deadline was set
-           without measuring the distance, so re-count this one on the first full turn of the
-           campaign and say in the diary whether T335 still holds.
+expires:   turn 280 - fifty-four turns from T226, where this branch stands (read from the heartbeat on
+           2026-09-28): assemble and upgrade 2-4 turns, then 6-12 turns per city for the **six** the
+           Netherlands holds, the span 021 taught us to measure. A hard stop, and the arithmetic is the
+           point: 021 expired because its deadline was set without measuring the distance. **This is the
+           one number here that is inherited rather than read** - re-count it on the first full turn of
+           the campaign from the real coordinates and say in the diary whether T280 still holds.
 done when: **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists
            `Cities (N): name pop P (x,y) walls W` for every city it holds, so the task ends when
            that line names none - and, if the last one falls, when the Netherlands no longer appears
@@ -21,57 +21,78 @@ done when: **the Netherlands holds no city.** The proof is `get_diplomacy`'s lin
            `023-dutch-siege-corps-done-T<n>.md` the turn the last city is ours, or as
            `-expired-T<n>.md` at the hard stop with the cities taken, the cities left, and the
            measured per-city rate.
-overrides: **the human's instruction, and the army we already have.** 占领所有荷兰的城市 was given at T281; the file is
+overrides: **the human's instruction, and the army we already have.** 占领所有荷兰的城市 is the instruction; the file is
            the reason of record for the campaign and the diary records the instruction rather than
            inventing a strategic one, as 016, 020 and 022 did for their cities. **No new unit is
            authorized by this file**: the corps is drawn from the army that exists (table below),
            and the only production it touches is what was already queued for the `siege-train` and
            `ranged-mass` checks. **Gold upgrades of existing units are authorized and expected** -
-           an Artillery is 155g under 职业军队 against a treasury at +83 a turn, it is the same unit,
-           and `siege-train` is red at 2/3 until it happens. **The Spaceport line is not this file's
-           to raid**: 西安's production, its Industrial Zone buildings and its power stay the victory
-           plan, and the science and housing queues stay theirs. **The west lane stays a screen**:
-           Sumer is at war and is now raiding (沃罗涅什's Campus is pillaged at T281), so the units
-           watching that lane are not pulled west-to-east for this campaign; a counter-strike there
-           is its own decision. Two overseas expeditions at once caused the T265 bankruptcy - gold
-           hit zero at -48/t and two units were disbanded - so this file runs **one** offensive and
-           one screen, never two offensives. **It does not override**: `one-garrison-per-city`,
+           an Artillery is 155g under 职业军队, it is the same unit, and `siege-train` stays short
+           until it happens. **The Spaceport line is not this file's to raid**: 西安's production,
+           its Industrial Zone buildings and its power stay the victory plan, and the science and
+           housing queues stay theirs. **The west lane stays a screen** (the directive's standing
+           orders put 俄罗斯 first and hold that lane): the units watching it are not pulled
+           west-to-east for this campaign; a counter-strike there is its own decision. Two overseas
+           expeditions at once caused the T265 bankruptcy on the run that was rolled back - gold hit
+           zero and two units were disbanded - so this file runs **one** offensive and one screen,
+           never two offensives. **It does not override**: `one-garrison-per-city`,
            `use-your-attacks`, `hold-what-you-take`, the directive's ban on `propose_peace` (the
            Dutch war still ends only by taking their cities), or the policies the hold depends on.
            Every city taken is resolved with `city_action keep` - the instruction says 占领, not raze.
 scope:     Every Dutch city, in the order the campaign reaches them, their rings, the units defending them, the
            route to each, and the corps this file names. Not the Netherlands' cities once taken
-           (they are ours and `hold-what-you-take` owns them), not Sumer or the west lane, not a
+           (they are ours and `hold-what-you-take` owns them), not 俄罗斯 or the west lane, not a
            city-state, not a barbarian camp, and not a second offensive anywhere.
 
-## What is known at T281, and the one call that is still missing
+## This file was written on a run that was rolled back - read every state line that way
+
+The corps census and the two sieges below were measured while the match stood at **T281 of a run that
+no longer exists** (that run took 哈勒姆 at T271 and 布鲁塞尔 at T237). This branch stands at **T226**,
+where neither of those is true: 哈勒姆 is still theirs, our only conquest on their side is 布鲁塞尔
+(T224), and the Dutch still hold **six** cities.
+
+What carries over is the **instruction**, the **shape of the corps**, the **deadline accounting**, and
+the **lessons** (the six staging overrides, the d1 shot, walls-versus-pool, the stale post-combat
+prose). What does **not** carry over is any statement about whose city something is, or what a check
+reads. Every line below that comes from the other run is marked `[rolled-back run]` and is evidence,
+not state - the state is whatever this turn's own reads say, and **the first job is to read them**.
+
+## What this branch has actually read
 
 | fact | reading | source |
 |---|---|---|
-| the Netherlands | **7 cities**, military **57**, score 463, at war with us (state 6, grievances -148) | T281 diary snapshot |
-| 哈勒姆 | **ours since T271** - the campaign's forward base, five tiles north of 布鲁塞尔 across a narrow strait, coastal, with a city strike | `done/022-take-haarlem-done-T271.md` |
-| two of their cities are visible | **格罗宁根** around (69,14)-(69,16) and **提尔堡** around (77,23)/(79,24) | T281 diary, first sight of the Dutch interior |
-| their coast battery | a Bombard working (70,19)-(70,20) that has killed **five** of our units; it takes fire from our Battleship at (67,15) and from Haarlem's walls | T276-T281 diary |
-| the rest of their city list | **never read** - `get_diplomacy` prints `荷兰: Cities: 7 (all in fog)` until a city is seen | T258, when Haarlem first appeared that way |
-| our corps' standards | `siege-train` **2/3** and `ranged-mass` **2/4** are the two red checks; both clear with the Artillery upgrade and the Field Cannon already building | T281 turn result |
+| the Netherlands | **6 cities**, military **176** vs our **824** (0.2x), at war with us: `荷兰 (威廉明娜) — WAR (-35) **AT WAR** [player 2]` | `get_diplomacy` at T220, this run |
+| the only Dutch city seen | **乌得勒支 - pop 6, (74,23), walls 200** - and five more still in fog: the line reads `Cities (6): 乌得勒支 pop 6 (74,23) walls 200 + 5 in fog` | `get_diplomacy` at T220, this run |
+| 哈勒姆 | **theirs.** The T271 capture is the rolled-back run's record (`done/022-take-haarlem-done-T271.md`); nothing of theirs has fallen on this branch | this branch's `get_diplomacy` list |
+| our forward base | **布鲁塞尔, ours since T224** - task 024 was retired there, the capture move came from (69,28), the tile north of its centre, and its queue is running (a Water Mill finished T225) | T224/T225 log of this run; `done/024-take-brussels-done-T224.md` |
+| our treasury and size | **289g at +16/t**, 69 units, 19 cities | `get_game_overview` at T219, this run |
+| their coast battery | `[rolled-back run]` a Bombard working (70,19)-(70,20) that killed five of our units, fired on by our Battleship and by Haarlem's walls | that run's T276-T281 diary |
+| our corps' standards | **re-read this turn** - `siege-train` and `ranged-mass` are the two checks that decide the shape of the corps. The values the other run recorded (2/3 and 2/4) are that run's, at T281 | this turn's `end_turn` result |
+| their interior | **never read on this branch** - one city is visible and five are not, so the target list, the distances and the deadline are all still measurements to make | `get_diplomacy` at T220 |
 
 **Gate 0 is one call nobody has made for the whole campaign: `get_diplomacy`'s list for 荷兰.**
 It prints every city the Netherlands holds as `name pop P (x,y) walls W` (`src/civ_mcp/narrate.py:805-814`),
-which is exactly how Haarlem was found at T258 after thirty turns of `7 (all in fog)`. **Write that
-list into the diary on the first turn of the campaign, with each city's distance from our nearest
-coastal base** - it is the target list *and* the measurement the deadline is re-counted from.
+which is how the one city above was found after the earlier `6 (all in fog)`. **Write that list into
+the diary on the first turn of the campaign, with each city's distance from our nearest base** - it is
+the target list *and* the measurement the deadline is re-counted from. Then keep at least one unit
+moving through their fog every turn, because a city we have not seen is a city whose distance, walls
+and garrison we cannot price.
 
 ## The corps, drawn from the army we already have (利用现有部队)
 
-| unit | count | role in the corps |
+The table is **a census taken at T281 of the rolled-back run**; re-count it from `get_units` this
+session. The shape is the point, not the numbers: a siege train, a ranged mass, melee that can take a
+city, a fast arm, and the naval battery.
+
+| unit | count then | role in the corps |
 |---|---|---|
 | BOMBARD | 2 | the siege train - **upgrade both to Artillery** (155g each under 职业军队) and `siege-train` clears |
 | FIELD_CANNON | 3 (+1 building, 10t) | the ranged mass; the fourth clears `ranged-mass` |
-| INFANTRY | 2 | the melee that takes cities and, measured at 布鲁塞尔, breaks walls as well as a Bombard |
+| INFANTRY | 2 | the melee that takes cities and, `[rolled-back run]` measured at 布鲁塞尔, breaks walls as well as a Bombard |
 | LINE_INFANTRY | 2 | second melee / garrison pool for what is taken |
 | CAVALRY + CUIRASSIER | 1 + 1 | the fast arm: reconnaissance, the supply hexes, and a capture unit that arrives first |
 | AT_CREW | 1 | anti-cavalry cover for the train |
-| BATTLESHIP + FRIGATE | 1 + 1 | **the naval battery**: a Frigate alone took Haarlem's 100 walls to 0 in six turns from d2, and the Battleship is the strongest shooter we own |
+| BATTLESHIP + FRIGATE | 1 + 1 | **the naval battery**: `[rolled-back run]` a Frigate alone took 哈勒姆's 100 walls to 0 in six turns from d2; the Battleship is the strongest shooter we own |
 | RANGER | 1 | eyes ahead of the column |
 | GREAT_GENERAL | 2 | **keep both alive, do not activate them**: +5 CS and +1 movement to land units in range, passively |
 
@@ -79,25 +100,32 @@ No new unit is built for this (see `overrides:`). What the corps needs beyond th
 the two Artillery upgrades and, if a city proves to be inland, nothing else - a march is measured
 before it is ordered, not paid for.
 
-## What this match's two sieges actually measured
+## What the two sieges measured - and which run measured them
 
-1. **Coastal and near beats inland and far, by a lot.** Haarlem - five tiles away, coastal, walls 100 -
-   fell in **thirteen turns from Gate 0**, six of them the naval wall phase. 021's target was thirty to
-   forty tiles inland and its artillery was still 13-22 tiles out when its thirty-three-turn window
-   expired, with `get_staging_plan` reporting nine units `TOO FAR` and "0 shooter(s) in position".
-2. **The naval battery is a first-class siege asset.** Walls 100 -> 0 under Frigate fire alone
-   (T261-T266, ~22 a turn). A city on the coast of a sea we control is the cheap kind of target.
-3. **A siege unit firing from d1 works**: Haarlem's Bombard resolved `RANGE_ATTACK ... dist:1`. The
-   old note that d1 is refused is corrected - what is true is that a **d2 tile is not a d1 tile for
-   melee** (T237: `STOPPED_SHORT ... 2 tiles away`).
+1. **Coastal and near beats inland and far, by a lot.** `[rolled-back run]` 哈勒姆 - five tiles away,
+   coastal, walls 100 - fell in **thirteen turns from Gate 0**, six of them the naval wall phase.
+   `[rolled-back run]` 021's target was thirty to forty tiles inland and its artillery was still 13-22
+   tiles out when its thirty-three-turn window expired, with `get_staging_plan` reporting nine units
+   `TOO FAR` and "0 shooter(s) in position". Neither of those runs is this one; the lesson is the
+   distance, and this branch's distances are unread.
+2. **The naval battery is a first-class siege asset.** `[rolled-back run]` walls 100 -> 0 under Frigate
+   fire alone (T261-T266, ~22 a turn). A city on the coast of a sea we control is the cheap kind of
+   target.
+3. **A siege unit firing from d1 works**: `[rolled-back run]` 哈勒姆's Bombard resolved
+   `RANGE_ATTACK ... dist:1`. The old note that d1 is refused is corrected - what is true is that a
+   **d2 tile is not a d1 tile for melee** (`[rolled-back run]` T237: `STOPPED_SHORT ... 2 tiles away`).
 4. **Walls are permanent; the pool is not.** A city heals about twenty points a turn, so the ring is
-   the landing party's first job: Haarlem's supply line was cut 3/6 and still healed while it was
-   fired on.
+   the landing party's first job: `[rolled-back run]` 哈勒姆's supply line was cut 3/6 and still healed
+   while it was fired on.
 5. **The four numbers are three until a probe** - a city's own tile can stay `[fog]` while its whole
-   ring is visible (021's finding). But **we are already at war with the Netherlands**, so our own
-   attack list reads the garrison for free, which is how Haarlem's Builder and 布鲁塞尔's were found.
+   ring is visible. But **we are already at war with the Netherlands** (state above), so our own
+   attack list reads the garrison for free, which is how 布鲁塞尔's was found on this branch.
 6. **The post-combat prose is stale; the pooled `walls:` / `city hp:` fields are the record**, and a
    later read is the fact.
+7. **This branch's own capture is the nearest example**: 布鲁塞尔 taken at T224 with the capture move
+   from (69,28) - the tile north of the centre, one tile out - after the train assembled from the T220
+   save. Read its ledger in the diary before planning the next city; it is the only siege on this
+   branch that is not someone else's.
 
 ## Gate 0, per city, as the corps arrives
 
@@ -105,16 +133,18 @@ before it is ordered, not paid for.
 `get_staging_plan(city_x, city_y)` and the written table **before the first `unit_action`**. The six
 overrides this map has already paid for live in `prompts/tactics/04-staging-out-of-range.md` step 3b-1 -
 read them there rather than restating them, and note that **the d1 note is corrected**: a siege unit
-firing from d1 works (measured at 哈勒姆, `RANGE_ATTACK ... dist:1`), while a d2 tile is not a d1 tile
+firing from d1 works (`[rolled-back run]`, `RANGE_ATTACK ... dist:1`), while a d2 tile is not a d1 tile
 for the capture move.
 
 ## Sequencing - and it is a proposal until the list is read
 
 **Nearest and coastal first**, one city at a time, and **each captured city becomes the next forward
-base**: Haarlem already is one - it is on their coast, it has a city strike that is the cheapest
-damage in the empire (43, no retaliation), and it is where a garrison can heal between phases. Write
-the planned order from the actual `(x,y)` coordinates and the measured distances, not from this file's
-guess, and re-count the deadline from it (below).
+base**: 布鲁塞尔 already is one - it is on their side of the strait, its queue is running, and it is
+where a garrison can heal between phases (read its walls and its strike this turn rather than assuming
+either: a captured city's walls come down with the capture). 乌得勒支 (74,23) is the one city we have
+seen, walls 200 and pop 6, and it is therefore the default first target - but write the planned order from the actual `(x,y)`
+coordinates and the measured distances, not from this file's guess, and re-count the deadline from it
+(below).
 
 ## 集结 and 集火
 
@@ -125,32 +155,34 @@ there. Then, in order:
 1. **Cut the supply ring** on the approach - the pool heals about twenty a turn otherwise.
 2. **Walls first.** The naval battery and the d2 shooters work them; the wall number comes from the
    first melee attack's result line when the tile is fogged.
-3. **The d1 melee is worth a Bombard against walls** (measured T236: 50 off the wall pool, no
-   retaliation) and takes the city the turn the pool empties - `city_action keep` the same turn or the
-   turn will not end, and **one capture attack per tile per turn**.
+3. **The d1 melee is worth a Bombard against walls** (`[rolled-back run]` T236: 50 off the wall pool,
+   no retaliation) and takes the city the turn the pool empties - `city_action keep` the same turn or
+   the turn will not end, and **one capture attack per tile per turn**.
 4. **Concentrate**: every shooter that can bear fires the same turn; nothing sits idle with a legal
    attack.
 5. **Re-read the city a call later** rather than trusting the immediate reply, and keep the pooled
    fields as the ledger.
 
-## Hold - the half Haarlem has not settled
+## Hold - the half this branch has barely started
 
-Haarlem at T281 reads **loyalty 44/100 at -0.5 a turn**, with a governor (维克多), an Infantry garrison
-and the `殖民地办事处` policy already in place. Every city this campaign takes gets the same treatment
+Only 布鲁塞尔 has been held on this branch, and only since T224, so its loyalty line is the one to
+watch and to report every turn. `[rolled-back run]` 哈勒姆 at T281 read **loyalty 44/100 at -0.5 a
+turn**, with a governor (维克多), an Infantry garrison and the `殖民地办事处` policy already in place -
+that is the shape of the treatment, not this branch's numbers. Every city this campaign takes gets it
 **the turn it falls**: `city_action keep`, its queue set, a governor or a garrison, and the anti-flip
-policy where it fits - and its loyalty line is reported every turn afterwards. A city that flips back
-is a campaign loss to report with its numbers, not a detail to leave out. **The durable answer to Dutch
-loyalty pressure is another Dutch city**, which is also this instruction.
+policy where it fits. A city that flips back is a campaign loss to report with its numbers, not a
+detail to leave out. **The durable answer to Dutch loyalty pressure is another Dutch city**, which is
+also this instruction.
 
 ## The deadline is a measurement, not a hope
 
-`expires: turn 335` is fifty-four turns from T281: assembly and the two upgrades 2-4, then **6-12 turns
-per city** measured from Haarlem's thirteen (six of them the naval wall phase) for the six the
-Netherlands still holds. **021 expired because its deadline was set without measuring the distance**,
-and the lesson is written into the task-history for exactly this reason. So: **on the first full turn of
-the campaign, after the city list is read, re-count this deadline from the real coordinates and say in
-the diary whether T335 still holds.** If it does not, report the measured per-city rate and the cities
-left - do not slide the deadline silently.
+`expires: turn 280` is fifty-four turns from T226: assembly and the two upgrades 2-4, then **6-12 turns
+per city** measured from `[rolled-back run]` 哈勒姆's thirteen (six of them the naval wall phase) for
+the **six** cities the Netherlands holds here. **021 expired because its deadline was set without
+measuring the distance**, and the lesson is written into the task-history for exactly this reason. So:
+**on the first full turn of the campaign, after the city list is read, re-count this deadline from the
+real coordinates and say in the diary whether T280 still holds.** If it does not, report the measured
+per-city rate and the cities left - do not slide the deadline silently.
 
 ## Report when it is done
 
@@ -159,11 +191,12 @@ city: its four numbers with their sources, the staging table with its overrides,
 the tile each came from, the capture resolution, the cost, and the loyalty reading after the capture.
 At the end: whether the Netherlands still exists, what `get_victory_progress`'s DOMINATION block reads
 before and after if their original capital was among them, and the state of the treasury and the two
-red checks. If it expires: the cities taken, the cities left, and the measured per-city rate.
+checks. If it expires: the cities taken, the cities left, and the measured per-city rate.
 
 ## Why this is a file and not a turn-check rule
 
-`siege-train` and `ranged-mass` are the rules and they are red; `tactics/07` owns the analysis and
-`tactics/06` the fire. What no rule carries is **the campaign itself** - that every Dutch city is the
-objective, that the corps is drawn from the existing army rather than built, that the west lane stays a
-screen, and that the deadline is a measurement to be re-counted rather than a date to be trusted.
+`siege-train` and `ranged-mass` are the rules and they decide the shape of the corps; `tactics/07` owns
+the analysis and `tactics/06` the fire. What no rule carries is **the campaign itself** - that every
+Dutch city is the objective, that the corps is drawn from the existing army rather than built, that the
+west lane stays a screen, and that the deadline is a measurement to be re-counted rather than a date to
+be trusted.

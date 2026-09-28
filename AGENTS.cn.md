@@ -12,7 +12,7 @@
 
 ## 临时任务就是文件：每回合开始时读 `prompts/tasks/tmp/`
 
-**IN FORCE NOW:** 无。
+**IN FORCE NOW:** `023-dutch-siege-corps.md`（按人类指令，用现有军队拿下每一座荷兰城池；西线只留一道屏护）。
 
 临时指令是**一个文件，而不是本参考手册里的一段话**。本节讲的是处理它们的*流程*：如何拿到它们、
 如何读一个任务、如何判断哪些仍在生效，以及细节住在哪里。它既记录任务的内容，也不记录任务的退役
@@ -64,6 +64,15 @@
 - **在它结束的那一回合让它退役**：把它移到 `done/`，按上面的方式重命名，在同一个提交里更新
   `IN FORCE NOW` 和 `current_tasks.md`，并在日记的 `tooling` 行里记下那个回合。一个被留在原地的过期
   任务就是一条永不退役的指令。
+- **机械的那一半是一条命令**：`python scripts/temp-task.py add ...` 会把任务文件、登记册行和这份
+  清单一起写好，运行强制的文本闸门和 `tests/test_temp_tasks.py`，并且只在两者都绿时才提交；
+  **`--why` 是英文，且不携带任何地块坐标**——它是任务文件里唯一会落进*本*参考手册的部分，所以用文字
+  点名目标（"文件点名的那个城邦"），把坐标留在任务文件里、留在属于本局对战状态的地方，而脚本会拒绝
+  携带坐标的 `--why`；`... retire <nnn> --done`（或 `--expired`）`--turn N` 会把文件移进 `done/`，
+  并重新同步登记册和这份清单；`... status` 打印当前生效的是什么、游戏处在哪个回合，以及三个来源是否
+  一致。`scripts\temp-task.cmd`（cmd 和 PowerShell）和 `bash scripts/temp-task.sh`（Git Bash 和任何
+  POSIX shell）是同一个命令，只是不带解释器路径。它**不**写的是日记的 `tooling` 行和
+  `docs/task-history.md`——那些仍然归你。
 - `IN FORCE NOW` 那一行与目录由 `tests/test_temp_tasks.py` 相互核对，所以一次没有记录的退役会变红，
   而不是悄无声息地继续生效。
 
@@ -85,12 +94,13 @@ python scripts/fix-text-encoding.py --check     # report only; exit 1 when one i
 **DSH 交给模型的每一份文档都只用英文**（人类指令 2026-09-28）：本参考手册、
 `.dsh/skills/civ6-orchestrator/SKILL.md`，以及被 `scripts/use-strategy.ps1` 复制进该技能 DIRECTIVE
 块的预设 `prompts/strategies/<name>/directive.md`。这三者都是纯 ASCII 且无 BOM，把它们约束在那里的
-就是 `civ_mcp.text_encoding.ASCII_ONLY`，所以 `--check` 会在其中任何一份出现中文行时失败。**先把改动
-翻译成英文再写进去，把中文措辞放到文件旁边的 `<name>.cn.md` 镜像里**（`AGENTS.cn.md`、
-`SKILL.cn.md`、`directive.cn.md`），没有任何 DSH 搜索模式会匹配到它：harness 读取的是 `AGENTS.md` /
-`CLAUDE.md`，而一个技能必须是名字恰为 `SKILL.md` 的文件。`scripts/set-strategy.ps1 -Text` 出于同样
-的理由拒绝非 ASCII 输入，而如果某个镜像出现在 DSH 会加载它的地方，`tests/test_dsh_documents.py` 会
-失败。
+就是 `civ_mcp.text_encoding.ASCII_ONLY`，所以 `--check` 会在其中任何一份出现中文行时失败。**当一项
+改动带着中文时，把它翻译成英文，并写英文**——这些文件里出现一行中文就是一次失败，而不是一份草稿。
+**每一份旁边都有一个中文备份，`<name>.cn.md`**（`AGENTS.cn.md`、`SKILL.cn.md`、
+`directive.cn.md`）：它是从英文文件为人类读者生成的，从不被编辑，也从不是来源，而 DSH 无法加载
+它——harness 读取的是 `AGENTS.md` / `CLAUDE.md`，而一个技能必须是名字恰为 `SKILL.md` 的文件。
+`scripts/set-strategy.ps1 -Text` 出于同样的理由拒绝非 ASCII 输入，而 `tests/test_dsh_documents.py`
+会在一行中文上、在一个 DSH 可能加载的备份上，或者在一个缺失的备份上失败。
 
 **这道检查是强制性的，而且它不只是查 BOM**：BOM 说明不了字符是否还是当初有人写下的那些，所以闸门还会
 对每个文件 grep 一遍 GBK 往返转换留下的损伤。它在 `git commit` 中运行（`.githooks/pre-commit`，由
@@ -137,8 +147,8 @@ python .tools/kb.py index                     # the knowledge index
    **最后**一个开火位——是 `prompts/tactics/04-staging-out-of-range.md` 第 3b 步。**同样的三个阶段
    ——分析（`tactics/07`）、集结（`tactics/04` + 这个工具）、执行（`tactics/05`/`06`）——在每一座
    敌方城池和每一个蛮族营地上都要跑**（人类指令 2026-09-26），所以传**营地**的地块就跟你传城池的地块
-   完全一样：环形与任务分配是一样的，回复会说 `STAGING PLAN for the camp at x,y` 和
-   `WALK-IN OPENS`，而且没有补给线要切断。
+   完全一样：环形与任务分配是一样的，回复会说 `STAGING PLAN
+   for the camp at x,y` 和 `WALK-IN OPENS`，而且没有补给线要切断。
 5. `get_cities`——队列、成长、被掠夺的区域
 6. 如果要放置新区域，就用 `get_district_advisor`
 7. 如有需要，`set_city_production` / `set_research`
@@ -285,7 +295,8 @@ Shipbuilding tech to embark"），所以一道海峡不可通行，而一张"黑
 回合进攻。当进攻在宣战回合回答 `NO_ENEMY` 时，不要重载或重试。
 
 ### 战时
-有城墙的城池可以射击 2 格内的敌人（`city_action(city_id, "attack", target_x, target_y)`）——实测
+有城墙的城池可以射击 2 格内的敌人（`city_action(city_id, "attack", target_x,
+target_y)`）——实测
 43 点伤害、无反击，这是帝国里最便宜的伤害——而被攻占的城池要用 `city_action`（`keep`、`raze`、
 `liberate_founder`、`liberate_previous`）来处理，否则回合不会结束。**和平是指令文件的事，不是本参考
 手册的事**：它彻底禁止 `propose_peace`，而每一份到来的提议都被拒绝，所以在那套战略下，一场战争只有当
