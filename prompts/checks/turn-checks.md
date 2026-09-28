@@ -312,3 +312,24 @@ require: metric(enemy_supply_uncut_with_idle) == 0
 message: An enemy city has open adjacent hexes - its supply line - while our fighting units within three tiles still have movement. A city heals about twenty points a turn while any adjacent hex is outside our zone of control (manual:1066-1085, HEALING DAMAGE TO CITIES), so a hex that can be cut cheaply is worth cutting. Measured over the T139-T159 Russian war: 沃罗涅什 read `supply line 3/6 cut` and 喀山 read `1/6` for their whole sieges, while spare units "fortified in place because the corridor is jammed" (T155, verbatim) - both pools came back to full and both cities rebuilt their walls; 圣彼得堡 took six turns of fire for the same reason, because the heal was out-damaged rather than cut, and one firing tile could not out-damage it. Order the surplus units - the ones with movement and nothing to shoot at - onto or beside the open hexes, taking the far side of the ring rather than queueing in the corridor; a unit that walks there is out of the firing line that turn, and declining that trade belongs in the diary. **But read the pool before spending a shooter on it**: a partial cut under continuous fire has not let a city out-heal us - 哈勒姆 held a 3/6 cut and its pool went 200 -> 189 -> 86 -> 60 -> 20 over T266-T270, and the next Dutch city went 200 -> 65 with 3-4/6 - so when the pool is falling, keep firing and record the accepted partial cut rather than walking a shooter off the line to close the last hex.
 -->
 
+## Activated 2026-09-28 (staged in `pending/` until a server computed `attacks_landed_nothing`)
+
+The manual settles a fight the damage estimator could not: **a melee land unit cannot attack a unit at
+sea** (`manual:723`, MELEE UNITS). The engine accepts the order anyway and deals nothing, and the tool
+used to print a damage estimate for it, so the no-op read as a hit. Measured T222-T237 on this branch:
+**seven melee attacks on Dutch Caravels, the target's HP identical every time** (`enemy HP:57 -> 57/100`,
+and the Dutch hulls read 57 and 100 for seventeen consecutive turns while the diary recorded "four
+Caravels destroyed"), and **two of our units sunk in the water** - 骑兵 at (74,27) on T226 and 野战加农炮
+at (74,29) on T233 - because each attack spent the move that would have carried them out of the sea. The
+Lua refuses the order now (`ERR:MELEE_CANNOT_ATTACK_AT_SEA`) and the estimate answers
+`REFUSED BY THE RULES` with the citation, so this rule reads 0 on a corrected server: it is a
+**regression lock**, and it fires the first turn the refusal is removed, bypassed, or re-introduced by a
+new attack path. The case record is `docs/retrospectives/2026-09-28-the-naval-no-op-T221-T237.md`.
+
+<!-- check
+id: attacks-that-land-nothing
+when: metric(attacks_landed_nothing) >= 1
+require: metric(attacks_landed_nothing) == 0
+message: An attack this turn resolved as a melee attack on a unit at sea, and that cannot land - a melee land unit cannot attack enemies at sea (manual:723). Whatever the result line says (`OK:MELEE_ATTACK`, `est damage dealt:~57`), the target's HP does not move while the unit has spent the move that would have carried it out of the water: measured T222-T237, seven such attacks, zero damage, and two units sunk by the Caravel they were attacking. Fire with a ranged unit from two tiles away (manual:725: ranged units always use ranged combat, even adjacent) or use a naval unit (task 026), and get the melee unit ashore.
+-->
+

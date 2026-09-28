@@ -155,16 +155,11 @@ class TestTheCounterAndTheRule:
         assert '"attacks_landed_nothing"' in end_turn
         assert "gs._attacks_landed_nothing = 0" in end_turn, "the counter must reset with the turn"
 
-    def test_the_rule_is_staged_until_a_server_computes_the_metric(self):
+    def test_the_rule_is_live_now_that_a_server_computes_the_metric(self):
         from civ_mcp import turn_checks
 
-        staged = (ROOT / "prompts" / "checks" / "pending" / "attacks-that-land-nothing.md").read_text(
-            encoding="utf-8-sig"
-        )
-        assert "attacks-that-land-nothing" in staged
-        assert "metric(attacks_landed_nothing) == 0" in staged
-        assert "manual:723" in staged
-        # It must not be live yet: the metric is new, and a live rule naming an uncomputed metric
-        # reports `un-evaluable` every turn (prompts/checks/pending/README.md).
         live_text, _ = turn_checks.load_checks()
-        assert "attacks-that-land-nothing" not in live_text
+        assert "attacks-that-land-nothing" in live_text
+        assert "metric(attacks_landed_nothing) == 0" in live_text
+        # Promoted the turn the code computing the metric was running (the staged copy is gone).
+        assert not (ROOT / "prompts" / "checks" / "pending" / "attacks-that-land-nothing.md").exists()

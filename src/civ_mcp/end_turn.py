@@ -22,9 +22,12 @@ log = logging.getLogger(__name__)
 
 # Metrics that describe the live battlefield rather than the stored diary row. A historical
 # row cannot be asked about them, so `_context_from_row` fills them with zeros (the rules
-# that use them are gated on `>= 1`, so zero means "rule not applicable to this row").
+# that use them are gated on `>= 1`, so zero means "rule not applicable to this row" - and a
+# metric missing from this tuple would make its rule report `un-evaluable` on every row-based
+# pass, which is a permanent streak and shifts the TURN START verdict).
 _CONTACT_METRIC_KEYS = (
     "attacks_this_turn",
+    "attacks_landed_nothing",
     "move_stops_this_turn",
     "unused_attacks",
     "damaged_this_turn",
