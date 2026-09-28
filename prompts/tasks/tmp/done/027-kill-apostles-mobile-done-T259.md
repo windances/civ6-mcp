@@ -175,3 +175,10 @@ unit spent it.
      at: 2026-09-28T22:20:31+08:00
      chinese backup: prompts/tasks/cn/027-kill-apostles-mobile.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 027 --done --turn 259
+     at: 2026-09-28T23:31:13+08:00
+     status: done at T259
+     chinese backup: prompts/tasks/cn/027-kill-apostles-mobile.cn.md
+-->

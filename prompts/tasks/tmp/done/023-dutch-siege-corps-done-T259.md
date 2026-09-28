@@ -207,3 +207,10 @@ the analysis and `tactics/06` the fire. What no rule carries is **the campaign i
 Dutch city is the objective, that the corps is drawn from the existing army rather than built, that the
 west lane stays a screen, and that the deadline is a measurement to be re-counted rather than a date to
 be trusted.
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 023 --done --turn 259
+     at: 2026-09-28T23:29:58+08:00
+     status: done at T259
+     chinese backup: prompts/tasks/cn/023-dutch-siege-corps.cn.md
+-->

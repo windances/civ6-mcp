@@ -151,3 +151,10 @@ met" are neither. A rule naming a metric the server does not compute reports `un
 and nobody can satisfy it, and new rules are staged in `prompts/checks/pending/` until a server
 computing their metric is running - so this instruction travels as a file, which the turn loop reads,
 until T250 retires it.
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 019 --expired --turn 250
+     at: 2026-09-28T22:31:57+08:00
+     status: expired at T250
+     chinese backup: prompts/tasks/cn/019-two-scouts-to-sea.cn.md
+-->

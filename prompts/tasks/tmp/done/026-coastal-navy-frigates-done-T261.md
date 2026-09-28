@@ -109,3 +109,10 @@ cities were building what, how many turns each needed, and what took their queue
      at: 2026-09-28T19:52:56+08:00
      chinese backup: prompts/tasks/cn/026-coastal-navy-frigates.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 026 --done --turn 261
+     at: 2026-09-28T23:36:46+08:00
+     status: done at T261
+     chinese backup: prompts/tasks/cn/026-coastal-navy-frigates.cn.md
+-->

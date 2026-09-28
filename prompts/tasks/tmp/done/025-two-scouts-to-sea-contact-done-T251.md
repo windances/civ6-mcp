@@ -116,3 +116,10 @@ no check can express - which is what a task file is for.
      at: 2026-09-28T19:11:39+08:00
      chinese backup: prompts/tasks/cn/025-two-scouts-to-sea-contact.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 025 --done --turn 251
+     at: 2026-09-28T22:38:39+08:00
+     status: done at T251
+     chinese backup: prompts/tasks/cn/025-two-scouts-to-sea-contact.cn.md
+-->
