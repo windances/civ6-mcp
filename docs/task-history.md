@@ -431,3 +431,50 @@ supply line 6/6 全被切断（城市因此不再回血）。三发攻城火力�
 FIRE from here" 对移动满格抵达的单位不成立；(2) 线列步兵 #5111819 被一条长移动指令带下水
 (71,28)，再次证明 024 的 GROUND gate 警告——一条盲目的 move 会无声地让陆军登船；(3) (74,23)
 的 CAPTURE_MOVE|BLOCKED 说明那里有一个可俘获的敌方平民，但海路被阻断。
+
+
+## T224 - 020-take-brussels retired (done), and the takeover that found it
+
+The human rolled the match back to T224 a second time (after the T218 rollback above), and the first
+thing the new session did was rebuild every fact from the game rather than from the notes. That is
+how 020 ended: **布鲁塞尔 is already ours at T224.** `get_cities` lists it (pop 7, id 1310739), the
+tile at (69,29) reads `PLAINS FLOODPLAINS_PLAINS River Coast (Road) [CITY_CENTER] (owned by 中国)
+[my: CUIRASSIER]`, and `get_city_states` no longer lists 布鲁塞尔 among the five city-states. All
+three of 020's own conditions therefore hold, and the file was retired as
+`done/020-take-brussels-done-T224.md` by `scripts/temp-task.py retire 020 --done --turn 224`.
+
+- **The register had it wrong, and the game was the authority.** `current_tasks.md` carried the
+  rollback script's note that 020 "was restored by the rollback to T224 ... its `done when:` is false
+  again there". That note is a heuristic - the script restores any task retired *after* the rollback
+  turn - and at T224 布鲁塞尔 is ours. The lesson is the one this repo keeps relearning: **a task's
+  state is what the game says, not what the rollback bookkeeping predicted.**
+- **The assault ledger is the rolled-back run's, not this one's**: T235's wall probe read
+  `walls: 200/200`, fire came from (68,31), (69,31), (70,31), (71,30), and a Line Infantry attack from
+  (69,28) took the city across T236-T237 (`city hp 200/200 -> 0, walls 200/200 -> 0`). This session
+  inherited the city, not the fight, and says so rather than claiming the capture.
+- **The four Chinese backups the rollback had left missing** (019, 020, 021, 022) were written by hand
+  in the same turn; `tests/test_temp_tasks.py` + `tests/test_text_encoding.py` then read **41 passed**
+  and `scripts/fix-text-encoding.py --check` exits 0.
+
+### What the T224-T235 session measured
+
+Three movement rules were added to the toolkit by this run, none of them in `AGENTS.md`:
+
+1. **An embarked land unit cannot move onto enemy-owned land.** Cavalry #5177368 at (75,25) was
+   refused `BLOCKED (tile is enemy territory but movement still blocked - check path)` for both
+   (75,24) and (76,24) while unowned (77,25) was accepted - so a sea-borne invasion must land on
+   neutral or friendly ground and walk in.
+2. **A move onto foreign soil spends the unit's whole turn.** A Field Cannon with 5/5 movement stepped
+   one tile onto Dutch land and then answered `NO_MOVES|Unit has no movement points for ranged
+   attack`. This is the missing half of the `BLOCKED` message above: the refusal is a price the unit
+   cannot pay, not a prohibition - the same Cavalry entered (76,24) without trouble at full movement.
+3. **A melee land unit cannot attack a unit at sea** (`MELEE_CANNOT_ATTACK_AT_SEA`, manual:723), but
+   **a ranged unit can** - and `get_units` lists the attack for both, so the long-recorded "phantom
+   attack" is an unfiltered list, not a game bug. A Field Cannon did ~24 to a Caravel, ~4 and then ~11
+   to 乌得勒支's walls.
+
+The campaign itself did not take a city. 乌得勒支 (74,23) read `city hp 200/200, walls 185/200,
+supply line 3/6 cut` at T235 with a **Builder** as its garrison, and the siege block read
+`STAGNANT (+0 over 3 turns)` - a Field Cannon's wall damage is far too slow, the Bombard that would
+fix it cannot share the single d1 firing tile and must cross five contested steps, and the Dutch
+replaced every Caravel the water cost them. That is the record 023's expiry should be read against.
