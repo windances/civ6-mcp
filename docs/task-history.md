@@ -416,3 +416,18 @@ the **temporary tasks** back (`.tools/rollback-tasks.py`, job 3 of five) - which
 - **023 was kept** although it was added after T218: a human instruction is not the game's to withdraw.
   What it needed was re-reading, and its deadline was re-counted from T218 to **T272**.
 
+
+## T221 - 024-take-brussels retired (done)
+
+布鲁塞尔 (69,29) 在 T221 落入我手，比 expires (T241) 早二十回合。Gate 0 的数字：walls 100/100、
+city hp 200/200、守军是一支商人 (UNIT_TRADER，非战斗单位，从我们自己的攻击列表读出)、ring 18 格、
+supply line 6/6 全被切断（城市因此不再回血）。三发攻城火力（射石炮 #4128794 在 (68,31) d2、
+#4325376 在 (69,31) d2、#4980745 在 (69,30) d1）把城防池从 100 打到 0、城市血量打到 131；
+随后胸甲骑兵 #6029340 (70,29) d1 与线列步兵 #4456464 (70,30) d1 的近战攻击把血量清零并直接占领
+（第三次实测：近战攻击清空城防池即占领，攻击者进入城市）。city_action keep -> 布鲁塞尔 pop 7
+(id 1310739)，忠诚 50/100 且 +14/回合；get_city_states 不再列它，empire 19 -> 20 城。
+代价：线列步兵在 T220 的城防火力中掉 10 血 (57/100)，无单位损失。三条教训：(1) 射石炮移动后
+不能开火（NO_MOVES|Ranged attacks require movement），staging plan 的 "arrive this turn -
+FIRE from here" 对移动满格抵达的单位不成立；(2) 线列步兵 #5111819 被一条长移动指令带下水
+(71,28)，再次证明 024 的 GROUND gate 警告——一条盲目的 move 会无声地让陆军登船；(3) (74,23)
+的 CAPTURE_MOVE|BLOCKED 说明那里有一个可俘获的敌方平民，但海路被阻断。
