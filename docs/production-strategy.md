@@ -81,6 +81,61 @@ Market/Lighthouse adds capacity - the next capacity point is another route to th
    yields, empire-wide (`Expansion2_Buildings.xml:463-515`), and it is the only multiplier in this list
    that is bought with food and luxuries rather than production.
 
+## Does this hold for a new game?
+
+**The physics does; the priority order does not.** Sections 1-3 mix two different kinds of statement,
+and a new game has to separate them: the *mechanics* come from the game's data files and are true on
+turn 1 of any match, while the *rankings* were derived from a T288 board with 27 cities, 88 districts,
+12 trade routes, 2502 faith and a Spaceport under construction.
+
+**Universal - true on turn 1 of any match** (all cited in `docs/production-speed.md`):
+
+- the arithmetic: turns = cost / production per turn, purchase bypasses it, and neither overflow nor a
+  minimum-turns rule is parameterised anywhere;
+- citizens on tiles are the base - unemployed citizens yield 1 gold, a specialist gives up whatever
+  tile it left, the city centre floor is 1 production;
+- the amenity multiplier and its bands (GS: Happy +10%, Ecstatic +20%, and -10/-20/-30/-40% below
+  Content), including the two self-inflicted sources, war weariness and a negative treasury;
+- the trade-route formula: a **domestic** route gives its destination +1 production per qualifying
+  district there, plus food;
+- Industrial Zone adjacency and the two +100%-adjacency cards; Industrial Zone specialists at +2;
+- **power**: a plant is +1 production per citizen, a plant needs a Factory, and it serves cities
+  **within six tiles**; an unpowered city loses the power-only building yields under a -50% cap
+  (`docs/new-game.md:19-40`);
+- district costs rise with tech progress (`COST_PROGRESSION_NUM_UNDER_AVG_PLUS_TECH`, param 40) while
+  buildings and wonders do not;
+- gold purchase is 2x production cost, and districts are not purchasable unless Liang's or Moksha's
+  promotion is in place;
+- chop and harvest values are fixed integers (Woods 20, Rainforest 10+10, Marsh 20 food, Deer/Stone
+  20) with **no scaling**, and Great Engineer charges are fixed sums that discard their overflow.
+
+**Must be re-derived per match** - these were this board's numbers, not rules: the Spaceport, the
+space chain, Pingala's Space Initiative, Synthetic Technocracy, Ruhr Valley/Kilwa/Amundsen-Scott
+availability, the 12 trade routes, 780 gold and 2502 faith, 7 governors and their promotions, the
+suzerainties, and the 028 window itself. A new game's **target** is set by the victory hypothesis
+(`docs/new-game.md:12-17`), and the repo ships six presets - `balanced`, `china-conquest`,
+`domination`, `expansion`, `religion`, `science` - each of which changes what the production is *for*.
+
+**Inverts early - the most important part:**
+
+| late-game plan (this window) | a new game |
+|---|---|
+| *"Do not chop into the Spaceport - a +20 chop is ~1% of 1800."* | **Chop deliberately.** +20 on a 30-cost Scout is 60% of the item, and it is the cheapest burst a small empire has. Plan the chops, and put **Magnus with Groundbreaker (+50%)** in the city that does them |
+| *"Stack percentage multipliers (+100% Industrial Zone adjacency, +20% districts, +30% projects)."* | Percentages need a base. With 2-9 production, **first get citizens onto tiles and repair/improve them** (+1 hammer is +10-30% there); the cards come once the base exists |
+| *"Spend the 780 gold on districts, the 2502 faith on a Great Person."* | Gold's job early is **Builders and Settlers**: the directive's rule is that gold above ~300 with unimproved tiles should buy a Builder rather than be saved (`directive.md:282-288`), and faith is for a pantheon or a Great Prophet race, not for patronage |
+| *"Concentrate every domestic route on the Spaceport city."* | Same formula, different target: with 1-2 routes, send them to the **youngest** city that needs food and production to catch up, not to the capital that is already ahead |
+| *"Industrial Zone adjacency is the workhorse."* | Do not build the Industrial Zone early. The compounding order is growth first (Granary, Water Mill, farms), then the **Campus line**, then Commercial Hub, then Government Plaza, and an Encampment only when a war is near (`directive.md:289-292`) |
+| *"One city is the space factory."* | One city is the **war city** (`directive.md:321`), and for China the cheapest research is **wonders** - any completed wonder grants a Eureka *and* an Inspiration, so a cheap Classical wonder belongs in the first thirty turns (`directive.md:6,306-309`) |
+
+**What a new game should actually do about production**, in order: scout to see the map; settle 4-6
+cities on fresh water and then stop; keep the district arithmetic `districts <= floor(pop/3)` in view
+every time a queue is chosen; growth infrastructure first; the Campus line before any army; Builders
+continuously, because unimproved tiles are the usual reason an empire stalls; one cheap Classical
+wonder for the boosts; amenities positive before the first war; the Industrial Zone **placed for its
+six-tile ring** with power planned from turn one; and the army held to the directive's budget
+(maintenance under ~30% of income, negative GNP as the hard signal of an over-built army,
+`directive.md:301-305`).
+
 ## Sources
 
 - `docs/production-speed.md` - the full factor list with `path:line` citations into the installed game
@@ -90,3 +145,6 @@ Market/Lighthouse adds capacity - the next capacity point is another route to th
   window's own finish line.
 - `prompts/strategies/china-conquest/directive.md` - the compounding rules, the army budget and the
   "for China a wonder is a research building" ability.
+- `docs/new-game.md` - the three decisions before the first turn, and power planned at the start
+  (Industrial Zones placed for their six-tile ring, a plant requires a Factory and serves six tiles,
+  and fuel is an army decision as much as a city one).
