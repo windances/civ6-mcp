@@ -38,7 +38,7 @@ that stood at T281 (it took 布鲁塞尔 at T237 and 哈勒姆 at T271), and the
 same T218 save and reached T301 (it took 布鲁塞尔 at T224 - that is 024). **This position is T218**, where
 none of those holds: 布鲁塞尔 is a city-state again, 哈勒姆 is still the Netherlands', and the whole task
 set at T218 is being rolled back by `.tools/rollback-tasks.py`.
-| `021-siege-legion-overseas.md` | 2026-09-27 | turn 270 | siege Legion Overseas - restored by the rollback to turn 224; re-read the file before acting | **one of the two endings below holds, and the diary carries it**: (a) the legion is ashore on |
+| `028-development-science-wonders.md` | 2026-09-28 | turn 317 | development first for fifty turns - science and wonders, on the human's instruction: the empire is at peace and the space chain is the victory path | **turn 50 of this window - the `expires:` turn the header names - arrives with 西安's 宇航中心 (Spaceport) |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 
@@ -84,3 +84,5 @@ Task 023 was retired as `done/023-dutch-siege-corps-done-T259.md`.
 Task 027 was retired as `done/027-kill-apostles-mobile-done-T259.md`.
 
 Task 026 was retired as `done/026-coastal-navy-frigates-done-T261.md`.
+
+Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.

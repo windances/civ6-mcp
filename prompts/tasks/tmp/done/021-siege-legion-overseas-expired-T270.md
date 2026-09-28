@@ -186,3 +186,9 @@ and the diary:
 into 023's `expires:` arithmetic. The legion was never lost in battle - it was still on the road when
 the clock ran out, which is the failure mode the next campaign's deadline was changed for.
 
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 021 --expired --turn 270
+     at: 2026-09-28T23:56:12+08:00
+     status: expired at T270
+     chinese backup: prompts/tasks/cn/021-siege-legion-overseas.cn.md
+-->
