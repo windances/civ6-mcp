@@ -359,3 +359,38 @@ satisfied in full. It is the only task of the session that ended in a captured c
   turn and the only cheap answer is the supply cut, so a landing party's first job is the ring, not
   more fire.
 
+## `024-take-brussels` — done at T224
+
+**The record of the run that is playing now**, which was handed the T218 save after 021-022's run was
+rolled back: it stands at T226, 哈勒姆 is still the Netherlands', and this is the only city it has
+taken. The file is `prompts/tasks/tmp/done/024-take-brussels-done-T224.md`, added 2026-09-28 at T220
+from the human instruction 占领布鲁塞尔 with `expires: turn 241` - retired **four turns after it was
+filed and nineteen turns inside its own stop**, the fastest task of the three campaigns.
+
+- **The staging plan was written on the turn the task was filed, and the fire came from the tiles it
+  named.** `get_staging_plan(69,29)` at T220 reported *18 ring tile(s), 8 unit(s) placed, 1 unplaced*
+  and posted the three Bombards to (68,31), (70,31) and (69,31) - all d2 - with a Line Infantry on d1
+  at (68,29). Every shot below came from one of those tiles.
+- **The wall pool was 100, and one Bombard shot took all of it.** T223, Bombard #5636108 from d2:
+  `pre_hp:200/200 ... damage dealt:33 | city hp: 167/200, walls: 0/100`. A siege unit's work is on the
+  walls; the city's own pool is the second problem.
+- **Three shots read `damage dealt:none read` while the damage had landed** - T222's, T223's second and
+  T224's first. The T224 shot opened on `pre_hp:54/200`, so **113 points had come off behind the stale
+  prose**. That is the trap `docs/turn-result-blocks.md` describes, and here it cost nothing only
+  because the train kept firing; calling the fire off on the first "none" would have cost a turn.
+- **The capture was a move, not an attack.** T224: Bombard #5636108 took the pool to `0/200`; Line
+  Infantry #5111819 moved (69,28) -> (69,29) and the log carries
+  `CAPTURE_MOVE|69,29|from:69,28|CITY TAKEN`; the tile then read `[CITY_CENTER] ... (owned by 中国)`,
+  `get_cities` went **19 -> 20**, and the Harbour at (70,28) was ours with it. A builder was walking to
+  the **NITER at (68,31)** - the city-state's own resource tile - on T225.
+- **Three attacks were fired at a city already at 0/200** after the pool emptied (two Bombards and the
+  Field Cannon), and T223's `end_turn` recorded `CHECK FAILED [use-your-attacks]`. The rule cannot say
+  it, so it is here: **an attack on a city whose pool reads zero buys nothing - the turn belongs to the
+  capture move.** The pool is in the `pre_hp:` of the next shot, not in the prose of the last one.
+- **The cost**: four turns, no unit lost in the operation, and the Line Infantry that took the city was
+  at **57/100** after counter-battery fire at (71,28) and (69,28) on T221-T222 - it made the capture
+  move anyway. Compare 022's thirteen turns from Gate 0 and three units lost to barbarian ships for the
+  same class of coastal target: the difference is that here **the train was already assembled and its
+  staging plan written on the turn the instruction arrived**, so the campaign spent its four turns
+  firing rather than marching.
+
