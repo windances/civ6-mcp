@@ -39,6 +39,7 @@ same T218 save and reached T301 (it took 布鲁塞尔 at T224 - that is 024). **
 none of those holds: 布鲁塞尔 is a city-state again, 哈勒姆 is still the Netherlands', and the whole task
 set at T218 is being rolled back by `.tools/rollback-tasks.py`.
 | `028-development-science-wonders.md` | 2026-09-28 | turn 317 | development first for fifty turns - science and wonders, on the human's instruction: the empire is at peace and the space chain is the victory path | **turn 50 of this window - the `expires:` turn the header names - arrives with 西安's 宇航中心 (Spaceport) |
+| `029-two-scouts-sea-info.md` | 2026-09-29 | turn 301 | two scout-line units to sea to find the one civilization still unmet, information only and no fighting, on the human's instruction | **`get_diplomacy` no longer prints `Unmet Civilization`** - it names three civilizations and prints |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 

@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `028-development-science-wonders.md` (development first for fifty turns - science and wonders, on the human's instruction: the empire is at peace and the space chain is the victory path).
+**IN FORCE NOW:** `028-development-science-wonders.md` (development first for fifty turns - science and wonders, on the human's instruction: the empire is at peace and the space chain is the victory path) and `029-two-scouts-sea-info.md` (two scout-line units to sea to find the one civilization still unmet, information only and no fighting, on the human's instruction).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
