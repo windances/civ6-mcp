@@ -52,7 +52,7 @@ the Dutch war's business.** No war is declared over a missionary, and this file 
 ## Why this instruction, measured
 
 荷兰's own row of the per-turn snapshot (`unit_composition` and `religion_cities`, read from the diary)
-over the last fifteen turns of this branch:
+over the last eighteen turns of this branch:
 
 | turn | Dutch apostles | Dutch cities | cities following their religion | their military |
 |---|---|---|---|---|
@@ -60,6 +60,7 @@ over the last fifteen turns of this branch:
 | 232 | 5 | 7 | 13 | 124 |
 | 241 | 1 | 5 | 15 | 70 |
 | 244 | 2 | 3 | 15 | 22 |
+| 248 | 2 | 2 | 15 | 48 |
 
 Their army is gone - **military 120 -> 22** across the turns we took four of their cities - and the
 apostles are still here, and their religion is still spreading: **13 cities at T230, 15 at T244** while
@@ -68,6 +69,13 @@ An apostle costs them faith (they hold about 145 with +28 a turn), no rule in th
 one, and killing their army did not stop the conversion. That is the measured case for hunting it
 deliberately instead of treating it as the directive's "opportunistic, one tile of movement at most"
 case.
+
+**The two that exist right now are not a stale reading.** Three turns after this file was written the
+Dutch row still read `APOSTLE: 2` - the same two, while their cities went 3 -> 2 and their military
+went 22 -> 48 - so the finish line is still false, the sweep still has a target, and the two apostles
+have outlived five of their cities. They are not standing in the open waiting to be found: they are
+either inside the two cities that are left or walking between them, and both of those cities are in
+our fog at this writing.
 
 The only sighting on record: at T220 a Dutch apostle stood **on a Dutch city tile** with one of our
 mounted units one tile away (the run log of the session that played it, tile line
