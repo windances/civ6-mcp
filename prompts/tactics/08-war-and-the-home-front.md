@@ -91,6 +91,54 @@ not fighting from; the war city's queue is siege, melee, upgrades and its own wa
 - **Never leave a compounding city's queue empty.** An empty queue costs a turn of compounding in a
   city nobody is watching; that is the single most common way a war window goes flat.
 
+## Power — the bill the compounding cities run up
+
+The compounding half of this file is a power load, and this is the one bill a home front can run up
+for fifty turns without noticing. A city is either **fully powered** or its power-load buildings run at
+reduced strength — there is no partial state — and the loads are exactly the buildings this file tells
+the non-war cities to queue (`Expansion2_Buildings.xml`, `Building_RequiredPower`): **Research Lab 3,
+Stock Exchange 3, Broadcast Center 3, Film Studio 3, Factory 2, Stadium 2, Aquatics Center 2, Food
+Market 1, Shopping Mall 1, Airport 1**. What an unpowered city loses is measured, not folklore:
+`POWER_MAX_PRODUCTION_MODIFIER_PENALTY = -50` ("Buildings which require Power provide less than half of
+their normal yield when the city is Unpowered", `Expansion2_GlobalParameters.xml:224`) — and the
+missing half is the powered-only row, `Building_YieldChangesBonusWithPower`: **Factory +3, Electronics
+Factory +5, Airport +2**. A compounding city that is unpowered is compounding at half rate.
+
+| source | power | what it costs |
+|---|---|---|
+| Coal Power Plant | **1 Coal → 4 power**, for every city **within 6 tiles** | a fuel we are usually capping |
+| Oil Power Plant | 1 Oil → 4 power, within 6 tiles | the fuel the army's upgrades need |
+| Nuclear Power Plant | 1 Uranium → 16 power, within 6 tiles | 核裂变, and an ageing reactor can melt down |
+| Hydroelectric Dam | **+6**, no fuel | ~81 production once Electricity is in; river city, one per river |
+| Geothermal Plant | +4, no fuel | a geothermal vent and a builder charge |
+| Solar / Wind / Offshore Wind Farm | +2 each, no fuel | one builder charge each |
+| 商人's `RENEWABLE_ENERGY` promotion | +2 on each renewable in that city | one governor promotion |
+
+Four rules that decide it:
+
+1. **The 6-tile ring is the planning unit, not the city.** A plant serves every city within six tiles
+   that needs power, so on a wide empire the question is coverage: several plants (one per cluster) plus
+   renewables for the cities no ring reaches. Measure the ring before queueing, and name the cities it
+   covers.
+2. **A plant needs an Industrial Zone and a Factory** (the plant's prerequisite building is the
+   Factory), and the coal, oil and nuclear plants are **mutually exclusive** in one city — so the
+   decision is a cluster's, made once, not a per-city build order.
+3. **Spend coal, keep oil.** A capped coal stockpile is thrown away every turn — measured on this
+   branch, `COAL 70/70 (+12/t)` with the turn result itself printing `RESOURCE CAP ... excess is
+   wasted` — while oil at 0-4 of 70 twice refused a unit upgrade for want of one point. A coal plant
+   turns the waste into power; an oil plant competes with the army for the fuel the front needs.
+4. **Dams and renewables are the compounding answer**, because they cost no fuel and no CO2: the
+   Hydroelectric Dam is the largest free source in the game (+6), a Geothermal Plant +4, and one
+   builder charge per Solar/Wind farm. The card-style play is the 商人 governor with `RENEWABLE_ENERGY`
+   in whichever city holds the most renewable sources.
+
+**Read it, do not assume it.** `get_cities` prints `Power available/required` on each city line and a
+`!! UNPOWERED` line naming the requirement, the available power and the game's own advice, and the
+per-turn city record carries `power_required`, `power_available` and `powered`. The `power-the-cities`
+rule (staged in `prompts/checks/pending/`) makes `unpowered_cities` a failing metric once a server
+computes it. On an older server none of that exists — then the reading is the city banner, and the
+diary says which city was checked by eye.
+
 ## Step 3 — the units the war does not need still have jobs
 
 - **Builders keep coming, and they never follow the stack.** +10 improvements during this war is the
@@ -168,6 +216,15 @@ Answer both in that turn's diary. The two windows read differently and the diffe
   army is over-built, and it is the one number that did not recover in this war.
 - **Do not leave a strategic resource unmined inside our borders** (measured: iron, all war, with Iron
   Working already researched), and do not leave a resource cap full (+2/turn discarded).
+- **Do not queue the next science building in a city the game calls unpowered** as if it were paying
+  full: either the power source is queued in the same window (a plant for the cluster, a dam, a
+  renewable) or the diary says the half-rate compounding is accepted and for how long. An unpowered
+  Research Lab is a Research Lab at less than half strength.
+- **Do not burn oil on power while the army needs it.** Oil fired power is the same 4 power as coal for
+  a fuel the front's upgrades queue for; the oil plant is a decision for the window in which the wells
+  out-produce the army.
+- **Do not put two power plants in one city.** Coal, oil and nuclear plants are mutually exclusive
+  there; the second plant belongs to the next cluster, inside whose 6-tile ring its cities sit.
 - **Do not move the governor out of a low-loyalty city** to make a number in a compounding city look
   better; a city that revolts has to be besieged again.
 - **Do not pull a builder or a trader toward the front** to "help": they have no combat strength, they
@@ -179,6 +236,8 @@ Answer both in that turn's diary. The two windows read differently and the diffe
 WAR CITY   <city> — queue, production n/turn, what it is building for the front
 COMPOUND   for every other city: <city — next district/building, n turns>; empty queues: <list or none>
 SLOTS      districts n vs floor(pop/3) n; cities with a free slot: <list or none>
+POWER      unpowered cities: <city — required n, available n, the source queued or the accepted
+           half-rate window>; fuel spent on power vs kept for the army: <coal n, oil n>
 CASH       gold n, gold/turn n (floor +10), military n; the next named purchase: <item, turn>
 UNITS      builders n (charges n, nearest URGENT tile), idle trade routes n, settlers n
 GOVERNORS  <governor -> city> and which phase each is buying
