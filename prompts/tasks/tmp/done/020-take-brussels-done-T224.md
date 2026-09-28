@@ -155,3 +155,10 @@ Every mechanical half already has a rule or a tactic: `siege-train`, `screen-the
 objective at all** - the standing doctrine says it is not, the human has said it is, and that reversal
 has to travel to the turn loop as a file with the human's instruction written in it as the reason of
 record.
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 020 --done --turn 224 --no-commit --note "Task 020 was retired as done: 布鲁塞尔 (69,29) reads [CITY_CENTER] owned by 中国 with our Cuirassier standing on it, it is in get_cities (pop 7, id 1310739) and it is off get_city_states; the assault ledger is the rolled-back run's (wall probe walls 200/200 at T235, fire from (68,31),(69,31),(70,31),(71,30) plus a Line Infantry attack from (69,28) across T236-T237)."
+     at: 2026-09-28T20:36:02+08:00
+     status: done at T224
+     chinese backup: none
+-->

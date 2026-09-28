@@ -233,15 +233,30 @@ def why_from_git(root: pathlib.Path, name: str) -> str | None:
     return why_from_history(diff, name) if diff else None
 
 
-def why_is_usable(why: str) -> bool:
-    """Whether a blurb may travel into `AGENTS.md`: pure ASCII and no tile coordinate.
+_TURN_REF = re.compile(r"\bT\d{2,4}\b")
 
-    The register's history is **not** safe by construction. The row task 024 was added with named its
-    target's tile - "(69,29)" - which is the exact coordinate that turned `AGENTS.md` red and was
-    repaired out of the reference and the register the same day. Recovering it verbatim and writing it
-    back would undo that, so a recovered blurb is checked here and falls back to the derived one.
+
+def why_is_usable(why: str) -> bool:
+    """Whether a blurb may travel into `AGENTS.md`: ASCII, no tile coordinate, no bare turn reference.
+
+    The register's history is **not** safe by construction, in two ways that were both measured:
+
+    - the row task 024 was added with named its target's tile - "(69,29)" - which is the exact
+      coordinate that turned `AGENTS.md` red and was repaired out of the reference the same day; and
+    - the row task 019 was added with read `(T220: 32% of the map explored, four living majors not
+      met)`, and restoring it put a bare turn reference into the `IN FORCE NOW` line, which
+      `tests/test_agents_is_game_agnostic.py` counts in prose against a budget of four - the restore
+      turned the suite red on 2026-09-28, one turn after the rollback that performed it.
+
+    A recovered blurb is checked here and falls back to the derived one when it cannot travel, so a
+    restore can never write either shape back into the reference.
     """
-    return bool(why) and why.isascii() and not tt.stray_coordinates(why)
+    return (
+        bool(why)
+        and why.isascii()
+        and not tt.stray_coordinates(why)
+        and not _TURN_REF.search(why)
+    )
 
 
 # Kept lowercase inside a derived blurb, so a slug does not read like a headline.

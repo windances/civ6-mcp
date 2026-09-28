@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `023-dutch-siege-corps.md` (take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen) and `025-two-scouts-to-sea-contact.md` (two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight) and `026-coastal-navy-frigates.md` (build a navy in the coastal cities - frigates, or the next tier the tech tree offers, on the human's instruction).
+**IN FORCE NOW:** `023-dutch-siege-corps.md` (take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen) and `025-two-scouts-to-sea-contact.md` (two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight) and `026-coastal-navy-frigates.md` (build a navy in the coastal cities - frigates, or the next tier the tech tree offers, on the human's instruction) and `019-two-scouts-to-sea.md` (two Scouts to sea, to find the civilizations nobody has met (the map is about a third explored and four living majors are unmet)) and `021-siege-legion-overseas.md` (siege Legion Overseas - restored by the rollback to turn 224; re-read the file before acting) and `022-take-haarlem.md` (take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and

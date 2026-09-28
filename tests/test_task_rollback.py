@@ -232,6 +232,25 @@ class TestTheWhyForARestoredTask:
         )
         assert tr.why_is_usable(row["why"]), row["why"]
 
+    def test_a_recovered_blurb_with_a_turn_reference_falls_back(self, scratch, monkeypatch):
+        """A blurb that reads `(T220: 32% of the map explored)` must not reach `AGENTS.md`.
+
+        Measured 2026-09-28: restoring task 019 from the register's history put a bare `T220` into the
+        `IN FORCE NOW` line, and `tests/test_agents_is_game_agnostic.py` counts those in prose against a
+        budget of four - the restore turned the suite red one turn after the rollback that did it.
+        """
+        monkeypatch.setattr(
+            tr, "why_from_git", lambda root, name: "scouts to sea (T220: a third of the map explored)"
+        )
+        report = tr.apply_plan(scratch, tr.build_plan(scratch, 218))
+        assert [name for name, _, _ in report.restored] == ["020-take-brussels.md"]
+        row = next(
+            row for row in tr.tt.register_rows(tr.tt.read_text(tr.tt.root_paths(scratch)[2]))
+            if row["file"] == "020-take-brussels.md"
+        )
+        assert "T220" not in row["why"]
+        assert not tr._TURN_REF.search(row["why"])
+
     def test_an_override_that_cannot_travel_is_refused_before_any_move(self, scratch):
         agents = tr.tt.root_paths(scratch)[3].read_bytes()
         report = tr.apply_plan(

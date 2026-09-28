@@ -41,6 +41,9 @@ set at T218 is being rolled back by `.tools/rollback-tasks.py`.
 | `023-dutch-siege-corps.md` | 2026-09-28 | turn 272 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
 | `025-two-scouts-to-sea-contact.md` | 2026-09-28 | turn 255 | two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight | **`get_diplomacy` lists a civilization it did not list at turn 220 (it lists five there), and both |
 | `026-coastal-navy-frigates.md` | 2026-09-28 | turn 277 | build a navy in the coastal cities - frigates, or the next tier the tech tree offers, on the human's instruction | **at least two naval units of the Frigate tier or above are ours (`get_units` names them) and every |
+| `019-two-scouts-to-sea.md` | 2026-09-27 | turn 250 | two Scouts to sea, to find the civilizations nobody has met (the map is about a third explored and four living majors are unmet) | **two units of the Scout line are alive, each on a water tile** (`COAST` or `OCEAN` in |
+| `021-siege-legion-overseas.md` | 2026-09-27 | turn 270 | siege Legion Overseas - restored by the rollback to turn 224; re-read the file before acting | **one of the two endings below holds, and the diary carries it**: (a) the legion is ashore on |
+| `022-take-haarlem.md` | 2026-09-28 | turn 288 | take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration | **Haarlem is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 
@@ -64,3 +67,13 @@ wanted at this position:
 produced this state; its backup is `.civ6-mcp-data/branches/rollback-tasks-T218-20260928-174858/`.
 
 Task 024 was retired as `done/024-take-brussels-done-T221.md`.
+
+Task 019 was restored by the rollback to T224: it was retired at T250, after the target turn, so its `done when:` is false again there.
+
+Task 020 was restored by the rollback to T224: it was retired at T237, after the target turn, so its `done when:` is false again there.
+
+Task 021 was restored by the rollback to T224: it was retired at T270, after the target turn, so its `done when:` is false again there.
+
+Task 022 was restored by the rollback to T224: it was retired at T271, after the target turn, so its `done when:` is false again there.
+
+Task 020 was retired as done: 布鲁塞尔 (69,29) reads [CITY_CENTER] owned by 中国 with our Cuirassier standing on it, it is in get_cities (pop 7, id 1310739) and it is off get_city_states; the assault ledger is the rolled-back run's (wall probe walls 200/200 at T235, fire from (68,31),(69,31),(70,31),(71,30) plus a Line Infantry attack from (69,28) across T236-T237).
