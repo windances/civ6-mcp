@@ -212,23 +212,22 @@ class TestTheUpgradeMetricsAreWired:
         assert "melee_upgrades_available" in inspect.getsource(et._matchup_metrics)
 
 
-class TestTheDiscountRuleIsStaged:
-    """Cut in only once a session running the metric's code has started (`pending/README.md`)."""
+class TestTheDiscountRuleIsLive:
+    """Cut in at T220: the session playing the T218 save runs the code that computes the metric."""
 
-    def test_the_staged_file_names_the_metric_and_the_code(self):
-        text = PENDING_DISCOUNT.read_text(encoding="utf-8-sig")
-        assert "id: keep-the-upgrade-discount" in text
-        assert "upgrades_gated_by_discount" in text, "the rule depends on this metric"
-        assert "_gated_by_discount" in text, "the staged file names the code that must ship first"
+    def test_the_staged_file_is_gone(self):
+        assert not PENDING_DISCOUNT.exists(), (
+            "the rule moved up to turn-checks.md; a staged copy left behind is one fact in two places"
+        )
 
-    def test_it_is_not_live_yet(self):
-        # The running session's metric set lacks the key, and a rule naming a metric no server
-        # computes reports `un-evaluable` every turn: alive-looking and unsatisfiable.
-        assert "keep-the-upgrade-discount" not in LIVE.read_text(encoding="utf-8-sig")
+    def test_it_is_in_the_live_file_with_its_measured_evidence(self):
+        live = LIVE.read_text(encoding="utf-8-sig")
+        assert "id: keep-the-upgrade-discount" in live
+        for measured in ("115 -> 230", "155 -> 310", "190 -> 380", "540g", "270g"):
+            assert measured in live, f"the rule's message lost the measurement {measured!r}"
 
-    def test_the_staged_expression_evaluates_in_this_build(self):
-        rule = turn_checks.parse_checks(PENDING_DISCOUNT.read_text(encoding="utf-8-sig"))[0]
-        assert rule.check_id == "keep-the-upgrade-discount"
+    def test_the_engine_evaluates_it_in_this_build(self):
+        rule = _live_rule("keep-the-upgrade-discount")
         fired = context(upgrades_gated_by_discount=1)
         quiet = context(upgrades_gated_by_discount=0)
         assert bool(turn_checks.evaluate(rule.when, fired)) is True

@@ -28,6 +28,7 @@ import json
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 
 import pytest
@@ -342,3 +343,71 @@ class TestEveryTaskFileIsRetirable:
                 continue
             text = path.read_text(encoding="utf-8-sig")
             assert "done when:" not in text or "-done-T" in path.name or "-expired-T" in path.name
+
+
+class TestTheInForceLineStaysGameAgnostic:
+    """The register's `why` blurb is the one field of it that reaches AGENTS.md, so it is held to that
+    file's own bar: English, and no tile coordinates.
+
+    Measured 2026-09-28: task 024's blurb named its target's tile - "take the city-state at (69,29)" -
+    and `scripts/temp-task.py add` wrote it straight into `IN FORCE NOW`, which turned
+    `tests/test_agents_is_game_agnostic.py` red in the same commit. The suite caught it, but a
+    game-agnostic reference should not depend on a later test noticing state a *script* injected: the
+    task file is where a coordinate belongs, because that is the file a player of this match reads.
+    """
+
+    def test_the_helper_reads_the_bar_the_agents_test_enforces(self):
+        from civ_mcp import temp_tasks as tt
+
+        assert tt.stray_coordinates(AGENTS.read_text(encoding="utf-8-sig")) == []
+        assert tt.stray_coordinates("take the city-state at (69,29) now") == ["69,29"]
+        # The Coordinate System's own teaching example is the single pair the reference may carry.
+        assert tt.stray_coordinates("moving (9,24) to (9,26) is south") == []
+
+    def test_the_library_refuses_to_write_a_coordinate_into_agents(self):
+        from civ_mcp import temp_tasks as tt
+
+        rows = [
+            {
+                "file": "024-take-brussels.md",
+                "added": "2026-09-28",
+                "expires": "turn 241",
+                "why": "take the city-state at (69,29)",
+                "done": "the city is ours",
+            }
+        ]
+        with pytest.raises(ValueError, match="tile coordinates"):
+            tt.agents_with_in_force(AGENTS.read_text(encoding="utf-8-sig"), tt.in_force_line(rows))
+
+    def test_the_script_refuses_the_blurb_before_it_writes_anything(self):
+        """The refusal has to happen at the writing end, not in the suite that reads it afterwards."""
+        done = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "temp-task.py"),
+                "--root",
+                str(ROOT),
+                "add",
+                "--title",
+                "A coordinate probe",
+                "--why",
+                "take the city-state at (69,29)",
+                "--done-when",
+                "get_cities lists the city as ours; it is no longer a city-state",
+                "--overrides",
+                "nothing",
+                "--scope",
+                "nothing",
+                "--expires-turn",
+                "9999",
+                "--dry-run",
+                "--no-gate",
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            timeout=180,
+        )
+        output = (done.stdout or "") + (done.stderr or "")
+        assert done.returncode == 1, f"the script accepted a coordinate in --why: {output}"
+        assert "tile coordinates" in output

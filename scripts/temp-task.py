@@ -25,6 +25,10 @@ Notes that are easy to get wrong and are handled here:
   own words go in `--instruction`, verbatim, and are written into the task file's `added:` line (which
   carries a BOM). On Windows prefer `--instruction @file.txt`: CJK through a shell's argv is where it
   gets mangled, and every `--done-when`, `--overrides`, `--scope` and `--body-file` takes `@file` too.
+* `--why` may not carry a **tile coordinate** for the same reason: AGENTS.md is the interface reference
+  and stays game-agnostic (`tests/test_agents_is_game_agnostic.py` fails the file on any pair but the
+  Coordinate System example). Name the target - "the city-state the file names" - and leave the
+  coordinate in the task file, where the match's state belongs. Both `add` and `retire` refuse it.
 * `--expires-turn` defaults to the current game turn plus `--turns` (30). The current turn is read the
   way the suite reads it - the newest save first, since that is the only record that keeps moving while
   a human plays with no session attached.
@@ -53,6 +57,30 @@ def _value(raw: str) -> str:
 
 def _one_line(text: str) -> str:
     return " ".join(text.strip().split())
+
+
+def _line_guard(rows: list[tt.Row]) -> int:
+    """0 when the rebuilt `IN FORCE NOW` line may be written into AGENTS.md, else 1 after saying why.
+
+    AGENTS.md is the interface reference, not this match's diary: it is held to the pure-ASCII bar and
+    to game-agnostic prose (`tests/test_agents_is_game_agnostic.py`), and the register's one-line `why`
+    is the one field of it that reaches that line. Both `add` and `retire` rewrite the line, so both ask
+    here - the earlier a leak is refused, the fewer files carry it.
+    """
+    blocked = tt.non_ascii_rows(rows)
+    if blocked:
+        print("refusing: these register rows hold non-ASCII text in the 'why' column, and AGENTS.md")
+        print("          cannot carry it: " + ", ".join(blocked))
+        print("          write each one-line reason in English (the Chinese stays in the task file).")
+        return 1
+    stray = tt.stray_coordinates(tt.in_force_line(rows))
+    if stray:
+        print("refusing: the 'why' column carries tile coordinates (" + ", ".join(stray) + "), and")
+        print("          AGENTS.md stays game-agnostic - a coordinate there is this match's state.")
+        print("          Name the target instead ('the city-state the file names'); the task file")
+        print("          itself still carries the coordinate, which is where a player reads it.")
+        return 1
+    return 0
 
 
 def _run(cmd: list[str], cwd: pathlib.Path) -> tuple[int, str]:
@@ -216,11 +244,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     path = tmp / name
     register_text = tt.register_with_row(tt.read_text(register), row)
     rows = tt.register_rows(register_text)
-    blocked = tt.non_ascii_rows(rows)
-    if blocked:
-        print("refusing: these register rows hold non-ASCII text in the 'why' column, and AGENTS.md")
-        print("          cannot carry it: " + ", ".join(blocked))
-        print("          write each one-line reason in English (the Chinese stays in the task file).")
+    if _line_guard(rows):
         return 1
     agents_text = tt.agents_with_in_force(tt.read_text(agents), tt.in_force_line(rows))
 
@@ -294,11 +318,7 @@ def cmd_retire(args: argparse.Namespace) -> int:
         note = f"Task {int(wanted):03d} was retired as `done/{target.name}`: {_one_line(note)}"
     register_text = tt.register_without(tt.read_text(register), path.name, note)
     rows = tt.register_rows(register_text)
-    blocked = tt.non_ascii_rows(rows)
-    if blocked:
-        print("refusing: these register rows hold non-ASCII text in the 'why' column, and AGENTS.md")
-        print("          cannot carry it: " + ", ".join(blocked))
-        print("          write each one-line reason in English (the Chinese stays in the task file).")
+    if _line_guard(rows):
         return 1
     agents_text = tt.agents_with_in_force(tt.read_text(agents), tt.in_force_line(rows))
 
@@ -352,7 +372,7 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument("--done-when", required=True, help="observable finish line; @file reads UTF-8")
     add.add_argument("--overrides", required=True, help="what the task outranks; @file reads UTF-8")
     add.add_argument("--scope", required=True, help="what the task authorizes; @file reads UTF-8")
-    add.add_argument("--why", required=True, help="one ASCII line for the register and AGENTS.md")
+    add.add_argument("--why", required=True, help="one ASCII line, no (x,y), for the register and AGENTS.md")
     add.add_argument("--slug", help="file-name slug (default: from the title)")
     add.add_argument("--turns", type=int, default=30, help="expiry = game turn + this (default 30)")
     add.add_argument("--expires-turn", type=int, help="an explicit expiry turn")

@@ -64,26 +64,34 @@ class TestTheMetricAndTheLine:
         assert "232" in text, "the line carries the measurement that produced it"
 
 
-class TestTheRuleIsStaged:
-    def test_the_staged_file_names_the_metric_and_the_code(self):
-        text = PENDING.read_text(encoding="utf-8-sig")
-        assert "id: issue-the-calls-furthest-first" in text
-        assert "move_stops_this_turn" in text
-        assert "note_move_stops" in text, "the staged file names the code that must ship first"
+class TestTheRuleIsLive:
+    """Cut in at T220: the session playing the T218 save runs the code that computes the metric."""
 
-    def test_it_is_not_live_yet(self):
-        # The running session's metric set is in memory and lacks this key: cutting it in now would
-        # report `un-evaluable` every turn.
-        assert "issue-the-calls-furthest-first" not in LIVE.read_text(encoding="utf-8-sig")
+    def test_the_staged_file_is_gone(self):
+        assert not PENDING.exists(), (
+            "the rule moved up to turn-checks.md; a staged copy left behind is one fact in two places"
+        )
 
-    def test_the_staged_expression_evaluates_in_this_build(self):
-        rule = turn_checks.parse_checks(PENDING.read_text(encoding="utf-8-sig"))[0]
-        assert rule.check_id == "issue-the-calls-furthest-first"
+    def test_it_is_in_the_live_file_with_its_measurement(self):
+        live = LIVE.read_text(encoding="utf-8-sig")
+        assert "id: issue-the-calls-furthest-first" in live
+        assert "232 stops" in live, "the rule's message lost the measurement that produced it"
+        assert "rolled back from" in live, (
+            "the measurement is from the branch this save was rolled back from, and the rule has to "
+            "say so: those turns are after this branch's present"
+        )
+
+    def test_the_engine_evaluates_it_in_this_build(self):
+        checks = {
+            check.check_id: check
+            for check in turn_checks.parse_checks(LIVE.read_text(encoding="utf-8-sig"))
+        }
+        rule = checks["issue-the-calls-furthest-first"]
         jammed = turn_checks.CheckContext(
-            turn=300, units={}, metrics={"move_stops_this_turn": 5}, researched=frozenset()
+            turn=220, units={}, metrics={"move_stops_this_turn": 5}, researched=frozenset()
         )
         clear = turn_checks.CheckContext(
-            turn=300, units={}, metrics={"move_stops_this_turn": 1}, researched=frozenset()
+            turn=220, units={}, metrics={"move_stops_this_turn": 1}, researched=frozenset()
         )
         assert bool(turn_checks.evaluate(rule.when, jammed)) is True
         assert bool(turn_checks.evaluate(rule.require, jammed)) is False

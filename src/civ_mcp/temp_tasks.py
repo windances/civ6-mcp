@@ -294,14 +294,36 @@ def non_ascii_rows(rows: list[Row]) -> list[str]:
     return [row["file"] for row in rows if not row["why"].isascii()]
 
 
+# A parenthesised tile pair is this match's state, not the interface's: `AGENTS.md` has to read the
+# same in the next game, so the only pair it may carry is the Coordinate System's own teaching example
+# (`tests/test_agents_is_game_agnostic.py` holds the file to exactly that). A register blurb travels
+# into that line, so it is held to the same bar before it is written.
+COORD_RE = re.compile(r"\((\d{1,3}),\s?(\d{1,3})\)")
+ALLOWED_COORDS = frozenset({"9,24", "9,26"})
+
+
+def stray_coordinates(text: str) -> list[str]:
+    """The parenthesised tile pairs in `text` that a game-agnostic document may not carry."""
+    found = {f"{x},{y}" for x, y in COORD_RE.findall(text)}
+    return sorted(found - ALLOWED_COORDS)
+
+
 def agents_with_in_force(agents_text: str, line: str) -> str:
     """Replace the `IN FORCE NOW` line, swallowing any continuation lines that named tasks.
 
     AGENTS.md is held to the pure-ASCII bar, so the line itself is checked here rather than left for
-    the gate: a Chinese blurb belongs in the task file, not in the reference.
+    the gate: a Chinese blurb belongs in the task file, not in the reference. It is also held to
+    game-agnostic prose, which is why a coordinate in the line is refused here as well.
     """
     if not line.isascii():
         raise ValueError("the IN FORCE NOW line must be pure ASCII (it is part of AGENTS.md)")
+    stray = stray_coordinates(line)
+    if stray:
+        raise ValueError(
+            "the IN FORCE NOW line may not carry tile coordinates "
+            f"({', '.join(stray)}): it is written into AGENTS.md, which stays game-agnostic - "
+            "keep the coordinates in the task file, where this match's state belongs"
+        )
     lines = agents_text.splitlines()
     start = next((i for i, l in enumerate(lines) if IN_FORCE_MARKER in l), None)
     if start is None:

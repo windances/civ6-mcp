@@ -73,7 +73,10 @@ record.
   task left behind is an instruction that never retires.
 - **The mechanical half is one command**: `python scripts/temp-task.py add ...` writes the task file, the
   register row and this list together, runs the mandatory text gate and `tests/test_temp_tasks.py`, and
-  commits only when both are green; `... retire <nnn> --done` (or `--expired`) `--turn N` moves the file
+  commits only when both are green; **`--why` is English and carries no tile coordinate** - it is the
+  one part of a task file that lands in *this* reference, so name the target in words ("the
+  city-state the file names"), leave the coordinate in the task file where this match's state
+  belongs, and the script refuses a `--why` that carries one; `... retire <nnn> --done` (or `--expired`) `--turn N` moves the file
   into `done/` and re-syncs the register and this list; `... status` prints what is in force, what turn
   the game stands on and whether the three sources agree. `scripts\temp-task.cmd` (cmd and PowerShell)
   and `bash scripts/temp-task.sh` (Git Bash and any POSIX shell) are the same command without the

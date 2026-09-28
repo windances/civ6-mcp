@@ -95,6 +95,13 @@ message: At least one unit still has movement points and a legal attack it did n
 -->
 
 <!-- check
+id: issue-the-calls-furthest-first
+when: metric(move_stops_this_turn) >= 3
+require: metric(move_stops_this_turn) <= 2
+message: Three or more units were ordered somewhere this turn and stopped short of it: that is the column queueing behind itself, not fighting. `get_staging_plan` prints the order the calls should go in (furthest ring tile first, nearest last) - issue them in that order, one move per call with a `get_units` between them, and re-issue a stopped unit before moving the next. Measured on the branch this save was rolled back from (T228-T299): 232 stops in 72 turns, 19 in a single turn, and every staging plan leaving 6-9 units unplaced. A turn that stops three units for a stated reason - a Zone of Control entry, a landing, a corridor that fits one unit - belongs in the diary.
+-->
+
+<!-- check
 id: finish-the-wounded
 when: turn() >= 60 and metric(weakest_enemy_hp_within_2) >= 1 and metric(weakest_enemy_hp_within_2) <= 20
 require: metric(attacks_this_turn) >= 1
@@ -230,6 +237,13 @@ id: upgrade-the-unwatched
 when: metric(at_war) >= 1 and metric(uncovered_upgrades_available) >= 1 and metric(gold) >= metric(min_uncovered_upgrade_cost) * 2
 require: metric(uncovered_upgrades_available) <= 0
 message: An affordable upgrade for a ranged, cavalry or anti-cavalry unit is waiting while the war is on, and the treasury can pay for it twice over. No other rule watches this class - match-their-melee covers the melee and anti-cavalry tiers, upgrade-the-siege covers siege - so nothing else will say it. Measured T204-T215: the treasury went 621 -> 768 while a Knight -> Cuirassier (230g) and two Crossbowman -> Field Cannon (310g each) sat unbought for twelve turns, and at T216-T217 two of them were bought at the doubled price the T201 policy window had created when it traded POLICY_PROFESSIONAL_ARMY ('50% discount on all unit upgrades') for housing - 540g where 270g would have done. Upgrade the cheapest one, or say in the diary why the gold is being kept.
+-->
+
+<!-- check
+id: keep-the-upgrade-discount
+when: metric(upgrades_gated_by_discount) >= 1
+require: metric(upgrades_gated_by_discount) <= 0
+message: An upgrade is affordable at the discount price and not at the price the treasury is quoted, because POLICY_PROFESSIONAL_ARMY ('50% discount on all unit upgrades') is not in the government - every offer has cost double since the T201 free window traded it for housing (measured 115 -> 230, 155 -> 310, 190 -> 380, and 540g paid at T216-T217 where 270g would have done). Put the card back at the next free policy change, or say in the diary which policy is worth more than halving every upgrade.
 -->
 
 ## Holding what you take
