@@ -163,3 +163,10 @@ written in it as the reason of record.
 it affordable is the Netherlands' military of **3**. If the two compete for production, gold or the
 Frigate, **021 keeps its expedition and this file takes what is left** - the `overrides:` line says so,
 and the diary should record which of the two the session chose whenever they collide.
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 022 --done --turn 241
+     at: 2026-09-28T22:12:15+08:00
+     status: done at T241
+     chinese backup: prompts/tasks/cn/022-take-haarlem.cn.md
+-->

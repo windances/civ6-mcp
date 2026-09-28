@@ -43,7 +43,7 @@ set at T218 is being rolled back by `.tools/rollback-tasks.py`.
 | `026-coastal-navy-frigates.md` | 2026-09-28 | turn 277 | build a navy in the coastal cities - frigates, or the next tier the tech tree offers, on the human's instruction | **at least two naval units of the Frigate tier or above are ours (`get_units` names them) and every |
 | `019-two-scouts-to-sea.md` | 2026-09-27 | turn 250 | two Scouts to sea, to find the civilizations nobody has met (the map is about a third explored and four living majors are unmet) | **two units of the Scout line are alive, each on a water tile** (`COAST` or `OCEAN` in |
 | `021-siege-legion-overseas.md` | 2026-09-27 | turn 270 | siege Legion Overseas - restored by the rollback to turn 224; re-read the file before acting | **one of the two endings below holds, and the diary carries it**: (a) the legion is ashore on |
-| `022-take-haarlem.md` | 2026-09-28 | turn 288 | take Haarlem, the Dutch city the human named; the Dutch war is already on, so no declaration | **Haarlem is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
+| `027-kill-apostles-mobile.md` | 2026-09-28 | turn 265 | hunt the apostles of the civilization we are at war with using our fastest units, on the human's instruction: their army is gone and their apostles are still spreading their faith | **荷兰's own row in the turn's per-player snapshot no longer lists `APOSTLE` (that field is |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 
@@ -77,3 +77,5 @@ Task 021 was restored by the rollback to T224: it was retired at T270, after the
 Task 022 was restored by the rollback to T224: it was retired at T271, after the target turn, so its `done when:` is false again there.
 
 Task 020 was retired as done: 布鲁塞尔 (69,29) reads [CITY_CENTER] owned by 中国 with our Cuirassier standing on it, it is in get_cities (pop 7, id 1310739) and it is off get_city_states; the assault ledger is the rolled-back run's (wall probe walls 200/200 at T235, fire from (68,31),(69,31),(70,31),(71,30) plus a Line Infantry attack from (69,28) across T236-T237).
+
+Task 022 was retired as `done/022-take-haarlem-done-T241.md`.
