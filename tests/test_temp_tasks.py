@@ -222,6 +222,64 @@ class TestTheProtocolIsAdvertised:
         assert (TMP / "done" / "README.md").is_file()
 
 
+class TestEveryTaskKeepsItsChineseBackup:
+    """Human instruction 2026-09-28: a new task also keeps a Chinese version, as a backup only.
+
+    The backup is *not* in `prompts/tasks/tmp/`, and that is the whole point: the turn loop reads every
+    `*.md` in that directory, so a `025-....cn.md` sitting there would be read as a second instruction
+    (and this suite would demand its five header lines). It lives in `prompts/tasks/cn/`, which no
+    instruction points the agent at; `civ_mcp.temp_tasks.cn_path_for` is the one place that decides it.
+    """
+
+    def test_every_in_force_task_has_one(self):
+        from civ_mcp import temp_tasks as tt
+
+        missing = [
+            path.name
+            for path in task_files()
+            if not tt.cn_path_for(ROOT, path.name).is_file()
+        ]
+        assert not missing, (
+            f"these in-force tasks have no Chinese backup in {tt.CN_REL}: {missing}. "
+            "Publish with `scripts/temp-task.py add ... --cn @<file>` (or --no-cn deliberately)."
+        )
+
+    def test_a_backup_is_a_backup_and_not_a_task(self):
+        from civ_mcp import temp_tasks as tt
+
+        for path in task_files():
+            backup = tt.cn_path_for(ROOT, path.name)
+            if not backup.is_file():
+                continue
+            raw = backup.read_bytes()
+            assert raw.startswith(b"\xef\xbb\xbf"), (
+                f"{backup.relative_to(ROOT)} holds Chinese and must carry a BOM"
+            )
+            text = backup.read_text(encoding="utf-8-sig")
+            head = "\n".join(text.splitlines()[:3])
+            assert "中文备份" in head and path.name in head, head
+            assert "不得" in head, "the banner must say the file is not an instruction"
+            assert sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff") > 200, (
+                f"{backup.relative_to(ROOT)} looks like a stub, not a translation"
+            )
+            # The directory the agent reads must not hold it, in any form.
+            assert not list(TMP.rglob("*.cn.md")), [str(p) for p in TMP.rglob("*.cn.md")]
+
+    def test_a_task_published_by_the_tool_has_both_records(self):
+        """A file the tool published carries the command that made it - and therefore a backup."""
+        from civ_mcp import temp_tasks as tt
+
+        for path in [*task_files(), *(TMP / "done").glob("*.md")]:
+            text = path.read_text(encoding="utf-8-sig")
+            if not tt.audit_blocks(text):
+                continue
+            # A retired file's backup keeps the name it had in force: `-done-T221` is stripped.
+            original = re.sub(r"-(?:done|expired)-T\d+(?=\.md$)", "", path.name)
+            assert tt.cn_path_for(ROOT, original).is_file(), (
+                f"{path.name} was published by the tool, so it should have written a Chinese backup"
+            )
+
+
 class TestTheListAndTheDirectoryAgree:
     """`AGENTS.md` names what is in force; the directory is what is actually in force.
 
@@ -400,6 +458,7 @@ class TestTheInForceLineStaysGameAgnostic:
                 "nothing",
                 "--expires-turn",
                 "9999",
+                "--no-cn",          # the coordinate guard is what this probe is about
                 "--dry-run",
                 "--no-gate",
             ],

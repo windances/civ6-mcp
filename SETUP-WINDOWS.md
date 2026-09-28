@@ -2059,7 +2059,7 @@ scripts\temp-task.cmd add --title "take Brussels: analysis, staging, assault" ^
     --instruction @.tmp\instruction.txt ^
     --why "take the city-state Brussels on the human's instruction" ^
     --done-when @.tmp\done-when.txt --overrides @.tmp\overrides.txt --scope @.tmp\scope.txt ^
-    --body-file .tmp\body.md
+    --body-file .tmp\body.md --cn @.tmp\cn.md
 scripts\temp-task.cmd retire 021 --done --turn 270 --note "..."
 ```
 
@@ -2070,9 +2070,22 @@ bash scripts/temp-task.sh add --title "take Brussels: analysis, staging, assault
     --instruction @.tmp/instruction.txt \
     --why "take the city-state Brussels on the human's instruction" \
     --done-when @.tmp/done-when.txt --overrides @.tmp/overrides.txt --scope @.tmp/scope.txt \
-    --body-file .tmp/body.md
+    --body-file .tmp/body.md --cn @.tmp/cn.md
 bash scripts/temp-task.sh retire 021 --done --turn 270 --note "..."
 ```
+
+**`--cn` 是必需的**（人类指令 2026-09-28）：每个新增任务都留一份中文版做备份，写进
+`prompts/tasks/cn/<nnn>-<slug>.cn.md`，带一行说明"这是备份、不是指令"的 banner。**它故意不在
+`prompts/tasks/tmp/` 里**——回合循环会读那个目录下每个 `*.md`，放在旁边的备份会被当成第二条指令
+（协议测试也会要求它有五个表头行）。目录里只有 `--no-cn` 这条刻意的例外，而且这个选择会写进任务文件。
+`tests/test_temp_tasks.py` 强制"每个在 force 的任务都有备份、备份带 BOM 与 banner、且不在 `tmp/` 里"。
+
+**发布命令本身也记录在任务文件里**（人类指令 2026-09-28，方便核查）：文件末尾有一段 HTML 注释
+`<!-- published by scripts/temp-task.py ... -->`，里面是**当时实际执行的 argv**（因此长字段显示为
+`@.tmp\...` 的引用而不是内容），`retire` 会再追加一段 `<!-- retired ... -->`，随文件一起进 `done/`。
+注意：**重复发布同一个 slug 会报错**，要改写已有任务必须加 `--replace`（它保留编号并原地重写）——
+这条规则来自一次实测：第二次发布时工具另起了 026，而不是更新 025。`status` 会逐条列出备份是否存在、
+以及有多少任务带发布记录。
 
 | 入口 | 用在哪，为什么 |
 |---|---|

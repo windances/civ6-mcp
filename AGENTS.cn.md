@@ -73,6 +73,11 @@
   一致。`scripts\temp-task.cmd`（cmd 和 PowerShell）和 `bash scripts/temp-task.sh`（Git Bash 和任何
   POSIX shell）是同一个命令，只是不带解释器路径。它**不**写的是日记的 `tooling` 行和
   `docs/task-history.md`——那些仍然归你。
+- **它还会为每个任务保留一份中文备份**（`--cn`），写进 `prompts/tasks/cn/`，并且**刻意不**写进这个
+  目录：回合循环会读 `prompts/tasks/tmp/` 下每个 `*.md`，所以放在任务旁边的备份会被当成第二条指令。
+  `--no-cn` 是刻意跳过它，而任务文件会把这个选择记下来。**发布时用的命令也会被记录**：任务文件末尾
+  有一段 HTML 注释（退役时再追加一段），方便核查这个文件是怎么来的——这也意味着用同一个 slug 再次
+  发布必须加 `--replace`，否则第二次发布会另起一个重复任务，而不是更新你想更新的那个。
 - `IN FORCE NOW` 那一行与目录由 `tests/test_temp_tasks.py` 相互核对，所以一次没有记录的退役会变红，
   而不是悄无声息地继续生效。
 

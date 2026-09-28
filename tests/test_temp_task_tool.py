@@ -68,6 +68,11 @@ Body.
 """
 
 SECOND_NAME = "002-second-task-do-the-second-thing.md"
+CN_NAME = "002-second-task-do-the-second-thing.cn.md"
+CN_DRAFT = """# 临时任务 002 - 做第二件事
+
+这是第二件事的中文版，仅供人阅读：它说明这个任务要做什么、什么时候算完成。
+"""
 
 ADD_ARGS = [
     "add",
@@ -78,6 +83,7 @@ ADD_ARGS = [
     "--overrides", "the development plan, for this one slot",
     "--scope", "the second thing and nothing else",
     "--expires-turn", "40",
+    "--cn", f"@{SCRATCH / 'cn-draft.md'}",   # the Chinese version every publish carries
     "--no-gate",
     "--no-commit",
 ]
@@ -101,6 +107,7 @@ def scratch() -> pathlib.Path:
     (tmp / "current_tasks.md").write_text(REGISTER_STUB, encoding="utf-8")
     (tmp / "001-first-task.md").write_text(TASK_STUB, encoding="utf-8")
     (tmp / "done" / "README.md").write_text("# retired\n", encoding="utf-8")
+    (SCRATCH / "cn-draft.md").write_text(CN_DRAFT, encoding="utf-8")
     return SCRATCH
 
 
@@ -329,7 +336,10 @@ class TestTheCliEndToEnd:
         assert tool.main(["--root", str(scratch), *ADD_ARGS, "--body-file", str(body)]) == 0
         text = (scratch / "prompts/tasks/tmp" / SECOND_NAME).read_text(encoding="utf-8-sig")
         assert "With a paragraph and a `done when:` mention." in text
-        assert str(body) not in text
+        # The body's *content* is inlined; its path appears only in the recorded command, never as the
+        # way the content got there.
+        assert str(body) not in text.split("<!-- published")[0]
+        assert str(body) in text
         capsys.readouterr()
 
     def test_the_default_body_is_a_skeleton_when_none_is_given(self, scratch, capsys):
@@ -348,3 +358,98 @@ class TestTheCliEndToEnd:
         (scratch / "prompts/tasks/tmp/current_tasks.md").write_text("# empty\n", encoding="utf-8")
         assert tool.main(["--root", str(scratch), "status"]) == 0
         assert "MISMATCH" in capsys.readouterr().out
+
+
+def without_cn() -> list[str]:
+    """`ADD_ARGS` with the Chinese version taken out, for the refusal test."""
+    return [arg for arg in ADD_ARGS if arg != "--cn" and not arg.startswith(f"@{SCRATCH}")]
+
+
+class TestTheChineseBackup:
+    """Human instruction 2026-09-28: every added task keeps a Chinese version as a backup.
+
+    The load-bearing detail is **where** it lives. The turn loop's first step is "read every `*.md` in
+    `prompts/tasks/tmp/`", so a backup inside that directory would be read as a second task - and the
+    protocol suite would demand its five header lines. These tests pin the sibling directory and that
+    the task directory itself stays English-only.
+    """
+
+    def test_the_backup_is_written_outside_the_directory_the_agent_reads(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *ADD_ARGS]) == 0
+        backup = scratch / "prompts" / "tasks" / "cn" / CN_NAME
+        assert backup.exists(), "the Chinese backup was not written"
+        assert backup.read_bytes().startswith(b"\xef\xbb\xbf"), "Chinese needs a BOM"
+        text = backup.read_text(encoding="utf-8-sig")
+        assert "中文备份" in text and SECOND_NAME in text
+        assert "不得" in text, "the banner must say it is not to be used as an instruction"
+        capsys.readouterr()
+
+    def test_the_task_directory_holds_only_english_files(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *ADD_ARGS]) == 0
+        tmp = scratch / "prompts" / "tasks" / "tmp"
+        assert not list(tmp.rglob("*.cn.md")), [str(p) for p in tmp.rglob("*.cn.md")]
+        # The only things the agent's glob sees are tasks, the register and the README.
+        assert {p.name for p in tmp.glob("*.md")} == {
+            "README.md", "current_tasks.md", "001-first-task.md", SECOND_NAME,
+        }
+        capsys.readouterr()
+
+    def test_publishing_without_a_backup_is_refused(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *without_cn()]) == 1
+        out = capsys.readouterr().out
+        assert "Chinese backup" in out and "--cn" in out
+        assert not (scratch / "prompts" / "tasks" / "tmp" / SECOND_NAME).exists()
+        assert not (scratch / "prompts" / "tasks" / "cn").exists()
+
+    def test_no_cn_publishes_without_one_and_says_so(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *without_cn(), "--no-cn"]) == 0
+        assert not (scratch / "prompts" / "tasks" / "cn" / CN_NAME).exists()
+        text = (scratch / "prompts" / "tasks" / "tmp" / SECOND_NAME).read_text(encoding="utf-8-sig")
+        assert "chinese backup: none (--no-cn)" in text
+        capsys.readouterr()
+
+
+class TestThePublishedCommandIsRecorded:
+    """The command that published a task travels with it, so a reader can check how it was made."""
+
+    def test_the_task_file_carries_the_command(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *ADD_ARGS]) == 0
+        capsys.readouterr()
+        text = (scratch / "prompts" / "tasks" / "tmp" / SECOND_NAME).read_text(encoding="utf-8-sig")
+        blocks = tt.audit_blocks(text)
+        assert len(blocks) == 1 and blocks[0].startswith("<!-- published by scripts/temp-task.py")
+        # The argv as it was run: the tests pass `--root` first because argparse demands the global
+        # option before the subcommand, and the record is faithful rather than prettified.
+        assert "python scripts/temp-task.py" in blocks[0]
+        assert " add " in blocks[0]
+        assert "--title" in blocks[0] and "--cn" in blocks[0]
+        assert f"chinese backup: prompts/tasks/cn/{CN_NAME}" in blocks[0]
+        # A task file's protocol rules must not be disturbed by the audit block.
+        assert tt.problems(text) == []
+
+    def test_a_retirement_records_its_own_command(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *ADD_ARGS]) == 0
+        assert tool.main(
+            ["--root", str(scratch), "retire", "2", "--done", "--turn", "40", "--no-gate", "--no-commit"]
+        ) == 0
+        out = capsys.readouterr().out
+        assert "command recorded in the retired file" in out
+        retired = (
+            scratch / "prompts" / "tasks" / "tmp" / "done"
+            / "002-second-task-do-the-second-thing-done-T40.md"
+        )
+        blocks = tt.audit_blocks(retired.read_text(encoding="utf-8-sig"))
+        assert len(blocks) == 2, blocks
+        assert blocks[0].startswith("<!-- published")
+        assert "retired by scripts/temp-task.py" in blocks[1]
+        assert "retire 2 --done --turn 40" in blocks[1]
+
+    def test_status_counts_the_records_and_the_backups(self, scratch, capsys):
+        assert tool.main(["--root", str(scratch), *ADD_ARGS]) == 0
+        capsys.readouterr()
+        assert tool.main(["--root", str(scratch), "status"]) == 0
+        out = capsys.readouterr().out
+        # 001 is the fixture's pre-existing task: it has neither a record nor a backup, and status says so.
+        assert "published command recorded: 1/2 task(s)" in out
+        assert "001-first-task.md" in out
+        assert "chinese backup: MISSING" in out

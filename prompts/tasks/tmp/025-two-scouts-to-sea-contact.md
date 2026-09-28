@@ -1,7 +1,7 @@
 ﻿# TEMP TASK 025 - two scouts to sea: find the civilizations we have not met
 
 added:     2026-09-28 (human instruction: 新任务：出两个侦察兵，出海探索更多文明，不恋战，获取到信息就走)
-expires:   turn 248 - 30 turn(s) from T218, the turn the match stands on (read from the save); a hard stop,
+expires:   turn 255 - 30 turn(s) from T225, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
 done when: **`get_diplomacy` lists a civilization it did not list at turn 220 (it lists five there), and both
            Scout-line units are alive when it does** - the new contact's own line (name, leader,
@@ -29,8 +29,9 @@ overrides: **the human's instruction, 不恋战 above all.** These two units are
            revert to whatever the directive says about idle scouts.
 scope:     The two Scout-line units, the water and the fog they can reach, the civilizations they meet, and the
            tiles they sight on the way. Not a barbarian camp (report its tile and leave it), not a
-           city-state (note it and its type if visible, and leave envoys to `get_city_states`' own
-           cadence), not a war, not a siege, not a garrison, and no unit of the standing army.
+           city-state (report it and do not envoys-and-leave it - envoys are `get_city_states`'
+           business, not this file's), not a war, not a siege, not a garrison, and no unit of the
+           standing army.
 
 ## What this instruction is
 
@@ -109,3 +110,9 @@ No metric carries "made contact and came back". `get_victory_progress` counts wh
 opinion on whether we are *trying*, and `exploration_pct` rises for a scout that wanders in circles. What
 this instruction adds to the machine is a **purpose** for two cheap units and a **rule about fights** that
 no check can express - which is what a task file is for.
+
+<!-- published by scripts/temp-task.py
+     command: python scripts/temp-task.py add --title "two scouts to sea: find the civilizations we have not met" --slug two-scouts-to-sea-contact --instruction @.tmp\t025-instruction.txt --why "two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight" --done-when @.tmp\t025-done.txt --overrides @.tmp\t025-overrides.txt --scope @.tmp\t025-scope.txt --body-file .tmp\t025-body.md --cn @.tmp\t025-cn.md --turns 30 --replace --no-commit
+     at: 2026-09-28T19:11:39+08:00
+     chinese backup: prompts/tasks/cn/025-two-scouts-to-sea-contact.cn.md
+-->

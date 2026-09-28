@@ -18,6 +18,28 @@ editing the strategy directive and without waiting for a restart.
      standing directive without leaving the agent to guess which one wins.
 3. To cancel a task, delete the file. To see what has been done, look in `done/`.
 
+**The mechanical half is one command**, and it is the way to add one (it writes the file, the register
+row and `AGENTS.md`'s `IN FORCE NOW` line together, runs the mandatory text gate and the protocol
+suite, and commits only when both are green):
+
+```
+.venv\Scripts\python.exe scripts\temp-task.py add --title "..." --slug <slug> \
+    --instruction "@<verbatim instruction file>" --why "<one ASCII line, no (x,y)>" \
+    --done-when "@<file>" --overrides "@<file>" --scope "@<file>" --body-file <file> \
+    --cn "@<the Chinese version>" --turns 30
+```
+
+Two things that command carries, both from human instructions of 2026-09-28:
+
+- **`--cn` writes a Chinese backup** of the task to `prompts/tasks/cn/<nnn>-<slug>.cn.md`, with a banner
+  saying what it is. **It is deliberately not in this directory**: the turn loop reads every `*.md`
+  here, so a backup placed beside the task would be read as a second instruction. `--no-cn` is the
+  escape hatch, and the task file records that choice.
+- **The command itself is recorded** in an HTML comment at the end of the task file
+  (`<!-- published by scripts/temp-task.py ... -->`), so a reader can check how the file was made.
+  `retire` appends its own block to the retired copy. Re-running the same publish needs `--replace`,
+  which rewrites that file in place instead of filing a second task with the next number.
+
 ## For the agent: how to consume one
 
 - **Read every `*.md` in this directory at the start of every turn** (with `get_game_overview`), and

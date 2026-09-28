@@ -39,7 +39,7 @@ same T218 save and reached T301 (it took 布鲁塞尔 at T224 - that is 024). **
 none of those holds: 布鲁塞尔 is a city-state again, 哈勒姆 is still the Netherlands', and the whole task
 set at T218 is being rolled back by `.tools/rollback-tasks.py`.
 | `023-dutch-siege-corps.md` | 2026-09-28 | turn 272 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
-| `025-two-scouts-to-sea-contact.md` | 2026-09-28 | turn 248 | two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight | **`get_diplomacy` lists a civilization it did not list at turn 220 (it lists five there), and both |
+| `025-two-scouts-to-sea-contact.md` | 2026-09-28 | turn 255 | two scouts to sea, on the human's instruction: make contact with civilizations we have not met, and do not get drawn into a fight | **`get_diplomacy` lists a civilization it did not list at turn 220 (it lists five there), and both |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 

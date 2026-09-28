@@ -364,6 +364,58 @@ def in_force_names(agents_text: str) -> set[str]:
 
 
 # --------------------------------------------------------------------------------------
+# The Chinese backup, and the audit block that records how a task was published
+# --------------------------------------------------------------------------------------
+#
+# Human instruction 2026-09-28: **every task added keeps a Chinese version beside it as a backup, and
+# that version is never used by the civ6 agent.** Where it lives is the whole design. The turn loop's
+# first step is "read every `*.md` in `prompts/tasks/tmp/`", so a `<name>.cn.md` sitting *in* that
+# directory would be read as a second task - and `tests/test_temp_tasks.py` would demand its five header
+# lines and an `expires:`. So the backup lives in a sibling directory, `prompts/tasks/cn/`, which no
+# instruction anywhere points the agent at, and `tests/test_temp_task_tool.py` pins that the task
+# directory itself holds nothing but the English files, the register and the README.
+
+CN_REL = pathlib.Path("prompts") / "tasks" / "cn"
+CN_SUFFIX = ".cn.md"
+
+
+def cn_path_for(root: pathlib.Path, task_name: str) -> pathlib.Path:
+    """Where a task's Chinese backup lives: `prompts/tasks/cn/<stem>.cn.md`, never inside `tmp/`."""
+    stem = pathlib.Path(task_name).stem
+    return pathlib.Path(root) / CN_REL / f"{stem}{CN_SUFFIX}"
+
+
+def cn_banner(task_name: str) -> str:
+    """The first lines of a backup: what it is, and that it is not an instruction."""
+    return (
+        f"> 本文件是 `{task_name}` 的中文备份（发布任务时由 `scripts/temp-task.py` 写入，仅供人阅读）。\n"
+        f"> civ6 agent 读的是 `prompts/tasks/tmp/` 下的英文任务文件；本文件不在那个目录里，"
+        f"也**不得**作为指令使用。\n"
+    )
+
+
+def audit_block(action: str, lines: list[str]) -> str:
+    """An HTML comment recording *how* a task was published or retired, for a later reader to check.
+
+    The command is what the human actually ran, so it names the field files (`--body-file ...`) rather
+    than their contents, and the block stays out of the rendered page while being a single `grep`
+    away. `tests/test_temp_task_tool.py` pins that the block survives a retirement.
+    """
+    body = "\n".join(f"     {line}" for line in lines)
+    return f"<!-- {action} by scripts/temp-task.py\n{body}\n-->"
+
+
+def with_audit(text: str, block: str) -> str:
+    """The task text with an audit block appended at the end."""
+    return text.rstrip("\n") + "\n\n" + block + "\n"
+
+
+def audit_blocks(text: str) -> list[str]:
+    """Every audit block in a task file, in order - the record of how it was published and retired."""
+    return re.findall(r"<!-- (?:published|retired) by scripts/temp-task\.py.*?-->", text, re.DOTALL)
+
+
+# --------------------------------------------------------------------------------------
 # The clock: what turn the match stands on, read offline
 # --------------------------------------------------------------------------------------
 

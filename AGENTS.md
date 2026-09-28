@@ -82,6 +82,13 @@ record.
   and `bash scripts/temp-task.sh` (Git Bash and any POSIX shell) are the same command without the
   interpreter path. What it does **not** write is the diary's `tooling` line and
   `docs/task-history.md` - those stay yours.
+- **It also keeps a Chinese backup of every task** (`--cn`), written to `prompts/tasks/cn/` and
+  deliberately **not** into this directory: the turn loop reads every `*.md` in `prompts/tasks/tmp/`,
+  so a backup placed beside the task would be read as a second instruction. `--no-cn` skips it on
+  purpose, and the task file records that. **The command it was published with is recorded too**, as an
+  HTML comment at the end of the task file (and one more when it is retired), so a reader can check how
+  the file was made - which also means re-publishing the same slug needs `--replace`, or a second
+  publish files a duplicate task instead of updating the one you meant.
 - The `IN FORCE NOW` line and the directory are checked against each other by `tests/test_temp_tasks.py`,
   so a retirement that is not recorded goes red instead of quietly staying in force.
 

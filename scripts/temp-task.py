@@ -59,6 +59,21 @@ def _one_line(text: str) -> str:
     return " ".join(text.strip().split())
 
 
+def _command(argv: list[str]) -> str:
+    """The command as a reader can re-run it: the argv, with spaces quoted.
+
+    Recorded verbatim rather than reconstructed from the parsed values, because the point of the audit
+    block is *what was run* - including the `@file` references a long field arrived in, which is also
+    what keeps a Chinese instruction out of a shell's argv.
+    """
+    quoted = [f'"{arg}"' if any(c in arg for c in " \t") else arg for arg in argv]
+    return "python scripts/temp-task.py " + " ".join(quoted)
+
+
+def _stamp() -> str:
+    return datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
 def _line_guard(rows: list[tt.Row]) -> int:
     """0 when the rebuilt `IN FORCE NOW` line may be written into AGENTS.md, else 1 after saying why.
 
@@ -151,6 +166,16 @@ def cmd_status(args: argparse.Namespace) -> int:
         state = "" if not expiry or turn is None or expiry >= turn else "  ** PAST ITS EXPIRY **"
         print(f"  {path.name}  expires turn {expiry if expiry is not None else '?'}{left}{state}")
         print(f"      {row.get('why', '(not in the register)')}")
+        backup = tt.cn_path_for(root, path.name)
+        print(f"      chinese backup: {backup.relative_to(root).as_posix()}"
+              if backup.exists() else
+              f"      chinese backup: MISSING ({backup.relative_to(root).as_posix()})")
+    published = [
+        path.name for path in files
+        if tt.audit_blocks(tt.read_text(path))
+    ]
+    print(f"published command recorded: {len(published)}/{len(files)} task(s)"
+          + (f" - missing in {[n for n in on_disk if n not in published]}" if len(published) != len(files) else ""))
     if listed != on_disk:
         print(f"  MISMATCH: AGENTS.md lists {sorted(listed)}, the directory holds {sorted(on_disk)}")
     if set(rows) != on_disk:
@@ -193,13 +218,42 @@ def cmd_add(args: argparse.Namespace) -> int:
     if "|" in args.why:
         print("refusing: --why may not contain '|' (it is a table cell)")
         return 1
+    # Human instruction 2026-09-28: every added task keeps a Chinese version as a backup. It is
+    # required unless the caller says --no-cn, so a task cannot be published without one by accident.
+    if not args.cn and not args.no_cn:
+        print("refusing: every task keeps a Chinese backup (human instruction 2026-09-28).")
+        print("          pass --cn @<file> with the Chinese version, or --no-cn on purpose.")
+        print(f"          it would be written to {tt.CN_REL}\\<name>{tt.CN_SUFFIX}, outside the")
+        print("          directory the turn loop reads.")
+        return 1
+    if args.cn and args.no_cn:
+        print("refusing: --cn and --no-cn contradict each other")
+        return 1
 
     number = tt.next_number(tmp, done)
     slug = args.slug or tt.slugify(args.title)
     if not slug:
         print("refusing: the title has no ASCII words to build a file name from; pass --slug")
         return 1
-    name = f"{number:03d}-{slug}.md"
+    # Re-running the same publish is how an audit block gets added to a task that already exists
+    # (measured 2026-09-28: it filed a second task, 026, beside the 025 it meant to update). The slug
+    # is the identity, so a second publish must say `--replace` and then it rewrites that file in
+    # place, keeping its number.
+    existing = next(
+        (p for p in tt.task_files(tmp) if p.stem.split("-", 1)[-1] == slug),
+        None,
+    )
+    if existing is not None and not args.replace:
+        print(f"refusing: {existing.name} already has this slug - a second publish would file a")
+        print("          duplicate task. Pass --replace to rewrite that file in place (its number")
+        print("          and its place in the register are kept), or --slug <other> for a new task.")
+        return 1
+    if existing is not None:
+        number = int(existing.stem.split("-", 1)[0])
+        name = existing.name
+        print(f"replacing {name} in place (number {number:03d} kept)")
+    else:
+        name = f"{number:03d}-{slug}.md"
     instruction = _one_line(_value(args.instruction) if args.instruction else "")
     added = args.added or datetime.date.today().isoformat()
     added_text = f"{added} (human instruction: {instruction})" if instruction else added
@@ -233,6 +287,23 @@ def cmd_add(args: argparse.Namespace) -> int:
             print(f"  - {problem}")
         return 1
 
+    backup = tt.cn_path_for(root, name)
+    backup_text = None
+    if args.cn:
+        backup_text = tt.cn_banner(name) + "\n" + _value(args.cn).strip() + "\n"
+    text = tt.with_audit(
+        text,
+        tt.audit_block(
+            "published",
+            [
+                f"command: {_command(args.argv)}",
+                f"at: {_stamp()}",
+                f"chinese backup: {backup.relative_to(root).as_posix()}"
+                if backup_text is not None else "chinese backup: none (--no-cn)",
+            ],
+        ),
+    )
+
     first_line = _one_line(next(l for l in text.splitlines() if l.startswith("done when:")))
     row = tt.Row(
         file=name,
@@ -242,7 +313,12 @@ def cmd_add(args: argparse.Namespace) -> int:
         done=first_line.removeprefix("done when:").strip()[:160],
     )
     path = tmp / name
-    register_text = tt.register_with_row(tt.read_text(register), row)
+    register_text = tt.read_text(register)
+    if existing is not None:
+        # The row is being rewritten: drop the old one so the new `expires`/`why`/`done` replace it
+        # instead of the old row being kept because a row with that name already exists.
+        register_text = tt.register_without(register_text, name)
+    register_text = tt.register_with_row(register_text, row)
     rows = tt.register_rows(register_text)
     if _line_guard(rows):
         return 1
@@ -252,27 +328,40 @@ def cmd_add(args: argparse.Namespace) -> int:
     print(f"  expires: turn {prints} (game turn {turn if turn is not None else '?'}, from the {source})")
     print(f"  register row: {tt.row_markdown(row)}")
     print(f"  IN FORCE NOW: {tt.in_force_line(rows)}")
+    print(f"  command recorded in the file: {_command(args.argv)}")
+    if backup_text is None:
+        print(f"  chinese backup: none (--no-cn); the task directory is what the agent reads")
+    else:
+        print(f"  chinese backup: {backup.relative_to(root).as_posix()} (not read by the agent)")
     if args.dry_run:
         print("dry run: nothing written")
         return 0
 
     tt.write_text(path, text)
+    if backup_text is not None:
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        tt.write_text(backup, backup_text)
     tt.write_text(register, register_text)
     tt.write_text(agents, agents_text)
-    print("  wrote the task file, the register and AGENTS.md")
+    print("  wrote the task file, the register and AGENTS.md"
+          + (", and the Chinese backup" if backup_text is not None else ""))
     failures = _gates(root, args.no_gate)
     if failures or args.no_commit:
         for failure in failures:
             print(f"  ! {failure}")
         print("  not committed. Undo with: git checkout -- AGENTS.md prompts/tasks/tmp/current_tasks.md")
         print(f"                          and delete prompts/tasks/tmp/{name}")
+        if backup_text is not None:
+            print(f"                          and delete {backup.relative_to(root).as_posix()}")
         return 1 if failures else 0
     return _commit(
         root,
         f"Task {number:03d}: {args.title}",
         f"Added by scripts/temp-task.py.\n\n{expires_text}\n\n"
-        + (f"Verbatim instruction: {instruction}\n" if instruction else ""),
-        [path, register, agents],
+        + (f"Verbatim instruction: {instruction}\n" if instruction else "")
+        + (f"Chinese backup: {backup.relative_to(root).as_posix()}\n" if backup_text else "")
+        + f"\nCommand recorded in the task file: {_command(args.argv)}\n",
+        [path, register, agents, *([backup] if backup_text is not None else [])],
     )
 
 
@@ -321,13 +410,32 @@ def cmd_retire(args: argparse.Namespace) -> int:
     if _line_guard(rows):
         return 1
     agents_text = tt.agents_with_in_force(tt.read_text(agents), tt.in_force_line(rows))
+    backup = tt.cn_path_for(root, path.name)
+    retired_text = tt.with_audit(
+        tt.read_text(path),
+        tt.audit_block(
+            "retired",
+            [
+                f"command: {_command(args.argv)}",
+                f"at: {_stamp()}",
+                f"status: {status} at T{turn}",
+                f"chinese backup: {backup.relative_to(root).as_posix()}"
+                if backup.exists() else "chinese backup: none",
+            ],
+        ),
+    )
 
     print(f"retire: {path.name} -> done/{target.name} ({status} at T{turn})")
     print(f"  IN FORCE NOW: {tt.in_force_line(rows)}")
+    print(f"  command recorded in the retired file: {_command(args.argv)}")
+    if not backup.exists():
+        print(f"  note: no Chinese backup at {backup.relative_to(root).as_posix()} "
+              "(publish with --cn next time)")
     if args.dry_run:
         print("dry run: nothing moved")
         return 0
 
+    tt.write_text(path, retired_text)
     path.rename(target)
     tt.write_text(register, register_text)
     tt.write_text(agents, agents_text)
@@ -380,6 +488,15 @@ def main(argv: list[str] | None = None) -> int:
     add.add_argument("--added", help="the date for the 'added:' line (default: today)")
     add.add_argument("--body", help="the body markdown; @file reads UTF-8")
     add.add_argument("--body-file", help="a UTF-8 file with the body markdown, read directly")
+    add.add_argument(
+        "--cn",
+        help=f"the task's Chinese version; @file reads UTF-8. Written to {tt.CN_REL}\\<name>{tt.CN_SUFFIX}, "
+             "which the turn loop does not read. Required unless --no-cn",
+    )
+    add.add_argument("--no-cn", action="store_true",
+                     help="publish without a Chinese backup (deliberate, and recorded in the file)")
+    add.add_argument("--replace", action="store_true",
+                     help="rewrite the task that already has this slug, in place, instead of refusing")
     add.add_argument("--dry-run", action="store_true", help="print the plan, write nothing")
     add.add_argument("--no-commit", action="store_true", help="write the files, do not commit")
     add.add_argument("--no-gate", action="store_true", help="skip the text gate and the protocol suite")
@@ -399,6 +516,9 @@ def main(argv: list[str] | None = None) -> int:
     retire.set_defaults(func=cmd_retire)
 
     args = parser.parse_args(argv)
+    # The audit block records *this* invocation, so the argv travels with the parsed arguments: a test
+    # that calls `main([...])` must not record pytest's own command line.
+    args.argv = list(argv) if argv is not None else list(sys.argv[1:])
     return args.func(args)
 
 
