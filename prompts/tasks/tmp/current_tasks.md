@@ -33,3 +33,4 @@ Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.
 
 Task 022 was retired as `done/022-take-haarlem-done-T271.md`.
 | `023-dutch-siege-corps.md` | 2026-09-28 | turn 335 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
+| `024-take-brussels.md` | 2026-09-28 | turn 241 | take the city-state at (69,29) on the human instruction - analysis, staging, assault, deadline re-counted from get_staging_plan | **Brussels is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
