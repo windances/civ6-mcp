@@ -139,7 +139,8 @@ class TestTheApply:
         assert listed(scratch) == in_force(scratch)
         rows = tr.tt.register_rows(tr.tt.read_text(tr.tt.root_paths(scratch)[2]))
         row = next(row for row in rows if row["file"] == "020-take-brussels.md")
-        assert row["expires"] == "turn 228"
+        # The stop is T245; T228 is only the turn the deadline was counted from.
+        assert row["expires"] == "turn 245"
         assert row["added"] == "2026-09-27"
         assert row["why"].isascii() and not tr.tt.stray_coordinates(row["why"])
         assert any("verified" in note for note in report.notes)
@@ -194,6 +195,53 @@ class TestTheApply:
 
 
 class TestTheWhyForARestoredTask:
+    def test_a_utf8_git_child_is_decoded_as_utf8(self):
+        """`text=True` alone decodes with the locale code page, and git does not write that.
+
+        The first real use of this module died here: `git log -p` output holding a Chinese commit
+        subject raised UnicodeDecodeError in the reader thread, `stdout` came back None, and the
+        recovery of a restored task's blurb crashed instead of falling back. This checkout's history has
+        non-ASCII subjects, so it is the natural place to pin the decoding.
+        """
+        subjects = tr._git(ROOT, ["log", "-50", "--format=%s"])
+        assert subjects, "git should answer in this checkout"
+        assert any(not line.isascii() for line in subjects.splitlines()), (
+            "no non-ASCII commit subject in the last 50 commits - this test can no longer see whether "
+            "the child is decoded as UTF-8"
+        )
+
+    def test_the_real_history_row_is_what_the_fallback_exists_for(self):
+        """The row 024 was actually added with names its target's tile, so it cannot travel.
+
+        Recovering it verbatim would write "(69,29)" back into `AGENTS.md` - the exact coordinate that
+        took `tests/test_agents_is_game_agnostic.py` red and was repaired out of the reference and the
+        register the same day. So this asserts the trap is real, not that the history is clean.
+        """
+        why = tr.why_from_git(ROOT, "024-take-brussels.md")
+        assert why, "the register's history should hold the row 024 was added with"
+        assert not tr.why_is_usable(why)
+        assert tr.tt.stray_coordinates(why)
+
+    def test_a_recovered_blurb_that_cannot_travel_falls_back(self, scratch, monkeypatch):
+        monkeypatch.setattr(tr, "why_from_git", lambda root, name: "take the city-state at (69,29)")
+        report = tr.apply_plan(scratch, tr.build_plan(scratch, 218))
+        assert [name for name, _, _ in report.restored] == ["020-take-brussels.md"]
+        row = next(
+            row for row in tr.tt.register_rows(tr.tt.read_text(tr.tt.root_paths(scratch)[2]))
+            if row["file"] == "020-take-brussels.md"
+        )
+        assert tr.why_is_usable(row["why"]), row["why"]
+
+    def test_an_override_that_cannot_travel_is_refused_before_any_move(self, scratch):
+        agents = tr.tt.root_paths(scratch)[3].read_bytes()
+        report = tr.apply_plan(
+            scratch, tr.build_plan(scratch, 218), overrides={"020": "take the city at (69,29)"}
+        )
+        assert report.restored == [] and report.backup is None
+        assert any("refused" in note for note in report.notes)
+        assert in_force(scratch) == {"023-dutch-siege-corps.md"}
+        assert tr.tt.root_paths(scratch)[3].read_bytes() == agents
+
     def test_history_supplies_the_last_known_blurb(self):
         diff = (
             "diff --git a/x b/x\n"
@@ -216,6 +264,8 @@ class TestTheWhyForARestoredTask:
         assert why.isascii() and tr.tt.stray_coordinates(why) == []
         assert tr.derived_why(task, 218).isascii()
         assert tr.tt.stray_coordinates(tr.derived_why(task, 218)) == []
+        # A slug is the only English in a file name, so a proper noun has to be capitalised.
+        assert tr.derived_why(task, 218).startswith("take Brussels")
 
 
 class TestTheCommandLine:

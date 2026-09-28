@@ -394,3 +394,25 @@ filed and nineteen turns inside its own stop**, the fastest task of the three ca
   staging plan written on the turn the instruction arrived**, so the campaign spent its four turns
   firing rather than marching.
 
+## The T218 rollback: the task set follows the game
+
+`scripts/rollback-to-turn.py 218 --apply` archived the saves after T218
+(`branches/rollback-to-T218-from-T219-T301-20260928-171348/`), split the diary at the boundary
+(`branches/abandoned-T219-T298/`), and restored the rules that attempt had retired. It now also rolls
+the **temporary tasks** back (`.tools/rollback-tasks.py`, job 3 of five) - which is how this was found:
+
+- **Five tasks had been retired after T218** - 019 (T250), 020 (T237), 021 (T270), 022 (T271) and 024
+  (T224) - and every one of them recorded a `done when:` the rollback had just un-done. Left alone, 024
+  would have sat in `done/` while 布鲁塞尔 was an independent city-state again: a human instruction with
+  no carrier anywhere.
+- **024 was restored**, because 布鲁塞尔 is a city-state at T218, its T241 deadline is reachable from
+  there, and it is the newer of the two Brussels files. The command is
+  `.tools/rollback-tasks.py 218 --apply --skip 019 --skip 020 --skip 021 --skip 022`, its backup is
+  `branches/rollback-tasks-T218-20260928-174858/`, and the register says what it did.
+- **019, 020, 021 and 022 were left retired deliberately** (the human's call, 2026-09-28): 020 is the
+  same objective as 024, 022 (哈勒姆) is a subset of 023's campaign, and 019/021 are thirty-turn windows
+  that belong to abandoned runs. That decision is written into `current_tasks.md` rather than left
+  implicit - a skip nobody records is the same silent withdrawal this job exists to prevent.
+- **023 was kept** although it was added after T218: a human instruction is not the game's to withdraw.
+  What it needed was re-reading, and its deadline was re-counted from T218 to **T272**.
+

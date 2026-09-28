@@ -42,8 +42,12 @@ from . import temp_tasks as tt
 _RETIRED = re.compile(r"-(done|expired)-T(\d+)\.md$")
 
 # `expires: turn 280 - fifty-four turns from T226, where this branch stands ...` - temp-task.py writes
-# the turn the match stood on, which is the only record of *when* a task entered force.
+# the turn the match stood on, which is the only record of *when* a task entered force. The **stop** is
+# the first `turn N`; the `from T<n>` is when it was counted, and the two are different numbers (024:
+# stops at 241, anchored at 220) - using the anchor as the deadline would put a wrong date in the
+# register.
 _ANCHOR = re.compile(r"\bfrom T(\d+)\b")
+_EXPIRY = re.compile(r"\bturn (\d+)\b")
 
 
 @dataclass
@@ -104,6 +108,16 @@ def anchor_turn(text: str) -> int | None:
     for line in text.splitlines():
         if line.startswith("expires:"):
             found = _ANCHOR.search(line)
+            if found:
+                return int(found.group(1))
+    return None
+
+
+def expiry_turn(text: str) -> int | None:
+    """The turn the task stops at - the **first** `turn N` of its `expires:` line, not the anchor."""
+    for line in text.splitlines():
+        if line.startswith("expires:"):
+            found = _EXPIRY.search(line)
             if found:
                 return int(found.group(1))
     return None
@@ -194,26 +208,66 @@ def why_from_history(diff_text: str, name: str) -> str | None:
     return found
 
 
-def why_from_git(root: pathlib.Path, name: str) -> str | None:
-    """`why_from_history` against this checkout's history, or None when that is not available."""
-    register = tt.root_paths(root)[2]
+def _git(root: pathlib.Path, args: list[str]) -> str | None:
+    """Run a git command and decode its output as UTF-8, or None when git cannot answer.
+
+    `text=True` alone decodes with the **locale** code page - gbk on this machine - while git writes
+    UTF-8, so a commit subject holding Chinese raised `UnicodeDecodeError` in the reader thread and left
+    `stdout` as None: the first real use of this module died on it (2026-09-28). A checkout with no
+    history is a report, not a crash, so failures come back as None.
+    """
     try:
         done = subprocess.run(
-            ["git", "log", "-p", "--", str(register.relative_to(root))],
-            cwd=str(root), capture_output=True, text=True, timeout=120,
+            ["git", *args], cwd=str(root), capture_output=True,
+            text=True, encoding="utf-8", errors="replace", timeout=120,
         )
     except (OSError, subprocess.SubprocessError):
         return None
-    if done.returncode != 0:
-        return None
-    return why_from_history(done.stdout, name)
+    return done.stdout if done.returncode == 0 else None
+
+
+def why_from_git(root: pathlib.Path, name: str) -> str | None:
+    """`why_from_history` against this checkout's history, or None when that is not available."""
+    register = tt.root_paths(root)[2]
+    diff = _git(root, ["log", "-p", "--", str(register.relative_to(root))])
+    return why_from_history(diff, name) if diff else None
+
+
+def why_is_usable(why: str) -> bool:
+    """Whether a blurb may travel into `AGENTS.md`: pure ASCII and no tile coordinate.
+
+    The register's history is **not** safe by construction. The row task 024 was added with named its
+    target's tile - "(69,29)" - which is the exact coordinate that turned `AGENTS.md` red and was
+    repaired out of the reference and the register the same day. Recovering it verbatim and writing it
+    back would undo that, so a recovered blurb is checked here and falls back to the derived one.
+    """
+    return bool(why) and why.isascii() and not tt.stray_coordinates(why)
+
+
+# Kept lowercase inside a derived blurb, so a slug does not read like a headline.
+_LOWER_WORDS = frozenset(
+    {"the", "a", "an", "of", "to", "in", "on", "at", "and", "or", "for", "from", "with"}
+)
 
 
 def derived_why(task: Task, boundary: int) -> str:
-    """An ASCII, coordinate-free blurb for a restore whose original cannot be recovered."""
+    """An ASCII, coordinate-free blurb for a restore whose original cannot be recovered.
+
+    The slug is the only English in the file name, so a proper noun can only be recovered by
+    capitalising: `024-take-brussels.md` becomes "take Brussels", not "take brussels". The boundary is
+    written as "turn 218", not "T218": `AGENTS.md`'s evidence test counts bare `T<number>` references in
+    its prose and that line is prose, so a status blurb must not spend one of its four anchors.
+    """
     words = [word for word in task.name.removesuffix(".md").split("-")[1:] if word.isascii()]
-    label = " ".join(words) if words else "the task"
-    return f"{label} - restored by the rollback to T{boundary}; re-read the file before acting"
+    label = (
+        " ".join(
+            word if index == 0 or word in _LOWER_WORDS else word.capitalize()
+            for index, word in enumerate(words)
+        )
+        if words
+        else "the task"
+    )
+    return f"{label} - restored by the rollback to turn {boundary}; re-read the file before acting"
 
 
 def resolve_why(root: pathlib.Path, task: Task, boundary: int, overrides: dict[str, str]) -> tuple[str, str]:
@@ -228,10 +282,11 @@ def resolve_why(root: pathlib.Path, task: Task, boundary: int, overrides: dict[s
 
 
 def _row(root: pathlib.Path, task: Task, why: str) -> tt.Row:
+    stop = expiry_turn(tt.read_text(task.path))
     return tt.Row(
         file=task.name,
         added=(field_line(task.path, "added").split(" ")[0] or datetime.date.today().isoformat()),
-        expires=f"turn {task.anchor}" if task.anchor is not None else "turn ?",
+        expires=f"turn {stop}" if stop is not None else "turn ?",
         why=why,
         done=done_when(task.path),
     )
@@ -275,6 +330,22 @@ def apply_plan(
                                f", and {len(plan.added_after)} added after it are kept in force"))
         return report
 
+    # Resolve and validate every blurb **before** a single file moves: a refusal has to leave the
+    # checkout exactly as it was, and `AGENTS.md`'s guards are what make the check possible.
+    resolved: list[tuple[Task, str, str]] = []
+    for task in restores:
+        why, source = resolve_why(root, task, plan.boundary, overrides)
+        if not why_is_usable(why):
+            if source == "history":
+                why, source = derived_why(task, plan.boundary), "derived (the register's row cannot travel)"
+            else:
+                report.notes.append(
+                    f"refused: the {source} blurb for {task.name} cannot go into AGENTS.md "
+                    f"(ASCII only, and no tile coordinate): {why!r}"
+                )
+                return report
+        resolved.append((task, why, source))
+
     tmp, _, register, agents = tt.root_paths(root)
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     backup = root / ".civ6-mcp-data" / "branches" / f"rollback-tasks-T{plan.boundary}-{stamp}"
@@ -284,8 +355,8 @@ def apply_plan(
     shutil.copy2(agents, backup / agents.name)
 
     register_text = tt.read_text(register)
-    for task in restores:
-        why, source = resolve_why(root, task, plan.boundary, overrides)
+    moved: list[tuple[pathlib.Path, pathlib.Path]] = []
+    for task, why, source in resolved:
         # Read the header fields while the file is still where it is: the row is built from them, and
         # the move below is what makes the file the in-force copy.
         row = _row(root, task, why)
@@ -295,6 +366,7 @@ def apply_plan(
             continue
         shutil.copy2(task.path, backup / task.path.name)
         task.path.rename(target)
+        moved.append((target, task.path))
         register_text = tt.register_with_row(register_text, row)
         register_text = _note(register_text, task, plan.boundary)
         report.restored.append((task.name, why, source))
@@ -314,14 +386,20 @@ def apply_plan(
 
     rows = tt.register_rows(register_text)
     blocked = tt.non_ascii_rows(rows)
-    if blocked:
-        report.notes.append("refused: the register would carry non-ASCII `why` text for: "
-                            + ", ".join(blocked))
-        return report
-    stray = tt.stray_coordinates(tt.in_force_line(rows))
-    if stray:
-        report.notes.append("refused: the IN FORCE NOW line would carry tile coordinates: "
-                            + ", ".join(stray))
+    stray = [] if blocked else tt.stray_coordinates(tt.in_force_line(rows))
+    if blocked or stray:
+        # A refusal has to leave the checkout as it was found: the moves are reversed rather than left
+        # half-done, because a task file in `tmp/` that no register row and no `IN FORCE NOW` line
+        # names is worse than the state this call started from.
+        for target, original in moved:
+            target.rename(original)
+        report.restored.clear()
+        report.notes.append(
+            "refused: the register or the `IN FORCE NOW` line would not pass its guard ("
+            + ("non-ASCII `why` for: " + ", ".join(blocked) if blocked
+               else "tile coordinates: " + ", ".join(stray))
+            + ") - the moved files were put back and nothing was written"
+        )
         return report
 
     tt.write_text(register, register_text)
@@ -357,6 +435,10 @@ def _reconcile(
             continue
         task = Task(name=name, path=path, in_force=True, anchor=anchor_turn(tt.read_text(path)))
         why, source = resolve_why(root, task, boundary, overrides)
+        if not why_is_usable(why):
+            # Same fallback as a restore: this row is being *created* here, so it must be a blurb that
+            # can travel, whatever the history says.
+            why, source = derived_why(task, boundary), "derived (could not travel)"
         register_text = tt.register_with_row(register_text, _row(root, task, why))
         report.notes.append(f"{name} had no register row; added one (why from {source})")
     for name in sorted(registered - set(present)):

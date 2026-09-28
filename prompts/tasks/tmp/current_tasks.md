@@ -39,5 +39,25 @@ same T218 save and reached T301 (it took 布鲁塞尔 at T224 - that is 024). **
 none of those holds: 布鲁塞尔 is a city-state again, 哈勒姆 is still the Netherlands', and the whole task
 set at T218 is being rolled back by `.tools/rollback-tasks.py`.
 | `023-dutch-siege-corps.md` | 2026-09-28 | turn 272 | take every Dutch city with the existing army, on the human's instruction; the west lane stays a screen | **the Netherlands holds no city.** The proof is `get_diplomacy`'s line for 荷兰 (player 2): it lists |
+| `024-take-brussels.md` | 2026-09-28 | turn 241 | take Brussels - restored by the rollback to turn 218; re-read the file before acting | **Brussels is ours** - the tile at its own (x,y) reads `[CITY_CENTER]` owned by 中国 with one of our |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
+
+Task 024 was restored by the rollback to T218: it was retired at T224, after the target turn, so its `done when:` is false again there.
+
+**Four more tasks were retired after T218 and were left retired deliberately** (the human's call, asked
+and answered on 2026-09-28), because the rollback undid their results but their instructions are not
+wanted at this position:
+
+- 019-two-scouts-to-sea.md (retired T250, added T220) - a thirty-turn exploration window that belongs
+  to the abandoned attempt; re-opening it would re-arm an expedition nobody asked to repeat.
+- 020-take-brussels.md (retired T237, added T232) - **the same objective as the restored 024**, filed
+  on the T281 run. 024 is the newer file, its `done when:` is the same proof, and its T241 deadline is
+  reachable from T218, so one Brussels task is enough.
+- 021-siege-legion-overseas.md (retired T270, added T237) - an overseas expedition whose whole window
+  (T237-T270) belongs to an abandoned run.
+- 022-take-haarlem.md (retired T271, added T257) - Haarlem is a subset of 023's campaign ("every
+  Dutch city"), which stays in force, so the campaign file covers it.
+
+`.tools/rollback-tasks.py 218 --apply --skip 019 --skip 020 --skip 021 --skip 022` is the command that
+produced this state; its backup is `.civ6-mcp-data/branches/rollback-tasks-T218-20260928-174858/`.
