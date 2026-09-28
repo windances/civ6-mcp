@@ -21,6 +21,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from civ_mcp import end_turn as et  # noqa: E402
+from civ_mcp import turn_checks  # noqa: E402
 from civ_mcp.lua import models as m  # noqa: E402
 
 
@@ -134,6 +135,59 @@ def test_it_quotes_the_plan_it_is_checking_against(diary):
     text = asyncio.run(et.turn_start_briefing(gs, 60))
     assert "builder mines (51,25)" in text
     assert "city 5 lands ~T62" in text
+
+
+def test_the_longest_failure_names_the_command_that_clears_it(diary, monkeypatch):
+    # A rule that has been red for twenty turns is a queue item, not information: measured T274-T295,
+    # `siege-train` sat at 2/3 and `ranged-mass` at 2/4 while one 155-gold upgrade each would have
+    # cleared it. One synthetic rule, so the failing set - and therefore the command - is exact.
+    import shutil
+
+    scratch = pathlib.Path(".tools") / f"_briefing_rule_{uuid.uuid4().hex}"
+    scratch.mkdir(parents=True)
+    rule_file = scratch / "one-rule.md"
+    rule_file.write_text(
+        "<!-- check\nid: siege-train\nrequire: units(BOMBARD) >= 3\n"
+        "message: fewer than three siege units\n-->\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        turn_checks, "load_checks", lambda: (rule_file.read_text(encoding="utf-8"), rule_file)
+    )
+    try:
+        gs = FakeGameState(60, {1: unit(1, "UNIT_ARCHER")})
+        text = asyncio.run(et.turn_start_briefing(gs, 60))
+        next_lines = [line for line in text.splitlines() if line.strip().startswith("NEXT:")]
+        assert len(next_lines) == 1, "exactly one command, or the briefing is a list again"
+        line = next_lines[0]
+        assert "[siege-train]" in line and "red for 16 turn(s)" in line
+        assert et._NEXT_COMMAND["siege-train"][:24] in line
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+def test_a_failing_rule_with_no_command_names_none(monkeypatch, diary):
+    # `ram-tower-before-civil-engineering` is a `once:` goal: it can outlast every mapped check and
+    # there is nothing to order, so the briefing stays quiet about it.
+    import shutil
+
+    scratch = pathlib.Path(".tools") / f"_briefing_rule_{uuid.uuid4().hex}"
+    scratch.mkdir(parents=True)
+    rule_file = scratch / "one-rule.md"
+    rule_file.write_text(
+        "<!-- check\nid: ram-tower-before-civil-engineering\nrequire: units(BATTERING_RAM) >= 1\n"
+        "message: no ram\n-->\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        turn_checks, "load_checks", lambda: (rule_file.read_text(encoding="utf-8"), rule_file)
+    )
+    try:
+        gs = FakeGameState(60, {1: unit(1, "UNIT_ARCHER")})
+        text = asyncio.run(et.turn_start_briefing(gs, 60))
+        assert "NEXT:" not in text
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
 
 
 def test_it_shows_what_the_last_turn_bought(diary):

@@ -502,6 +502,10 @@ async def _logged(
         return result
     # Success —reset connection error counter + refresh heartbeat
     _logged._conn_errors = 0
+    try:
+        _get_game(ctx).note_move_stops(result)
+    except Exception:
+        log.debug("move-stop count failed", exc_info=True)
     heartbeat.write("playing", turn=turn)
     ms = int((time.monotonic() - start) * 1000)
     log.info(

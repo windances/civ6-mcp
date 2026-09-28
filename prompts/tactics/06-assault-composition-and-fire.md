@@ -135,6 +135,13 @@ down (`supply line 4/6 cut - the city is still healing`).
 - **Prefer cutting to out-damaging.** An assault that must beat a twenty-point heal needs a much
   larger stack than one that does not; two spare units walked around the city are usually cheaper
   than two more Catapults.
+- **But price the last hex against the shooter that would cut it.** Cutting a hex buys about 20 a
+  turn; the unit that walks there gives up its own shot, which at 哈勒姆 was 40-100 a turn. Measured
+  T261-T270: the city held a **3/6** cut for the whole siege and its pool still went 200 -> 189 -> 86
+  -> 60 -> 20, never once up, because the fire out-damaged the heal every turn; the next Dutch city
+  went 200 -> 65 on a 3-4/6 cut. So a partial cut is a **ledger entry, not a failure**: when the pool
+  is falling, keep firing and say in the diary that the last hexes are being out-damaged - the rule
+  `cut-the-supply` will still be red, and that is the trade it asks you to state rather than to take.
 - **The screen does double duty.** Units already standing in front of the siege to absorb the
   city's strike are, by standing there, also cutting supply hexes - pick the tiles with that in
   mind.

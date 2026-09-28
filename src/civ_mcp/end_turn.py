@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 # that use them are gated on `>= 1`, so zero means "rule not applicable to this row").
 _CONTACT_METRIC_KEYS = (
     "attacks_this_turn",
+    "move_stops_this_turn",
     "unused_attacks",
     "damaged_this_turn",
     "camps_within_3",
@@ -1157,6 +1158,13 @@ async def _check_turn_checks(
         if upgrade_text:
             events.append(lq.TurnEvent(priority=3, category="combat", message=upgrade_text))
         try:
+            jam_text = _move_jam_event(int(getattr(gs, "_move_stops_this_turn", 0) or 0), turn)
+        except Exception:
+            log.debug("move jam report failed", exc_info=True)
+            jam_text = None
+        if jam_text:
+            events.append(lq.TurnEvent(priority=3, category="combat", message=jam_text))
+        try:
             loyalty_text = _loyalty_event(await _loyalty_for_checks(gs, turn), turn)
         except Exception:
             log.debug("loyalty report failed", exc_info=True)
@@ -1579,6 +1587,29 @@ def _gated_by_discount(units: dict | None, gold: float, policies) -> list[tuple[
     return gated
 
 
+def _move_jam_event(stops: int, turn: int) -> str | None:
+    """The column queueing behind itself, which no rule measured before T300.
+
+    T228-T299 moved 232 times less than ordered - `STOPPED_MID_PATH` on a unit that was sent to a
+    staging tile (T257-T259 alone: 15, 17, 19; T234 ordered eight units and took eight stops one to
+    three tiles short). The plan assigns distinct tiles; the *order of the calls* is what decides
+    whether the column queues behind itself, and `get_staging_plan` now prints it. This is the count
+    that says whether the order was followed.
+    """
+    if stops <= 0:
+        return None
+    lead = f"MOVE JAMS (T{turn}): {stops} unit(s) stopped short of the tile they were sent to."
+    if stops < 3:
+        return lead + " One or two is traffic: re-issue those units before the next order."
+    return (
+        lead
+        + " The column is queueing behind itself. Issue the calls in the order `get_staging_plan`"
+        " prints (furthest ring tile first, nearest last), one move per call with a `get_units`"
+        " between them, and re-issue a stopped unit before moving the next. Measured T228-T299: 232"
+        " stops in 72 turns, 19 in one turn, and every staging plan leaving 6-9 units unplaced."
+    )
+
+
 def _upgrade_event(units: dict | None, gold: float, turn: int, policies=None) -> str | None:
     """The upgrades the treasury can already pay for, named one by one.
 
@@ -1928,6 +1959,8 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         "local_superiority": 0,
         "enemies_massed_on": 0,
         "attacks_this_turn": int(getattr(gs, "_attacks_this_turn", 0) or 0),
+        # Partial moves this turn: the column queueing behind itself, counted where it happens.
+        "move_stops_this_turn": int(getattr(gs, "_move_stops_this_turn", 0) or 0),
         # A unit standing next to a killable enemy with moves left is the failure mode the
         # "attacks_this_turn >= 1" rule cannot see: two Catapults firing at a city satisfy it
         # while a 7 HP Swordsman is ignored one tile away (seen live at T111-T115).
@@ -2283,6 +2316,24 @@ def _failing_ids(row: dict | None) -> set[str]:
     return {check.check_id for check, _ in run.failures}
 
 
+# What clears the checks whose remedy is a command rather than a judgement. The briefing names the
+# longest-running failure's command because a red rule that nobody acts on for twenty turns is a queue
+# item, not information: measured T274-T295, `siege-train` sat at 2/3 and `ranged-mass` at 2/4 while one
+# 155-gold upgrade each (with 职业军队 slotted) would have cleared the first outright.
+_NEXT_COMMAND = {
+    "siege-train": "one more siege unit - `upgrade_unit` the cheapest siege unit (155g with the "
+    "discount card) or queue one in the war city",
+    "ranged-mass": "one more ranged unit - `upgrade_unit` the cheapest ranged unit, or finish the one "
+    "already in a queue",
+    "use-your-attacks": "fire with every unit that has a legal attack, before any other order",
+    "cut-the-supply": "the ring is partially cut and the pool is falling - accepting that is a diary "
+    "line, not a unit walked off the firing line (哈勒姆: 3/6, pool 200 -> 20 in five turns)",
+    "carrying-capacity": "gold/turn is under the floor: fewer units or a shorter war, not another buy",
+    "hold-what-you-take": "a governor or a garrison into the city this turn - moving a governor is free",
+    "one-garrison-per-city": "move the surplus unit off the city tile and to the front",
+}
+
+
 async def turn_start_briefing(gs, turn: int) -> str:
     """The reminder block for the *start* of a turn: rules, trend, and the efficiency read.
 
@@ -2351,6 +2402,17 @@ async def turn_start_briefing(gs, turn: int) -> str:
             lines.append(
                 f"    [{check_id}] {aged}"
                 + (f" - {check.message.split('.')[0]}." if check.message else "")
+            )
+        # A rule that has been red for a long time is not information any more, it is a queue item:
+        # name the command that clears it. Measured T274-T295 - `siege-train` at 2/3 and `ranged-mass`
+        # at 2/4 for twenty turns while one 155-gold upgrade each was available and unspent. The
+        # longest-red check is picked among the ones that *have* a command: a `once:` goal like
+        # `ram-tower-before-civil-engineering` can outlast them all and has no remedy to name.
+        ranked = sorted(streaks.items(), key=lambda kv: (-kv[1], kv[0]))
+        chosen = next(((cid, n) for cid, n in ranked if cid in _NEXT_COMMAND), None)
+        if chosen:
+            lines.append(
+                f"  NEXT: [{chosen[0]}] red for {chosen[1]} turn(s) - {_NEXT_COMMAND[chosen[0]]}"
             )
     else:
         lines.append("  FAILING: none - every checkable rule holds")
@@ -3787,6 +3849,7 @@ async def execute_end_turn(gs: GameState) -> str:
     # read it, so a blocker turn earlier in the turn still sees the attacks made so far.
     if turn_after is not None:
         gs._attacks_this_turn = 0
+        gs._move_stops_this_turn = 0
 
     # Every 10 turns: full victory progress snapshot, and the window review.
     if turn_after is not None and turn_after % 10 == 0:

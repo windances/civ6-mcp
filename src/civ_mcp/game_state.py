@@ -80,6 +80,9 @@ class GameState:
         # measurable if the attacks are counted where they happen. end_turn resets it after
         # the checks have run.
         self._attacks_this_turn: int = 0
+        # Units that were ordered somewhere and stopped short of it this turn. A column ordered
+        # nearest-first queues behind itself; measured T228-T299 this happened 232 times in 72 turns.
+        self._move_stops_this_turn: int = 0
         # Enemy city HP seen from our own attacks, per city name: (turn, hp, max_hp). Read by
         # end_turn's siege-progress report.
         self._city_hp_history: dict[str, list[tuple[int, int, int]]] = {}
@@ -272,6 +275,20 @@ class GameState:
     # ------------------------------------------------------------------
     # Action methods (run in InGame context for UnitManager access)
     # ------------------------------------------------------------------
+
+    #: Markers a partial move leaves in its own result line. `STOPPED_MID_PATH` is written by
+    #: `move_unit` below; `STOPPED_SHORT` comes from the same Lua reply on a path the engine stops
+    #: early. Both mean the unit is not where it was sent.
+    _STOP_MARKERS = ("STOPPED_MID_PATH", "STOPPED_SHORT")
+
+    def note_move_stops(self, result: str) -> None:
+        """Count one tool result's partial moves, so the turn can report the jam it caused.
+
+        Called for every tool result from the dispatch wrapper rather than from `move_unit`, because
+        the marker is also produced by paths that never reach this class's own post-processing.
+        """
+        if any(marker in result for marker in self._STOP_MARKERS):
+            self._move_stops_this_turn += 1
 
     async def move_unit(self, unit_index: int, target_x: int, target_y: int) -> str:
         # Pre-dismiss any blocking popups that would silently eat the move
