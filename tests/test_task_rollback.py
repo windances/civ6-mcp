@@ -195,20 +195,31 @@ class TestTheApply:
 
 
 class TestTheWhyForARestoredTask:
-    def test_a_utf8_git_child_is_decoded_as_utf8(self):
+    def test_a_utf8_git_child_is_decoded_as_utf8(self, tmp_path):
         """`text=True` alone decodes with the locale code page, and git does not write that.
 
         The first real use of this module died here: `git log -p` output holding a Chinese commit
         subject raised UnicodeDecodeError in the reader thread, `stdout` came back None, and the
-        recovery of a restored task's blurb crashed instead of falling back. This checkout's history has
-        non-ASCII subjects, so it is the natural place to pin the decoding.
+        recovery of a restored task's blurb crashed instead of falling back.
+
+        The commit is **made here** rather than looked for in this checkout's history: the earlier
+        version needed a non-ASCII subject among the last fifty commits, which a run of English commit
+        messages quietly removed - the test then failed on its own premise (2026-09-29) instead of on the
+        decoding it exists to pin.
         """
-        subjects = tr._git(ROOT, ["log", "-50", "--format=%s"])
-        assert subjects, "git should answer in this checkout"
-        assert any(not line.isascii() for line in subjects.splitlines()), (
-            "no non-ASCII commit subject in the last 50 commits - this test can no longer see whether "
-            "the child is decoded as UTF-8"
-        )
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True, capture_output=True)
+        (repo / "f.txt").write_text("x", encoding="utf-8")
+        subject = "任务 031：军事生产实验的第二次尝试"
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-q", "-m", subject], cwd=repo, check=True, capture_output=True)
+
+        subjects = tr._git(repo, ["log", "-1", "--format=%s"])
+        assert subjects is not None, "git should answer in a repository with one commit"
+        assert subject in subjects, "the Chinese subject came back mangled - the child is not decoding UTF-8"
 
     def test_the_real_history_row_is_what_the_fallback_exists_for(self):
         """The row 024 was actually added with names its target's tile, so it cannot travel.
