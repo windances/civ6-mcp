@@ -1111,22 +1111,22 @@
   },
   "verdict": [
     {
-      "prediction": "P1 a siege unit early (owned one by T45)",
-      "status": "OPEN",
-      "detail": "first siege unit owned never"
-    },
-    {
-      "prediction": "P2 establishment complete by T60",
+      "prediction": "Q1 establishment complete by T60",
       "status": "OPEN",
       "detail": "establishment not reached by T40"
     },
     {
-      "prediction": "P3 first enemy city kept by T80",
+      "prediction": "Q2 the siege train ordered before any economy order after Engineering",
+      "status": "OPEN",
+      "detail": "Engineering has not landed by T40, so the order is unaskable"
+    },
+    {
+      "prediction": "Q3 first enemy city kept by T80",
       "status": "OPEN",
       "detail": "first keep none"
     },
     {
-      "prediction": "P4 gold floor red on <10 turns",
+      "prediction": "Q4 gold floor red on <10 turns",
       "status": "OPEN",
       "detail": "0 red turn(s) by the rule up to T60; the diary's own gold/turn is below 10 on 40 of those 40 turn(s)"
     }
