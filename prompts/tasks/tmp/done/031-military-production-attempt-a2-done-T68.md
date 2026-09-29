@@ -85,3 +85,10 @@ and write the record as `docs/experiments/002-attempt-A2.md`. Then compare it wi
      at: 2026-09-29T13:58:59+08:00
      chinese backup: prompts/tasks/cn/031-military-production-attempt-a2.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 031 --done --turn 68
+     at: 2026-09-29T17:59:24+08:00
+     status: done at T68
+     chinese backup: prompts/tasks/cn/031-military-production-attempt-a2.cn.md
+-->

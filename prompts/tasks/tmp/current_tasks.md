@@ -89,9 +89,11 @@ Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.
 Task 028 was retired as `done/028-development-science-wonders-expired-T288.md`: Superseded: the match this file governed was handed over and a new match was started for the military production experiment; see docs/experiments/README.md.
 
 Task 029 was retired as `done/029-two-scouts-sea-info-expired-T288.md`: Superseded: the match this file governed was handed over and a new match was started for the military production experiment; see docs/experiments/README.md.
-| `031-military-production-attempt-a2.md` | 2026-09-29 | turn 90 | military production experiment attempt A2: the same doctrine on a target inside the window, since A1's capture half was decided by the map | a city is kept (a city_action reply reads KEEP|) or the game reaches turn 80, whichever comes first |
-| `033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end.md` | 2026-09-29 | turn 85 | take the city-state the attempt has besieged since the war was unblocked | turn 80 is reached, or a city_action reply reads KEEP| - whichever comes first |
 
 Task 030 was retired as `done/030-military-production-attempt-a1-expired-T40.md`: Superseded: A1 stopped at its own T40 review point with the review written; the review re-scoped the target and attempt A2 continues from the same save under task 031. A1's position is preserved in the saves and its numbers in docs/experiments/A1-T40.json.
 
 Task 032 was retired as `done/032-attempt-a2-second-half-t41-to-the-first-siege-order-done-T66.md`: the first siege order was read at T48 (both Catapults, before any economy order); the assault continues under 033
+
+Task 031 was retired as `done/031-military-production-attempt-a2-done-T68.md`.
+
+Task 033 was retired as `done/033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end-done-T68.md`.

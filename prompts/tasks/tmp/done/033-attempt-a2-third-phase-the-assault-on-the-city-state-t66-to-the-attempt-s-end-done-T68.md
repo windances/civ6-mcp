@@ -81,3 +81,10 @@ from the immediate reply, and resolve the city with `city_action` when the pool 
      at: 2026-09-29T17:33:35+08:00
      chinese backup: prompts/tasks/cn/033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 033 --done --turn 68
+     at: 2026-09-29T18:00:04+08:00
+     status: done at T68
+     chinese backup: prompts/tasks/cn/033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end.cn.md
+-->
