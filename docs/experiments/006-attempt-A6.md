@@ -129,15 +129,26 @@ table above). The treasury, read from this attempt's own `get_game_overview` row
 | T12 | **87** | +5 |
 | **T20** | **139** | **+7** |
 | **T30** | **218** | **+10** |
+| **T43** | **356** | **+13** |
 
 **At +5/turn the treasury would need about forty-seven more turns from T12 to reach the 320 a Catapult
-costs** - about **T59**, nine turns past Q2's T50 deadline. **But income climbed to +7/turn by T20 and to
-+10/turn by T30**, and from T30's 218 that is about **ten more turns, i.e. about T40** - inside the deadline
-with ten turns to spare, before counting the trade route, the second city or any luxury the empire sells.
-**So the warning is discharged: on the trajectory read at T30 the funding half clears its arithmetic by a
-wide margin.** A3 reached 347 by T48 on this same start, so the route was never hypothetical - and A6 is
-running **ahead** of A3's pace, which is the first half of the variable doing exactly what it was meant to.
-The record still reads the treasury at every checkpoint and names the purchase turn when it comes.
+costs** - about **T59**, nine turns past Q2's T50 deadline. **But income climbed to +7/turn by T20, to
++10/turn by T30 and to +13/turn by T43**, and **the treasury stood at 356 on T43 - it has crossed the 320
+the Catapult costs**, ten turns ahead of the deadline. **So the funding half is met and the early warning
+is discharged on the numbers rather than argued away.** A3 reached 347 by T48 on this same start, so A6 is
+running ahead of A3's pace, which is the first half of the variable doing what it was meant to.
+
+**And the binding constraint turns out to be the technology rather than the gold**, which the record states
+because it is what Q2's turn will actually be set by: the `get_tech_civics` reads run
+**`Researching: Engineering (29 turns)` at T30, `(15 turns)` at T40 and `(3 turns)` at T43**, so Engineering
+lands about **T46** - and a Catapult **cannot be bought before it exists as a unit type**. **So the purchase
+turn will be the turn Engineering is owned, not the turn the gold arrived**, and the treasury has been
+sitting above the price since T43. The record reads both clocks and names which one set the purchase.
+
+**No purchase has been made yet, and the log's purchase rows are empty** - which is the funding half being
+executed rather than asserted: the whole point of the first half of this variable is that the gold is
+**raised** by restraint and income, and every `purchase_item`/`purchase_tile` row in this attempt is listed
+in the end table so that claim is checkable.
 
 ## The end table, and the verdict - written when the attempt ends
 
