@@ -88,3 +88,10 @@ that is only answerable if the empire did the rest of its job too.
      at: 2026-09-29T03:34:58+08:00
      chinese backup: prompts/tasks/cn/030-030-military-production-attempt-a1.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 030 --expired --turn 40 --note "Superseded: A1 stopped at its own T40 review point with the review written; the review re-scoped the target and attempt A2 continues from the same save under task 031. A1's position is preserved in the saves and its numbers in docs/experiments/A1-T40.json." --no-commit --no-gate
+     at: 2026-09-29T13:59:10+08:00
+     status: expired at T40
+     chinese backup: prompts/tasks/cn/030-military-production-attempt-a1.cn.md
+-->
