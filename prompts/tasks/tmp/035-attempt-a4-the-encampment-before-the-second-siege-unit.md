@@ -1,4 +1,4 @@
-﻿# TEMP TASK 035 - TEMP TASK 035 - attempt A4: the Encampment before the second siege unit, from the shared T1 start
+﻿# TEMP TASK 035 - attempt A4: the Encampment before the second siege unit, from the shared T1 start
 
 added:     2026-09-30 (human instruction: 继续A3 ~ A7)
 expires:   turn 115 - 30 turn(s) from T72, the turn the match stands on (read from the save); a hard stop,
@@ -7,12 +7,15 @@ done when: turn 110 is reached, or a city is kept (a city_action reply reads KEE
 overrides: nothing: the design is docs/experiments/README.md's A4 row and it contradicts neither the directive
            nor A3's record. It does supersede the earlier attempts' stop-turn conventions - A1
            stopped at T40 and A2 ran to its capture - because this attempt's window is written from
-           its own queue: Engineering ~T48, the train ~T55, the Encampment built after the second
-           city, and the capture inside T110.
+           its own queue: Engineering ~T48, the train ~T55, the Encampment built in the war city
+           before the second siege unit, and the capture inside T110.
 scope:     this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save:
            attempt A4 - the same settings, the same pinned opening and the corrected tactics/01,
-           with the Encampment's place in the queue (after the second city, where A3 builds it
-           before) as the one variable
+           with the Encampment's place in the war city's queue (**before the second siege unit** -
+           the reading `prompts/tactics/08-war-and-the-home-front.md` states, executed for the first
+           time in the programme; the earlier form of this line said "after the second city, where A3
+           builds it before", which was refuted by the measurement that no attempt has ever built an
+           Encampment at all) as the one variable
 
 Attempt **A4** of the military-production experiment (`docs/experiments/README.md`, section 3). A1, A2 and
 A3 are `001-attempt-A1.md`, `002-attempt-A2.md` and `003-attempt-A3.md`; the cross-attempt report is
