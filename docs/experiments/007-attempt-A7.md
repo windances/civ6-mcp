@@ -53,6 +53,43 @@ force; A4, A5 and A6 all matched it and all three are certified `held` by the in
 **one city** (`get_cities` reads `1 cities: Xi'an (pop 3)`), so the settler is walking to its site, and the
 record names the city and the turn when it lands.
 
+## The split, and the variable executed
+
+**The second city was founded at `T21 FOUNDED|53,21`** (`unit_action(found_city)`), and **both cities' queues
+have been army units from that turn** - which is the variable:
+
+| city | its orders, in turn order | what it is |
+|---|---|---|
+| **Xi'an (65536)** | `WARRIOR` T20, `SLINGER` T23, `SLINGER` T25, `SLINGER` T26, `HEAVY_CHARIOT` T28 | the war city `tactics/08` prescribes, unchanged |
+| **the second city (131073)** | **`SLINGER` T21** - ordered **the turn it was founded** - and `WARRIOR` T28 | **the second war city: an army queue from its first order** |
+
+**So `tactics/08`'s "the other cities build everything else" is overridden exactly as the brief says it
+should be**, and **Q2's condition is on track**: both cities hold army-role orders before any keep. The
+second city's first unit (a Slinger at 9 turns) completes about **T30**, and the record reads whether it is
+alive and where it went when the attempt ends.
+
+**And one shared change has to be recorded beside the variable, because it changes the production the
+attempt is measuring.** `T23 choose_pantheon -> PANTHEON_FOUNDED|God of the Forge` - **the +25% toward
+Ancient and Classical units belief, founded at T23 on 19 faith**. **The baseline matters here and it is now
+measured, not assumed**: the pantheon guard in `build_choose_pantheon` was replaced with the game's own
+`CanCreatePantheon()` at the A4/A5 boundary, because the old flat standard-speed 25 refused pantheons the
+game was already offering (it cost A3 four turns on Quick). **All three attempts that ran under the fixed
+guard founded God of the Forge, and all three founded it below the old threshold**:
+
+| attempt | `get_pantheon_beliefs` reads | founded |
+|---|---|---|
+| **A5** | T28, **Faith 17** | **T28** |
+| **A6** | T25, **Faith 19** | **T25** |
+| **A7** | T23, **Faith 19** | **T23** |
+
+**That is the live verification the retro was waiting for**: faith 17 and 19 are both below the flat 25 the
+old guard demanded, so under the old code all three would have been refused for several more turns - and
+A2's attempt shows what that costs (no pantheon at all until T41). **So A7's production is boosted by the
+fixed guard exactly as A5's and A6's are**, and its 3-to-5-turn head start on the belief is the ordinary
+spread between three attempts rather than a confound unique to it. **The production comparison for this
+variable is therefore against A5 and A6** - the two attempts under the same guard and the same corrected
+`tactics/01` - and against A2-A4 only with the belief difference named.
+
 ## The hypothesis, with the numbers that falsify it
 
 | # | prediction | falsified when |
