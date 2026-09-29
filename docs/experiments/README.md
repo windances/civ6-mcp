@@ -114,7 +114,7 @@ The doctrine's testable claims, each with the file that makes it:
 | **A1** | none - the doctrine as written | the establishment is complete by T60 and the first city falls by T80 |
 | **A2** | **the target's distance alone** - same save, same doctrine, but the objective is the nearest *city* (a city-state inside a dozen tiles) instead of the nearest rival capital, which this map puts 33 tiles away | the siege half becomes reachable inside a sixty-turn window once the target is inside ~12 tiles: siege 2/2 and the first city kept by T80 |
 | **A3** | **the target's defences** - a *walled* city, everything else held (same doctrine, same save family, the corrected table) | the train's wall phase, which A2 never ran because its target read `walls: none`, changes the arithmetic in a measurable way: the first city kept **no earlier** than A2's T68 and **no later than T80**, with the wall pool's turn count on the record |
-| **A4** | Encampment after the second city instead of before it | two cities' compounding beats the earlier general's aura: first city falls no later than A3 |
+| **A4** | **the Encampment is built, in the war city, before the second siege unit** - the doctrine's own prescription executed for the first time | the aura pays for the district: the first city falls **no later than A3's keep turn**, with a Great General recruited (and never activated) before the war opens |
 | **A5** | **Magnus in the war city** - his base ability Groundbreaker (+50% to feature removals) with the chops going into units instead of infrastructure | the establishment arrives 5+ turns earlier than A2's T55 completion and the economy is behind by less than 5 turns at T60 |
 | **A6** | **the first siege unit is bought with gold, not produced** - the arithmetic below allows no more than one | the first siege unit is in hand before A2's T53 completion, funded deliberately out of a treasury that reached 243 at T40 and 274 at T50 against a 320g price; the train is complete no later than A2's T55, and the purchase's cost shows as a longer negative `carrying-capacity` window |
 | **A7** | two war cities instead of one | the second city's production outweighs the lost compounding |
@@ -134,6 +134,23 @@ pre-flight arithmetic rather than at hour three. **A4-A7 also
 compare a war's opening turn against the previous attempt, not against A2**: A2's T60 included six turns
 lost to the city-state war-declaration bug that `0f214eb` fixed before A3 ran, so A2 is no longer a clean
 war-timing baseline - the fixed tool is part of what A3 onward plays with.
+
+**A4's premise was false, and the measurement is the finding** (2026-09-29, found before publication the same
+way A6's arithmetic was). A4's first form said it would build the Encampment *after* the second city "where
+the doctrine and A3 build it before". **No attempt has ever built an Encampment at all**: across all seven
+session logs of this match - A1, A2, A3 and the abandoned branches - there are **zero** `DISTRICT_ENCAMPMENT`
+orders. So the "before the second city" arm does not exist and the old A4 would have measured its variable
+against nothing. What does exist is the doctrine's own prescription, stated **twice with different timings**:
+`tactics/08:81` puts the Encampment *in the war city's war queue* ("builds units, siege and the
+Encampment/Barracks, and nothing else for the duration") while the directive's build order puts it **last**
+("then Encampment only when a war is actually near", `directive.md:299`) even as the same file also lists it
+with the war city's queue (`:63`, `:331`). **A4 therefore executes `tactics/08`'s reading for the first
+time** - the Encampment completed in the war city before the second siege unit - and its mechanism question
+is separate on purpose: an Encampment that yields no Great General by the first shot is the claim's mechanism
+missing (`tactics/01:74-76`: +1 movement and +5 combat strength to land units within 2 tiles), not its cost.
+**The contradiction itself is owed a reconciliation** - the same class as the two establishment tables that
+still disagree - because an obedient session reading `tactics/08` and one reading the directive's build order
+will do different things, which is why three attempts did neither.
 
 **A3 was re-scoped after A2** (2026-09-29), and for the same reason A2 was re-scoped after A1: the
 question the attempt was built to ask must be *askable*. A2 held H1 and took its city, but its target had
