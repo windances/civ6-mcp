@@ -803,7 +803,9 @@ def attempt_row(name: str, payload: dict) -> dict:
         "first_keep": f"T{min(keeps)}" if keeps else "none",
         "sci_T20": at(20).get("science", "-"),
         "sci_T40": at(40).get("science", "-"),
-        "gold_T40": at(40).get("gold_per_turn", "-"),
+        # Named `gpt`, not `gold`: the economy table's `gold` is the treasury and this is the income.
+        # Quoting one for the other read 6 (GPT) against a real 236 (treasury) at A1's T40.
+        "gpt_T40": at(40).get("gold_per_turn", "-"),
         "h5": len(doctrine.get("forbidden_orders") or []),
         "self_mismatch": mismatches,
         "rules_red": len(payload.get("rules") or {}),
@@ -818,7 +820,7 @@ COMPARE_COLUMNS = (
     "first_keep",
     "sci_T20",
     "sci_T40",
-    "gold_T40",
+    "gpt_T40",
     "h5",
     "self_mismatch",
     "rules_red",
@@ -846,7 +848,8 @@ def print_compare(paths: list[pathlib.Path]) -> int:
     print(
         "\ncolumns: establishment = the turn the army matched tactics/01's table; army_start = first "
         "role-mapped unit ordered;\nsiege_order = first siege order; h5 = ram/tower orders (must be 0); "
-        "self_mismatch = diary ESTABLISHMENT lines the record contradicts."
+        "self_mismatch = diary ESTABLISHMENT lines the record contradicts;\nsci_T20/sci_T40/gpt_T40 = "
+        "science and gold income **per turn** at that turn (the treasury is `gold` in the economy table)."
     )
     return 0
 

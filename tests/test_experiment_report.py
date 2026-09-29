@@ -13,6 +13,7 @@ a `unit_composition` field. Handing it a bare composition dict is a mistake the 
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -267,7 +268,7 @@ def test_attempt_rows_compare_two_snapshots_on_the_same_columns():
     assert row["army_start"] == "T22"
     assert row["siege_order"] == "T35"
     assert row["first_keep"] == "T61"
-    assert row["sci_T20"] == 21.4 and row["gold_T40"] == 14.2
+    assert row["sci_T20"] == 21.4 and row["gpt_T40"] == 14.2
     assert row["h5"] == 1  # the forbidden ram was ordered
     assert row["self_mismatch"] == 1
     assert row["rules_red"] == 1
@@ -340,3 +341,32 @@ def test_boundaries_survive_a_diary_with_gaps():
     # A diary with no gaps is the ordinary case: exactly the multiples, plus the first and last row.
     dense = frames({turn: {"WARRIOR": 1} for turn in range(1, 42)})
     assert report.boundaries(dense, 10) == [1, 10, 20, 30, 40, 41]
+
+
+def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
+    """A1's T40 read `gold_T40 6.0` beside a treasury of 236 - the column was gold **per turn**.
+
+    The columns that hold a yield are named for it (`gpt_T40`), so a reader cannot quote the income
+    as the balance, and the legend says which is which.
+    """
+    snapshot = {
+        "game": "china_test",
+        "first_turn": 1,
+        "last_turn": 40,
+        "economy": [{"turn": 40, "science": 7.9, "gold": 236.0, "gold_per_turn": 6.0}],
+    }
+    first = tmp_path / "A1-T40.json"
+    second = tmp_path / "A2-T40.json"
+    for path, science in ((first, 7.9), (second, 12.0)):
+        snapshot["economy"] = [{"turn": 40, "science": science, "gold": 236.0, "gold_per_turn": 6.0}]
+        path.write_text(json.dumps(snapshot), encoding="utf-8")
+
+    assert report.print_compare([first, second]) == 0
+    out = capsys.readouterr().out
+    header = out.splitlines()[0]
+    assert "gpt_T40" in header
+    assert "gold_T40" not in out  # the ambiguous name is gone, not merely documented
+    # The two rows carry their own values, so the table is a compare and not one row twice.
+    rows = [line for line in out.splitlines()[1:] if line.startswith(("A1-T40", "A2-T40"))]
+    assert len(rows) == 2 and rows[0] != rows[1]
+    assert "per turn" in out  # the legend disambiguates the yield columns from the treasury
