@@ -510,3 +510,67 @@ rediscovering:
    FireTuner instead (`PlayerConfigurations[i]:SetLeaderTypeName` / `:SetCivilizationTypeName` /
    `:SetSlotStatus`), which the screen then displayed correctly; difficulty, map size, speed and map
    type come from the screen's own short pulldowns, which do fit.
+
+## T68 - `031` and `033` retired (done): A2 took its city, and the attempt ends there
+
+Attempt A2's finish line was met at **T68** - twelve turns inside the T80 deadline - and both files were
+retired the same turn: `031-military-production-attempt-a2` and
+`033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end`, by
+`scripts/temp-task.py retire <nnn> --done --turn 68`. The capture itself is one line:
+
+```
+KEEP|耶路撒冷 (pop 5, id:196610, captured)
+```
+
+Run by three sessions in sequence - `sacred-garnet-vault-35` (T1-T40), `pale-pearl-aqueduct-92`
+(T41-T65) and `volcanic-indigo-caravan-23` (T66-T68) - which is why the snapshot has to name all three:
+the instrument attributes diary rows by session time, and naming only the last one drops every turn
+before T66.
+
+**The walls read `none`.** Twenty-six turns of staging, six of them spent at the gate, had produced no
+wall value from any tool; the first Catapult shot printed `city hp: 200/200, walls: none`, and 耶路撒冷
+never had a wall pool at any point. **The doctrine's entire wall phase - the reason the siege train
+exists - therefore never ran.** What the city defended itself with were its garrison (an Archer that
+moved into the city tile on the last turn), its sortied field army (six units at peak, a Heavy Chariot
+among them) and its healing, about 20 a turn while any one of its six adjacent hexes stayed outside our
+zone of control.
+
+**The two turns of fire, in the city's own numbers:** 200 -> 130 (T66, two Catapults) -> 24 (T67, two
+Catapults) -> 44 at the top of T68 (it healed 20 back while one hex was open) -> 0 (one Catapult hit).
+The cost: **Warrior 655367 killed on the ring at (51,22)**, Catapult 1310723 down to 25/100 (the enemy
+Heavy Chariot was adjacent to both forward guns on every turn and was never screened, because no tile of
+ours can be *strictly closer* to an enemy that is already adjacent), Catapult 1245188 to 80/100, and the
+capturing Warrior to 39/100.
+
+**Four tool findings from the two assault turns, all of the same family - a reply that cannot be read as
+a result:**
+
+1. **`damage dealt:none read (city still N/200)` is not a damage reading.** Both T66 shots printed it
+   while doing ~70 between them; the adapter only reports a delta when the follow-up read lands after the
+   hit, and for a city attack there is no estimate to fall back on.
+2. **`SIEGE PROGRESS` replays a recorded read, not a live one** (`end_turn.py` builds it from the history
+   the attack follow-ups write), so T67's block still printed `200/200` while the pool was at 130. The
+   trustworthy live number is the attack estimate line - `vs CITY_CENTER (CS:0, HP:N)` - which is where
+   130, 24, 44 and 0 all came from.
+3. **The capture move's reply is stale too, and this one nearly cost the attempt its result.** The T68
+   move answered `CAPTURE_MOVE|50,22|from:49,21|now_at:49,21|BLOCKED (city-state territory (耶路撒冷) -
+   need suzerainty or Open Borders)` - the pre-war border refusal - while the unit was in fact standing
+   on (50,22) and the city-state had been eliminated. `now_at` is read before the asynchronous move
+   resolves and the border diagnostic runs against the pre-move plot. Only the follow-up `get_units` read
+   showed the capture had happened; without it the attempt would have been recorded as blocked by a tool
+   when it had actually won.
+4. **The ZOC rule invalidates an attack the tool still lists.** `HasMovedIntoZOC` refused Warrior
+   131073's T67 attack on the city (`ZOC|Unit entered Zone of Control this turn - cannot attack until
+   next turn`) while `get_units` showed the same target under `CAN ATTACK`, so `use-your-attacks` can
+   fail on an order the engine will not accept.
+
+**The verdict, as the instrument prints it** (`--questions a2`, `--expect-est 60 --expect-city 80`):
+**Q1 falsified** (the table reads `ram 0/1, ranged 3/4` - and the ram slot is unsatisfiable as
+`tactics/01` is written, which is why its zero is a statement about the table rather than the session);
+**Q2 held** (`Engineering T48; first siege order T48, first economy order T55` - the experiment's
+headline and the first test H1 has ever had); **Q3 held** (`first keep T68`, the first city either
+attempt has taken); **Q4 falsified** (the gold floor red on every turn the rule has run, and below +10 on
+the diary's own number on all 68 turns).
+
+The records are `docs/experiments/A2-final.json` (the snapshot), the end table and verdict at the foot of
+`docs/experiments/002-attempt-A2.md`, and section 6 of `docs/experiments/RETRO-2026-09-29.md`.
