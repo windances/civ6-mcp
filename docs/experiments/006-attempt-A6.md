@@ -150,6 +150,27 @@ executed rather than asserted: the whole point of the first half of this variabl
 **raised** by restraint and income, and every `purchase_item`/`purchase_tile` row in this attempt is listed
 in the end table so that claim is checkable.
 
+## The purchase - the variable, executed
+
+**`T46 purchase_item(city_id=65536, item_type="UNIT", item_name="UNIT_CATAPULT", yield_type="YIELD_GOLD")
+-> PURCHASED|UNIT_CATAPULT|cost=320g (had 396g)`.** Engineering's `Research complete` line sits in **T45's**
+`end_turn`, so the tech is owned from **T46** - and **the purchase was made on T46, the first turn it could
+be**. The same turn ordered the second, produced one:
+`T46 set_city_production(city_id=65536, UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|6 turns`.
+
+| what | the number |
+|---|---|
+| the purchase turn | **T46** - against Q2's **T50** deadline, so **HELD with four turns to spare** |
+| the price and the balance | **`cost=320g (had 396g)`** - the treasury had been above the price since **T43** (356), so **the gold was not the binding clock**; Engineering was, exactly as the re-read above predicted |
+| the first siege unit, against every prior attempt | **the earliest in the programme**: A6 bought at **T46**, against A4's first Catapult **owned T49**, A5's **T50**, A3's **T53** and A2's **T53** - **seven turns earlier than A2's completion**, which is more than the "four or five turns" the variable promised |
+| the second unit | ordered the same turn in the same city, **6 turns** (about T52), against A2's second completing **T55** and Q3's bound |
+| the funding-half audit | **the Catapult is the only `purchase_item` row in the entire attempt so far**, and there is **no `purchase_tile` row and no trade row at all** - so the 396 gold was raised by income and restraint, which is the first half of the variable measured rather than asserted |
+
+**Two things this does not yet establish**, and they are the ones the end table has to answer: whether the
+**train** is complete by A2's T55 (the second Catapult is in the queue at 6 turns), and whether the **war
+opens** early - because A5 is the standing cautionary case of a train that arrived early beside a war that
+did not, and the march, not the gun, is what A5's record blames.
+
 ## The end table, and the verdict - written when the attempt ends
 
 The attempt ends when **a city is kept** - a `city_action` reply reads `KEEP|`, **or** the game resolves the
