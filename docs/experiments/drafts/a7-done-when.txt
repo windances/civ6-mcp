@@ -1,0 +1,1 @@
+turn 110 is reached, or a city is kept (a city_action reply reads KEEP|) - whichever comes first

@@ -122,11 +122,15 @@ The doctrine's testable claims, each with the file that makes it:
 **A6's claim was cut to its arithmetic before the attempt was published** (2026-09-29), and the cut is part
 of the finding. The design's first form - "the siege train is bought with gold" - cannot happen on this
 start: `UNIT_CATAPULT` is 120 production and **buy: 320g** (A2's own T68 production read), while A2's
-treasury reached **243.4 at T40** and **274.4 at T50** on 5-9 g/turn with no improved luxury to sell, so one
-purchase is only just reachable at T48-T50 and **two (640g) are arithmetically impossible before about
-T70**. A6 therefore buys the **first** unit and produces the second, and its claim is a five-turn gain on one
-unit rather than a five-turn-earlier war. This is A1's "P2 impossible by arithmetic" arriving one attempt
-later and one level down, and it was found by pre-flight arithmetic rather than at hour three. **A4-A7 also
+treasury reached **243.4 at T40** and **274.4 at T50** - and **never held 320 at all** (its peak inside the
+window was 294.8 at T68) - on 5-9 g/turn with no improved luxury to sell. So one purchase is **not
+reachable on A2's own path**, and buying one by T50 means this attempt's treasury has to run ahead of A2's:
+that is the variable's first half (fund the purchase deliberately - buy nothing else, keep the army's
+maintenance down - and state the turn the price is actually reached). **Two (640g) are arithmetically
+impossible before about T70.** A6 therefore buys the **first** unit and produces the second, and its claim
+is a five-turn gain on one unit - if the funding can be found at all - rather than a five-turn-earlier war.
+This is A1's "P2 impossible by arithmetic" arriving one attempt later and one level down, and it was found by
+pre-flight arithmetic rather than at hour three. **A4-A7 also
 compare a war's opening turn against the previous attempt, not against A2**: A2's T60 included six turns
 lost to the city-state war-declaration bug that `0f214eb` fixed before A3 ran, so A2 is no longer a clean
 war-timing baseline - the fixed tool is part of what A3 onward plays with.

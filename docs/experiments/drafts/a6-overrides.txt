@@ -1,0 +1,6 @@
+the expectation that a `carrying-capacity` red is fixed on the turn it fires: this attempt's design
+           predicts the gold floor going red for longer than A2's ten turns and records that as the
+           variable's cost in the diary every turn it fires, instead of treating the rule as a blocker. It
+           contradicts nothing else in the directive, and it supersedes the earlier attempts' stop-turn
+           conventions because this attempt's window is written from its own queue: Engineering ~T48, the
+           first siege unit bought by T50, the train complete by T55.

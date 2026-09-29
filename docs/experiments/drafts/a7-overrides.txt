@@ -1,0 +1,5 @@
+tactics/08's one war city: this attempt's variable is a second city whose queue is army units, and its
+           whole question is whether that city's production outweighs the compounding it does not do. It
+           contradicts nothing else in the directive, and it supersedes the earlier attempts' stop-turn
+           conventions because this attempt's window is written from its own queue: the second war city
+           founded or taken early, both cities producing army units, and the first capture inside T110.

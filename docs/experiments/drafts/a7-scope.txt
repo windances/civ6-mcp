@@ -1,0 +1,3 @@
+this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save:
+           attempt A7 - the same settings, the same pinned opening and the corrected tactics/01, with the
+           number of war-production cities (two, against the one tactics/08 prescribes) as the one variable

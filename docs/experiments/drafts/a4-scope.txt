@@ -1,0 +1,4 @@
+this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save:
+           attempt A4 - the same settings, the same pinned opening and the corrected tactics/01, with
+           the Encampment's place in the queue (after the second city, where A3 builds it before) as
+           the one variable

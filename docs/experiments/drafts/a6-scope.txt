@@ -1,0 +1,4 @@
+this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save:
+           attempt A6 - the same settings, the same pinned opening and the corrected tactics/01, with the
+           way the FIRST siege unit is paid for (gold, not production turns) as the one variable - the
+           arithmetic on this start allows no more than one purchase

@@ -1,0 +1,5 @@
+nothing: the design is docs/experiments/README.md's A5 row and it contradicts neither the directive nor
+           A3's record; it depends on the chop rule that lands in tactics/01 with the commit that retires
+           task 034. It does supersede the earlier attempts' stop-turn conventions - A1 stopped at T40 and
+           A2 ran to its capture - because this attempt's window is written from its own queue: Engineering
+           ~T48, the establishment ~T50, and the economy read at T60.
