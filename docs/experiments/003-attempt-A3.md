@@ -374,23 +374,40 @@ is `restart_and_load("0_MCP_0070")`, the autosave the HANG line names.
 the same column as A2's six war-declaration turns and A3's own T59-T60. The resolution and its cost are in the
 end table below.
 
-**And the cause is in the log, not in the screen.** When the session went back to work it read
-`get_world_congress`, which answered
+**The cause is not the World Congress, and this paragraph first said it was - corrected here.** Reading the
+MCP's own `end_turn` log for the retry shows `WC fires this turn with **0 resolutions** - auto-proceeding`, so
+there were no votes to register and the Congress cannot have been the blocker; the first version of this note
+inferred a cause from `get_world_congress`'s warning line and was wrong.
+
+**What the MCP's own diagnosis recorded is the window, not the turn.** `.civ6-mcp-data/hang_diagnosis.jsonl`
+holds three entries for T70, one per `end_turn`, each with the same shape:
 
 ```
-World Congress: FIRES THIS TURN - use queue_wc_votes() before end_turn()!
-Favor: 38 | Vote costs (cumulative): 1 vote=free, 2=6, 3=...
+{"turn": 70, "iso": "2026-09-29 22:47:26", "window": {..., "foreground": false,
+ "foreground_window": "... DSH Local Build - Google Chrome"}}
 ```
 
-**The World Congress fires synchronously inside `end_turn()`** (`AGENTS.md`: "register votes before calling
-end_turn", and a session that has not is the case that blocks). So the ten-minute `end_turn` was not a stuck
-AI turn in the ordinary sense - it was the game waiting on the Congress with this session's votes unregistered,
-and the second `end_turn` reproduced it because the votes were still unregistered. The tool's own HANG wording
-("AI turn processing appears stuck") names the wrong subsystem, and the recovery sequence it suggests ignores
-the one piece of state that was actually pending: **`dismiss_popup` has nothing to dismiss because the
-Congress is not a popup**, it is an inter-turn phase, and no amount of screen-reading shows it as a dialog.
-That is worth carrying in the programme's notes: **before treating a stuck `end_turn` as an AI hang, read
-`get_world_congress`** - it costs one call and it is the difference between a recovery and a relaunch.
+- `22:47:26`, `23:00:47`, `23:15:55` - **all three with `foreground: false`**, and the window holding the
+  foreground in every one of them is **the harness's own browser**, the UI this agent is driven through. The
+  MCP re-focuses the game and retries before any restart (that is what its `HANG DIAGNOSIS` line does), and the
+  focus goes back to the browser between attempts.
+
+**And then it was not a focus problem either.** The human, watching the screen, reported the game sitting in
+its **"Please wait" AI-turn phase for a long time** - a genuine stall in the game's own turn processing, not a
+dialog and not a lost focus. On their call the game and the session were killed (`scripts\civ6-clean.ps1`, all
+three of game, mcp and agent) and the position was left where it is safe: **`0_MCP_0070`**, written 22:36:21,
+with the game's own `AutoSave_0070` beside it.
+
+**The recovery has a step the tools do not cover, and it is worth recording.** The game was relaunched through
+Steam (the raw EXE exits with code 53 - Steam's DRM needs Steam to start it: `steam://rungameid/289070`), and
+the menu was in Chinese, where the MCP's OCR path looks for an English `Load Game`; the human changed the game
+language to English. Even then **synthetic clicks do not reach the game**: `.tools/click-text.py` and a manual
+`SetCursorPos` + `mouse_event` pair both reported a successful click with the game verified foreground, and the
+menu did not move, while `.tools/drive-load.py` refused to navigate ("main menu not up yet ... not navigating
+blind"). The most likely cause is the game running with a token that makes Windows drop injected input from
+this non-elevated process. **So the load is done by hand**, and the attempt resumes from T70 when it is. What
+this costs the attempt is wall-clock, not state: the T67 capture and every verdict that rests on it are already
+in the log and in this record.
 
 ## The end table, and the verdict - written when the attempt ends
 
