@@ -1297,11 +1297,12 @@ def verdict_a5(
     expect_city: int = 80,
     expect_gold_red: int = 10,
 ) -> list[tuple[str, str, str]]:
-    """A5's four questions: Magnus' Groundbreaker, the chops into units instead of infrastructure.
+    """A5's four questions: Magnus in the war city, the chops into units instead of infrastructure.
 
     One chop-for-units variable. Q1 is the corrected table's deadline, **Q2 is the variable** - the
-    establishment 5+ turns ahead of A2's T55 - Q3 is the cost it is expected to pay (a first non-unit
-    order no more than 5 turns behind A2's T55), and Q4 is the generic gold floor.
+    establishment 5+ turns ahead of A2's T55 - Q3 is the cost it is expected to pay (the first economy
+    order **after the Engineering gate** no more than 5 turns behind A2's T55, which is itself a
+    post-gate order), and Q4 is the generic gold floor.
     """
     generic = _generic_slots(by_turn, rows, expect_est, expect_city, expect_gold_red)
     last = _last_turn(by_turn)

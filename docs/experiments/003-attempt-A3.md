@@ -127,6 +127,37 @@ unattributed rather than borrowed):
 | the gold floor, both measures (Q4 allows < 10 red turns) | **the two measures disagree at T24**: `carrying-capacity` red on **0** turns (it is gated to T60 in this build), while the diary's own `gold_per_turn` is below +10 on **24 of 24** turns - which is the A1/A2 finding repeating, and the reason Q4 names both |
 | the verdict so far on Q1-Q4 | all four `OPEN` at T24 (the deadlines have not arrived): Q2 already carries the warning that the wall phase is unaskable if no `walls > 0` target is attacked - and that is A3's own answer to give, not a failure to report |
 | production orders, all of them | `SCOUT` T1, `SLINGER` T5, `SETTLER` T6, `WARRIOR` T15, `SLINGER` T18, `BUILDER` T19 (second city 131073), `SLINGER` T20, `BUILDER` T22 (capital) - 8 units, all of them army roles, and `H5 clean` (no ram, no siege tower ordered or bought) |
+| the pre-gate economy orders (H1's own context) | session 2 spent on the economy **before** the gate: `UNIT_TRADER` T30, `BUILDING_WATER_MILL` T33 (capital) and T35 (second city). A2's pre-gate spend was `UNIT_BUILDER` T43 and `UNIT_TRADER` T46 - so A3 arrives at its gate with more economy already bought, and H1's claim is about the **gate turn's** choice, which both attempts had free. The comparison is only fair if the gate turn is read the same way in both, and the instrument does that |
+| **the target set, read at T44** (Q2's raw material) | **six city-states plus a free city are known**: 安善 (Scientific), 桑给巴尔 (Trade), **耶路撒冷** (Religious - the one A2 captured), 撒马尔罕 (Trade), 欣盖提 (Religious), and **自由城市 (`player 62`, Unknown)**. Explored **18% of land (241/1323 tiles)** by T44, against A2's **7%** at T68 with no scout ever built. This is the corrected table's recon row doing exactly what the correction was for: A2 met one city-state and Babylon; A3 has seven candidates to read for a wall pool, and `tactics/07`'s Gate 0 - "a candidate city is actually visible" - is satisfiable on this position |
+
+## The Engineering gate, measured - T43, and H1 holds for the second time
+
+**`TECH_ENGINEERING` landed at T43** (the diary row for T43 is the first whose `techs` list carries it; at
+T42 the tech read `1 turns`), and the same turn the capital was asked for `UNIT_CATAPULT`. The instrument's
+own words, `--questions a2` over both sessions:
+
+```
+HELD  Q2 the siege train ordered before any economy order after Engineering
+      [Engineering T43; first siege order T43, no economy order since]
+```
+
+That is H1's second test and it holds, in the same shape as A2's: **the train is asked for on the gate turn
+itself, before anything economic.** The boundary is worth stating because A3 tested it: at **T42**, with
+Engineering one turn out, the capital was given `BUILDING_MONUMENT` - an economy order placed while the
+tech was still researching, which is what A2 did too (`UNIT_BUILDER` T43, `UNIT_TRADER` T46, both pre-gate).
+Read strictly as "no economy order while the tech is imminent", T42 is a near-miss; read as the record has
+read it since A2 - **the first order after the tech exists** - it is clean, and the instrument says so in
+one line rather than in prose.
+
+**A3's gate is five turns earlier than A2's, and the record says why.** T43 against T48. The cause is
+visible in the same log: A3 appointed **平伽拉 (`GOVERNOR_THE_EDUCATOR`)** in 西安 at **T41** and took
+`GOVERNOR_PROMOTION_EDUCATOR_RESEARCHER` the same turn, and its science at T42 reads **12.4** against A2's
+**5.9** at T40 (A2's reached 13.3 only at T50). So this attempt diverges from A2 in another way that is not
+its variable: an economy-and-science line A2 never ran. That makes A3's **siege half arriving before A2's**
+attributable to more than the corrected table, and it is the third such difference on this record (the pin,
+the pantheon, the governor). None of them is the target's defences, which is what A3 was built to test -
+and the delivery of the train is not what A3's questions are about, so the divergence is recorded as
+context rather than as a falsification.
 
 ## The end table, and the verdict - written when the attempt ends
 
