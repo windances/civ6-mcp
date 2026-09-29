@@ -430,12 +430,33 @@ def _list_saves_filesystem() -> str:
     return "\n".join(lines)
 
 
+async def _save_list_cached(conn: GameConnection) -> bool:
+    """Is `ExposedMembers.MCPSaveList` populated in the state a load will run in?"""
+    try:
+        lines = await conn.execute_write(
+            f'if ExposedMembers and ExposedMembers.MCPSaveList then print("CACHED") '
+            f'else print("EMPTY") end; print("{lq.SENTINEL}")'
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    return any(line.startswith("CACHED") for line in lines)
+
+
 async def load_save(conn: GameConnection, save_index: int) -> str:
-    """Load a save by index from the most recent list_saves() query.
+    """Load a save by index **from the Lua save list**, which is the list this function reads.
 
     The game will reload — the FireTuner connection stays alive but
     all Lua state is wiped. Wait a few seconds after calling this.
+
+    **`list_saves()` is not that list, and the two do not share an order.** `list_saves` returns the
+    filesystem scan (capped, newest-first) and never runs the Lua query, so a caller who lists and
+    then loads was answered `No save list cached`; and when the cache *is* populated its order is the
+    game's own, so a filesystem index is the wrong index anyway. Measured on the A5 handover
+    (2026-09-30): the shared start save was filesystem index 1 and Lua index 12, and loading 1
+    returned that error. So the cache is populated here when it is missing, rather than refused.
     """
+    if not await _save_list_cached(conn):
+        await _list_saves_lua(conn)
     lines = await conn.execute_write(
         f"if not ExposedMembers or not ExposedMembers.MCPSaveList then "
         f'  print("ERR:NO_SAVE_LIST"); print("{lq.SENTINEL}"); return '
