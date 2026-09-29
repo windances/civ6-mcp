@@ -266,6 +266,19 @@ while its presumed payoff is not, which is precisely the case the brief's honest
 **the Encampment's cost is measured (35 gold, four capital turns, a research line through Bronze Working) and
 its benefit is, so far, zero - the record will not read an unchanged capture turn as the district paying off.**
 
+**And A4 supplies the sharpest measurement yet of a tooling defect the retro carried as owed.** The pantheon
+guard compares faith against the **standard-speed** `RELIGION_PANTHEON_MIN_FAITH` (**25**,
+`Base/Assets/Gameplay/Data/GlobalParameters.xml:475`) while this match runs **Quick**, where the
+`GAMESPEED_QUICK` row's `CostMultiplier` is **67** (25 x 0.67 = 16.75). **A4's own log shows the guard
+refusing a pantheon the game had already offered**: at **T19** the game's own end-turn block carried
+`* Choose Pantheon` (the `ENDTURN_BLOCKING_PANTHEON` / `NOTIFICATION_CHOOSE_PANTHEON` signal), the T20 read
+answered `No pantheon selected. Faith: 23`, and the same turn's `choose_pantheon` answered **`faith 23 < 25`**
+- a refusal against a pantheon the game was already offering. A3's session was offered at **T22** with
+`Faith: 13` at T21 and refused at T23 on `faith 17`. **The record's own conclusion is that the guard should
+key on the game's own blocker rather than on a second copy of the constant**, which is speed-proof; the edit
+is deliberately **not** made while this attempt holds FireTuner, for the reason the retro gives, and it is
+staged for the A4/A5 boundary.
+
 ## The end table, and the verdict - written when the attempt ends
 
 The attempt ends when **a city is kept** (a `city_action` reply reads `KEEP|`) or the game reaches
