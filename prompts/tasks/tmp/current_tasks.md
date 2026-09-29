@@ -38,8 +38,6 @@ that stood at T281 (it took 布鲁塞尔 at T237 and 哈勒姆 at T271), and the
 same T218 save and reached T301 (it took 布鲁塞尔 at T224 - that is 024). **This position is T218**, where
 none of those holds: 布鲁塞尔 is a city-state again, 哈勒姆 is still the Netherlands', and the whole task
 set at T218 is being rolled back by `.tools/rollback-tasks.py`.
-| `028-development-science-wonders.md` | 2026-09-28 | turn 317 | development first for fifty turns - science and wonders, on the human's instruction: the empire is at peace and the space chain is the victory path | **turn 50 of this window - the `expires:` turn the header names - arrives with 西安's 宇航中心 (Spaceport) |
-| `029-two-scouts-sea-info.md` | 2026-09-29 | turn 301 | two scout-line units to sea to find the one civilization still unmet, information only and no fighting, on the human's instruction | **`get_diplomacy` no longer prints `Unmet Civilization`** - it names three civilizations and prints |
 
 Task 024 was retired as `done/024-take-brussels-done-T224.md`.
 
@@ -87,3 +85,8 @@ Task 027 was retired as `done/027-kill-apostles-mobile-done-T259.md`.
 Task 026 was retired as `done/026-coastal-navy-frigates-done-T261.md`.
 
 Task 021 was retired as `done/021-siege-legion-overseas-expired-T270.md`.
+
+Task 028 was retired as `done/028-development-science-wonders-expired-T288.md`: Superseded: the match this file governed was handed over and a new match was started for the military production experiment; see docs/experiments/README.md.
+
+Task 029 was retired as `done/029-two-scouts-sea-info-expired-T288.md`: Superseded: the match this file governed was handed over and a new match was started for the military production experiment; see docs/experiments/README.md.
+| `030-military-production-attempt-a1.md` | 2026-09-29 | turn 90 | military production experiment attempt A1: play the production doctrine as written and record the two decisive turns | an enemy city is kept (a city_action reply reads KEEP|) or the game reaches turn 80, whichever comes |

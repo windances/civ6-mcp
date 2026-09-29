@@ -232,3 +232,10 @@ position and the turn the first project lands, and the ledger of what the fifty 
      at: 2026-09-28T23:50:24+08:00
      chinese backup: prompts/tasks/cn/028-development-science-wonders.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 028 --expired --turn 288 --note "Superseded: the match this file governed was handed over and a new match was started for the military production experiment; see docs/experiments/README.md." --no-commit
+     at: 2026-09-29T03:32:31+08:00
+     status: expired at T288
+     chinese backup: prompts/tasks/cn/028-development-science-wonders.cn.md
+-->

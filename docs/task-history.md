@@ -478,3 +478,35 @@ supply line 3/6 cut` at T235 with a **Builder** as its garrison, and the siege b
 `STAGNANT (+0 over 3 turns)` - a Field Cannon's wall damage is far too slow, the Bombard that would
 fix it cannot share the single d1 firing tile and must cross five contested steps, and the Dutch
 replaced every Caravel the water cost them. That is the record 023's expiry should be read against.
+
+### What the new match and the production experiment are (2026-09-29)
+
+The China match that tasks 028 and 029 governed was handed over at T288, and both files were retired
+as **superseded** rather than done or expired: a new match was started for the military production
+experiment, and a task file left in `prompts/tasks/tmp/` is read as an instruction for whatever game
+is running. Their content is preserved in `prompts/tasks/tmp/done/`, and either can be re-published
+with `scripts/temp-task.py add ... --replace`.
+
+The new match - China, Qin (Unifier), against Australia and the Maori, Pangaea/Small, Prince, Quick,
+Gathering Storm, turn-1 save `evals/saves/ATTEMPT-A1-T1.Civ6Save` - exists to **test** the production
+doctrine in `prompts/tactics/01-unit-production.md`, not to be won. The experiment, its fixed
+settings, its one-variable-per-attempt rule, and the tool that extracts an attempt's numbers from the
+diary and the call log are `docs/experiments/README.md` and `scripts/experiment-report.py`; attempt A1
+is `docs/experiments/001-attempt-A1.md`, and its instruction is task 030.
+
+**Two things the creation of that match measured**, both of which cost time and are worth not
+rediscovering:
+
+1. **Civ 6 cannot start inside the workspace file sandbox.** Launch it with full access: with writes
+   confined to the checkout, the game process appears and dies within seconds, writes nothing to its
+   own user directory, opens no window, and `content_log.txt` never records an app launch. The same
+   hold is visible directly - writing a file into `Documents/My Games/Sid Meier's Civilization VI`
+   is refused.
+2. **The Create Game leader pulldown cannot be scrolled by any input this toolchain can synthesise.**
+   It lists 54 entries in an 11-row panel; the front-end Lua has no `eMouseWheel` handler, the popup
+   has no scrollbar in its pixels, and arrow keys, PageDown, type-ahead, wheel events (posted and
+   injected) and drags on five different parts of the panel all leave the list where it started. The
+   leader, the civilisation and the opponent count were written into the engine's pregame model over
+   FireTuner instead (`PlayerConfigurations[i]:SetLeaderTypeName` / `:SetCivilizationTypeName` /
+   `:SetSlotStatus`), which the screen then displayed correctly; difficulty, map size, speed and map
+   type come from the screen's own short pulldowns, which do fit.
