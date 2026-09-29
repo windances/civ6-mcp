@@ -53,6 +53,23 @@ ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>
 WAR READY: <the turn the establishment was complete, or "not yet">
 ```
 
+## The first stop: the end of turn 40
+
+Play to the end of **turn 40**, then stop and report - do not carry on past it. The experiment takes
+its mid-window review at T40, and the review needs the attempt to stop at a known turn for the
+numbers to line up with the stretch that follows. **Stopping is not retiring**: this file stays in
+force, the attempt continues after the review, and the session that resumes it starts from T41.
+
+What the report at T40 must put in the diary's `strategic` line, so the review can be written without
+re-reading the whole log:
+
+```
+T40: cities n, pop n, science n, culture n, gold n (+n/t), military n
+ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>
+WAR READY: <the turn the establishment was complete, or "not yet">
+ENEMY SEEN: <which rival cities are visible, and the distance in tiles to the nearest one>
+```
+
 ## The stop
 
 The attempt ends the turn the first enemy city is kept, or at turn 80, whichever comes first. Retire
