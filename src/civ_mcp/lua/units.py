@@ -74,9 +74,17 @@ for i, u in Players[id]:GetUnits():Members() do
                 if row.Index == rIdx then relName = row.ReligionType; break end
             end
         end
-        -- Scan for attackable enemies if unit has moves
+        -- Scan for attackable enemies if unit has moves.
+        -- A siege unit that is not also ranged (`bomb > 0 and rs == 0`, the predicate the action path
+        -- refuses at `ERR:SIEGE_CANNOT_ATTACK_UNITS`) has **no legal unit target at all**: Catapults
+        -- and Trebuchets attack cities and districts only. The hint used to list unit targets for them
+        -- anyway - measured in attempt A2 at T55, where a Catapult ordered onto the listed Archer came
+        -- back `ERR:SIEGE_CANNOT_ATTACK_UNITS`, and again at T66 where a Catapult was offered two
+        -- Archers and a Heavy Chariot. `build_unused_attack_query` already excludes them and claims the
+        -- two tests mirror each other, so the contradiction was in this scan.
         local targets = ""
-        if u:GetMovesRemaining() > 0 and (cs > 0 or rs > 0 or bomb > 0) then
+        local siegeNoRanged = (bomb > 0 and rs == 0)
+        if u:GetMovesRemaining() > 0 and (cs > 0 or rs > 0 or bomb > 0) and not siegeNoRanged then
             local rng = ((rs > 0 or bomb > 0) and (entry and entry.Range or 1)) or 1
             local tgtList = {}
             for dy = -rng, rng do
