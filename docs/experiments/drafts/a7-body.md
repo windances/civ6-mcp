@@ -89,7 +89,10 @@ city comes to exist; if the second city is taken instead, the record says which 
 
 ## The finish line, and what to leave behind
 
-- The attempt ends when **a city is kept** (a `city_action` reply reads `KEEP|`) or the game reaches
+- The attempt ends when **a city is kept** - either a `city_action` reply reads `KEEP|`, or the game
+  resolves the capture itself and the move's reply reads `CAPTURE_MOVE ... CITY TAKEN` (when that happens
+  no `KEEP|` ever appears and `resolve_city_capture` answers `NO_PENDING_CITY`; the city list is the
+  confirmation) - or the game reaches
   **turn 110**, whichever comes first. `expires:` is T115.
 - At the end: take the snapshot with
   `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <this session> --from 1 --to <last turn> --step 10 --verdict --questions a7 --save docs/experiments/A7-final.json`

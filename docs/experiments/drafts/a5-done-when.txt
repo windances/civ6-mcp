@@ -1,1 +1,1 @@
-turn 70 is reached, or a city is kept (a city_action reply reads KEEP|) - whichever comes first
+turn 70 is reached, or a city is kept (a city_action reply reads KEEP|, or the move's reply reads CAPTURE_MOVE ... CITY TAKEN) - whichever comes first

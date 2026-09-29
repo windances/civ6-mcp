@@ -727,6 +727,53 @@ def _keep_row(turn: int) -> dict:
             "result": "KEEP|Yerushalayim (pop 5, id:196610, captured)"}
 
 
+def test_a_capture_the_game_resolved_itself_is_still_a_capture():
+    """Measured on A4 at T65: the game kept the city, so `KEEP|` never appeared.
+
+    The melee unit's move answered `CAPTURE_MOVE|50,22|...|CITY TAKEN`, and every
+    `resolve_city_capture` after it answered `NO_PENDING_CITY` because nothing was pending. A reader
+    that only looked for `KEEP|` scored the attempt as having kept nothing while `get_cities` showed
+    three cities. Both shapes are evidence now.
+    """
+    taken = {
+        "turn": 65,
+        "tool": "unit_action",
+        "params": {"unit_id": 720903, "action": "move", "target_x": 50, "target_y": 22},
+        "result": "CAPTURE_MOVE|50,22|from:49,23|now_at:50,22|(moved dx:+1 dy:-1)|"
+                  "CITY TAKEN - resolve keep/raze with city_action",
+    }
+    got = report.captures([taken])
+    assert [turn for turn, _ in got] == [65]
+    assert "CITY TAKEN" in got[0][1]
+
+    # The explicit reply still counts, and a capture-move whose city was NOT taken does not.
+    assert [t for t, _ in report.captures([_keep_row(67)])] == [67]
+    assert report.captures(
+        [
+            {
+                "turn": 65,
+                "tool": "unit_action",
+                "result": "CAPTURE_MOVE|50,22|from:49,23|now_at:49,23|BLOCKED (occupied)",
+            }
+        ]
+    ) == []
+
+
+def test_verdict_a7_holds_on_a_capture_the_game_resolved_itself():
+    """Q3 asks whether a city was kept, not which reply spelled it - A4's shape must read HELD."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 65: FULL}))
+    taken = {
+        "turn": 65,
+        "tool": "unit_action",
+        "params": {"unit_id": 720903, "action": "move", "target_x": 50, "target_y": 22},
+        "result": "CAPTURE_MOVE|50,22|from:49,23|now_at:50,22|CITY TAKEN - resolve keep/raze with "
+                  "city_action",
+    }
+    questions = report.verdict_a7(by_turn, [taken])
+    assert questions[2][1] == report.HELD
+    assert "T65" in questions[2][2]
+
+
 def _a3_frames(turns: list[int]) -> dict[int, dict]:
     by_turn = frames({t: {"WARRIOR": 1} for t in turns})
     for turn in turns:
@@ -1158,7 +1205,7 @@ def test_the_a7_second_city_has_to_produce_before_the_keep():
     late = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 80: FULL}))
     questions = report.verdict_a7(late, [_city_order_row(30, 11, "UNIT_WARRIOR")])
     assert questions[1][1] == report.FALSIFIED
-    assert questions[2][1] == report.FALSIFIED and "no KEEP| row" in questions[2][2]
+    assert questions[2][1] == report.FALSIFIED and "no keep row" in questions[2][2]
 
     # A keep after T80 is outside the window.
     too_late = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 85: FULL}))

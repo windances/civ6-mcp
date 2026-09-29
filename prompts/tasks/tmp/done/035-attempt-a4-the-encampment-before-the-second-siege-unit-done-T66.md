@@ -114,7 +114,10 @@ this rule now carries the re-run consequence instead of asking for an explanatio
 
 ## The finish line, and what to leave behind
 
-- The attempt ends when **a city is kept** (a `city_action` reply reads `KEEP|`) or the game reaches
+- The attempt ends when **a city is kept** - either a `city_action` reply reads `KEEP|`, or the game
+  resolves the capture itself and the move's reply reads `CAPTURE_MOVE ... CITY TAKEN` (when that happens
+  no `KEEP|` ever appears and `resolve_city_capture` answers `NO_PENDING_CITY`; the city list is the
+  confirmation) - or the game reaches
   **T110**, whichever comes first. `expires:` is T115.
 - At the end: take the snapshot with
   `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <this session> --from 1 --to <last turn> --step 10 --verdict --questions a3 --save docs/experiments/A4-final.json`
@@ -136,5 +139,12 @@ this rule now carries the re-run consequence instead of asking for an explanatio
 <!-- published by scripts/temp-task.py
      command: python scripts/temp-task.py add --title "TEMP TASK 035 - attempt A4: the Encampment before the second siege unit, from the shared T1 start" --instruction "继续A3 ~ A7" --slug attempt-a4-the-encampment-before-the-second-siege-unit --scope @docs/experiments/drafts/a4-scope.txt --overrides @docs/experiments/drafts/a4-overrides.txt --done-when @docs/experiments/drafts/a4-done-when.txt --why "the Encampment's place in the war city's queue, tested from the experiment's shared start" --expires-turn 115 --body-file docs/experiments/drafts/a4-body.md --cn @docs/experiments/drafts/a4-cn.md
      at: 2026-09-30T00:48:31+08:00
+     chinese backup: prompts/tasks/cn/035-attempt-a4-the-encampment-before-the-second-siege-unit.cn.md
+-->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 035 --done --turn 66
+     at: 2026-09-30T02:35:54+08:00
+     status: done at T66
      chinese backup: prompts/tasks/cn/035-attempt-a4-the-encampment-before-the-second-siege-unit.cn.md
 -->

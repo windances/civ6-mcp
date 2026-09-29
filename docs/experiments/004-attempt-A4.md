@@ -1,14 +1,15 @@
 ﻿# Attempt A4 - the Encampment before the second siege unit
 
-**Status: in progress** - **one session so far** (`molten-sage-compass-31`), played from the
-experiment's shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, and standing at **T46** when
-this section is written (the log's last `end_turn` reads `Turn 45 -> 46`). **The variable has been
-executed and the gate has held**: the Encampment was bought a tile for (35 gold) at T27, ordered the
-same turn and complete at **T31** - before any siege unit existed at all - and the first siege order
-followed the Engineering gate on **T43**, the same turn the tech was owned, with no building or
-district order since (the instrument's gate reads `HELD` from A4's own attributed diary rows as well
-as from its log). The establishment is still short: at T46 the Catapult is in production (due ~T48)
-and no siege unit is on the map yet, so Q1 is open, and no rival has been met at 16% explored. The
+**Status: COMPLETE** - **one session** (`molten-sage-compass-31`), played from the experiment's
+shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` and finished at **T66**, when the keeper
+read three cities and the third was the target city-state. **The variable was executed and every
+half of it held**: the Encampment was bought a tile for (35 gold) at T27, ordered the same turn and
+complete at **T32** - before any siege unit existed at all - the first siege order followed the
+Engineering gate on **T43**, the same turn the tech was owned, the district's own points produced a
+Great General who was recruited at **T56** and never activated, and **a city was kept at T65**, two
+turns inside A3's T67. The establishment was complete at T54, six turns inside the T60 deadline, and
+the instrument reads `HELD` for Q1, Q3 and Q4. **No rival major civilisation was ever met** - the map
+was 20% explored at the keep - so every number below is against city-states, as in A2 and A3. The
 attempt's instruction is
 `prompts/tasks/tmp/035-attempt-a4-the-encampment-before-the-second-siege-unit.md`; the design is
 section 3 of `docs/experiments/README.md`; A3's record is `003-attempt-A3.md` and its snapshot is
@@ -322,22 +323,70 @@ the district: the estimate is a floor, and the engine's own resolution is the fa
 engine's `CombatManager.SimulateAttackVersus`, which `units.py:866` already cites as the authority for
 flanking) is **not** made while this attempt holds FireTuner, for the same reason as the pantheon guard.
 
-## The end table, and the verdict - written when the attempt ends
+## The end table, and the verdict
 
-The attempt ends when **a city is kept** (a `city_action` reply reads `KEEP|`) or the game reaches
-**T110**, whichever comes first (`expires:` T115). When it does, this section carries one row per
-question with the number that decides it - Q1's establishment turn, Q2's district offer/order/completion
-turns and tile, Q3's recruit turn and whether the general was activated, Q4's two gold-floor counts and
-the capture turn against A3's T67 - plus the snapshot (`docs/experiments/A4-final.json`), the
-four-attempt `--compare` line, and the divergences that are **not** the variable (the research line is
-already one).
+**The attempt's finish line was met at T65 - a city was kept - and the record must state how that was
+observed, because it was not the shape the brief named.** The melee unit's move answered
+`CAPTURE_MOVE|50,22|from:49,23|now_at:50,22|(moved dx:+1 dy:-1)|CITY TAKEN - resolve keep/raze with
+city_action`, and then **four** `resolve_city_capture(action="keep")` calls (two at T65, two at T66) each
+answered **`Error: NO_PENDING_CITY|No rebelled or captured city pending decision`** - because the game had
+**already resolved the capture itself and left nothing to decide**. That no `KEEP|` exists is therefore not
+a failed keep: the T66 `get_cities` read **three cities**, including `Jerusalem (pop 6) at (50,22) ...
+[id:196610]` with its districts and buildings, and `set_city_production(city_id=196610,
+BUILDING_MONUMENT)` was accepted the same turn. **So the keep is A4's, and the evidence is the move's own
+line plus the city list.** The instrument had to be taught this shape: `captures()` matched only
+`KEEP|`/`RAZE|` and scored A4 as having kept nothing until `CAPTURE_MOVE ... CITY TAKEN` was added to it
+(`scripts/experiment-report.py`, pinned by `test_a_capture_the_game_resolved_itself_is_still_a_capture` and
+`test_verdict_a7_holds_on_a_capture_the_game_resolved_itself`); **after the fix the instrument reads
+`HELD Q3 first enemy city kept by T80 [first keep T65]`.** The attempt's window closes here, at **T66**.
 
-**It must also carry the possibility the brief's own honesty note raises, because it is the failure mode
-this attempt is most exposed to**: an Encampment that yields **no Great General by the first shot is the
-claim's mechanism missing, not its cost**. `tactics/01:74-76` claims the district is worth its turns
-because of the general's +1 movement and +5 combat strength to land units within 2 tiles; if the
-district completes and no general is recruited before the war opens, the war city has paid the queue
-turns and the army has bought no aura, and the record says exactly that rather than reading an unchanged
-capture turn as the Encampment paying off. The mirror case is the same discipline: an attempt that ends
-with no `DISTRICT_ENCAMPMENT` completed falsifies Q2 in its own terms, and the programme's H3 gets its
-first measurement as a negative one.
+| # | the question | the number that decides it |
+|---|---|---|
+| **Q1** | the establishment under the corrected table by T60 | **HELD - `COMPLETE at T54`**, `siege=2 melee=2 anticav=1 ranged=4 cavalry=1 recon=1`: one turn after A3's T53, six turns inside the deadline, and **the first attempt in the programme to fill the table exactly**, with no row over strength |
+| **Q2** | the Encampment in the war city, completed before the second siege unit | **SATISFIED, and by eighteen turns - not a near thing.** Offered T22 (`get_city_production`), unplaceable at T22 (`get_district_advisor` -> `No valid placement tiles`), the tile bought for 35 gold at T27, ordered T27 and **complete T32 on (58,22)**, after `purchase_tile(58,22)` answered `cost:35`; the **second** `UNIT_CATAPULT` was ordered **T49** and owned T54, and the first was ordered T43 and owned T49. The district was standing before any siege unit existed at all |
+| **Q3** | a Great General recruited before the war, and never activated | **MET on both halves, and it is the programme's first general.** The district's own points ran 0/40 (T32) -> 7/40 (T39) -> **41/40 (T56)**, where `get_great_people` read `[CAN RECRUIT]` and **`recruit_great_person -> OK:RECRUITED|Trung Trac`**; **no `activate` call exists anywhere in the session's log**; and at the T62 declaration it stood with the stack at (55,22). **The `PROJECT_ENHANCE_DISTRICT_ENCAMPMENT` lever was never pulled** - the mechanism is the district's own points, which is the cheaper half of what the brief left open |
+| **Q4** | the gold floor, both measures, and the capture against A3's T67 | **HELD on both halves.** The rule counted **7 red turns** up to the T65 horizon (limit 10) while the diary's own `gold_per_turn` is below the +10 floor on **46 of those 65 turns** - the two measures still disagree, as they have in every attempt; and **the first city was kept at T65, two turns inside A3's T67 bound and the earliest keep in the programme** |
+
+**Q2 in the instrument's sense - the walled target - is not decided and is not decidable on this map**, and
+the attempt says which: no city with a wall pool above zero was ever attacked, the target 耶路撒冷 reading
+`walls: none` again, exactly as in A2 and A3. That is a property of the map the experiment is played on, and
+it is the reason A3's variable and A4's could not be separated by the wall phase.
+
+```
+attempt   turns   establishment  army_start  siege_order  first_keep  sci_T20  sci_T40  gpt_T40  h5  self_mismatch  rules_red
+A1-T40    T1-T40  not reached    T1          never        none        4.5      7.9      6.0      0   0              1
+A2-final  T1-T68  not reached    T1          T48          T68         4.0      5.9      8.9      0   23             6
+A3-final  T1-T72  T53            T1          T43          T67         5.5      6.3      9.8      0   6              7
+A4-final  T1-T66  T54            T1          T43          T65         4.0      13.9     6.0      0   7              5
+```
+
+Snapshot: `docs/experiments/A4-final.json`. **A4 is the fastest capture in the programme (T65 against A3's
+T67 and A2's T68), it is the second attempt to complete the corrected table, and it is the first with a
+certified pinned opening and the first with a Great General.**
+
+**The divergences that are not the variable, and they are large enough that the two-turn difference must not
+be attributed to the district:**
+
+- **The research line is A4's own** - it went through `TECH_BRONZE_WORKING` (T8, the Encampment's
+  prerequisite) and reached Engineering at T43, the same turn as A3's, but its **science at T40 is 13.9
+  against A3's 6.3**, the largest gap on the compare table. An attempt with more than twice the science is
+  not a controlled comparison for a district that costs queue turns.
+- **`SETTLER` was ordered at T10 where A1-A3 all ordered theirs at T6**, so every downstream turn in this
+  attempt sits four turns later than theirs.
+- **The war opened at T62 and the city fell at T65 - three turns of assault.** A3's assault opened T66 and
+  its city fell at T67. The two attempts attacked the same city-state with the same doctrine, so the
+  comparison is meaningful; **what cannot be read off it is the aura's share**, because the estimate the
+  session judges attacks with does not contain the general (measured above) and no attempt has run without
+  one under this programme.
+- **The war city took an economy order of its own** (a Granary at T54) - the first in the war city after the
+  gate, against `tactics/08`'s "nothing else for the duration".
+
+**The honesty note the brief asked for is answered, and it is answered in the affirmative**: the failure mode
+was *an Encampment that yields no Great General by the first shot*, and A4's district **did** yield one - 41
+points by T56, recruited two turns before the declaration, never activated. **So the mechanism is not
+missing; what remains unmeasured is its size.** The district's cost is fully on the record (35 gold, a
+four-turn queue, the Barracks it built next, and a research line through Bronze Working), the general
+existed and stood with the train, and the city fell two turns earlier than the same doctrine's previous
+attempt - but the programme has no aura-less control arm under identical science, and the tool that would
+have shown the aura working is blind to it. **The two-turn difference is a correlation the next attempt
+inherits, not a measurement A4 can claim.**

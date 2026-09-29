@@ -95,6 +95,13 @@ REFUSALS = (
 )
 
 CAPTURE_RE = re.compile(r"\b(KEEP|RAZE|LIBERATE_FOUNDER|LIBERATE_PREVIOUS)\|", re.I)
+#: A capture the game **resolved itself**. Measured on A4 at T65: the melee unit's move answered
+#: `CAPTURE_MOVE|50,22|...|CITY TAKEN - resolve keep/raze with city_action`, and every
+#: `resolve_city_capture(action="keep")` after it answered `NO_PENDING_CITY` - because there was no
+#: decision left to make. The city was ours (the next `get_cities` read three cities and the new city
+#: accepted production orders), so a reader that only looked for `KEEP|` would score the attempt as
+#: having kept nothing. The move's own line is the evidence, and it is matched here.
+CAPTURE_TAKEN_RE = re.compile(r"CAPTURE_MOVE\|[^\n]{0,120}?CITY TAKEN", re.I)
 RULE_RE = re.compile(r"CHECK FAILED \[([a-z0-9\-]+)\]")
 ACHIEVED_RE = re.compile(r"CHECK ACHIEVED[^\n]*?\[([a-z0-9\-]+)\]")
 ORDER_RE = re.compile(r'"item_name":\s*"([A-Za-z_0-9]+)"')
@@ -1614,18 +1621,18 @@ def verdict_a7(
     if keep_turn is not None:
         q3_status = _status(keep_turn <= A7_LATE_KEEP, True)
         q3_detail = (
-            f"the first city was kept T{keep_turn} (KEEP| in the reply); held when <= "
+            f"the first city was kept T{keep_turn} (the reply's own capture line); held when <= "
             f"T{A7_LATE_KEEP}, falsified by a later keep"
         )
     elif last >= A7_LATE_KEEP:
         q3_status = FALSIFIED
         q3_detail = (
-            f"no KEEP| row in this attempt's log by T{last}: T{A7_LATE_KEEP} has passed with no city "
+            f"no keep row in this attempt's log by T{last}: T{A7_LATE_KEEP} has passed with no city "
             f"taken"
         )
     else:
         q3_status = OPEN
-        q3_detail = f"no KEEP| row yet at T{last}; the deadline is T{A7_LATE_KEEP}"
+        q3_detail = f"no keep row yet at T{last}; the deadline is T{A7_LATE_KEEP}"
 
     q4 = generic["P4"]
     return [
@@ -1840,18 +1847,27 @@ def refusal_counts(rows: list[dict]) -> collections.Counter:
 
 
 def captures(rows: list[dict]) -> list[tuple[int, str]]:
-    """City keeps/razes, deduplicated - the same reply appears in both `result` and its summary."""
+    """City keeps/razes, deduplicated - the same reply appears in both `result` and its summary.
+
+    Two shapes count, because the game produces two. The explicit one is a `KEEP|`/`RAZE|` reply from
+    `city_action`. The implicit one is a `CAPTURE_MOVE` whose own line says `CITY TAKEN`: there the game
+    resolved the capture itself, no keep/raze decision was ever pending, and every later
+    `resolve_city_capture` answers `NO_PENDING_CITY` - so `KEEP|` never appears even though the city is
+    ours. A4 measured exactly that at T65, and this reader scored its capture as nothing until the
+    second pattern was added.
+    """
     seen: set[tuple[int, str]] = set()
     out: list[tuple[int, str]] = []
     for row in rows:
         blob = json.dumps(row, ensure_ascii=False)
-        for match in CAPTURE_RE.finditer(blob):
-            snippet = blob[match.start() : match.end() + 40]
-            key = (row.get("turn") or 0, snippet[:28])
-            if key in seen:
-                continue
-            seen.add(key)
-            out.append((row.get("turn") or 0, snippet))
+        for pattern in (CAPTURE_RE, CAPTURE_TAKEN_RE):
+            for match in pattern.finditer(blob):
+                snippet = blob[match.start() : match.end() + 40]
+                key = (row.get("turn") or 0, snippet[:28])
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append((row.get("turn") or 0, snippet))
     return out
 
 

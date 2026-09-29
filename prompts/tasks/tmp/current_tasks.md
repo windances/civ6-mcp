@@ -99,4 +99,5 @@ Task 031 was retired as `done/031-military-production-attempt-a2-done-T68.md`.
 Task 033 was retired as `done/033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end-done-T68.md`.
 
 Task 034 was retired as `done/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start-done-T72.md`.
-| `035-attempt-a4-the-encampment-before-the-second-siege-unit.md` | 2026-09-30 | turn 115 | the Encampment's place in the war city's queue, tested from the experiment's shared start | turn 110 is reached, or a city is kept (a city_action reply reads KEEP|) - whichever comes first |
+
+Task 035 was retired as `done/035-attempt-a4-the-encampment-before-the-second-siege-unit-done-T66.md`.

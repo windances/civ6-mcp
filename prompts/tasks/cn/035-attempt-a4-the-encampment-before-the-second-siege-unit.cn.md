@@ -44,7 +44,7 @@
 
 ## 终点，以及要留下什么
 
-- 尝试在**拿下城**（`city_action` 回执读到 `KEEP|`）或棋局到达 **T110** 时结束，以先到者为准。`expires:` 为 T115。
+- 尝试在**拿下城**时结束——要么 `city_action` 回执读到 `KEEP|`，要么游戏自己结算了攻占、移动回执读到 `CAPTURE_MOVE ... CITY TAKEN`（这种情况下永远不会出现 `KEEP|`，`resolve_city_capture` 会回 `NO_PENDING_CITY`；以城市列表为确认）——或棋局到达 **T110** 时结束，以先到者为准。`expires:` 为 T115。
 - 结束时取快照：
   `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <本会话> --from 1 --to <最后一回合> --step 10 --verdict --questions a3 --save docs/experiments/A4-final.json`
   （`--questions a3` 是**插桩读**的那一半——它的 Q2 读城墙池、Q3 读第一次 `KEEP|`、Q4 读金币地板；而本次尝试的 Q2 与 Q3 是**记录读**：营地从日志里具名 `DISTRICT_ENCAMPMENT` 的 `set_city_production` 行读，大将军从 `get_great_people` 与单位读取读），跑
