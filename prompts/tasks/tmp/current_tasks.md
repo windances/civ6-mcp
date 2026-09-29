@@ -97,3 +97,4 @@ Task 032 was retired as `done/032-attempt-a2-second-half-t41-to-the-first-siege-
 Task 031 was retired as `done/031-military-production-attempt-a2-done-T68.md`.
 
 Task 033 was retired as `done/033-attempt-a2-third-phase-the-assault-on-the-city-state-t66-to-the-attempt-s-end-done-T68.md`.
+| `034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.md` | 2026-09-29 | turn 115 | the wall phase no attempt has measured, on a target whose wall pool is above zero | turn 110 is reached, or a city whose wall pool read above zero is kept (a city_action reply reads |
