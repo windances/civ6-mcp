@@ -1,13 +1,17 @@
 ﻿# Attempt A3 - the same doctrine against a walled target
 
-**Status: in progress** - **two sessions so far**, both from the experiment's shared T1 start, started
+**Status: in progress** - **four sessions so far**, all from the experiment's shared T1 start, started
 2026-09-29. Session 1 `flint-indigo-rampart-32` played **T1-T25** and died mid-turn at T25 (20:56:59):
 its stderr ends at `dsh: reasoning: H`, its job exited 1, and the log holds 165 rows with the last at
 T25's `unit_action` (`CAPTURE_MOVE|43,25|from:45,23|BLOCKED`). The match kept running, so session 2
 `crumbling-emerald-parapet-16` was launched into the same position at 20:57:35 - the task file carries a
 note (added the same minute) telling it to continue from T25 rather than reload the T1 save, because
-replaying would put two A3 branches in one log. The instrument's `--run` filter takes both ids, which is
-how the commands below read this attempt. The attempt's instruction is `prompts/tasks/tmp/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.md`;
+replaying would put two A3 branches in one log. Session 3 `marble-ebony-pennant-56` took over at **T60**,
+stopped so the fixed city-state war path could load, and session 4 `coastal-coral-zeppelin-16` runs from
+**T70** on, because the game stalled in its own AI-turn phase at T70 and the game and the session were
+killed and the game restarted, with the position recovered from `0_MCP_0070` (the T70 section below has
+the detail). The instrument's `--run` filter takes all four ids, which is how the commands below read this
+attempt. The attempt's instruction is `prompts/tasks/tmp/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.md`;
 the design is section 3 of `docs/experiments/README.md`; A1's and A2's records are
 `001-attempt-A1.md` and `002-attempt-A2.md`, and the cross-attempt report is
 `RETRO-2026-09-29.md`. This file is A3's record. A session that dies at ~T25 and is resumed is this
@@ -98,12 +102,12 @@ T20, State Workforce T24.
 4. **the turns under the gold floor**, both measures.
 
 Commands, with **every session this attempt has used** in the log filter - the list grows when a session
-dies or is restarted, and a missing id silently drops the rows after it (session 3 started at T60, so two
-ids would have hidden the whole assault):
+dies or is restarted, and a missing id silently drops the rows after it (session 3 started at T60 and
+session 4 at T70, so two ids would have hidden the whole assault):
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56 --from 1 --to 110 --verdict --questions a3
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56 --from 1 --to 110 --step 10 --verdict --questions a3 --save docs/experiments/A3-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56,coastal-coral-zeppelin-16 --from 1 --to 110 --verdict --questions a3
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56,coastal-coral-zeppelin-16 --from 1 --to 110 --step 10 --verdict --questions a3 --save docs/experiments/A3-final.json
 .venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A1-T40.json docs/experiments/A2-final.json docs/experiments/A3-final.json
 ```
 
@@ -235,7 +239,7 @@ constraint the retro records for the pantheon guard. A3's window is the one the 
 (`crumbling-emerald-parapet-16`, T25-T60) was stopped with `scripts\civ6-clean.ps1 -KeepGame` - the game
 was left running, at **T60**, with the tuner ports still listening - and session 3
 **`marble-ebony-pennant-56`** was launched into the same position. Every command in this record must
-therefore name **three** sessions, and the live verification of the fix is the next declaration this attempt
+therefore name **four** sessions, and the live verification of the fix is the next declaration this attempt
 places: an `OK:WAR_REQUESTED` reply is the fix working, and another `WARN:WAR_UNCERTAIN` means the branch is
 still dead and the attempt's capture half is blocked by the tool for the second time in the programme.
 
@@ -441,6 +445,31 @@ menu, so the working call is `load_game_save(name)`, not `load_save(index)`; and
 tuner moved from 4318 to 4319** while `GameConnection` is hardcoded to 4318 - a mismatch that will bite any
 MCP session started right after a recovery load, and one to check with
 `Get-NetTCPConnection -State Listen | ? LocalPort -in 4318,4319` before blaming the session.
+
+### The working recovery recipe, measured end to end
+
+This is the sequence that actually put the game back in play, in the order it was run; every step was
+observed, none is a guess.
+
+1. **Launch the game through Steam** (`steam://rungameid/289070`). The raw `CivilizationVI_DX12.exe`
+   exits with code 53, because of Steam's DRM.
+2. **Load the save by name through the Lua path, not the menus.** A small script calls
+   `game_lifecycle.list_saves(conn)` and then `game_lifecycle.load_game_save(conn, "0_MCP_0070")`.
+   `game_lifecycle.load_save(conn, index)` is **InGame-only** and answers `GameCore_Tuner/InGame states
+   not found` from the main menu, so the name-based call is the one that works.
+3. **Press the load screen's `CONTINUE` by posting window messages**, because input injection is blocked
+   here: `PostMessage(hwnd, WM_MOUSEMOVE 0x0200 / WM_LBUTTONDOWN 0x0201 / WM_LBUTTONUP 0x0202)` with
+   `lParam = (y shl 16) or x`, using **client-area coordinates** - the client area is 2560x1440 while the
+   captured window is 3840x2160 (150% scaling), so a point at physical (1700, 1395) is posted at client
+   about (1100, 927). The signal that it worked was the OCR box count changing from 6 to 24.
+4. **Dismiss the `CHINESE EMPIRE JOINS THE WORLD STAGE` introduction by posting a keyboard message** -
+   `WM_KEYDOWN 0x0100` / `WM_KEYUP 0x0101` with `VK_ESCAPE` (27). Mouse messages on that screen did
+   nothing; escape did. The signal was the on-screen turn appearing, `TURN 70 / 330`, and the tool's
+   `turn readable: 70`.
+5. **Then check both tuner ports**
+   (`Get-NetTCPConnection -State Listen | Where-Object LocalPort -in 4318,4319`): after a load the game
+   may listen on **4319 only** while `GameConnection` is hardcoded to **4318**, and once the InGame state
+   is up both ports listen and `4318` carries the full state list (`ingame=119`).
 
 ## The end table, and the verdict - written when the attempt ends
 
