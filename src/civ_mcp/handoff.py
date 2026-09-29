@@ -467,6 +467,12 @@ def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = Fals
         f"   preflight checked this at {facts['checked_at']} and found turn {expected}; the state\n"
         f"   can change between that check and this call, because the game can be closed or\n"
         f"   another session can take the tuner.\n"
+        f"   **`starting` is not a stop condition when your own reads work.** FireTuner serves one\n"
+        f"   connection and stops accepting new ones once one is established, so the port probe inside\n"
+        f"   that status reports \"not listening\" for the session that holds it, and its OCR fallback\n"
+        f"   reads a stale frame when the game window is behind another application (measured\n"
+        f"   2026-09-29: a session reading turn 1 through four tool calls was told `starting`). A\n"
+        f"   successful `get_game_overview` is the authority - if it returns a turn, play.\n"
         f"   **Never launch the game and never load a save: both are the human's calls.**",
     ]
     if rollback:
@@ -491,6 +497,12 @@ def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = Fals
         "   ```\n"
         "   .venv\\Scripts\\python.exe scripts\\orient.py --radius 2\n"
         "   ```\n"
+        "\n"
+        "   **If that answers `could not connect to FireTuner`, that is expected and it is not the\n"
+        "   game: your own MCP server holds the only connection, and `orient.py` opens its own.** Do\n"
+        "   the same orientation through the MCP tools, which read the game over the connection that\n"
+        "   already exists, and do not conclude from the script's failure that the game is\n"
+        "   unreachable.\n"
         "\n"
         "   (`--maps` when the map around the cities and units is what you plan with,\n"
         "   `--only a,b` to narrow.) Three channels it does not print, and all three block the\n"

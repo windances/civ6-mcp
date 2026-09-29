@@ -3138,7 +3138,7 @@ def _pid_alive(pid: int) -> bool:
         return False
 
 
-def game_status() -> str:
+def game_status(own_connection: bool = False) -> str:
     """Where the game is right now, and what that state calls for.
 
     An agent otherwise has to infer this from the wording of whatever failed: "the game
@@ -3153,6 +3153,14 @@ def game_status() -> str:
     **This one connects** (tuner probe, then OCR) because it serves the moment this
     process is about to act. To ask the same question before a handoff - while another
     session may hold the single FireTuner connection - use ``passive_status``.
+
+    ``own_connection`` is the caller saying "my own FireTuner connection is live; I have
+    just read from it". That is the strongest evidence available that a game is loaded,
+    and it is needed because the two probes below both fail in exactly that case:
+    FireTuner stops accepting new connections once one is established, so the port reads
+    as not listening, and the OCR fallback reads a stale frame whenever the game window
+    is occluded. Measured 2026-09-29 - a session holding the connection was told
+    ``starting`` while every one of its tool calls worked.
     """
     pids = _running_game_pids()
     window = _find_game_window()
@@ -3180,6 +3188,18 @@ def game_status() -> str:
     if not pids:
         state = "not_running"
         nxt = "Call launch_game, then check again. Nothing else can work yet."
+    elif own_connection:
+        # Stronger than either probe: the caller has just read the live game through its own
+        # connection. The port probe cannot see that connection and the OCR may be reading an
+        # occluded window, so trusting them here reports `starting` on a game that is being played.
+        state = "in_game"
+        where = f"turn {on_screen}" if on_screen is not None else "the current turn"
+        nxt = (
+            f"In game at {where}: this session's own FireTuner connection is live, which is "
+            "also why the port probe above reports nothing listening (FireTuner stops accepting "
+            "new connections once one is established). Play it: get_game_overview, then the turn "
+            "loop. Nothing needs loading."
+        )
     elif turn is not None or screen == "in-game":
         state = "in_game"
         where = f"turn {on_screen}" if on_screen is not None else "the current turn"

@@ -3081,7 +3081,11 @@ async def get_game_status(ctx: Context) -> str:
 
     States: not_running, starting, main_menu, leader_screen, loading, in_game.
     """
-    return await asyncio.to_thread(game_launcher.game_status)
+    # Pass our own connection state: a session that holds the single FireTuner connection makes the
+    # launcher's port probe report "not listening" and can make the OCR read a stale frame, so the
+    # passive probes alone answer `starting` on a game this very process is reading.
+    gs = _get_game(ctx)
+    return await asyncio.to_thread(game_launcher.game_status, bool(gs.conn.is_connected))
 
 
 @mcp.tool(annotations={"destructiveHint": True})

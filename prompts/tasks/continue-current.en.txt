@@ -17,10 +17,23 @@ save name for exactly that reason: those go stale within a turn.
    - `get_game_overview` - a real read. A status string that says `in_game` while the read fails
      means the link is not usable, and the honest answer is "cannot execute".
 
+   **`starting` from `get_game_status` is not a stop condition when your own reads work.** FireTuner
+   serves exactly one connection and stops accepting new ones once one is established, so for the
+   session that holds it the port probe inside that status reports "not listening"; its OCR fallback
+   reads a stale frame whenever the game window sits behind another application. Measured 2026-09-29: a
+   session that had just read turn 1 through four tool calls was told `starting` and nearly reported
+   "cannot execute" while the game was perfectly playable. **The authority is a successful
+   `get_game_overview`**: if it returns a turn, the game is `in_game`, whatever the status string says.
+   The same reason is why `scripts/orient.py` cannot connect from inside a session - it opens its own
+   tuner connection - so use the MCP tools for the orientation read, or run `orient.py` before the
+   session starts. (The status tool itself now takes the live connection into account, so a session
+   started after this note sees `in_game`.)
+
    Then:
    - **`in_game` and the overview returns a turn** - everything is in place. Continue with the steps
      below.
-   - **anything else - STOP and report.** Do not launch, do not load, do not retry in a loop. Say
+   - **anything else, *with the overview failing too* - STOP and report.** Do not launch, do not load,
+     do not retry in a loop. Say
      what the state was and what it means for the human:
      * `not_running` - the game is not up; it needs a launch, and a save if no match is loaded.
      * `main_menu` / `leader_screen` - a save has to be chosen and loaded. `list_saves` is readable
