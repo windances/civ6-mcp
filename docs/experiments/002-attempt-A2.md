@@ -34,6 +34,21 @@ overwrite A1's as it plays them. That is why A1's numbers were snapshotted **bef
 (`docs/experiments/A1-T40.json`), and it is the protocol's "snapshot while it is the current attempt"
 rule doing its job rather than a theory.
 
+**And it was a real trap, not a caution.** With A2 at T10, re-extracting A1 - `--run` naming A1's
+session - reported A2's T10 row (military 31, tourism 0, era 4) where A1's own row says 34, 8, 2: the
+`--run` filter scoped the log rows but not the diary, and a diary row carries no session. The instrument
+now attributes each diary row to the run whose log window covers it (sessions cannot overlap - FireTuner
+serves one connection at a time), per turn when the log has that turn and by the session span otherwise,
+and **names and discards** a turn two attempts wrote inside one window instead of guessing (`d3ebb51`).
+Re-extracting A1 reproduces the pre-A2 snapshot field for field, and the same check reads both attempts'
+own T10 rows side by side. The snapshot rule stays - it keeps the record independent of the instrument -
+but a snapshot lost to an overwrite is now recoverable rather than lost.
+
+**The same-start check, measured.** A2's T1 row is identical to A1's on every economy field (science
+2.5, culture 1.3, gold 6, GPT 5, faith 0, military 20, pop 1, one city, exploration 2%), so the "one
+variable" claim is read off the record instead of asserted; the first divergence the record shows is the
+T10 military figure, **34 for A1 against 31 for A2**.
+
 ## The hypothesis, with the numbers that falsify it
 
 | # | Prediction | Falsified when |
