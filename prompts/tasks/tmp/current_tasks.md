@@ -90,5 +90,6 @@ Task 028 was retired as `done/028-development-science-wonders-expired-T288.md`: 
 
 Task 029 was retired as `done/029-two-scouts-sea-info-expired-T288.md`: Superseded: the match this file governed was handed over and a new match was started for the military production experiment; see docs/experiments/README.md.
 | `031-military-production-attempt-a2.md` | 2026-09-29 | turn 90 | military production experiment attempt A2: the same doctrine on a target inside the window, since A1's capture half was decided by the map | a city is kept (a city_action reply reads KEEP|) or the game reaches turn 80, whichever comes first |
+| `032-attempt-a2-second-half-t41-to-the-first-siege-order.md` | 2026-09-29 | turn 85 | resume attempt A2 past its mid-window checkpoint so the first siege order can be read | turn 80 is reached, or a set_city_production reply reads PRODUCING|UNIT_CATAPULT (with that turn |
 
 Task 030 was retired as `done/030-military-production-attempt-a1-expired-T40.md`: Superseded: A1 stopped at its own T40 review point with the review written; the review re-scoped the target and attempt A2 continues from the same save under task 031. A1's position is preserved in the saves and its numbers in docs/experiments/A1-T40.json.
