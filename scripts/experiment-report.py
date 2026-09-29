@@ -281,25 +281,89 @@ def attribute_diary(
 
 
 def diary_rows_for_run(game: str, run: str) -> tuple[dict[int, dict], list[int]]:
-    """One session's rows even after another attempt overwrote the same turns in the shared diary."""
-    windows = run_turn_windows(game, run)
-    span = None
-    if windows:
-        span = (min(lo for lo, _ in windows.values()), max(hi for _, hi in windows.values()))
-    return attribute_diary(diary_candidates(game), windows, span)
+    """One session's rows even after another attempt overwrote the same turns in the shared diary.
+
+    `run` may name **several sessions**, because an attempt can span a resume: A2's first half is
+    `sacred-garnet-vault-35` (T1-T40) and its second half `pale-pearl-aqueduct-92` (T41 on), so a report
+    that can only name one of them starts at T41 and drops the other thirty-nine turns. Each named
+    session gets its own per-turn windows and its own span, and a row is attributed to whichever named
+    session it is closest to - the spans stay separate on purpose, so widening the search to two
+    sessions does not widen any single window.
+    """
+    runs = [part.strip() for part in str(run).split(",") if part.strip()]
+    sessions: list[tuple[dict[int, tuple[float, float]], tuple[float, float] | None]] = []
+    for name in runs:
+        windows = run_turn_windows(game, name)
+        span = None
+        if windows:
+            span = (min(lo for lo, _ in windows.values()), max(hi for _, hi in windows.values()))
+        sessions.append((windows, span))
+    if len(sessions) == 1:
+        return attribute_diary(diary_candidates(game), *sessions[0])
+    return attribute_diary_multi(diary_candidates(game), sessions)
+
+
+def _distance_to_window(at: float, window: tuple[float, float]) -> float:
+    """0 when the stamp is inside the window, else the seconds to its nearest edge."""
+    lo, hi = window
+    return lo - at if at < lo else (at - hi if at > hi else 0.0)
+
+
+def attribute_diary_multi(
+    candidates: dict[int, list[dict]],
+    sessions: list[tuple[dict[int, tuple[float, float]], tuple[float, float] | None]],
+) -> tuple[dict[int, dict], list[int]]:
+    """Attribute each turn to the nearest of **several** sessions of one attempt.
+
+    The gate is unchanged from `attribute_diary` - a row must be inside some named session's window
+    (its per-turn window when it has one, else that session's own span), within
+    `ATTRIBUTION_SLACK_SECONDS` - but the candidate is scored against its best session rather than a
+    single one. Two rows a session apart still cannot be told apart at the same distance, so the turn
+    is named instead of guessed.
+    """
+    by_turn: dict[int, dict] = {}
+    unattributed: list[int] = []
+    for turn, rows in candidates.items():
+        windows = [per_turn.get(turn) or span for per_turn, span in sessions]
+        windows = [window for window in windows if window is not None]
+        if not windows:
+            unattributed.append(turn)
+            continue
+        scored: list[tuple[float, dict]] = []
+        for row in rows:
+            at = _epoch(row.get("timestamp"))
+            if at is None:
+                continue
+            scored.append((min(_distance_to_window(at, window) for window in windows), row))
+        if not scored:
+            unattributed.append(turn)
+            continue
+        scored.sort(key=lambda pair: pair[0])
+        if scored[0][0] > ATTRIBUTION_SLACK_SECONDS:
+            unattributed.append(turn)
+            continue
+        if len(scored) > 1 and scored[1][0] - scored[0][0] < AMBIGUOUS_SECONDS:
+            unattributed.append(turn)
+            continue
+        by_turn[turn] = scored[0][1]
+    return by_turn, sorted(unattributed)
 
 
 
 def log_rows(game: str, run: str | None = None) -> list[dict]:
-    """Every logged call for the game, oldest first. `run` keeps one session's rows only.
+    """Every logged call for the game, oldest first. `run` keeps the named sessions' rows only.
 
     Attempts share a game key: they start from the same save, so the seed - and therefore
     `diary_<game>.jsonl` and the log family - is the same for all of them. A log row carries the
     session that made it, so an attempt's log rows are separable even though its diary rows are not.
+
+    `run` is comma separated because an attempt can span a resume (A2: `sacred-garnet-vault-35` for
+    T1-T40, `pale-pearl-aqueduct-92` from T41), and both halves are the same attempt.
     """
+    wanted = [part.strip() for part in str(run).split(",") if part.strip()] if run else []
     rows: list[dict] = []
     for path in sorted(DATA.glob(f"log_{game}_*.jsonl")):
-        if run and run not in path.name:
+        if wanted and not any(name in path.name for name in wanted):
             continue
         with path.open(encoding="utf-8") as fh:
             for line in fh:
@@ -310,8 +374,10 @@ def log_rows(game: str, run: str | None = None) -> list[dict]:
                     row = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if run and (row.get("session") or row.get("run_id") or "") not in ("", run):
-                    continue
+                if wanted:
+                    session = row.get("session") or row.get("run_id") or ""
+                    if session and session not in wanted:
+                        continue
                 rows.append(row)
     rows.sort(key=lambda r: r.get("ts") or 0)
     return rows
@@ -1092,7 +1158,8 @@ def main() -> int:
     ap.add_argument("--ids", default="P1,P2,P3,P4",
                     help="the attempt's own prediction labels for the verdict, comma separated "
                          "(default P1,P2,P3,P4: A1's; A2's are Q1,Q2,Q3,Q4)")
-    ap.add_argument("--run", help="keep only one session's log rows (attempts share a game key)")
+    ap.add_argument("--run", help="keep one or more sessions' rows (comma separated when an attempt "
+                                  "spans a resume); attempts share a game key")
     ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
     ap.add_argument("--compare", nargs="+",
                     help="compare saved attempt reports (files written by --save) and exit")

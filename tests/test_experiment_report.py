@@ -468,6 +468,71 @@ def test_verdict_prints_the_attempt_s_own_prediction_ids():
         report.verdict(by_turn, [], ids=("Q1", "Q2"))
 
 
+def test_attribute_diary_multi_recovers_both_halves_of_a_resumed_attempt():
+    """An attempt can span a resume: A2's first half is one session, its second half another.
+
+    Each session keeps its own windows, so widening the search to two sessions does not widen any
+    single window - a turn no named session covers is still named rather than guessed.
+    """
+    first_window = (
+        report._epoch("2026-09-29T05:20:00+00:00"),
+        report._epoch("2026-09-29T05:25:00+00:00"),
+    )
+    second_window = (
+        report._epoch("2026-09-29T07:00:00+00:00"),
+        report._epoch("2026-09-29T07:05:00+00:00"),
+    )
+    sessions = [({10: first_window}, first_window), ({41: second_window}, second_window)]
+    candidates = {
+        10: [_diary_row(10, "2026-09-29T05:24:30+00:00", science=5.9)],
+        41: [_diary_row(41, "2026-09-29T07:01:00+00:00", science=5.4)],
+        60: [_diary_row(60, "2026-09-29T09:00:00+00:00", science=9.9)],  # no named session covers T60
+    }
+    by_turn, unattributed = report.attribute_diary_multi(candidates, sessions)
+    assert sorted(by_turn) == [10, 41]
+    assert unattributed == [60]
+    assert (by_turn[10]["science"], by_turn[41]["science"]) == (5.9, 5.4)
+
+
+def test_diary_rows_for_run_takes_a_comma_separated_list(tmp_path, monkeypatch):
+    """The CLI passes what the record needs: `--run first,second` for an attempt that was resumed.
+
+    Read end to end here - the diary rows and the two runs' logs on disk - because the failure this
+    guards against is silent: with one run named, the other half's turns are dropped and the report
+    simply starts at the resume.
+    """
+    data = tmp_path
+    rows = [
+        _diary_row(10, "2026-09-29T05:24:30+00:00", science=5.9),
+        _diary_row(41, "2026-09-29T07:01:00+00:00", science=5.4),
+    ]
+    (data / "diary_china_test.jsonl").write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8"
+    )
+    logs = {
+        # A session's log row for a turn and the diary row it writes land within seconds of each
+        # other (measured: 22s at A2's T40), which is the window the attribution exists for.
+        "first-half": (10, report._epoch("2026-09-29T05:23:40+00:00")),
+        "second-half": (41, report._epoch("2026-09-29T07:00:30+00:00")),
+    }
+    for name, (turn, ts) in logs.items():
+        (data / f"log_china_test_{name}.jsonl").write_text(
+            json.dumps({"turn": turn, "ts": ts, "session": name, "tool": "end_turn"}) + "\n",
+            encoding="utf-8",
+        )
+    monkeypatch.setattr(report, "DATA", data)
+
+    by_turn, unattributed = report.diary_rows_for_run("china_test", "first-half,second-half")
+    assert unattributed == []
+    assert sorted(by_turn) == [10, 41]
+    # One run alone still answers for its own half only - which is why the list exists.
+    only_second, _ = report.diary_rows_for_run("china_test", "second-half")
+    assert sorted(only_second) == [41]
+    # And the log family is filtered the same way, so both halves' calls are one attempt's.
+    assert len(report.log_rows("china_test", "first-half,second-half")) == 2
+    assert [row["turn"] for row in report.log_rows("china_test", "second-half")] == [41]
+
+
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
     """A1's T40 read `gold_T40 6.0` beside a treasury of 236 - the column was gold **per turn**.
 
