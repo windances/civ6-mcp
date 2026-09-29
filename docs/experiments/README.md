@@ -15,6 +15,22 @@ Nothing here is a new instrument. The loop already writes everything an attempt 
 | the turn-1 save in `evals/saves/` | the attempt itself, replayable |
 | `prompts/tasks/tmp/` | what the session was told to do |
 
+**Two things about that log that cost three probes to learn** (measured 2026-09-29, driving the server's
+own tool wrappers outside a session):
+
+- **It only starts once the game is bound, and `get_game_overview` is what binds it.** `LocalSink`
+  buffers every event until `bind_game()`, so a run of read tools that never calls the overview logs
+  nothing to disk at all - the calls succeed and the file simply is not there.
+- **It only goes to `CIV_MCP_DATA_DIR`.** That is `LOCAL_DIR`, read once at import; a real session gets
+  it from `dsh/civ6.cordis.yml:18` as `process.cwd()/.civ6-mcp-data`, and anything driving the wrappers
+  by hand has to set it or the rows land in `~/.civ6-mcp` where nothing expects them.
+
+Both matter because **the doctrine checks read this log, not the diary**: which unit was ordered, whether
+a ram was ever bought, how many cities were asked for units. The diary holds what the empire has; the log
+holds what it asked for. A run that produces diary rows but no log rows - `scripts/auto-turns.py` calls
+`GameState` directly, so that is exactly what it does - can be judged on the economy and the army it
+ended up with, and **not** on the ordering the doctrine is about.
+
 ## 1. The settings, fixed for every attempt
 
 | Parameter | Value | Why this value |
