@@ -33,6 +33,14 @@ authority on the design; this file is the instruction for playing it. A1 and A2 
    change in the diary's `tooling` line. Replaying would put two A3 branches in one log and make the
    attempt's own numbers ambiguous - the thing the shared start exists to prevent, arriving from the
    other direction.
+   **Recovering after the game hung at T70 (added 2026-09-29, T70; this line outranks the two above it):**
+   the game stalled in its "Please wait" AI-turn phase at T70 and was killed and restarted, so it may be
+   **not running** when this is read. **The attempt's position is `0_MCP_0070`** (written 22:36:21; the
+   game's own `AutoSave_0070` is the same position) and **that is the save to load** - `launch_game` first
+   if nothing is running, then `restart_and_load("0_MCP_0070")` or the save list. **Do not load
+   `ATTEMPT-A1-T1-settled.Civ6Save`**: A3's T1-T70 is already played and its record holds those numbers, so
+   a fresh T1 start would throw away three sessions of work and make this attempt's own log ambiguous.
+   Then continue from T70 as usual.
 1. Then `get_diary` (it holds A1's and A2's history on this save) and one `scripts\orient.py` read.
 
 ## The opening build is pinned (the protocol's rule from A3 on)
