@@ -1,9 +1,17 @@
 China, Qin (Unifier). Play the two abilities this leader actually has, not a
 generic domination plan.
 
-**Dynastic Cycle (civilisation ability).** Eurekas and Inspirations are worth 60%
-instead of 50%, and completing ANY wonder grants a random Eureka and Inspiration
+**Dynastic Cycle (civilisation ability).** Eurekas and Inspirations are worth 50%
+instead of 40%, and completing ANY wonder grants a random Eureka and Inspiration
 from that wonder's era. For China a wonder is therefore a *research building*.
+**The numbers are the Gathering Storm ones, and they are the ones this match plays
+under.** The base game's text says 60% instead of 50%, and the ability's description
+is replaced per ruleset (`Expansion2_Civilizations.xml:73` sets
+`..._DYNASTIC_CYCLE_EXPANSION2_DESCRIPTION`, whose text reads 50% of civics and
+technologies instead of 40%): quoting the base-game figure under this ruleset
+overstates every boost by ten points. The *delta* is +10 points either way, so the
+argument below - never skip a boost - does not change; only arithmetic built on 60%
+does.
 
 - Before researching a technology or adopting a civic, name the Eureka or
   Inspiration that boosts it and the action that triggers the boost. China gains
@@ -304,7 +312,8 @@ one; they never replace a phase.
   Live example: military 20 -> 101 -> 273 while districts went 0 -> 4 -> 6, gold
   hit -132 per turn, and the war those units were for still took 60 turns.
 - **For China a wonder is a research building** (see Dynastic Cycle above): each
-  one grants a Eureka *and* an Inspiration, and Chinese boosts are worth 60%. Get
+  one grants a Eureka *and* an Inspiration, and Chinese boosts are worth 50% under
+  this ruleset (40% for everyone else). Get
   the first cheap one up in the Classical era: waiting until T170 to build the
   Oracle throws away the ability for the whole game.
 

@@ -13,8 +13,10 @@ the strategic recommendation.
 
 China-specific direction:
 
-- **Boosts are the strategy.** Eurekas and Inspirations give China 60% instead of
-  50%, and every completed wonder grants a random Eureka and Inspiration from its
+- **Boosts are the strategy.** Eurekas and Inspirations give China 50% under
+  Gathering Storm (40% for everyone else, and 60%/50% under the base ruleset - the
+  ability's text is replaced per ruleset, `Expansion2_Civilizations.xml:73`), and
+  every completed wonder grants a random Eureka and Inspiration from its
   era. Name the boost and its trigger before recommending any expensive
   technology or civic, and treat cheap Ancient and Classical wonders as research
   buildings.

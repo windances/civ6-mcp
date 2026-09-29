@@ -36,7 +36,7 @@ files are** - never memory, and never the repo's own doctrine treated as fact. F
 
 | claim | evidence |
 |---|---|
-| **Dynastic Cycle**: 60% boosts, and a completed wonder grants a Eureka **and** an Inspiration "if available" | `Base\Assets\Text\en_US\Civilizations_Text.xml:296` (verbatim), with the four modifiers at `Civilizations.xml:269-289` |
+| **Dynastic Cycle**: boosts worth **50% instead of 40% under Gathering Storm** (the base ruleset says 60%/50% - the description is replaced per ruleset), and a completed wonder grants a Eureka **and** an Inspiration "if available" | `DLC\Expansion2\Text\en_US\Expansion2_ConfigText.xml:543` (the GS text), swapped in by `DLC\Expansion2\Data\Expansion2_Civilizations.xml:73`; the base game's `Base\Assets\Text\en_US\Civilizations_Text.xml:296` is the 60% line and does **not** apply here; the four modifiers are at `Civilizations.xml:269-289` |
 | **Great Wall**: built by Builders, **in a line on the frontier**, +4 defence / +2 fortification, +1 gold per adjacent segment (Masonry), +1 culture (Castles), tourism from Flight | `Improvements.xml:56,384,385,373,300` |
 | a **domestic trade route** gives its destination +1 production and +1 food **per qualifying district**; +3 gold as an international destination | `Districts.xml`, the `District_TradeRouteYields` rows (City Center: production 1 / food 1 as domestic destination, gold 3 international) |
 | GS **adds** Industrial Zone adjacency rows rather than replacing the base set | `DLC\Expansion2\Data\Expansion2_Districts.xml` inserts new `YieldChangeId`s (`Minel_HalfProduction`, `LumberMill_HalfProduction`, `Aqueduct_Production`, `Bath_Production`, `Canal_Production`, `Dam_Production`, `Strategic_Production`) alongside the base rows in `Districts.xml` |
@@ -67,11 +67,21 @@ files are** - never memory, and never the repo's own doctrine treated as fact. F
    wins, and the conflict is recorded here rather than smoothed over.
 5. **"Gold purchase is 2x" is a data value.** The manual says only that gold buys units and buildings
    (`manual:2111`); the 2x multiplier is `GOLD_PURCHASE_MULTIPLIER` (`GlobalParameters.xml:334`).
-6. **The 60% has no numeric row anywhere.** The four Dynastic Cycle modifiers are
+6. **The boost percentage is per-ruleset, and the first pass of this audit read the wrong one.**
+   Corrected 2026-09-29: the ability's description is *replaced* by the expansion
+   (`Expansion2_Civilizations.xml:73` ->
+   `LOC_TRAIT_CIVILIZATION_DYNASTIC_CYCLE_EXPANSION2_DESCRIPTION`), so under Gathering Storm -
+   the ruleset these strategies are written for - the text is **50% instead of 40%**
+   (`Expansion2_ConfigText.xml:543`), not the **60% instead of 50%** of the base game
+   (`Base\Assets\Text\en_US\Civilizations_Text.xml:296`, the line quoted until now). The four
+   Dynastic Cycle modifiers are
    `MODIFIER_PLAYER_ADJUST_CIVIC_BOOST`, `..._TECHNOLOGY_BOOST`,
    `..._ADJUST_FREE_CIVIC_BOOST_WONDER_ERA` and `..._ADJUST_FREE_TECH_BOOST_WONDER_ERA`
-   (`Civilizations.xml:269-289`) - engine-implemented, so 60% exists in the ability text only. A reader
-   should not expect to find it in a data file.
+   (`Civilizations.xml:269-289`) - engine-implemented, so **no percentage exists in any data file**
+   and a reader must not expect to find one. What survives the correction is the *argument*: the
+   delta is +10 points under either ruleset, so a Chinese boost is still worth more than anyone
+   else's and skipping one is still a waste. What does not survive is any **arithmetic** built on
+   60% (it overstates each boost by ten points of the item's cost).
 7. **Score gained two facts the docs lacked**: a wonder's score travels with **the city that holds it**
    (`manual:2405`), and an **eliminated civ scores zero** (`manual:2395`) - both sharpen the score
    fallback's two hard rules.

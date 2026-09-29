@@ -83,9 +83,20 @@ than production queues - the turn it was *ordered* is only visible in the logs.
 
 ## What this attempt already found (2026-09-29, before turn 1)
 
-- **The in-game ability text disagrees with the directive's number.** At game start the leader screen
-  read: 朝代更替 - "尤里卡和鼓舞提供 **50%** 的科技与市政，而非 **40%**", while
-  `prompts/strategies/china-conquest/directive.md` states **60%** (and `docs/strategy-verification.md`
-  took 60% from `Civilizations_Text.xml:296`). One of the two is wrong about this ruleset; the value
-  to settle it is the engine's own `EUREKA_BOOST`-family global, and it is worth checking before any
-  later attempt leans on the number. **Not yet resolved.**
+- **RESOLVED, and the directive was wrong: the boost is 50%, not 60%.** At game start the leader
+  screen read: 朝代更替 - "尤里卡和鼓舞提供 **50%** 的科技与市政，而非 **40%**", while
+  `prompts/strategies/china-conquest/directive.md` said 60%. The ability's description is **replaced
+  per ruleset**, which the earlier audit missed:
+  `DLC\Expansion2\Data\Expansion2_Civilizations.xml:73` swaps in
+  `LOC_TRAIT_CIVILIZATION_DYNASTIC_CYCLE_EXPANSION2_DESCRIPTION`, and that row
+  (`DLC\Expansion2\Text\en_US\Expansion2_ConfigText.xml:543`) reads **"50% of civics and technologies
+  instead of 40%"**. The 60% comes from the *base game's* text
+  (`Base\Assets\Text\en_US\Civilizations_Text.xml:296`), which does not apply under Gathering Storm -
+  the ruleset this match plays. Fixed in the directive (both languages), in `prompts/workers/strategy.md`,
+  in `docs/china-production-by-victory.md` and in `docs/strategy-verification.md`; the installed skill
+  was re-synced so the session reads the corrected number.
+  **What survives**: the delta is +10 points under either ruleset, so "a Chinese boost is worth more
+  than anyone else's, never skip one" stands; **what does not** is any arithmetic built on 60%, which
+  overstates every boost by ten points of the item's cost. This is the first finding of the experiment,
+  and it came from the game's own interface disagreeing with a document - which is the kind of thing
+  the attempt's diary is supposed to catch.

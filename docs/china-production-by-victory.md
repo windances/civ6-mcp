@@ -4,11 +4,17 @@ Production is never a goal of its own - it is the means. What changes between vi
 the hammers are for**, and therefore which multipliers are worth stacking and which are wasted. This
 file is the per-goal answer for **China (Qin)**, whose kit bends every one of these plans:
 
-- **Dynastic Cycle** - Eurekas and Inspirations are worth **60%** instead of 50%, and **completing ANY
-  wonder grants a random Eureka *and* Inspiration** from that wonder's era (`directive.md:4-6`). The
-  ability's own text (`Base\Assets\Text\en_US\Civilizations_Text.xml:296`) reads: *"Eurekas and
-  Inspirations provide 60% of civics and technologies instead of 50%. When completing a wonder receive
-  a random Eureka and Inspiration from the era of the wonder, **if available**."* That last clause
+- **Dynastic Cycle** - Eurekas and Inspirations are worth **50%** instead of 40% **under Gathering
+  Storm**, the ruleset this file's plans are written for, and **completing ANY
+  wonder grants a random Eureka *and* Inspiration** from that wonder's era (`directive.md:4-6`).
+  **The ruleset matters here and this file used to get it wrong**: the ability's description is
+  replaced per ruleset (`Expansion2_Civilizations.xml:73` sets
+  `LOC_TRAIT_CIVILIZATION_DYNASTIC_CYCLE_EXPANSION2_DESCRIPTION`), and the *base game's* text at
+  `Base\Assets\Text\en_US\Civilizations_Text.xml:296` - the one quoted here until 2026-09-29 - reads
+  *"60% of civics and technologies instead of 50%"*, which is ten points too high for this ruleset.
+  The Gathering Storm text reads: *"Eurekas and Inspirations provide 50% of civics and technologies
+  instead of 40%. When completing a wonder receive a random Eureka and Inspiration from the era of
+  the wonder, **if available**."* That last clause
   matters, and the manual supplies the reason: **boosts do not stack** (`manual:2063`), and a boost is
   worth "50% of the needed research" or "50% of the needed culture" before China's +10 (`manual:1157`,
   `1173`). So the wonder's grant is **wasted when the era's techs and civics are already boosted** -
