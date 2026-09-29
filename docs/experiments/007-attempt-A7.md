@@ -1,4 +1,4 @@
-# Attempt A7 - two war cities instead of one
+﻿# Attempt A7 - two war cities instead of one
 
 **Status: in progress** - **one session so far** (`divine-amber-outpost-82`), played from the experiment's
 shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, started 2026-09-30 and standing at **T2** when
@@ -159,6 +159,16 @@ order was placed.
 attacked. So at the declaration A7 had a complete establishment, a two-city train, God of the Forge from
 T23, and **the question the attempt exists to answer - whether that becomes a city kept by T80 - is the only
 one left open**, with Q2 (two cities producing before the keep) already satisfied by construction.
+
+**And the assault's opening pace is the first evidence that the variable pays.** Three turns after the
+T56 declaration, at **T59**, 耶路撒冷 reads **`CITY_CENTER (CS:0, HP:81)`** - **200 down to 81 in three
+turns**, with a Warrior already in melee at 23 HP and **26 units** on the board (`get_units`). Against a
+~20/turn heal that is roughly **60 damage a turn**, which is what a two-Catapult train plus an
+establishment at six melee and ten ranged delivers; the pool arithmetic says it empties about **T61-T62**,
+which would be **three to four turns earlier than A4's T65, the earliest keep in the programme**. **The
+record states that projection now** so the end table can be read against it, and it does not treat the
+projection as the result - the keep turn is what decides, and the last two attempts both ended with the
+city still standing.
 
 ## The hypothesis, with the numbers that falsify it
 
