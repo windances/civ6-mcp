@@ -18,7 +18,7 @@ with its numbers, and - once the attempt ends - the table and the verdict.
 | Speed | Quick | the setup screen read 快速 |
 | Ruleset | Gathering Storm | `GameConfiguration.GetValue("RULESET")` = `RULESET_EXPANSION_2` |
 | Game key | `china_911679432` | `<civ>_<GAME_SYNC_RANDOM_SEED>` read from the live game - a different seed from the previous match, so the two diaries do not mix |
-| Turn 1 save | `evals/saves/ATTEMPT-A1-T1.Civ6Save` | saved from the live game at 4000 BC, no actions taken |
+| Turn 1 save | `evals/saves/ATTEMPT-A1-T1.Civ6Save` | saved from the live game at 4000 BC, no actions taken - **and this is the experiment's shared starting position: every later attempt loads this same save**, so the map, the opponents and the start do not move under the variable (`docs/experiments/README.md` section 2) |
 
 **How the match was created, since it is reproducible and was not obvious.** The game was launched
 from this checkout (`_launch_game_sync`), which needed full filesystem access - under the workspace

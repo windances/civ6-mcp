@@ -33,7 +33,30 @@ Nothing here is a new instrument. The loop already writes everything an attempt 
 Recorded per attempt: the seed, the turn-1 save name, and the settings actually used (read back
 from the game, not from this table - the table is the intent).
 
-## 2. The one variable per attempt
+## 2. One starting position for every attempt
+
+**Every attempt starts from the same turn-1 save**: `evals/saves/ATTEMPT-A1-T1.Civ6Save`, taken from
+the live game at 4000 BC before any action. A fresh match per attempt would put a different map,
+different neighbours and different land under the variable being tested, and a difference in the
+outcome would then have two candidate causes with no way to separate them. Loading the same save holds
+the map, the start position, the opponents and the difficulty constant, so the only thing that moves
+between attempts is the thing the attempt changed.
+
+**How an attempt is started** (the loading is the human's call, like every other load in this repo):
+
+1. load `evals/saves/ATTEMPT-A1-T1.Civ6Save` in the game;
+2. publish the attempt's own task file (`scripts/temp-task.py add ...`) - the `IN FORCE NOW` line is
+   what carries it into a running session, not the file's presence;
+3. the session plays to that attempt's stop, and the report is taken from the record as in section 4.
+
+**The residual confound, written down so nobody forgets it.** The seed fixes the map, not the history:
+after turn 1 the AI's choices and the combat rolls diverge from the previous attempt, and a run that
+meets a barbarian camp the last one missed is not a worse strategy. A finding therefore rests on the
+**process** metrics - the establishment turn, the order the parts of the army were asked for, the
+turns under the gold floor - and on the economy at fixed turns, **not on the final outcome**. "It lost
+the city" is not a datum about a production doctrine unless the process numbers explain why.
+
+## 3. The one variable per attempt
 
 An attempt changes **exactly one** thing. Everything else is the doctrine as written, so a
 difference between two attempts has one candidate cause.
@@ -57,10 +80,10 @@ The doctrine's testable claims, each with the file that makes it:
 | **A4** | the siege train is bought with gold, not produced | the war opens 5+ turns earlier at the cost of a negative `carrying-capacity` window |
 | **A5** | two war cities instead of one | the second city's production outweighs the lost compounding |
 
-A variable is only worth an attempt if the hypothesis can be **falsified by a number** in section 3.
+A variable is only worth an attempt if the hypothesis can be **falsified by a number** in section 4.
 An attempt whose hypothesis cannot fail is not run.
 
-## 3. What is measured, and when
+## 4. What is measured, and when
 
 Every attempt reports the same table, extracted by the same command:
 
@@ -107,7 +130,7 @@ three questions in the diary each time it fires. The attempt ends at the **first
 city**, or at **T80**, whichever comes first - the question is how the army was paid for, not how
 the war ended.
 
-## 4. What is written down
+## 5. What is written down
 
 | File | Contents |
 |---|---|
