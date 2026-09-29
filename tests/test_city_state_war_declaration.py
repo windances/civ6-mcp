@@ -35,21 +35,35 @@ class TestTheMinorCivBranchExists:
         assert "parameters[PlayerOperations.PARAM_PLAYER_ONE] = me" in text
         assert "parameters[PlayerOperations.PARAM_PLAYER_TWO] = target" in text
 
-    def test_it_is_gated_on_the_target_being_a_city_state(self):
-        text = lua()
-        assert "Players[target]:IsMinorCiv()" in text
-        # It runs before the session machinery, so a city-state never reaches RequestSession.
-        assert text.index("targetIsMinor") < text.index("DiplomacyManager.RequestSession")
+    def test_it_is_gated_on_no_diplomacy_session_opening(self):
+        """The discriminator is the session's own outcome - not an accessor that does not exist.
 
-    def test_it_returns_before_the_session_path(self):
+        The first version of this fix asked `Players[target]:IsMinorCiv()` inside a `pcall`. That
+        accessor is not available in the InGame state, so the pcall swallowed the error, the flag stayed
+        false, and the branch below was **dead**: attempt A3 hit `WARN:WAR_UNCERTAIN` at T59 *and* T60
+        after the "fix", and a move onto the ring answered `BLOCKED (city-state territory)`. The test
+        that shipped with it asserted the presence of that string in the generated Lua, which is why it
+        passed while the path it described could never run.
+        """
         text = lua()
-        minor = text.index("if targetIsMinor then")
-        early = text[minor : text.index("DiplomacyManager.RequestSession")]
-        assert "return" in early
-        # The early path emits the sentinel the collector stops at, so the caller never waits for the
-        # session machinery it skipped.
-        assert f'print("{lq.SENTINEL}")' in text
-        assert early.index(f'print("{lq.SENTINEL}")') < early.index("return")
+        assert "IsMinorCiv" not in text and "targetIsMinor" not in text
+        assert "elseif sessionCompleted then" in text
+        # The operation is reached only after the session machinery has had its chance.
+        assert text.index("DiplomacyManager.RequestSession") < text.index("UI.RequestPlayerOperation")
+
+    def test_the_uncertain_warning_is_kept_for_the_session_case_only(self):
+        """`WARN:WAR_UNCERTAIN` is the benign major-civilization case and must not swallow a city-state.
+
+        It is right when a session opened and completed (the engine commits the war next frame, so the
+        same-frame read is stale), and wrong when nothing opened - which is what a city-state is.
+        """
+        text = lua()
+        uncertain = text.index("WARN:WAR_UNCERTAIN")
+        assert text.index("elseif sessionCompleted then") < uncertain
+        assert uncertain < text.index("OK:WAR_REQUESTED|")
+        # And when neither route works the reply says no war exists rather than that it is uncertain.
+        assert "ERR:WAR_BLOCKED|" in text
+        assert "so no war exists" in text
 
     def test_the_reply_says_what_was_done_rather_than_that_it_is_uncertain(self):
         text = lua()

@@ -415,36 +415,19 @@ end"""
     #     parameters[PlayerOperations.PARAM_PLAYER_ONE] = attacker
     #     parameters[PlayerOperations.PARAM_PLAYER_TWO] = defender
     #     UI.RequestPlayerOperation(attacker, PlayerOperations.DIPLOMACY_DECLARE_WAR, parameters)
-    # Verified live on the A2 position: `IsAtWarWith` false -> true, `CanDeclareWarOn` true -> false.
-    minor_war_block = ""
-    if is_war:
-        minor_war_block = f"""
--- City-states are declared on by player operation, not by a diplomacy session (see the builder).
-local targetIsMinor = false
-pcall(function() targetIsMinor = Players[target]:IsMinorCiv() end)
-if targetIsMinor then
-    local parameters = {{}}
-    parameters[PlayerOperations.PARAM_PLAYER_ONE] = me
-    parameters[PlayerOperations.PARAM_PLAYER_TWO] = target
-    local requested = pcall(function()
-        UI.RequestPlayerOperation(me, PlayerOperations.DIPLOMACY_DECLARE_WAR, parameters)
-    end)
-    local minorName = Locale.Lookup(PlayerConfigurations[target]:GetCivilizationShortDescription())
-    if requested then
-        print("OK:WAR_REQUESTED|{action_name} on " .. minorName .. " - a city-state is declared on by "
-            .. "the same player operation the game's own declare-war popup uses, not by a diplomacy "
-            .. "session; the war state settles on the next frame, so confirm it with get_diplomacy")
-    else
-        print("ERR:WAR_BLOCKED|" .. minorName .. " - the player operation was refused")
-    end
-    print("{SENTINEL}")
-    return
-end
-"""
+    #
+    # **The discriminator is the session's own outcome, not a test for "is this a city-state".** The
+    # first version of this fix asked `Players[target]:IsMinorCiv()` inside a `pcall`; that accessor
+    # **does not exist in the InGame state**, so the pcall swallowed the error, the flag stayed false and
+    # execution fell through to the very session path the fix existed to avoid. Attempt A3 then measured
+    # it: `send_diplomatic_action(DECLARE_SURPRISE_WAR)` returned `WARN:WAR_UNCERTAIN` at T59 **and** T60,
+    # and a move onto the ring answered `BLOCKED (city-state territory (耶路撒冷) - need suzerainty or
+    # Open Borders)` - the same six lost turns A2 had, after the "fix". The outcome below needs no
+    # accessor: if no session opened (`sessionCompleted` false) and the action is a war, there is nothing
+    # for a session to declare through, which is exactly a city-state.
 
     return f"""
 {validation_block}
-{minor_war_block}
 -- Clean stale session for THIS target only (not all session IDs).
 -- Mass-closing sessions via IsSessionIDOpen loop corrupts AI diplomacy state.
 local staleSid = DiplomacyManager.FindOpenSessionID(me, target)
@@ -472,9 +455,29 @@ local name = Locale.Lookup(PlayerConfigurations[target]:GetCivilizationShortDesc
 if action:find("_WAR") then
     local atWar = pDiplo:IsAtWarWith(target)
     if atWar then
-        print("OK:WAR_DECLARED|" .. action .. " on " .. name .. " — now at war")
-    else
+        print("OK:WAR_DECLARED|" .. action .. " on " .. name .. " - now at war")
+    elseif sessionCompleted then
+        -- A session opened and completed: this is the ordinary major-civilization case, where the
+        -- engine commits the war on the next frame and the same-frame read above is stale.
         print("WARN:WAR_UNCERTAIN|" .. action .. " session completed but war state not yet confirmed for " .. name .. ". Check next turn.")
+    else
+        -- No session opened at all: this player has no diplomacy session to declare through, which is
+        -- what a city-state is. Declare through the operation the game's own popup uses.
+        local parameters = {{}}
+        parameters[PlayerOperations.PARAM_PLAYER_ONE] = me
+        parameters[PlayerOperations.PARAM_PLAYER_TWO] = target
+        local requested = pcall(function()
+            UI.RequestPlayerOperation(me, PlayerOperations.DIPLOMACY_DECLARE_WAR, parameters)
+        end)
+        if requested then
+            print("OK:WAR_REQUESTED|" .. action .. " on " .. name .. " - no diplomacy session exists for "
+                .. "this player, so the war is requested through the same player operation the game's own "
+                .. "declare-war popup uses, not by a session; the war state settles on the next frame, so "
+                .. "confirm it with get_diplomacy")
+        else
+            print("ERR:WAR_BLOCKED|" .. name .. " - neither a diplomacy session nor the player operation "
+                .. "went through, so no war exists")
+        end
     end
 elseif action == "DIPLOMATIC_DELEGATION" then
     if sessionCompleted then

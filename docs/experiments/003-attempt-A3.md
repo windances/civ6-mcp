@@ -193,6 +193,54 @@ up to T60` because the rule is gated `when: turn() >= 60`, while the diary's own
 +10 on **47 of 52** turns. Q4 therefore stays `OPEN` until the gate opens, and the substantive number is
 the diary's - which is the same finding A1 and A2 produced.
 
+## The war declaration failed twice, and the fix that was supposed to make it work was dead code
+
+**Measured at T59 and T60, before anything else about this attempt's assault can be read:**
+
+```
+T59 send_diplomatic_action -> WARN:WAR_UNCERTAIN|DECLARE_SURPRISE_WAR session completed but war state
+                              not yet confirmed for 耶路撒冷. Check next turn.
+T59 unit_action            -> MOVED_TO|50,21|...|BLOCKED (city-state territory (耶路撒冷) - need
+                              suzerainty or Open Borders)
+T60 send_diplomatic_action -> WARN:WAR_UNCERTAIN|... (the same reply, a turn later)
+```
+
+This is **A2's T60-T66 waste repeating**, and the cause is not the session's: the city-state branch in
+`build_send_diplo_action` (`src/civ_mcp/lua/diplomacy.py`) tested
+`Players[target]:IsMinorCiv()` **inside a `pcall`**. That accessor **does not exist in the InGame state** -
+this project recorded that fact once already - so the pcall swallowed the error, the flag stayed `false`,
+and control fell through to the diplomacy-session path the branch was written to avoid. The branch was
+**dead code on every call**, and its fallback is exactly the `WARN:WAR_UNCERTAIN` message written for the
+benign "not synced yet" case.
+
+**The test that shipped with the fix is why nobody noticed**: `tests/test_city_state_war_declaration.py`
+asserted that the string `Players[target]:IsMinorCiv()` appeared in the generated Lua, and that the branch
+sat before `RequestSession`. Both were true - of a call that could never succeed. A test that pins a
+*string* where the claim is about a *runtime path* is not a check; the retro's own ladder says an
+unverifiable assertion is a workaround. (And the retro's row on the fix said "verified live" - which was
+true of the player operation, verified by its own probe, and never true of the tool's guard.)
+
+**The fix, and why this one can be checked**: the discriminator is the **session's own outcome**, which the
+code already reads - a war action where `sessionCompleted` is false had no session to declare through, and
+that is what a city-state is. The player operation runs in that case, `WARN:WAR_UNCERTAIN` is kept for the
+case where a session *did* open (a major civilization, where the same-frame read is genuinely stale), and
+neither accessor nor `pcall` is involved. `tests/test_city_state_war_declaration.py` now asserts the
+outcome-based gate and that the uncertain wording belongs only to the session case; 6 tests pass.
+
+**The session was restarted to load it, and that is part of this attempt's record.** A running `civ-mcp`
+holds the modules it imported, so the fix cannot reach the session that was already playing - the same
+constraint the retro records for the pantheon guard. A3's window is the one the fix exists for, so session 2
+(`crumbling-emerald-parapet-16`, T25-T60) was stopped with `scripts\civ6-clean.ps1 -KeepGame` - the game
+was left running, at **T60**, with the tuner ports still listening - and session 3
+**`marble-ebony-pennant-56`** was launched into the same position. Every command in this record must
+therefore name **three** sessions, and the live verification of the fix is the next declaration this attempt
+places: an `OK:WAR_REQUESTED` reply is the fix working, and another `WARN:WAR_UNCERTAIN` means the branch is
+still dead and the attempt's capture half is blocked by the tool for the second time in the programme.
+
+**What this costs the comparison**: A3 lost T59-T60 to the failed declarations, and its assault opens two or
+more turns later than the army was ready. That is a tool cost, not a production one, and the end table says
+so - A1's capture half was decided by the map, A2's by a tool, and A3's by a tool *twice*.
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
