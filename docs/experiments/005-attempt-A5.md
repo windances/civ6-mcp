@@ -34,13 +34,15 @@ ability is in force:
 
 | what | the read that settles it | recorded |
 |---|---|---|
-| appointed | the `appoint_governor` reply | **not yet** |
-| assigned to the war city (西安) | the `assign_governor` reply | **not yet** |
-| `established=1` there | `get_governors` | **not yet** |
-| the ability is in force | `GOVERNOR_PROMOTION_RESOURCE_MANAGER_GROUNDBREAKER` has dropped off the `GOV_PROMO` list, and `promote_governor` with it answers `ERR:ALREADY_PROMOTED` - **that answer is the record of the ability, not a failure** | **not yet** |
+| appointed | the `appoint_governor` reply | **T34** - `APPOINT_REQUESTED\|Magnus - verify with get_governors()` |
+| assigned to the war city (西安) | the `assign_governor` reply | **T34** - `ASSIGNED\|Magnus to Xi'an` |
+| `established=1` there | `get_governors` | **not yet** at T34 - the same read says `(5 turns to establish)`, so it reads established about **T39**. The read is `Appointed (1): Magnus (GOVERNOR_THE_RESOURCE_MANAGER) - Xi'an (5 turns to establish)` |
+| the ability is in force | `GOVERNOR_PROMOTION_RESOURCE_MANAGER_GROUNDBREAKER` has dropped off the `GOV_PROMO` list, and `promote_governor` with it answers `ERR:ALREADY_PROMOTED` - **that answer is the record of the ability, not a failure** | **T34, and this is the clean evidence**: the T34 `get_governors` lists Magnus's available promotions as Surplus Logistics, Provision, Industrialist, Black Marketeer and Vertical Integration - **`GROUNDBREAKER` is absent from that list**, which is what a level-0 `BaseAbility` looks like once its holder is appointed. The session has not called `promote_governor` with it, so the `ERR:ALREADY_PROMOTED` half is not on the record; the absence is |
 
-The governor point comes from `CIVIC_STATE_WORKFORCE`, which the session took at **T23**; at T29 it is still
-researching.
+The governor point comes from `CIVIC_STATE_WORKFORCE`, which the session took at **T23** and completed
+before T34. **So the variable's precondition is satisfied in the order the brief requires**: Magnus is in the
+war city before any chop, because no chop has been made yet - the session is holding every forest and jungle
+tile in 西安's ring for the Catapult window, and Engineering has been researching since **T22**.
 
 ## The opening build is pinned, and the pin held
 
@@ -104,6 +106,21 @@ Read at **T29**, which is where the seeded state stands:
 | production so far | `SCOUT` T1, `SLINGER` T5, `SETTLER` T6, `BUILDER` T15, `SLINGER` T20, `MONUMENT` T21 (city 2), `WARRIOR` T22, `SLINGER` T24, `SLINGER` T26, `SLINGER` T28, `HEAVY_CHARIOT` T29 |
 | exploration and contact | 6% at T17 and no rival met - the target will again be a city-state unless the scout finds a major |
 | the verdict so far on Q1-Q4 | all four `OPEN` at T29 - the deadlines have not arrived |
+
+**Re-read at T35, and the variable's precondition is met.** The two things that had to happen before a chop
+could be legitimate both happened, in the right order:
+
+- **Magnus is in the war city from T34** - appointed and assigned the same turn (the chain above), with
+  `Groundbreaker` already held by virtue of being his level-0 ability. He establishes about T39.
+- **No chop has been made**, so the enabler preceded the activity it enables. The session is holding every
+  forest and jungle tile in 西安's ring, and Engineering has been on the research line since **T22** - the
+  Catapult window the chops are waiting for.
+
+The establishment is being built in parallel: 西安 is the war city and its queue has run
+`SCOUT` T1, `SLINGER` T5, `SETTLER` T6, `BUILDER` T15, `SLINGER` T20, `WARRIOR` T22, `SLINGER` T24,
+`SLINGER` T26, `SLINGER` T28, `HEAVY_CHARIOT` T29, while the second city (founded (57,25) at T21) has been
+given a Monument. The next things to look for are the **first `remove_feature`** with its city, tile,
+feature, turn and the queue item that absorbed the production, and the **Engineering gate**.
 
 **One tool finding comes from this window and is on the ledger rather than in this record's results**: at
 T20 the session issued `unit_action(unit_id=393217, ...)` for a unit id that **its own `get_units` read did
