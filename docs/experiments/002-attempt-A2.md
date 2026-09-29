@@ -163,6 +163,18 @@ thrown away and the turn closed on a discarded legal action.
   `tests/test_pantheon_faith_guard.py` is green. **The running server held the old Lua**, so the fix
   belongs to the next session - and the lost belief belongs in A2's verdict, because no play could avoid
   it.
+  **Verified in play at T41**, which is what makes the first half's loss a fact rather than a suspicion:
+  the resumed session `pale-pearl-aqueduct-92` called
+  `choose_pantheon(belief_type="BELIEF_GOD_OF_THE_FORGE")` with 56 faith banked and the tool answered
+  `PANTHEON_FOUNDED|锻造之神` - the belief the first half chose and could not have. So the guard is fixed
+  in the Lua a session loads, and the T40 checkpoint stands as a **no-pantheon baseline**: the first
+  half's army was built without the +25% it had planned for.
+  **The same read carried the era, and it lands on the second half, not on the comparison.** Both
+  attempts' T40 checkpoints are `age=NORMAL` / `ERA_ANCIENT` (A1: era score 11; A2: 5), so the T40
+  tables above are the same age and remain comparable. At **T41 the era advanced to Classical and the
+  age became Dark** - era score 5 against Dark 13 / Golden 26 - and the resumed session answered the
+  dedication with `DEDICATION_CHOSEN|COMMEMORATION_SCIENTIFIC`. Whatever the second half produces is
+  therefore built under a Dark Age that A1's window never saw, and the final compare has to say so.
 - **A jungle hill the builder board recommends cannot be improved or cleared** (T26):
   `get_builder_tasks` lists `(60,21): build MINE` as NORMAL, `improve` answers `tile has
   FEATURE_JUNGLE (use remove_feature first)`, and `remove_feature` answers

@@ -574,6 +574,15 @@ else
     local report = "OK:MELEE_ATTACK|target:" .. enemyName .. " at ({target_x},{target_y})"
     if enemyAlive then
         report = report .. "|" .. label .. enemyHP .. " -> " .. enemyAfterHP .. "/" .. enemyMaxHP
+        if enemyAfterHP == enemyHP then
+            -- Combat resolves asynchronously, so this read can still return the pre-attack damage.
+            -- Measured 2026-09-29 in attempt A2: two landed melee attacks both answered
+            -- "enemy HP:72 -> 72/100", the read right after agreed, and the target then went
+            -- 72 -> 50 -> 20 -> dead over the next turns. The session read the unchanged pair as a
+            -- silent failure, could not pass the pending-attack gate, and closed the turn with
+            -- `skip_remaining_units(force=True)`, discarding a legal attack.
+            report = report .. " (unchanged on this read - combat resolves asynchronously, so the hit may still have landed; read the target again before concluding it missed)"
+        end
     else
         report = report .. "|" .. label .. enemyHP .. " -> KILLED"
     end
