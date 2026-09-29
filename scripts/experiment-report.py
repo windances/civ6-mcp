@@ -113,10 +113,11 @@ ORDER_RE = re.compile(r'"item_name":\s*"([A-Za-z_0-9]+)"')
 # attempts' saved reports still compare on identical terms.
 ESTABLISHMENT = {"siege": 2, "melee": 2, "anticav": 1, "ranged": 4, "cavalry": 1, "recon": 1}
 
-#: The roles the *diary's* `ESTABLISHMENT:` line names, and the order it names them in. It is not the
-#: required table above: that line's shape was fixed by the task files the attempts were played under
-#: (`siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1`), and a parser that followed the table would
-#: stop reading the rows those attempts already wrote.
+#: The roles the *diary's* `ESTABLISHMENT:` line named, in the order it named them, under the task files
+#: A1 and A2 were played with (`siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1`). Kept as the record
+#: of that historical shape and read by nothing: the parser below takes whatever role tokens a line
+#: carries, because the corrected table made the ram conditional and added `anticav` and `recon`, and a
+#: parser tied to this tuple would have made every line written from A3 on unreadable.
 SELF_REPORT_FIELDS = ("siege", "melee", "ram", "ranged", "cavalry")
 ROLES: dict[str, tuple[str, ...]] = {
     "siege": ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY", "ROCKET_ARTILLERY"),
@@ -1039,21 +1040,35 @@ def contacts(by_turn: dict[int, dict]) -> list[tuple[int, str]]:
     return out
 
 
+#: The diary's own `ESTABLISHMENT:` line. **Its shape is not fixed any more**, and that is the point:
+#: the ram slot is conditional in the corrected table and `anticav`/`recon` are the two roles the
+#: correction added, so the reader takes whatever role tokens the line carries instead of demanding the
+#: pre-correction five-slot form. The measured cause: the old regex required `ram`, so **a line without
+#: it parsed as nothing at all**, and the one cross-check that caught all eleven of A2's mismatches was
+#: blind to exactly the two rows the correction introduced. Anecdotally, the briefs had taken to pinning
+#: the old shape and reporting the new rows beside it as unscored - a workaround that this removes.
 SELF_REPORT_RE = re.compile(
-    r"ESTABLISHMENT:\s*siege\s*(\d+)\s*/\s*2.*?melee\s*(\d+)\s*/\s*2.*?ram\s*(\d+)\s*/\s*1"
-    r".*?ranged\s*(\d+)\s*/\s*4.*?cavalry\s*(\d+)\s*/\s*1",
-    re.I | re.S,
+    r"ESTABLISHMENT:\s*(?P<body>[^\n]*?)(?=\s*WAR READY:|\s*ENEMY SEEN:|$)", re.I
 )
+_SELF_REPORT_ROLE_RE = re.compile(
+    r"(?P<role>siege|melee|ram|ranged|cavalry|anti-?cavalry|anticav|recon)"
+    r"[\s*_`]*"
+    r"(?P<held>\d+)\s*/\s*\d+",
+    re.I,
+)
+_SELF_REPORT_ALIASES = {"anti-cavalry": "anticav", "anti_cavalry": "anticav"}
 
 
 def self_reports(by_turn: dict[int, dict]) -> list[dict]:
     """The diary's own `ESTABLISHMENT:` lines, beside what the record says for the same turn.
 
-    The task asks the session to write
-    `ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>`. The instrument
-    computes the same numbers from `unit_composition`, so the two can be compared - and a claim the
-    record does not support is exactly the failure this check exists to catch. A turn without such a
-    line is not a failure: the line is requested every ten turns, not every turn.
+    The pre-correction brief asked for
+    `ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>`, and the corrected one
+    adds `anticav` and `recon` while making the ram conditional - so this reader takes every
+    `role held/target` token the line carries, in any combination, rather than one fixed shape. The
+    instrument computes the same numbers from `unit_composition`, so the two can be compared - and a
+    claim the record does not support is exactly the failure this check exists to catch. A turn without
+    such a line is not a failure: the line is requested every ten turns, not every turn.
     """
     out: list[dict] = []
     for turn in sorted(by_turn):
@@ -1061,7 +1076,15 @@ def self_reports(by_turn: dict[int, dict]) -> list[dict]:
         match = SELF_REPORT_RE.search(text)
         if not match:
             continue
-        claimed = {role: int(match.group(i)) for i, role in enumerate(SELF_REPORT_FIELDS, start=1)}
+        claimed: dict[str, int] = {}
+        for role, held in _SELF_REPORT_ROLE_RE.findall(match.group("body")):
+            key = str(role).lower()
+            # First occurrence wins: the report's own tokens come first, and the sentence that follows
+            # the report is prose - it quotes the *target* table ("the ranged line needs 4/4"), and
+            # taking the last occurrence read A2's T11 report of `siege 0/2` as a claim of 2.
+            claimed.setdefault(_SELF_REPORT_ALIASES.get(key, key), int(held))
+        if not claimed:
+            continue
         actual = role_counts(by_turn[turn].get("unit_composition"))
         out.append(
             {
@@ -1069,9 +1092,9 @@ def self_reports(by_turn: dict[int, dict]) -> list[dict]:
                 "claimed": claimed,
                 "actual": actual,
                 "mismatch": {
-                    role: (claimed[role], actual[role])
-                    for role in SELF_REPORT_FIELDS
-                    if claimed[role] != actual[role]
+                    role: (held, actual.get(role, 0))
+                    for role, held in claimed.items()
+                    if held != actual.get(role, 0)
                 },
             }
         )

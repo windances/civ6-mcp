@@ -88,11 +88,12 @@ A2's first economy order came at **T55**.
    last firing tile filled first, then declare war, position that turn, and fire every turn the train can
    fire while the surplus units cut the supply line.
 6. **Every ten turns**: `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:` and the `10-TURN REVIEW`'s three
-   questions, with numbers. Write the establishment line in the shape the instrument parses
-   (`SELF_REPORT_RE` in `scripts/experiment-report.py`): `ESTABLISHMENT: siege a/2 melee b/2 ram c/1
-   ranged d/4 cavalry e/1 at T<n>`, with the corrected table's other two rows beside it as `(anticav x/1,
-   recon y/1)`. The `ram c/1` slot stays even though the ram is conditional - a line without it is not
-   read at all - and the parser does not read anticav or recon, so those two are reported but not scored.
+   questions, with numbers. The establishment line is read by `SELF_REPORT_RE` in
+   `scripts/experiment-report.py`, which takes **every `role held/target` token the line carries** - so
+   write the rows that apply (`siege`, `melee`, `ranged`, `cavalry`, `anticav`, `recon`, and `ram` when the
+   empire owns one) and **every one of them is scored against the record**. There is no longer a shape to
+   memorise: `ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1 anticav 1/1 recon 1/1 at T50` is
+   read in full, and so is the older ram-shaped line.
 
 ## The finish line, and what to leave behind
 

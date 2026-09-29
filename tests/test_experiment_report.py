@@ -269,6 +269,72 @@ def test_self_report_mismatch_is_visible_and_agreement_is_quiet():
     assert report.self_reports(frames({1: {"WARRIOR": 1}})) == []
 
 
+def test_the_self_report_reader_takes_the_corrected_tables_shape_too():
+    """The correction made the ram conditional and added `anticav`/`recon`; the reader has to follow.
+
+    Measured cause: the old regex required the `ram` token, so a line written to the corrected table
+    parsed as **nothing at all** - the one cross-check that caught all eleven of A2's mismatches was
+    blind to exactly the two rows the correction introduced, and the briefs worked around it by pinning
+    the pre-correction shape and reporting the new rows as unscored.
+    """
+    full = frames({50: {"CATAPULT": 2, "WARRIOR": 2, "ARCHER": 4, "HORSEMAN": 1, "SPEARMAN": 1, "SCOUT": 1}})
+    full[50]["reflections"] = {
+        "strategic": "ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1 "
+                     "(anticav 1/1, recon 1/1) at T50"
+    }
+    got = report.self_reports(full)
+    assert len(got) == 1
+    assert got[0]["claimed"] == {
+        "siege": 2, "melee": 2, "ranged": 4, "cavalry": 1, "anticav": 1, "recon": 1
+    }
+    assert got[0]["mismatch"] == {}
+
+    # The hyphenated spelling is the same role, the ram slot may simply be absent, and a wrong count in
+    # either new row is a mismatch like any other.
+    hyphenated = frames({50: {"CATAPULT": 2, "WARRIOR": 2, "ARCHER": 4, "HORSEMAN": 1, "SPEARMAN": 0, "SCOUT": 0}})
+    hyphenated[50]["reflections"] = {
+        "strategic": "ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1, "
+                     "anti-cavalry 1/1, recon 1/1 at T50"
+    }
+    got = report.self_reports(hyphenated)
+    assert got[0]["claimed"]["anticav"] == 1 and "ram" not in got[0]["claimed"]
+    assert got[0]["mismatch"] == {"anticav": (1, 0), "recon": (1, 0)}
+
+    # A line that names no role at all is still not a report.
+    empty = frames({50: {"WARRIOR": 1}})
+    empty[50]["reflections"] = {"strategic": "ESTABLISHMENT: nothing to report at T50"}
+    assert report.self_reports(empty) == []
+
+
+def test_the_self_report_reader_reads_through_emphasis_and_takes_the_first_claim():
+    """Two measured traps in the same line, both found by running it against A2's real diary.
+
+    (1) The sessions **bold the slots they have filled** (`melee **2/2**`), which is why the old
+    strict regex missed whole lines - and a token scan that does not tolerate the emphasis reads only
+    the unbolded roles and silently drops the rest. (2) The sentence after the report quotes the
+    *target* table (`the plan is siege 2/2`), so a reader that keeps the last occurrence turns A2's
+    T11 report of `siege 0/2` into a claim of 2. First occurrence wins, and the scan stops at the next
+    field (`WAR READY:` / `ENEMY SEEN:`).
+    """
+    bolded = frames({7: {"WARRIOR": 2, "CATAPULT": 0, "SLINGER": 0, "HORSEMAN": 0, "BATTERING_RAM": 0}})
+    bolded[7]["reflections"] = {
+        "strategic": "ESTABLISHMENT: siege 0/2 melee **2/2** ram 0/1 ranged 0/4 cavalry 0/1 at T7. "
+                     "WAR READY: not yet."
+    }
+    got = report.self_reports(bolded)
+    assert got[0]["claimed"] == {"siege": 0, "melee": 2, "ram": 0, "ranged": 0, "cavalry": 0}
+    assert got[0]["mismatch"] == {}
+
+    trailing = frames({7: {"CATAPULT": 0, "WARRIOR": 2, "SLINGER": 0, "HORSEMAN": 0, "BATTERING_RAM": 0}})
+    trailing[7]["reflections"] = {
+        "strategic": "ESTABLISHMENT: siege 0/2 melee 2/2 ram 0/1 ranged 0/4 cavalry 0/1 at T7 - the "
+                     "plan is siege 2/2 and ranged 4/4. WAR READY: not yet."
+    }
+    got = report.self_reports(trailing)
+    assert got[0]["claimed"]["siege"] == 0 and got[0]["claimed"]["ranged"] == 0
+    assert got[0]["mismatch"] == {}
+
+
 def test_attempt_rows_compare_two_snapshots_on_the_same_columns():
     """`--compare` reads what `--save` wrote, because the diary will belong to the next attempt."""
     payload = {

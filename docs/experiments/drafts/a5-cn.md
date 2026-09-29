@@ -37,7 +37,7 @@
 3. **工程学 → `UNIT_CATAPULT`，早于任何经济建筑**（H1；它在 A2 的 T48 成立），并让战争城的队列在**整个砍伐窗口**里始终装着一个**单位**：砍伐把产能存入队列当时装着的东西，所以 `tactics/08` 的分工就是框架——战争城造军队，其余每座城复利——记录要写明每次砍伐时在生产的是什么。
 4. **把砍伐送进军队，每一次砍伐单独一行记录**：城市、地块、地貌、回合、产能进了哪个队列项，以及建造者剩余的次数。`remove_feature` 在所属城市环之外的地块上会被拒绝，所以每次砍伐都要写明城市与地块，并在每次之后重读编成表。
 5. **按 `tactics/04`/`05` 行军与集结，按 `tactics/06` 开火**：屏护在前、攻城在射程 2、最后填满开火格，然后宣战、当回合站位，在序列能开火的每一回合都开火，同时用富余单位剪断供给线。
-6. **每十回合**：写 `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:`，并用数字回答 `10-TURN REVIEW` 的三个问题。按插桩解析的形状写编成行（`scripts/experiment-report.py` 里的 `SELF_REPORT_RE`）：`ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>`，并在旁边写上修正表另外两行，写成 `(anticav x/1, recon y/1)`。即使撞车是条件式的，`ram c/1` 这一格也要留着——没有它的行根本不会被读取——而解析器不读 anticav 与 recon，所以那两行只是报告，不计分。
+6. **每十回合**：写 `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:`，并用数字回答 `10-TURN REVIEW` 的三个问题。编成行由 `scripts/experiment-report.py` 里的 `SELF_REPORT_RE` 读取，它**认行里出现的每一个 `角色 持有/目标` 记号**——所以把适用的行都写上（`siege`、`melee`、`ranged`、`cavalry`、`anticav`、`recon`，拥有撞车时再写 `ram`），而且**每一行都会与记录核对**。不再有需要背下来的固定形状：`ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1 anticav 1/1 recon 1/1 at T50` 会被完整读取，旧的带 ram 那种写法也照样读。
 
 ## 终点，以及要留下什么
 

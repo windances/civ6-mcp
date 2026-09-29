@@ -79,12 +79,10 @@ city comes to exist; if the second city is taken instead, the record says which 
    fire while the surplus units cut the supply line.
 6. **Every ten turns**: `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:` and the `10-TURN REVIEW`'s three
    questions, with numbers, plus `tactics/08` step 6's `WAR ECONOMY:` line (which names our cities building
-   civilians while at war - with two war cities, the count is the split being checked). Write the
-   establishment line in the shape the instrument parses (`SELF_REPORT_RE` in
-   `scripts/experiment-report.py`): `ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at
-   T<n>`, with the corrected table's other two rows beside it as `(anticav x/1, recon y/1)`. The `ram c/1`
-   slot stays even though the ram is conditional - a line without it is not read at all - and the parser
-   does not read anticav or recon, so those two are reported but not scored.
+   civilians while at war - with two war cities, the count is the split being checked). The establishment
+   line is read by `SELF_REPORT_RE` in `scripts/experiment-report.py`, which takes **every `role
+   held/target` token the line carries** - so write the rows that apply and **every one of them is scored
+   against the record**, the two new cities' production included.
 
 ## The finish line, and what to leave behind
 

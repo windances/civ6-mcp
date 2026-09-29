@@ -35,7 +35,7 @@
 3. **第二座战争城的队列从那一回合起就是军队单位**：按 `tactics/01` 的编成表用 `set_city_production(city_id, "UNIT", ...)`，并记录它的第一个军队订单、它完成的每一个单位，以及——这正是变量的代价——那个队列本来会为经济造什么（具名的区域或建筑，以及它的回合估算）。
 4. **不属于那两座战争城的每一座城都复利**（`tactics/08` 第 2 步）：下一个区域或它的建筑，队列不落空，建造者持续产出、绝不跟随部队集群。战争城里，工程学 → `UNIT_CATAPULT` 早于任何经济建筑（H1；它在 A2 的 T48 成立）。
 5. **按 `tactics/04`/`05` 行军与集结，按 `tactics/06` 开火**：屏护在前、攻城在射程 2、最后填满开火格，然后宣战、当回合站位，在序列能开火的每一回合都开火，同时用富余单位剪断供给线。
-6. **每十回合**：写 `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:`，用数字回答 `10-TURN REVIEW` 的三个问题，再加上 `tactics/08` 第 6 步的 `WAR ECONOMY:` 行（它点名我们在战时还造平民单位的城市——有两座战争城时，这个计数就是被检查的分工）。按插桩解析的形状写编成行（`scripts/experiment-report.py` 里的 `SELF_REPORT_RE`）：`ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>`，并在旁边写上修正表另外两行，写成 `(anticav x/1, recon y/1)`。即使撞车是条件式的，`ram c/1` 这一格也要留着——没有它的行根本不会被读取——而解析器不读 anticav 与 recon，所以那两行只是报告，不计分。
+6. **每十回合**：写 `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:`，用数字回答 `10-TURN REVIEW` 的三个问题，再加上 `tactics/08` 第 6 步的 `WAR ECONOMY:` 行（它点名我们在战时还造平民单位的城市——有两座战争城时，这个计数就是被检查的分工）。编成行由 `scripts/experiment-report.py` 里的 `SELF_REPORT_RE` 读取，它**认行里出现的每一个 `角色 持有/目标` 记号**——所以把适用的行都写上，而且**每一行都会与记录核对**，包括两座新城的生产。
 
 ## 终点，以及要留下什么
 
