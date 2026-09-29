@@ -1,0 +1,131 @@
+﻿# Attempt A5 - the chops go into units
+
+**Status: in progress** - **one session so far** (`unbroken-cerulean-herald-09`), played from the
+experiment's shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, started 2026-09-30 and standing at
+**T29** when this file is seeded. The attempt's instruction is
+`prompts/tasks/tmp/036-attempt-a5-the-chops-go-into-units.md`; the design is section 3 of
+`docs/experiments/README.md`; A4's record is `004-attempt-A4.md` - **the clean baseline, because its pinned
+opening is the first the instrument certified** - and the cross-attempt report is
+`RETRO-2026-09-29.md`. This file is A5's record. **The record is seeded with the settings, the pin and the
+hypothesis while the attempt plays, and the measured half is filled as it lands** (the attempt's own
+session writes its half too; the two are reconciled here).
+
+## Settings: the shared start, one variable
+
+| | A4 (the baseline) | A5 |
+|---|---|---|
+| start | the experiment's shared T1 start | **the same save**, loaded at T1 |
+| doctrine | the corrected `tactics/01` | the **same corrected table**, plus the **new chop exception** that landed at the A4/A5 boundary (item 3 of `## Production order`) |
+| the one variable | the Encampment's place in the war city's queue | **the destination of the chops** - feature removals in the war city go into the unit in the queue rather than into infrastructure, with **Magnus** in that city |
+| window | a city kept, or T110 | a city kept, or **T70** (`expires:` T75) |
+| the comparability gate | pin certified `held` | **pin certified `held`** (below) |
+
+**The variable's cost is stated before it is measured**: builder charges spent on production rather than on
+improvements, the features themselves and the yields they would have carried for the rest of the game, and
+the turns those builders are away from the tiles the compounding cities need. What it is meant to buy is the
+siege half of the establishment **five or more turns earlier than A2's T55**.
+
+## The enabler is recorded, not assumed
+
+`Groundbreaker` is Magnus's level-0 ability (`DLC/Expansion1/Data/Expansion1_Governors.xml:40,151`,
+`Level="0" BaseAbility="true"`, +50% to plot harvests and feature removals in his city), so it arrives with
+his **appointment** rather than from a governor point. The record carries three turns and the evidence the
+ability is in force:
+
+| what | the read that settles it | recorded |
+|---|---|---|
+| appointed | the `appoint_governor` reply | **not yet** |
+| assigned to the war city (西安) | the `assign_governor` reply | **not yet** |
+| `established=1` there | `get_governors` | **not yet** |
+| the ability is in force | `GOVERNOR_PROMOTION_RESOURCE_MANAGER_GROUNDBREAKER` has dropped off the `GOV_PROMO` list, and `promote_governor` with it answers `ERR:ALREADY_PROMOTED` - **that answer is the record of the ability, not a failure** | **not yet** |
+
+The governor point comes from `CIVIC_STATE_WORKFORCE`, which the session took at **T23**; at T29 it is still
+researching.
+
+## The opening build is pinned, and the pin held
+
+`SCOUT` -> `SLINGER` -> `SETTLER` -> `BUILDER`, order by order. The variable is the chops' destination, not
+the opening, so the pin is the condition the attempt's numbers are comparable under.
+
+| order | promised | the record |
+|---|---|---|
+| 1 | `UNIT_SCOUT` | **T1 - matched** |
+| 2 | `UNIT_SLINGER` | **T5 - matched**, placed the turn the Scout completed |
+| 3 | `UNIT_SETTLER` | **T6 - matched**, and the **first time in the programme a pinned `SETTLER` matches A1-A3's T6** (A4's came at T10, four turns late) |
+| 4 | `UNIT_BUILDER` | **T15 - matched** |
+
+The instrument's own line, run over A5's session:
+**`PIN opening: held - the pinned opening held: UNIT_SCOUT, UNIT_SLINGER, UNIT_SETTLER, UNIT_BUILDER in that
+order`**. **A5 is the second attempt in the programme whose pinned opening the instrument certifies** (A4
+was the first), and the first whose `SETTLER` is on time - so A5 and A4 are comparable on their openings,
+which is what the chop variable needs.
+
+## The hypothesis, with the numbers that falsify it
+
+`README.md`'s window row is *"the establishment turn against A2's T48/T53/T55, and the economy at T60"*,
+bounded by *"a city kept or T70"*. A2's numbers are Engineering and both Catapults ordered **T48**, the
+first Catapult completed **T53**, the second **T55**, and its first post-gate economy order at **T55**.
+
+| # | prediction | falsified when |
+|---|---|---|
+| Q1 | the establishment is complete **by T60** under the corrected table | the composition at T60 is short in any required role (`siege 2 / melee 2 / anti-cavalry 1 / ranged 4 / cavalry 1 / recon 1`), as the instrument computes it from the diary's `unit_composition` |
+| Q2 | the establishment arrives at least **5 turns earlier than A2's T55, i.e. by T50** | the instrument's establishment turn is T51 or later, or is never reached inside the window |
+| Q3 | the economy is behind by **less than 5 turns**: the first `BUILDING`-or-`DISTRICT` order **after the Engineering gate** lands **by T60** (A2's was T55) | the first post-gate `BUILDING`-or-`DISTRICT` order is T61 or later, or the log holds none. **Post-gate on purpose**: A2's own first non-unit order was a Granary at T28, twenty turns before Engineering existed |
+| Q4 | the army is paid for: `carrying-capacity` red on **fewer than ten turns** | the rule reads red ten or more times. **Both measures are reported** - the rule only evaluates from T60 and this attempt ends at T70, so the diary's own `gold_per_turn` is the one live over the whole window, and A1, A2 and A4 all sat under the +10 floor on most of their turns |
+
+## The decisive numbers, and the commands
+
+1. **every chop, one row each**: the city, the tile, the feature, the turn, **which queue item absorbed the
+   production**, and the builder's remaining charges - `remove_feature` is refused outside the city's owned
+   ring, and no tool prints the production gained, so the gain is read from the queue's turn count before
+   and after, or the record says it could not be read rather than estimating;
+2. **the establishment turn**, every turn, under the corrected table;
+3. **the gate** (Engineering -> the first siege order), as in A4;
+4. **the first post-gate economy order**;
+5. **the gold floor**, both measures;
+6. **the first keep**, against A4's T65 and A3's T67.
+
+```
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run unbroken-cerulean-herald-09 --from 1 --to 110 --verdict --questions a5
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run unbroken-cerulean-herald-09 --from 1 --to 110 --step 10 --verdict --questions a5 --save docs/experiments/A5-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --compare docs\experiments\A4-final.json docs\experiments\A5-final.json
+```
+
+## Mid-window review - filled as the attempt passes T20 / T40 / T60
+
+Read at **T29**, which is where the seeded state stands:
+
+| question | answer at T29 |
+|---|---|
+| the opening build, against the pin | **all four matched, and the instrument certifies `held`**: `UNIT_SCOUT` T1, `UNIT_SLINGER` T5, `UNIT_SETTLER` T6, `UNIT_BUILDER` T15 |
+| the second city | **founded at (57,25) on T21** (`FOUNDED\|57,25`), queue set to a Monument on the same turn - the compounding city, with 西安 as the war city |
+| the variable so far | **nothing chopped yet, and that is correct**: the chops are held for the Catapult window, and the session's own T20 plan says so - "ALL forest/jungle chops on 西安's tiles are held for the Catapult window", with Magnus to be appointed and assigned "the turn the governor point arrives, recording all three turns" |
+| the enabler | **not yet**: `CIVIC_STATE_WORKFORCE` taken at T23 and still researching at T29; no `appoint_governor` in the log |
+| production so far | `SCOUT` T1, `SLINGER` T5, `SETTLER` T6, `BUILDER` T15, `SLINGER` T20, `MONUMENT` T21 (city 2), `WARRIOR` T22, `SLINGER` T24, `SLINGER` T26, `SLINGER` T28, `HEAVY_CHARIOT` T29 |
+| exploration and contact | 6% at T17 and no rival met - the target will again be a city-state unless the scout finds a major |
+| the verdict so far on Q1-Q4 | all four `OPEN` at T29 - the deadlines have not arrived |
+
+**One tool finding comes from this window and is on the ledger rather than in this record's results**: at
+T20 the session issued `unit_action(unit_id=393217, ...)` for a unit id that **its own `get_units` read did
+not list**, and the order was applied to a **different unit** (the Warrior, id 131073). The session caught it
+itself and wrote the rule down - ids must be re-read from `get_units` rather than inferred. The measured case
+and the staged fix are in `RETRO-2026-09-29.md`'s ledger; the fix is deliberately **not** landed while this
+attempt plays, because the helper is on every unit action's path.
+
+## The end table, and the verdict - written when the attempt ends
+
+The attempt ends when **a city is kept** - a `city_action` reply reads `KEEP|`, **or** the game resolves the
+capture itself and the move's reply reads `CAPTURE_MOVE ... CITY TAKEN` (then no `KEEP|` ever appears and
+`resolve_city_capture` answers `NO_PENDING_CITY`; the city list is the confirmation) - or the game reaches
+**T70**, whichever comes first (`expires:` T75). When it does, this section carries one row per question with
+the number that decides it, the **chop table** (one row per chop, with the queue item that absorbed it), the
+snapshot `docs/experiments/A5-final.json`, the A4-vs-A5 `--compare` line, and the divergences that are **not**
+the variable.
+
+**It must carry the two ways this variable can fail while looking successful**, because both are live:
+
+- **a chop whose production went nowhere visible**: if the queue item changed or completed in the same turn,
+  the gain is not separable, and the record says so rather than claiming the five-turn advance;
+- **an economy that paid for the advance in compounding**: Q3 exists for exactly this, and a fast
+  establishment beside a T65 economy is the variable's cost, not a win. The two are reported together or the
+  attempt's claim is not made.
