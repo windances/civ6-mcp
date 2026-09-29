@@ -152,6 +152,48 @@ useful question the experiment can answer is what a *reachable* establishment wi
 own arithmetic suggests siege from about T45 and the screens from T33, which is a T75-T90 establishment,
 not a T60 one). That belongs in the next attempt's hypothesis, not in an apology for this one.
 
+## The map makes the T80 deadline unreachable, and that is the experiment's error, not the doctrine's
+
+Read out of the attempt's own map dump at T28 (`.civ6-mcp-data/mapstatic_china_911679432_*.json`, written
+by the MCP's map capture), which lists every city that existed at the start:
+
+| | tile | who |
+|---|---|---|
+| our capital | **(60,22)** 西安 | us |
+| **the only rival capital on the map** | **(27,18)** Canberra | Australia (pid 1) |
+| the second rival | *no city* | the Maori - Kupe starts at sea with a Settler and two Scouts, so there is no capital to find until he settles |
+| between us and Canberra | (50,22) Jerusalem, (42,23) Chinguetti, (37,22) Zanzibar, (31,26) Samarkand, (35,8) Hunza | five city-states |
+
+The map is 74x46. **The nearest major rival is 33 tiles west of us** - and on a hex grid where one step
+changes the x coordinate by at most one, **|dx| = 33 is a lower bound on the true distance**, with 37 as
+the upper bound if every one of the four rows of offset also had to be walked. The repository's own
+`hexdist.py` measures it exactly but needs the tuner, and the playing session holds that connection, so a
+bound is what is claimed here rather than a precise number. (Trying to run it is also a small proof of
+the rule: it answers `could not connect to FireTuner` while a session plays.)
+
+**Why this is decisive.** `docs/retrospectives/2026-09-28-city-captures-T228-T294.md` is the case record
+of exactly this failure: task 021 targeted a city **30-40 tiles inland**, its window expired with the
+artillery still 13-22 tiles out, and that retro's own correction was *"target selection: coastal and near
+beats inland and far, and a siege deadline is a `get_staging_plan` timetable"*. A1 has re-created that
+map with two opponents on a Small Pangaea: **the one target is 33+ tiles away, across five city-states'
+territory** - and `AGENTS.md` states the rule this breaks: *"`expires:` must be reachable ... count the
+turns from the queue, not from the calendar."* Task 030's T80 came from the calendar. I never measured
+the distance to a rival before writing it, and at that moment no rival had even been met.
+
+**So P3 does not need a battle to be decided.** A capture by T80 requires the army to walk 33+ tiles
+(ten turns of movement even at three tiles a turn, over terrain that is mv2-mv3 all round the capital),
+find a city that lies west of five city-states, break it and hold it - inside eighty turns that must also
+pay for the expansion the same task demands. The attempt said this itself at T24, before any of my
+arithmetic: *"if the Scout finds only mountains and coast for another ten turns, the attempt's map is a
+peninsula and the capture half of A1 becomes impossible for reasons that have nothing to do with the
+production doctrine - which the record must state plainly rather than blame on the army."*
+
+**What the next attempt changes, and it is a scenario fix rather than a strategy fix:** measure the
+distance to the nearest rival **before** the deadline is written - the map dump and `get_map_area` both
+give it, and the ruler is `get_staging_plan` - and then either set the deadline from that number or start
+from a position whose nearest rival is inside the window. A window whose capture half is arithmetically
+impossible cannot answer a question about production.
+
 ## What this attempt already found (2026-09-29, before its first played turn)
 
 - **A candidate correction to a rule, from the attempt's own tooling line.** `issue-the-calls-furthest-first`
