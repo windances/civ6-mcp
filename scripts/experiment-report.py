@@ -809,14 +809,18 @@ def wall_phase(by_turn: dict[int, dict], rows: list[dict]) -> dict:
         "reads": len(reads),
     }
     if not reads:
-        ended = keep is not None or last >= A3_LATE_KEEP
+        # **A keep is not what closes this question.** A3's own capture was of an unwalled city and its
+        # brief does not end there - it keeps hunting for a walled target to T110 - so treating "a city
+        # was kept" as terminal would close Q2 while the attempt was still looking. What closes it is the
+        # question's own late bound, T80: past that, no walled target was found inside the window the
+        # design gave the attempt, and that is the unaskable answer.
+        ended = last >= A3_LATE_KEEP
         out.update(
             status=UNASKABLE if ended else OPEN,
             detail=f"no city with a wall pool above zero was attacked by T{last} - the wall phase is "
                    f"unaskable on this map, which is the attempt's own answer to give"
-                   + (" (the attempt is over: a city was kept, or the T"
-                      f"{A3_LATE_KEEP} bound passed, so this is the answer and not a window still open)"
-                      if ended else ""),
+                   + (f" (the T{A3_LATE_KEEP} bound has passed, so this is the answer and not a window "
+                      f"still open)" if ended else ""),
         )
         return out
     first_wall = min(turn for turn, _hp, _top in reads)

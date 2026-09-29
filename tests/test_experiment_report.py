@@ -791,13 +791,16 @@ def test_an_unaskable_wall_phase_is_terminal_once_the_attempt_is_over():
     # Mid-window, with nothing walled attacked yet: still open, because a walled city could still appear.
     assert report.wall_phase(by_turn, no_walls)["status"] == report.OPEN
 
-    # A keep ends the attempt: the question was never askable, and that is terminal.
-    wall = report.wall_phase(by_turn, [*no_walls, _keep_row(70)])
-    assert wall["status"] == report.UNASKABLE
-    assert "unaskable on this map" in wall["detail"] and "the attempt is over" in wall["detail"]
+    # **A keep is not what closes it.** A3 kept an *unwalled* city at T67 and its brief kept the attempt
+    # running to T110 in search of a walled one, so "a city was kept" would have shut the question while
+    # the attempt was still hunting for the target the question is about.
+    kept_early = _a3_frames([1, 60, 62, 70])
+    assert report.wall_phase(kept_early, [*no_walls, _keep_row(70)])["status"] == report.OPEN
 
-    # The T80 bound closing is enough on its own, with no city kept at all.
-    assert report.wall_phase(_a3_frames([1, 60, 62, 81]), no_walls)["status"] == report.UNASKABLE
+    # The question's own late bound is what closes it.
+    wall = report.wall_phase(_a3_frames([1, 60, 62, 81]), no_walls)
+    assert wall["status"] == report.UNASKABLE
+    assert "unaskable on this map" in wall["detail"] and "T80 bound has passed" in wall["detail"]
 
 
 def test_the_a3_question_set_asks_a3_s_own_four():
