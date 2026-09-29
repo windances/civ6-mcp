@@ -225,3 +225,24 @@ class TestTheMetricAndTheStagedRule:
             "promoting it is the two-file move pending/README.md describes, and only once a "
             "server started after the _CONTACT_METRIC_KEYS change is running"
         )
+
+class TestTheAdviceFieldIsText:
+    """`GetPowerAdvice()` returns the localisation token [NEWLINE], not real line breaks.
+
+    Measured 2026-09-29 at T1 with a freshly founded capital (西安): the advice arrived as
+    "...发电：[NEWLINE][NEWLINE]在此城或附近城市中建造1座发电厂..." and reached the tool's output with
+    the token intact, because the query only collapsed real control characters - so the cleanup that
+    looked right did nothing. Both are collapsed now, and this asserts the token, because a regression
+    here is invisible until a city exists to ask.
+    """
+
+    def test_the_query_collapses_the_newline_token(self):
+        assert "%[NEWLINE%]" in CITIES_LUA, (
+            "the game returns the literal [NEWLINE] markup in the power advice; the query must replace it"
+        )
+
+    def test_the_control_character_pattern_is_built_with_string_char(self):
+        # A Lua escape written inside this Python string would reach the game as a real control
+        # character and end the Lua literal: the unfinished-string syntax error of the same day,
+        # which broke every get_cities call for as long as no session ran.
+        assert "string.char(9) .. string.char(10) .. string.char(13)" in CITIES_LUA

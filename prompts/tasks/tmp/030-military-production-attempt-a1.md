@@ -7,8 +7,9 @@ done when: an enemy city is kept (a city_action reply reads KEEP|) or the game r
            first
 overrides: nothing - this file is the whole instruction for this match; the standing directive supplies posture
            only
-scope:     this match only: the Pangaea/Small/Prince match whose turn-1 save is
-           evals/saves/ATTEMPT-A1-T1.Civ6Save
+scope:     this match only: the Pangaea/Small/Prince match whose shared start is
+           evals/saves/ATTEMPT-A1-T1-settled.Civ6Save (turn 1 with 西安 already founded at the
+           settle advisor's own first-ranked tile; ATTEMPT-A1-T1.Civ6Save is the same turn before it)
 
 # Attempt A1 - the military production doctrine as written
 

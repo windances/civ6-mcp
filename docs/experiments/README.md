@@ -35,16 +35,24 @@ from the game, not from this table - the table is the intent).
 
 ## 2. One starting position for every attempt
 
-**Every attempt starts from the same turn-1 save**: `evals/saves/ATTEMPT-A1-T1.Civ6Save`, taken from
-the live game at 4000 BC before any action. A fresh match per attempt would put a different map,
+**Every attempt starts from the same save**: `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, taken at
+turn 1 immediately after the capital was founded. A fresh match per attempt would put a different map,
 different neighbours and different land under the variable being tested, and a difference in the
 outcome would then have two candidate causes with no way to separate them. Loading the same save holds
-the map, the start position, the opponents and the difficulty constant, so the only thing that moves
-between attempts is the thing the attempt changed.
+the map, the start position, the capital site, the opponents and the difficulty constant, so the only
+thing that moves between attempts is the thing the attempt changed.
+
+**Why the capital is already founded in that save.** Where the first city goes is the largest early
+decision there is, so it must not be one of the variables. It is also not a contentious one: the game's
+own `get_settle_advisor` ranks the Settler's tile **first** for this start - `(60,22)` at **score 190**
+against 177 for the runner-up, fresh water, defence 5, with MAIZE, SUGAR, STONE and DYES in reach - so
+founding in place is the tool's own first answer, and every attempt inherits it. 西安 was founded there
+on 2026-09-29, and `ATTEMPT-A1-T1.Civ6Save` (the position *before* that, settler still standing) is kept
+beside it as the record of the untouched start.
 
 **How an attempt is started** (the loading is the human's call, like every other load in this repo):
 
-1. load `evals/saves/ATTEMPT-A1-T1.Civ6Save` in the game;
+1. load `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` in the game;
 2. publish the attempt's own task file (`scripts/temp-task.py add ...`) - the `IN FORCE NOW` line is
    what carries it into a running session, not the file's presence;
 3. the session plays to that attempt's stop, and the report is taken from the record as in section 4.

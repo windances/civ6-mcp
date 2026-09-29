@@ -18,7 +18,9 @@ with its numbers, and - once the attempt ends - the table and the verdict.
 | Speed | Quick | the setup screen read 快速 |
 | Ruleset | Gathering Storm | `GameConfiguration.GetValue("RULESET")` = `RULESET_EXPANSION_2` |
 | Game key | `china_911679432` | `<civ>_<GAME_SYNC_RANDOM_SEED>` read from the live game - a different seed from the previous match, so the two diaries do not mix |
-| Turn 1 save | `evals/saves/ATTEMPT-A1-T1.Civ6Save` | saved from the live game at 4000 BC, no actions taken - **and this is the experiment's shared starting position: every later attempt loads this same save**, so the map, the opponents and the start do not move under the variable (`docs/experiments/README.md` section 2) |
+| Turn 1 save | `evals/saves/ATTEMPT-A1-T1.Civ6Save` | the untouched start: 4000 BC, the Settler still standing, no action taken |
+| Shared start | `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` | **the experiment's shared starting position**: turn 1 with the capital founded, so every attempt loads this one and the map, the opponents, the capital site and the difficulty do not move under the variable (`docs/experiments/README.md` section 2) |
+| Capital | 西安 at (60,22), founded T1 | the Settler's own tile, because `get_settle_advisor` ranks it **#1 for this start: score 190** against 177 for the runner-up (fresh water, defence 5, MAIZE/SUGAR/STONE/DYES in reach) - the site is the tool's own first answer rather than a choice made here |
 
 **How the match was created, since it is reproducible and was not obvious.** The game was launched
 from this checkout (`_launch_game_sync`), which needed full filesystem access - under the workspace
@@ -107,8 +109,22 @@ review goes. It is written from the instrument, not from the diary's own summary
 Then one paragraph, and only one: what the window actually bought, and **the single thing** the next
 stretch changes. A mid-window review that lists five intentions changes nothing.
 
-## What this attempt already found (2026-09-29, before turn 1)
+## What this attempt already found (2026-09-29, before its first played turn)
 
+- **Founding the capital found a second defect in the same block the syntax error came from.** With 西安
+  founded, `get_cities` finally had a real city row to parse - and the row's **power advice arrived full
+  of literal `[NEWLINE]` markup**: `"进行发电：[NEWLINE][NEWLINE]在此城或附近城市中建造1座发电厂…"`. The
+  query's cleanup replaced *real* control characters, which `GetPowerAdvice()` never returns, so the
+  step that looked right did nothing at all. Both the markup and any real breaks are collapsed now, and
+  the row reads as one line. **The lesson is about where defects hide**: the syntax error announced
+  itself on the first call, and this one could not be seen until a city existed to ask about - the same
+  block, found a day apart, by doing the two different things.
+- **The city-side surface is clean at T1 once the capital exists**: `get_cities` parses the full row
+  (including `power_required` / `power_free` / `power_advice`), and `list_city_production`,
+  `get_builder_tasks`, `get_purchasable_tiles`, `get_wonder_advisor`, `get_district_advisor` (which
+  answers `CANNOT_PRODUCE` at pop 1, correctly) and `get_units` all answer. A read sweep of all 25
+  no-argument queries passed 25/25 in the no-city state before that, so the first turn's whole read
+  surface has now been walked.
 - **RESOLVED, and the directive was wrong: the boost is 50%, not 60%.** At game start the leader
   screen read: 朝代更替 - "尤里卡和鼓舞提供 **50%** 的科技与市政，而非 **40%**", while
   `prompts/strategies/china-conquest/directive.md` said 60%. The ability's description is **replaced
