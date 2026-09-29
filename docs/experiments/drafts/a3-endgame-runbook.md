@@ -11,15 +11,17 @@ judgement - the judgements live in `docs/experiments/003-attempt-A3.md` and the 
   session, and FireTuner serves exactly one connection, so **do not launch anything else while it plays**.
 - Read the end from the log, not from the session's prose: `KEEP|` in a `resolve_city_capture` reply, or
   the last turn.
-- **Write down every session id this attempt used.** A3 has two already
-  (`flint-indigo-rampart-32` for T1-T25, `crumbling-emerald-parapet-16` from T25 on) and a session that
-  dies mid-attempt is this project's normal rhythm. Every command below takes the whole list.
+- **Write down every session id this attempt used.** A3 has **three** already:
+  `flint-indigo-rampart-32` (T1-T25, died mid-turn), `crumbling-emerald-parapet-16` (T25-T60, stopped so the
+  fixed city-state war path could load), and `marble-ebony-pennant-56` (T60 on). A session that dies or is
+  restarted is this project's normal rhythm, and **a missing id silently drops every row after it** - two
+  ids would have hidden the entire assault. Every command below takes the whole list.
 
 ## 1. The snapshot (the attempt's own numbers)
 
 ```
 .venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 ^
-  --run flint-indigo-rampart-32,crumbling-emerald-parapet-16 ^
+  --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56 ^
   --from 1 --to <last turn> --step 10 --verdict --questions a3 ^
   --save docs/experiments/A3-final.json
 ```

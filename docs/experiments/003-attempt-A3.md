@@ -97,12 +97,14 @@ T20, State Workforce T24.
 3. **the turn the first city is kept**, from the `KEEP|` reply;
 4. **the turns under the gold floor**, both measures.
 
-Commands, with A3's own session in the log filter:
+Commands, with **every session this attempt has used** in the log filter - the list grows when a session
+dies or is restarted, and a missing id silently drops the rows after it (session 3 started at T60, so two
+ids would have hidden the whole assault):
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16 --from 1 --to 110 --verdict --questions a3
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16 --from 1 --to 110 --step 10 --verdict --questions a3 --save docs/experiments/A3-final.json
-.venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A2-final.json docs/experiments/A3-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56 --from 1 --to 110 --verdict --questions a3
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16,marble-ebony-pennant-56 --from 1 --to 110 --step 10 --verdict --questions a3 --save docs/experiments/A3-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A1-T40.json docs/experiments/A2-final.json docs/experiments/A3-final.json
 ```
 
 ## Mid-window review, read out of the instrument at T24
