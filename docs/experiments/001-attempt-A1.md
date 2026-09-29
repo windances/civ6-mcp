@@ -217,6 +217,17 @@ impossible cannot answer a question about production.
   The upstream retro (`docs/retrospectives/2026-09-28-city-captures-T228-T294.md`) listed this as "the
   stop count is told, not enforced"; the sharper statement is that it was **told by the wrong signal**.
 
+- **The instrument's H6 does not measure the claim it is testing.** `military_city_spread` counts
+  *distinct cities asked for a military unit*, and at T30 it reports "2 distinct cities ... (city 65536:
+  7, city 131073: 1)". The doctrine's claim (`tactics/08`) is **one war city** - concentration of
+  production - not the absence of any military order in a second city, so on these numbers the measure
+  reads as a violation when the attempt has built a single unit in its second city. The honest measure is
+  the share of military production in the busiest city, or the cities where military orders outnumber
+  civilian ones. **Fixed after the attempt, not during it** - the report is the attempt's record.
+- **`--run` earns its place.** `--run vigilant-sable-longbow-78` excludes the earlier probe session's
+  three read-only rows (`log_china_911679432_eternal-scarlet-catapult-86.jsonl`, from the tool-wrapper
+  test), so the doctrine checks count only the attempt's own calls.
+
 - **A turn was taken and reverted, and it found a rules bypass.** To prove the `end_turn` path before
   anyone depends on it, `scripts/auto-turns.py --turns 1` played T1. `end_turn` worked (`Turn 1 -> 2`,
   score 10, the diary row written and labelled `agent_client=script`) - but the same turn founded
