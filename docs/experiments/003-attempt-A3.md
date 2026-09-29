@@ -353,6 +353,27 @@ which is exactly what A1 and A2 showed. This is the mirror image of A1/A2's zero
 horizon was T60, so the rule could never fire) and it is the reason Q4 names two measures: **a criterion whose
 window opens at T60 and closes at T67 cannot decide whether the army was paid for.**
 
+## T70: the turn stalled, and the recovery sequence as it happened
+
+`end_turn` at **T70** answered, after about ten minutes of silence,
+
+```
+HANG:70:0_MCP_0070|End turn requested (turn is still 70). AI turn processing appears stuck.
+```
+
+The session then ran the sequence `docs/game-recovery.md` prescribes, in order, and each call came back empty:
+`get_pending_diplomacy` (no sessions), `get_pending_trades` (no deals), `dismiss_popup` (**No popups to
+dismiss**) - so **nothing in Lua saw a blocker**. The screen was then read with `.tools/whats-on-screen.py`,
+which reported the game on **Turn 70/330** with an ordinary HUD, **no dialog and no leader screen**, and
+**the game was not the foreground window** (a browser window was). That is trap 2 of the recovery document
+almost exactly - "a fullscreen game must be in front" - so the game window was brought to the front
+(a focus change; **no click, and no game action**), and the documented next step for a genuine AI-turn stall
+is `restart_and_load("0_MCP_0070")`, the autosave the HANG line names.
+
+**This is a tooling event and the record files it as one**: it consumed turns rather than measuring them, in
+the same column as A2's six war-declaration turns and A3's own T59-T60. The resolution and its cost are in the
+end table below.
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
