@@ -37,14 +37,21 @@ opening.
 | order | promised | the record |
 |---|---|---|
 | 1 | `UNIT_SCOUT` | **T1 - matched** (`set_city_production(city_id=65536, UNIT_SCOUT) -> PRODUCING\|UNIT_SCOUT\|4 turns`, the same turn `TECH_MINING` was set) |
-| 2 | `UNIT_SLINGER` | **not yet placed at T2** |
-| 3 | `UNIT_SETTLER` | **not yet placed at T2** |
-| 4 | `UNIT_BUILDER` | **not yet placed at T2** |
+| 2 | `UNIT_SLINGER` | **T5 - matched** (`PRODUCING\|UNIT_SLINGER\|5 turns`) |
+| 3 | `UNIT_SETTLER` | **T6 - matched** (`PRODUCING\|UNIT_SETTLER\|11 turns`), the same turn A1-A3 and A5 ordered theirs |
+| 4 | `UNIT_BUILDER` | **T15 - matched** (`PRODUCING\|UNIT_BUILDER\|6 turns`) |
+
+**All four matched, and the instrument certifies it** - run over A7's own session:
+**`PIN opening: held - the pinned opening held: UNIT_SCOUT, UNIT_SLINGER, UNIT_SETTLER, UNIT_BUILDER in
+that order`**, with **`H5 clean`** beside it. **A7 is the fourth attempt in the programme whose pinned
+opening the instrument certifies** (A4, A5 and A6 are the others), so it is comparable with them - which is
+what the second-war-city variable needs, because its whole question is a comparison of production lines.
 
 **A deviation is a re-run, not an explanation.** A3's fourth order was `UNIT_WARRIOR` at T15 with the pin in
 force; A4, A5 and A6 all matched it and all three are certified `held` by the instrument. **The pinned
-`SETTLER` is also the normal way the second war city comes to exist** - if it is taken instead, the record
-says which city and which turn.
+`SETTLER` is also the normal way the second war city comes to exist** - at T20 the empire still holds
+**one city** (`get_cities` reads `1 cities: Xi'an (pop 3)`), so the settler is walking to its site, and the
+record names the city and the turn when it lands.
 
 ## The hypothesis, with the numbers that falsify it
 
