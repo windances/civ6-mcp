@@ -1,7 +1,7 @@
 ﻿# TEMP TASK 034 - attempt A3: the same doctrine against a walled target, from the shared T1 start
 
 added:     2026-09-29 (human instruction: 继续A3 ~ A7)
-expires:   turn 115 - 30 turn(s) from T77, the turn the match stands on (read from the save); a hard stop,
+expires:   turn 115 - 30 turn(s) from T4, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
 done when: turn 110 is reached, or a city whose wall pool read above zero is kept (a city_action reply reads
            KEEP|) - whichever comes first
@@ -27,6 +27,23 @@ authority on the design; this file is the instruction for playing it. A1 and A2 
    Playing A3 on any other position makes its numbers incomparable with A1 and A2, which is the one thing
    the experiment cannot afford.
 1. Then `get_diary` (it holds A1's and A2's history on this save) and one `scripts\orient.py` read.
+
+## The opening build is pinned (the protocol's rule from A3 on)
+
+`docs/experiments/README.md` requires it of every attempt from A3: the doctrine fixes what the army is
+made of and **not** what the city is asked for first, so A1 and A2 opened differently and their compare
+had two candidate causes. These four orders are therefore fixed:
+
+| order | item | why |
+|---|---|---|
+| 1 | `UNIT_SCOUT` | the corrected table's **recon** row - `tactics/07`'s Gate 0 needs a city seen |
+| 2 | `UNIT_SLINGER` | the ranged line (Slinger → Archer → Crossbowman) |
+| 3 | `UNIT_SETTLER` | the second city; both earlier attempts built one early and the economy compounds from it |
+| 4 | `UNIT_BUILDER` | improvements feed the production the train needs |
+
+**The attempt's record must say whether the executor matched them**, order by order, and a deviation is
+allowed only with the reason in the diary's `planning` line. (A3's first order was the Scout: the pin
+arrives after it, so the record notes that the pin starts from an opening that already matched it.)
 
 ## The one variable: the target's defences
 
@@ -107,7 +124,7 @@ rather than attacking an unwalled one and calling it a wall test.
   a turn your session did not play is not yours to describe.
 
 <!-- published by scripts/temp-task.py
-     command: python scripts/temp-task.py add --title "attempt A3: the same doctrine against a walled target, from the shared T1 start" --instruction "继续A3 ~ A7" --why "the wall phase no attempt has measured, on a target whose wall pool is above zero" --done-when "turn 110 is reached, or a city whose wall pool read above zero is kept (a city_action reply reads KEEP|) - whichever comes first" --overrides "nothing: the design is docs/experiments/README.md's A3 row and it contradicts neither the directive nor A1/A2's records. It does supersede their stop-turn conventions - A1 stopped at T40 and A2 ran to its capture - because this attempt's window is written from its own queue: Engineering ~T48, the train ~T55, and a walled target found and attacked inside T80." --scope "this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save: attempt A3 - the same settings and the corrected tactics/01, with the assault target's defences as the one variable" --expires-turn 115 --body-file .tmp\a3-body.md --cn @.tmp\a3-cn.md
-     at: 2026-09-29T20:06:01+08:00
+     command: python scripts/temp-task.py add --replace --title "attempt A3: the same doctrine against a walled target, from the shared T1 start" --instruction "继续A3 ~ A7" --why "the wall phase no attempt has measured, on a target whose wall pool is above zero" --done-when "turn 110 is reached, or a city whose wall pool read above zero is kept (a city_action reply reads KEEP|) - whichever comes first" --overrides "nothing: the design is docs/experiments/README.md's A3 row and it contradicts neither the directive nor A1/A2's records. It does supersede their stop-turn conventions - A1 stopped at T40 and A2 ran to its capture - because this attempt's window is written from its own queue: Engineering ~T48, the train ~T55, and a walled target found and attacked inside T80." --scope "this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save: attempt A3 - the same settings and the corrected tactics/01, with the assault target's defences as the one variable" --expires-turn 115 --body-file .tmp\a3-body.md --cn @.tmp\a3-cn.md
+     at: 2026-09-29T20:22:06+08:00
      chinese backup: prompts/tasks/cn/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.cn.md
 -->
