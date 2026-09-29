@@ -777,6 +777,29 @@ def test_the_a3_question_set_measures_the_wall_phase():
     assert wall["status"] == report.FALSIFIED and "later than T80" in wall["detail"]
 
 
+def test_an_unaskable_wall_phase_is_terminal_once_the_attempt_is_over():
+    """A finished attempt whose Q2 still read OPEN would look undecided; its answer is "unaskable".
+
+    A3's own falsifier says "no city with `walls > 0` is found and attacked inside the window (unaskable -
+    report the reads)", so once the window has closed that is the result. Measured reason for the change:
+    A3 attacked an unwalled city-state from T61 and kept it, and every read - the target's and both rivals'
+    capitals - said `walls: none`; a snapshot of that attempt whose Q2 still read `OPEN` would have said the
+    question was undecided where the attempt had in fact answered it.
+    """
+    by_turn = _a3_frames([1, 60, 62])
+    no_walls = [_attack_row(62, "none")]
+    # Mid-window, with nothing walled attacked yet: still open, because a walled city could still appear.
+    assert report.wall_phase(by_turn, no_walls)["status"] == report.OPEN
+
+    # A keep ends the attempt: the question was never askable, and that is terminal.
+    wall = report.wall_phase(by_turn, [*no_walls, _keep_row(70)])
+    assert wall["status"] == report.UNASKABLE
+    assert "unaskable on this map" in wall["detail"] and "the attempt is over" in wall["detail"]
+
+    # The T80 bound closing is enough on its own, with no city kept at all.
+    assert report.wall_phase(_a3_frames([1, 60, 62, 81]), no_walls)["status"] == report.UNASKABLE
+
+
 def test_the_a3_question_set_asks_a3_s_own_four():
     by_turn = _a3_frames([1, 48, 60, 74])
     by_turn[48]["techs"] = ["TECH_MINING", "TECH_ENGINEERING"]

@@ -788,8 +788,11 @@ def wall_phase(by_turn: dict[int, dict], rows: list[dict]) -> dict:
     a number rather than an impression, and A2 could not answer it at all (`walls: none` on every shot).
 
     Status: HELD when a city with a wall pool was breached and kept inside A3's window, FALSIFIED when
-    one was kept outside it, and OPEN when either nothing with walls was attacked (the detail says
-    *unaskable*, which is a finding about the map rather than a miss) or no city has fallen yet.
+    one was kept outside it, **UNASKABLE once the attempt is over and nothing with a wall pool was ever
+    attacked** - the design's own falsifier calls that case "unaskable - report the reads", which is a
+    finding about the map rather than a miss - and OPEN while the attempt is still live with no walled
+    read yet. The distinction is the point: a finished attempt whose Q2 still reads OPEN looks undecided,
+    and the answer it actually produced is that the question could not be asked here.
     """
     reads: list[tuple[int, int, int]] = []
     for row in rows:
@@ -806,10 +809,14 @@ def wall_phase(by_turn: dict[int, dict], rows: list[dict]) -> dict:
         "reads": len(reads),
     }
     if not reads:
+        ended = keep is not None or last >= A3_LATE_KEEP
         out.update(
-            status=OPEN,
+            status=UNASKABLE if ended else OPEN,
             detail=f"no city with a wall pool above zero was attacked by T{last} - the wall phase is "
-                   f"unaskable on this map, which is the attempt's own answer to give",
+                   f"unaskable on this map, which is the attempt's own answer to give"
+                   + (" (the attempt is over: a city was kept, or the T"
+                      f"{A3_LATE_KEEP} bound passed, so this is the answer and not a window still open)"
+                      if ended else ""),
         )
         return out
     first_wall = min(turn for turn, _hp, _top in reads)
@@ -1111,6 +1118,9 @@ def rule_turns(rows: list[dict]) -> dict[str, list[int]]:
 
 
 HELD, FALSIFIED, OPEN = "HELD", "FALSIFIED", "OPEN"
+#: The design's own vocabulary for a question the map did not let an attempt ask ("unaskable - report the
+#: reads"). It is terminal where OPEN would read as "still undecided".
+UNASKABLE = "UNASKABLE"
 
 
 def _status(met: bool, deadline_reached: bool) -> str:
