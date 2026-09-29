@@ -17,6 +17,14 @@ the design is section 3 of `docs/experiments/README.md`; A1's and A2's records a
 `RETRO-2026-09-29.md`. This file is A3's record. A session that dies at ~T25 and is resumed is this
 project's normal rhythm rather than a failure of the attempt - A2 needed three sessions for T1-T68.
 
+**One state change the recovery brought with it, and the record must name it: the game's language is English
+from T70 on.** The MCP's menu-load path searches for English labels, so the human set the game to English
+while the position was recovered. Nothing about the attempt's numbers moves, but **the names in the log do**:
+the city-states this record calls 安善, 桑给巴尔 and 欣盖提 appear from T70 as `Anshan`, `Zanzibar` and a third
+name, and the city-state A3 declared on at T70 (`Muscat`) has **no Chinese name anywhere in this attempt** -
+so a reader matching names across the T70 boundary needs this line, and any future grep for the Chinese
+spellings will silently miss everything after T70.
+
 ## Settings: the shared start, the corrected table, one variable
 
 | | A2 | A3 |
