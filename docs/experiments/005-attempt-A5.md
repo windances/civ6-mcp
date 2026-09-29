@@ -197,11 +197,15 @@ PROGRESS` reads `185/200 (-15 over 2 turn(s))`: two shots from one gun were enti
 
 ## What actually went wrong, in order of size
 
-1. **The chop treatment could not be executed at its designed strength.** Two chops, one of which only
-   completed a Warrior, because the game refuses jungle and marsh removal and 西安's ring held two
-   forests. The mechanism A5 exists to measure was, in the event, worth about **two turns** on the first
-   Catapult - and the first Catapult *was* three turns early (T50 against A2's T53). The second gun is
-   where the advance disappeared: 西安's **7 turns per Catapult at Prod ~10** against A2's 5 and 7.
+1. **The chop treatment could not be executed at its designed strength, and the reason is the tech line
+   rather than the tool.** Two chops, one of which only completed a Warrior, because **only forest is
+   removable without `TECH_BRONZE_WORKING`** - which A5 did not own until **T45** - and 西安's ring held
+   two forests; the jungle and marsh attempts were the engine refusing for want of their own `RemoveTech`
+   (see the chop table, where this line first read "the game refuses jungle and marsh removal" and was
+   corrected against `Features.xml`). The mechanism A5 exists to measure was, in the event, worth about
+   **two turns** on the first Catapult - and the first Catapult *was* three turns early (T50 against A2's
+   T53). The second gun is where the advance disappeared: 西安's **7 turns per Catapult at Prod ~10**
+   against A2's 5 and 7.
 2. **Two whole movement turns were lost to AI diplomacy pauses.** At **T57 and T59** `get_units`
    reported **every unit at 0 moves**, with the tool's own note that this is a known post-diplomacy state
    ("seen in 8 of 195 logged turns"). In an attempt whose margin was two to six turns that is the single
