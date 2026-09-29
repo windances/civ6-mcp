@@ -130,6 +130,21 @@ its hypothesis can be falsified by a number, and "the wall phase" is not yet a n
 A variable is only worth an attempt if the hypothesis can be **falsified by a number** in section 4.
 An attempt whose hypothesis cannot fail is not run.
 
+**Each attempt's window is written from its own question, and four of the remaining five can stop early.**
+Playing from the shared T1 start costs roughly seventy turns before the siege train exists, so the window
+is the expensive part of an attempt and it should be no longer than the question:
+
+| attempt | what it measures | the window its task file sets |
+|---|---|---|
+| A3 | the wall phase: the wall pool's turn count, and the keep inside T68-T80 | a walled city kept, or **T110** (the walled target may not exist before then) |
+| A4 | the capture turn, Encampment before vs after the second city | a city kept, or **T110** - its number *is* the capture turn |
+| A5 | the establishment turn against A2's T48/T53/T55, and the economy at T60 | a city kept or **T70**: both numbers exist by the establishment plus one ten-turn review |
+| A6 | the turn the war opens (the train paid for with gold) | a city kept or **T70**: the question is answered the turn the second Catapult is bought |
+| A7 | whether a second war city's production outweighs the lost compounding | a city kept or **T110**: the second city has to contribute before the number exists |
+
+A window shorter than the question is what A1's arithmetic note and A2's T40 checkpoint both caught; a
+window longer than the question is only wall-clock, and the programme has five attempts to run.
+
 **A2 was re-scoped at T37 of A1, and that is the experiment working rather than changing its mind.**
 A1's mid-window finding is that **the map, not the plan, decides whether the capture half is answerable
 at all**: the only rival capital is 33 tiles west behind five city-states, no rival has been met by T37,
