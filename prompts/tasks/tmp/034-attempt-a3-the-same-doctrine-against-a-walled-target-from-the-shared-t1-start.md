@@ -26,6 +26,13 @@ authority on the design; this file is the instruction for playing it. A1 and A2 
    holds. The T77 position is not lost: the MCP keeps `0_MCP_NNNN` per turn, and `0_MCP_0077` holds it.
    Playing A3 on any other position makes its numbers incomparable with A1 and A2, which is the one thing
    the experiment cannot afford.
+   **Resuming A3 in a second session (added 2026-09-29, T25):** the first session of this attempt
+   (`flint-indigo-rampart-32`) died mid-turn at **T25** with the match still running, so the position the
+   game holds *is* this attempt's own play from that shared start. In that case **do not reload the T1
+   save and do not replay T1-T24**: continue from the turn the game stands on, and note the session
+   change in the diary's `tooling` line. Replaying would put two A3 branches in one log and make the
+   attempt's own numbers ambiguous - the thing the shared start exists to prevent, arriving from the
+   other direction.
 1. Then `get_diary` (it holds A1's and A2's history on this save) and one `scripts\orient.py` read.
 
 ## The opening build is pinned (the protocol's rule from A3 on)

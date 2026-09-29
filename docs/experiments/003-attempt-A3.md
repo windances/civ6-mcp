@@ -1,10 +1,17 @@
-﻿# Attempt A3 - the same doctrine against a walled target
+# Attempt A3 - the same doctrine against a walled target
 
-**Status: in progress** (session `flint-indigo-rampart-32`, from the experiment's shared T1 start; started
-2026-09-29). The attempt's instruction is `prompts/tasks/tmp/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.md`;
+**Status: in progress** - **two sessions so far**, both from the experiment's shared T1 start, started
+2026-09-29. Session 1 `flint-indigo-rampart-32` played **T1-T25** and died mid-turn at T25 (20:56:59):
+its stderr ends at `dsh: reasoning: H`, its job exited 1, and the log holds 165 rows with the last at
+T25's `unit_action` (`CAPTURE_MOVE|43,25|from:45,23|BLOCKED`). The match kept running, so session 2
+`crumbling-emerald-parapet-16` was launched into the same position at 20:57:35 - the task file carries a
+note (added the same minute) telling it to continue from T25 rather than reload the T1 save, because
+replaying would put two A3 branches in one log. The instrument's `--run` filter takes both ids, which is
+how the commands below read this attempt. The attempt's instruction is `prompts/tasks/tmp/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.md`;
 the design is section 3 of `docs/experiments/README.md`; A1's and A2's records are
 `001-attempt-A1.md` and `002-attempt-A2.md`, and the cross-attempt report is
-`RETRO-2026-09-29.md`. This file is A3's record.
+`RETRO-2026-09-29.md`. This file is A3's record. A session that dies at ~T25 and is resumed is this
+project's normal rhythm rather than a failure of the attempt - A2 needed three sessions for T1-T68.
 
 ## Settings: the shared start, the corrected table, one variable
 
@@ -15,24 +22,40 @@ the design is section 3 of `docs/experiments/README.md`; A1's and A2's records a
 | the one variable | the target's distance | **the target's defences - a city whose wall pool reads above zero** |
 | window | to the capture (T68) | `KEEP|` of a walled city, or **T110**; `expires:` T115 |
 
-**A3 differs from A2 in two ways, and the record says so**: the establishment table (corrected after A2)
-and the target's defences. That is why the capture arithmetic below is compared against A2's T68 with
-both differences in mind, rather than read as a clean single-variable delta.
+**A3 differs from A2 in two ways by design, and the record says so**: the establishment table (corrected
+after A2) and the target's defences. That is why the capture arithmetic below is compared against A2's T68
+with both differences in mind, rather than read as a clean single-variable delta. **And in a third way by
+execution: A3's opening is not the pinned one** - measured below, from the log's order sequence, and it
+qualifies Q1 and A4's Q2 rather than being waved through.
 
 ## The opening build is pinned (the protocol's rule from A3 on)
 
-`SCOUT` -> `SLINGER` -> `SETTLER` -> `BUILDER`, and the record states whether the executor matched them
-order by order. The pin was added at T3 (the first order, the Scout, had already matched it), because the
-protocol requires it of A3 and the file went out without it.
+`SCOUT` -> `SLINGER` -> `SETTLER` -> `BUILDER`, order by order. The pin was published at **20:23:19**
+(commit `7fd3132`, which re-published task 034 with it); the first order, the Scout, had already been placed
+at 20:16:37, so the pin records that fact rather than pretending to have governed it.
 
-**The executor's opening, as the log holds it:**
+**The executor's opening, as the log holds it - and the pin did not hold:**
 
 | order | promised | the record |
 |---|---|---|
-| 1 | `UNIT_SCOUT` | **T1** - matched (and it is the corrected table's recon row: the first attempt in the programme to open with it on purpose) |
-| 2 | `UNIT_SLINGER` | **T5** - matched |
-| 3 | `UNIT_SETTLER` | **T6** - matched |
-| 4 | `UNIT_BUILDER` | **T19 (the second city) and T22 (the capital)** - matched, with the Builder coming from the city the Settler founded rather than from 西安 first; the record notes that because it is a deviation in *which* city, not in the order |
+| 1 | `UNIT_SCOUT` | **T1** (20:16:37) - matched, and placed before the pin existed (it is the corrected table's recon row: the first attempt in the programme to open with it on purpose) |
+| 2 | `UNIT_SLINGER` | **T5** (20:23:03) - matched, 16 s before the pin was published |
+| 3 | `UNIT_SETTLER` | **T6** (20:24:05) - matched |
+| 4 | `UNIT_BUILDER` | **NOT MATCHED: the 4th order was `UNIT_WARRIOR` at T15 (20:36:21).** The first `BUILDER` is the 6th order, at T19, and it went to the second city (131073); the capital took one at T22 |
+
+Every order from T6 on was placed **with the pin in force**. The session's own T15 `planning` line asks for
+"Warrior #2 (melee 2/2), then Slinger, then the Campus when Writing lands" and never mentions the pin - so
+the deviation has a doctrine reason, but not the reason the pin requires. This record claimed "matched" for
+it until the order sequence was read out of the log order by order; the mid-window line below had it right
+even then ("the pin's fourth order (`BUILDER`) not placed at T12").
+
+**What that costs.** A3 differs from A2 in three ways, not two: the corrected table, the target's defences,
+and an opening that is not the pinned one. Q1 (the establishment complete by T60) is the verdict that
+depends on the opening, so it is read with that qualification, and A4's Q2 - which uses A3's keep turn as
+its bound - inherits the caveat. The sink for this is mechanical, and it is being extended with this
+attempt's snapshot: `scripts/experiment-report.py` prints a `pin:` block giving the attempt's first four
+orders and `MATCHED`/`DEVIATED`, so no attempt's pin can be glossed in prose again; A4-A7's task files carry
+the consequence that a deviated opening is **re-run from the shared start** rather than reasoned about.
 
 Research follows A1's and A2's shape: `TECH_MINING` T1, `TECH_THE_WHEEL` T8, **`TECH_ENGINEERING` T22** -
 the same turn A2 began it, which is the gate H1 is measured at (A2's landed T48, and the two attempts
@@ -59,29 +82,33 @@ T20, State Workforce T24.
 Commands, with A3's own session in the log filter:
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32 --from 1 --to 110 --verdict --questions a3
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32 --from 1 --to 110 --step 10 --verdict --questions a3 --save docs/experiments/A3-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16 --from 1 --to 110 --verdict --questions a3
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run flint-indigo-rampart-32,crumbling-emerald-parapet-16 --from 1 --to 110 --step 10 --verdict --questions a3 --save docs/experiments/A3-final.json
 .venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A2-final.json docs/experiments/A3-final.json
 ```
 
-## Mid-window review (end of T40 / T60) - filled as the attempt passes them
+## Mid-window review, read out of the instrument at T24
 
 **The instrument is ready for this attempt, and the attribution was rehearsed before the numbers matter.**
 A3 re-plays T1-T40, and A1 and A2 wrote diary rows for those same turns on the same game key - three
 candidates per turn. Run against the partial log at T12, the report attributes T1-T12 to A3's own rows
 (T10: military 21, faith 2.0 - neither A1's 34 nor A2's 31) and **names** T13-T60 as unattributed rather
-than borrowing the earlier attempts' rows. The establishment reads the corrected table:
-`screens (melee + anti-cavalry): 1   recon: 1`.
+than borrowing the earlier attempts' rows.
 
-| question | answer |
+Run at T24 (`--game china_911679432 --run flint-indigo-rampart-32 --from 1 --to 25 --verdict
+--questions a3`; the session's own rows are attributed to T1-T24, 30 later turns are named as
+unattributed rather than borrowed):
+
+| question | answer at T24 |
 |---|---|
-| the opening build, against the pin | **matched so far**: `SCOUT` T1, `SLINGER` T5, `SETTLER` T6; the pin's fourth order (`BUILDER`) not placed at T12 |
-| the establishment under the corrected table (Q1 wants <= T60) | not yet measured |
-| the order of asking at the gate (H1's second test) | not yet measured |
-| the wall pool: has any city been seen with `walls > 0` | **no city with a wall pool has been attacked yet** (checked at T77 of the previous branch: our three cities and the one met city-state all read `walls: 0/0`) |
-| the economy at T20 / T40 / T60 against A1's and A2's | not yet measured |
-| the gold floor, both measures (Q4 allows < 10 red turns) | not yet measured |
-| the verdict so far on Q1-Q4 | not yet measured |
+| the opening build, against the pin | **NOT matched** - the 4th order was `UNIT_WARRIOR` T15, with the pin in force since 20:23:19 (the section above has the order-by-order table and what it costs) |
+| the establishment under the corrected table (Q1 wants <= T60) | **not complete at T24**: `siege 0/2, melee 2/2, anticav 0/1, ranged 2/4, cavalry 0/1, recon 1/1`; screens (melee + anti-cavalry) 2, recon 1; first siege: never |
+| the order of asking at the gate (H1's second test) | **not yet measured** - `TECH_ENGINEERING` began T22 and A2's landed T48, so the gate is expected in the T47-T48 window; the order of the two answers there is the measurement |
+| the wall pool: has any city been seen with `walls > 0` | **no** - nothing with a wall pool has been attacked by T24, and the instrument says so in A3's own Q2 line; at T24 the map is 10% revealed (2% at T1) and **no rival has been met**, so there is no city to aim at yet - the same shape A1 hit |
+| the economy at T20 / T40 / T60 against A1's and A2's | T24 not measured; the composition and exploration above are the instrument's own reads for this window |
+| the gold floor, both measures (Q4 allows < 10 red turns) | **the two measures disagree at T24**: `carrying-capacity` red on **0** turns (it is gated to T60 in this build), while the diary's own `gold_per_turn` is below +10 on **24 of 24** turns - which is the A1/A2 finding repeating, and the reason Q4 names both |
+| the verdict so far on Q1-Q4 | all four `OPEN` at T24 (the deadlines have not arrived): Q2 already carries the warning that the wall phase is unaskable if no `walls > 0` target is attacked - and that is A3's own answer to give, not a failure to report |
+| production orders, all of them | `SCOUT` T1, `SLINGER` T5, `SETTLER` T6, `WARRIOR` T15, `SLINGER` T18, `BUILDER` T19 (second city 131073), `SLINGER` T20, `BUILDER` T22 (capital) - 8 units, all of them army roles, and `H5 clean` (no ram, no siege tower ordered or bought) |
 
 ## The end table, and the verdict - written when the attempt ends
 
