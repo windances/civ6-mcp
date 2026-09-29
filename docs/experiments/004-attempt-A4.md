@@ -144,6 +144,27 @@ ring it may not be able to build it on. **The ordering the attempt was built to 
 Engineering was set at **T31**, so the Encampment (due about **T32**) will be standing well before any second
 siege unit exists, and the question is whether that is worth what it cost. The record will carry the completion
 turn, the first and second siege-unit orders, and the Great General beside it.
+
+**And the completion is measured: `T31`.** The log's own line is
+`>> Xi'an finished building DISTRICT_ENCAMPMENT. Now: nothing.` - ordered at T27, complete at **T31**, four
+turns of the capital's production plus the 35 gold the placement fix cost. **So the ordering A4 was built to
+test is satisfied well inside the window: the Encampment exists before any siege unit does.** What is already
+visible beside it is the price, and it is not only those 35 gold: **Engineering read 11% and 25 turns at T34**,
+where A3's landed at T43 and A2's at T48 - the research line went through Bronze Working for the district, and
+the capital then spent T27-T31 on the district and T33 on its Barracks. Whether the general's aura repays that
+is what Q2-Q4 are for, and the first hard number is unfavourable: **the siege train cannot exist before about
+T59 unless something changes.**
+
+Two more facts this attempt has produced, and the row keeps them:
+
+- **`get_great_people` at T32**: `Great General: Trung Trac (Classical Era) - Unclaimed - your points: 0/40`.
+  The mechanism Q3 asks about is live and **not yet earned**: the Encampment is standing and has produced no
+  general points of its own. What it produced instead is the *offer* of its own project
+  (`PROJECT_ENHANCE_DISTRICT_ENCAMPMENT`, cost 25, 3 turns, T33) - which is the lever that would have to be
+  pulled for a general to arrive before the war.
+- **An Encampment is a queue item again, not a one-off cost**: T33 `BUILDING_BARRACKS` in the capital is the
+  Encampment's own building, and it competes with the army for the same city's turns - `tactics/08` lists
+  "the Encampment/Barracks" together and prices neither.
 | the establishment under the corrected table (Q1 wants <= T60) | **not yet measured** - the table's rows are read at the checkpoints, and no establishment read exists for this attempt yet |
 | the Encampment (Q2): offered, ordered, completed, and its tile | **not yet measured** - no `DISTRICT_ENCAMPMENT` order is in the log at T8, and the district offer has not been read |
 | the Great General (Q3): recruited, never activated, and where it stands | **not yet measured** - no `get_great_people` read and no general |
