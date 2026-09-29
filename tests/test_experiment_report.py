@@ -115,13 +115,30 @@ def test_verdict_measures_the_attempt_against_its_own_limits():
         {"turn": 60, "result": 'city_action -> "KEEP|City (pop 4, captured)"'},
         {"turn": 61, "result": "CHECK FAILED [carrying-capacity]"},
     ]
-    got = {name.split()[0]: (held, detail) for name, held, detail in report.verdict(by_turn, rows)}
-    assert got["P1"][0] is True  # a siege unit existed well before T45
-    assert got["P2"][0] is True  # establishment complete at T50, inside the T60 limit
-    assert got["P3"][0] is True  # first keep at T60, inside the T80 limit
-    assert got["P4"][0] is True  # one red turn before the city fell, under the limit of ten
+    got = {name.split()[0]: (status, detail) for name, status, detail in report.verdict(by_turn, rows)}
+    assert got["P1"][0] == report.HELD  # a siege unit existed well before T45
+    assert got["P2"][0] == report.HELD  # establishment complete at T50, inside the T60 limit
+    assert got["P3"][0] == report.HELD  # first keep at T60, inside the T80 limit
+    assert got["P4"][0] == report.HELD  # one red turn before the city fell, under the limit of ten
     assert "T60" in got["P3"][1]
     assert "T50" in got["P2"][1]
+
+
+def test_a_prediction_whose_deadline_has_not_arrived_is_open_not_falsified():
+    """A one-turn attempt must not read as a failed hypothesis - it is a window that has not closed."""
+    by_turn = frames({1: {"WARRIOR": 1}})
+    statuses = {name.split()[0]: status for name, status, _d in report.verdict(by_turn, [])}
+    assert statuses["P1"] == report.OPEN   # T45 has not arrived
+    assert statuses["P2"] == report.OPEN   # T60 has not arrived
+    assert statuses["P3"] == report.OPEN   # T80 has not arrived
+    assert statuses["P4"] == report.OPEN   # the gold-floor window is still running
+
+    # Past the deadline with the condition unmet, the same prediction is falsified.
+    late = frames({1: {"WARRIOR": 1}, 90: {"WARRIOR": 1}})
+    statuses = {name.split()[0]: status for name, status, _d in report.verdict(late, [])}
+    assert statuses["P1"] == report.FALSIFIED
+    assert statuses["P2"] == report.FALSIFIED
+    assert statuses["P3"] == report.FALSIFIED
 
 
 def test_orders_read_the_log_and_the_queue_beats_the_inventory():
@@ -149,13 +166,13 @@ def test_orders_read_the_log_and_the_queue_beats_the_inventory():
     # Ordered at T38, owned at T70: P1 must answer with the order and say so.
     by_turn = frames({70: FULL})
     p1 = report.verdict(by_turn, rows)[0]
-    assert p1[1] is True
+    assert p1[1] == report.HELD
     assert "ordered T38" in p1[2] and p1[0].startswith("P1 a siege unit early (ordered")
 
     # With no order in the log, the inventory answers and the label admits it.
     p1_owned = report.verdict(by_turn, [])[0]
     assert "owned T70" in p1_owned[2]
-    assert p1_owned[1] is False  # T70 is past the early threshold
+    assert p1_owned[1] == report.FALSIFIED  # T70 is past the early threshold, and past T45
 
 
 def test_orders_are_ordered_by_turn_not_by_log_position():

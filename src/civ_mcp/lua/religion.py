@@ -53,13 +53,23 @@ print("{SENTINEL}")
 
 
 def build_choose_pantheon(belief_type: str) -> str:
-    """Found a pantheon with the specified belief (InGame context)."""
+    """Found a pantheon with the specified belief (InGame context).
+
+    The faith check is not decoration. Measured 2026-09-29 on a fresh match (T1, a capital just
+    founded, `faith_balance 0`): with no guard at all the operation went through, the pantheon was
+    granted, and the empire was left at **-16 faith** - a pantheon nobody paid for. The threshold is
+    the game's own `RELIGION_PANTHEON_MIN_FAITH`
+    (`Base/Assets/Gameplay/Data/GlobalParameters.xml:475`, value 25) rather than a number written here.
+    """
     return f"""
 local me = Game.GetLocalPlayer()
 local pReligion = Players[me]:GetReligion()
 if pReligion:GetPantheon() >= 0 then {_bail("ERR:ALREADY_HAS_PANTHEON|You already have a pantheon")} end
 local belief = GameInfo.Beliefs["{belief_type}"]
 if belief == nil then {_bail(f"ERR:BELIEF_NOT_FOUND|{belief_type}")} end
+local minFaith = GameInfo.GlobalParameters["RELIGION_PANTHEON_MIN_FAITH"].Value
+local faith = pReligion:GetFaithBalance()
+if faith < minFaith then {_bail_lua('"ERR:NOT_ENOUGH_FAITH|faith " .. faith .. " < " .. minFaith')} end
 local params = {{}}
 params[PlayerOperations.PARAM_BELIEF_TYPE] = belief.Hash
 UI.RequestPlayerOperation(me, PlayerOperations.FOUND_PANTHEON, params)

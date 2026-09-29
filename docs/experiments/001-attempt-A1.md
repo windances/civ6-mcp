@@ -111,6 +111,22 @@ stretch changes. A mid-window review that lists five intentions changes nothing.
 
 ## What this attempt already found (2026-09-29, before its first played turn)
 
+- **A turn was taken and reverted, and it found a rules bypass.** To prove the `end_turn` path before
+  anyone depends on it, `scripts/auto-turns.py --turns 1` played T1. `end_turn` worked (`Turn 1 -> 2`,
+  score 10, the diary row written and labelled `agent_client=script`) - but the same turn founded
+  **节庆女神 with `faith_balance 0`**, leaving the empire at **-16 faith**: `choose_pantheon` checked
+  only whether a pantheon already existed, and not whether it could be paid for, so the operation went
+  through and granted a belief nobody bought. That is a real bypass of a game rule and, worse for this
+  experiment, a free benefit A1 would have and later attempts from the same save would not - so the
+  turn was reverted (`ATTEMPT-A1-T1-settled` reloaded: turn 1, faith 0, no pantheon, 西安 present) and
+  its diary rows were deleted rather than left to be read as part of the attempt. The query now refuses
+  below the game's own `RELIGION_PANTHEON_MIN_FAITH` (`GlobalParameters.xml:475`), pinned by
+  `tests/test_pantheon_faith_guard.py`.
+- **The verdict learned to say "not yet".** Reported against a one-turn attempt, the instrument printed
+  `FALSIFIED P2 establishment complete by T60`, which is not a judgement about a hypothesis but a window
+  that has not closed. Predictions now carry three states - a met achievement is `HELD`, an unmet one is
+  `OPEN` until its deadline and `FALSIFIED` after it, and a *bound* (the gold-floor count) is `HELD`
+  only when its window closes. A T1 attempt now reads four `OPEN`s and says so.
 - **Founding the capital found a second defect in the same block the syntax error came from.** With 西安
   founded, `get_cities` finally had a real city row to parse - and the row's **power advice arrived full
   of literal `[NEWLINE]` markup**: `"进行发电：[NEWLINE][NEWLINE]在此城或附近城市中建造1座发电厂…"`. The

@@ -474,13 +474,42 @@ def rule_turns(rows: list[dict]) -> dict[str, list[int]]:
     return {rule: sorted(turns) for rule, turns in sorted(out.items())}
 
 
+HELD, FALSIFIED, OPEN = "HELD", "FALSIFIED", "OPEN"
+
+
+def _status(met: bool, deadline_reached: bool) -> str:
+    """A prediction is only falsified once its deadline has passed.
+
+    Without this the report of a one-turn attempt reads `FALSIFIED P2 establishment complete by T60`,
+    which is not a judgement - it is a window that has not closed. `OPEN` is what a mid-window review
+    needs for "not yet decidable", and it is the difference between a verdict and a progress note.
+
+    This is the shape of an **achievement** - reaching the establishment, keeping a city - where
+    meeting the condition settles it early and missing it only matters once the clock runs out.
+    """
+    if met:
+        return HELD
+    return FALSIFIED if deadline_reached else OPEN
+
+
+def _survival_status(exceeded: bool, deadline_reached: bool) -> str:
+    """The shape of a **bound**: it is decided when it is broken, and held only when the window closes.
+
+    "Fewer than ten turns under the gold floor before the first city falls" is not held at turn 1
+    because nothing has gone wrong yet - it is simply still running.
+    """
+    if exceeded:
+        return FALSIFIED
+    return HELD if deadline_reached else OPEN
+
+
 def verdict(
     by_turn: dict[int, dict],
     rows: list[dict],
     expect_est: int = 60,
     expect_city: int = 80,
     expect_gold_red: int = 10,
-) -> list[tuple[str, bool, str]]:
+) -> list[tuple[str, str, str]]:
     """The attempt's predictions, answered from the record.
 
     The defaults are A1's own limits (`docs/experiments/001-attempt-A1.md`): establishment by T60,
@@ -489,9 +518,9 @@ def verdict(
     numbers, and a window inside an attempt that is not the attempt's end would otherwise be judged
     against limits it was never meant to meet.
 
-    P1 is deliberately weaker than the doctrine's claim: the diary holds what the empire *owns*, not
-    what a queue is building, so this measures the first turn a siege unit existed rather than the
-    turn it was ordered.
+    P1 asks about the **order**, not the inventory: the doctrine is a claim about what the empire asks
+    for, and the log holds that. Ownership is the fallback for a siege unit that was bought or
+    inherited rather than queued, and the label says which one answered.
     """
     est = establishment(by_turn)
     cap = captures(rows)
@@ -501,29 +530,28 @@ def verdict(
     owned = first_role_turn(by_turn, "siege")
     ordered = first_order_turn(rows, "siege")
     early = max(1, expect_est * 3 // 4)
-    # The order is the doctrine's own quantity; ownership is the fallback for a siege unit that was
-    # bought or inherited rather than queued, and the label says which one answered.
+    last = _last_turn(by_turn)
     siege_turn = ordered if ordered is not None else owned
     how = "ordered" if ordered is not None else "owned"
     return [
         (
             f"P1 a siege unit early ({how} one by T{early})",
-            bool(siege_turn and siege_turn <= early),
+            _status(bool(siege_turn and siege_turn <= early), last >= early),
             f"first siege unit {how} {'T' + str(siege_turn) if siege_turn else 'never'}",
         ),
         (
             f"P2 establishment complete by T{expect_est}",
-            bool(est["turn"] and est["turn"] <= expect_est),
+            _status(bool(est["turn"] and est["turn"] <= expect_est), last >= expect_est),
             f"establishment {'T' + str(est['turn']) if est['turn'] else 'not reached by T' + str(est['last_turn'])}",
         ),
         (
             f"P3 first enemy city kept by T{expect_city}",
-            bool(keep_turn and keep_turn <= expect_city),
+            _status(bool(keep_turn and keep_turn <= expect_city), last >= expect_city),
             f"first keep {'T' + str(keep_turn) if keep_turn else 'none'}",
         ),
         (
             f"P4 gold floor red on <{expect_gold_red} turns",
-            len(carry) < expect_gold_red,
+            _survival_status(len(carry) >= expect_gold_red, last >= horizon),
             f"{len(carry)} red turn(s) up to T{horizon}",
         ),
     ]
@@ -623,8 +651,14 @@ def print_verdict(
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")
-    for name, held, detail in verdict(by_turn, rows, expect_est, expect_city, expect_gold_red):
-        print(f"  {'HELD      ' if held else 'FALSIFIED '} {name}  [{detail}]")
+    results = verdict(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    for name, status, detail in results:
+        print(f"  {status:<9s} {name}  [{detail}]")
+    if any(status == OPEN for _n, status, _d in results):
+        print(
+            f"  (OPEN means the deadline has not arrived: the attempt stands at "
+            f"T{_last_turn(by_turn)}, so those predictions are undecided, not failed)"
+        )
 
 
 def rule_counts(rows: list[dict]) -> tuple[collections.Counter, list[tuple[int, str]]]:
@@ -900,8 +934,8 @@ def main() -> int:
             "self_reports": self_reports(by_turn),
         },
         "verdict": [
-            {"prediction": name, "held": held, "detail": detail}
-            for name, held, detail in verdict(
+            {"prediction": name, "status": status, "detail": detail}
+            for name, status, detail in verdict(
                 by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red
             )
         ],
