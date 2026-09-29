@@ -129,3 +129,16 @@ a recovery cannot throw away a position someone else is mid-turn in. Pass `force
 when you know that session is dead. Loading a save the game is already sitting on is not a
 load: `load_game_save` answers "Already loaded" from the current turn instead of clicking
 through a main menu that is not on screen.
+
+**And one *diagnostic* client at a time, which is the same rule from the side that bit us.**
+FireTuner hands its listener to the first client that accepts it, so **a probe you run to check
+the tuner takes the connection away from the session that is playing.** Measured 2026-09-30: a
+session sat at `phase: playing` with a heartbeat three minutes stale and would not advance while
+repeated `list_saves`/state probes were being run against the game from outside; the probes read
+an **empty Lua state list** (which reads exactly like "the tuner is broken"), and the moment the
+probing stopped the session reconnected on its own and played. **While a session plays, read files
+only** - the log, the heartbeat, `.tools/whats-on-screen.py` - and let the session make the tuner
+calls; if you need a fact from the game, ask the session. Two corollaries worth keeping: an empty
+state list from a probe is evidence about *your* connection, not about the game; and after a save
+load the game may listen on **4319** alone, which `GameConnection` now walks as a fallback
+(`tuner_port_candidates`, 4318 then 4319).
