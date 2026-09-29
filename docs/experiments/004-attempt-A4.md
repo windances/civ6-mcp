@@ -208,16 +208,19 @@ with its source.
   Encampment's own building, and it competes with the army for the same city's turns - `tactics/08` lists
   "the Encampment/Barracks" together and prices neither.
 **The self-report check fired on this attempt, and the cause is a convention the brief never stated.**
-The instrument prints the diary's own `ESTABLISHMENT:` line beside its computation, and from T43 to T46
-A4's line reads **`siege 1/2 (Catapult 1 due ~T48)`** while the map holds **0** siege units - so it is
-scored `MISMATCH - siege claimed 1 vs 0 held`, four turns running. **The session is not lying**: its own
-parenthetical says the unit is `due ~T48`, and at T43 the line read `siege 1/2 building (due ~T48)`. What
-happened is that the numerator was written as *"including the one in production"*, where
-`docs/experiments/README.md:249-252` and the diary-vs-log split it states ("the diary holds what the empire
-**has**") mean **held units in the field**. **A3 wrote the same shape on its own T43** (`siege 1/2 building
-(due ~T48)`), so this is a brief-level ambiguity two attempts fell into, not one session's error - and the
-correction is on the brief, where it reaches A5-A7 (see the retro's ledger). The record's own establishment
-number is the instrument's: **siege 0/2 at T46, the first Catapult in production, due about T48.**
+The instrument prints the diary's own `ESTABLISHMENT:` line beside its computation, and **from T43 to T48 -
+six turns, the whole span in which the first Catapult was in production - A4's line read
+`siege 1/2 (Catapult 1 due ~T48)` while the map held **0** siege units**, so each of those turns is scored
+`MISMATCH - siege claimed 1 vs 0 held`. **The session's parenthetical says the unit is still in production**
+(T43 read `siege 1/2 building (due ~T48)`), and **the line self-corrected at T49**, the turn the unit existed,
+becoming `siege 1/2 (Catapult 2 ~T54)` - which is the convention the instrument wants, with the numerator
+counting what is held and the pending unit named in words. **So the defect is bounded and the session found
+the right shape on its own; what it needed was the definition, and A3 wrote the same wrong shape on its own
+T43** (`siege 1/2 building (due ~T48)`), so this is a brief-level ambiguity two attempts fell into rather
+than one session's error. The correction lands on the brief, where it reaches A5-A7 (see the retro's ledger);
+**the check itself is unchanged, because a numerator that counts a unit in production is exactly the
+over-claim it exists to catch.** The record's own establishment number is the instrument's: **`
+COMPLETE at T54`**.
 
 | question | answer at T46 |
 |---|---|
@@ -278,6 +281,46 @@ answered `No pantheon selected. Faith: 23`, and the same turn's `choose_pantheon
 key on the game's own blocker rather than on a second copy of the constant**, which is speed-proof; the edit
 is deliberately **not** made while this attempt holds FireTuner, for the reason the retro gives, and it is
 staged for the A4/A5 boundary.
+
+**Re-read at T60, and two of the four questions are now decided - including the one the Encampment was built
+to answer.**
+
+- **Q1 is MET, and the instrument reads it from A4's own attributed rows: `COMPLETE at T54  siege=2 melee=2
+  anticav=1 ranged=4 cavalry=1 recon=1`** - one turn after A3's T53 and six turns inside the T60 deadline.
+  The T54 block above hedged this ("complete at T54, subject only to the diary row confirming it"); the
+  instrument confirms it, so the hedge is discharged rather than amended.
+- **Q3's mechanism exists, and this is the first time in the programme that it does.** The Encampment's own
+  points ran **0/40 at T32 -> 7/40 at T39 -> 41/40 at T56**, and at **T56** the log reads
+  `get_great_people ... Great General: Trung Trac (Classical Era) - China - your points: 41/40 [CAN RECRUIT]`,
+  followed the same turn by **`recruit_great_person -> OK:RECRUITED|Trung Trac`**. **No `activate` call exists
+  anywhere in this session's log** (checked against every `unit_action` row), and at T60 the general stands at
+  **(55,22) with the stack**, inside the aura's 2-tile reach of the siege train - **and no war has been
+  declared**, so a general was recruited before the first declaration and never activated: Q3's condition, met
+  on both halves. **The `PROJECT_ENHANCE_DISTRICT_ENCAMPMENT` lever was never pulled** - the points are the
+  district's own, which is the cheaper half of the mechanism the brief left open.
+- **The earlier note that the district's "benefit is, so far, zero" is therefore superseded on the mechanism
+  half.** What stays unmeasured is whether the aura changes the arithmetic of the capture: the general exists,
+  is unactivated and is in position, and no shot has been fired.
+- **At T60 the army is 14 units and staged** - 2 Catapults at (52,24) and (53,21), 2 Warriors, a Spearman at
+  (49,25), 3 Archers and a Slinger, the Heavy Chariot and the general; the only hostiles are the barbarians
+  around (53,23)-(61,24); **no rival civilisation has been met** and no war is on. The attempt has to T110,
+  and A3's T67 bound, to turn the train into a keep.
+
+**And a measurement that decides how the aura may be judged: the combat estimate the session uses does not
+contain the general.** `build_combat_estimate_query`'s own docstring lists its inputs - "base CS,
+promotions, fortification, terrain (hills, forest/jungle), river crossing, flanking bonus, and support
+bonus" (`src/civ_mcp/lua/units.py:668-673`) - and **neither a Great General's aura nor the government's
+combat bonus is among them**; the modifier construction in that function carries no general and no
+government term at all (checked through `effAttCS = effAttCS + attModTotal`). **A4's own T60 measures what
+that costs**: `Warrior id 131073 at (53,22)` - **two tiles from our own general at (55,22), inside the
+aura** - is estimated at **`CS:24` with `Modifiers: flank +4`**, i.e. base 20 plus flanking only, where the
+engine would also be applying **Oligarchy's +4** (the government has been Oligarchy since T43) and the
+**aura's +5**. So during A4's assault every estimate will understate our own attack, and **the aura cannot
+be shown to be working, or not working, by the estimate at all** - which matters because Q3 asks whether it
+changes the capture. The record therefore will not read a capture turn from the estimate as evidence about
+the district: the estimate is a floor, and the engine's own resolution is the fact. The tool fix (query the
+engine's `CombatManager.SimulateAttackVersus`, which `units.py:866` already cites as the authority for
+flanking) is **not** made while this attempt holds FireTuner, for the same reason as the pantheon guard.
 
 ## The end table, and the verdict - written when the attempt ends
 
