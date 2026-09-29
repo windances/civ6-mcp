@@ -533,6 +533,27 @@ def test_diary_rows_for_run_takes_a_comma_separated_list(tmp_path, monkeypatch):
     assert [row["turn"] for row in report.log_rows("china_test", "second-half")] == [41]
 
 
+def test_the_gold_floor_detail_reports_both_measures():
+    """A2's Q4 named the rule `carrying-capacity`, which is gated at turn 60.
+
+    Its horizon was T60, so the rule could only ever report zero red turns - and zero is not evidence
+    the army was paid for. `end_turn`'s own 10-turn review printed `carrying capacity: gold/turn +5.0
+    ... BELOW the +10` at T19, and +7.0/+6.0 at T29/T39, over the same turns. The diary's own number is
+    therefore printed beside the rule's, so a vacuous zero cannot read as a healthy economy.
+    """
+    by_turn = frames({1: {"WARRIOR": 1}, 40: {"WARRIOR": 1}})
+    by_turn[1]["gold_per_turn"] = 5.0
+    by_turn[40]["gold_per_turn"] = 9.0
+    _name, status, detail = report.verdict(by_turn, [])[3]
+    assert status == report.OPEN  # the deadline has not arrived, so nothing is claimed either way
+    assert "0 red turn(s) by the rule" in detail
+    assert "below 10 on 2 of those 2 turn(s)" in detail
+    # A turn that is fine by the diary's number is not counted against the attempt.
+    by_turn[40]["gold_per_turn"] = 12.0
+    _n, _s, detail = report.verdict(by_turn, [])[3]
+    assert "below 10 on 1 of those 2 turn(s)" in detail
+
+
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
     """A1's T40 read `gold_T40 6.0` beside a treasury of 236 - the column was gold **per turn**.
 

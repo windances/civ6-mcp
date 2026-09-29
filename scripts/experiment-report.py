@@ -779,6 +779,13 @@ def verdict(
     keep_turn = min((t for t, _ in cap), default=None)
     horizon = keep_turn if keep_turn is not None else expect_est
     carry = [t for t in rule_turns(rows).get("carrying-capacity", []) if t <= horizon]
+    # The rule the criterion names is gated (`when: turn() >= 60` in `prompts/checks/turn-checks.md`), so
+    # a horizon at or before that gate can only ever report zero red turns - and zero is not evidence the
+    # army was paid for. Measured on A2: the rule never fired inside its window, while `end_turn`'s own
+    # 10-turn review printed `carrying capacity: gold/turn +5.0 ... BELOW the +10` at T19 and +7.0/+6.0 at
+    # T29/T39. The diary's own gold/turn is therefore reported beside the rule's count.
+    covered = [turn for turn in by_turn if turn <= horizon]
+    below = sum(1 for turn in covered if (by_turn[turn].get("gold_per_turn") or 0) < 10)
     owned = first_role_turn(by_turn, "siege")
     ordered = first_order_turn(rows, "siege")
     early = max(1, expect_est * 3 // 4)
@@ -804,7 +811,8 @@ def verdict(
         (
             f"{ids[3]} gold floor red on <{expect_gold_red} turns",
             _survival_status(len(carry) >= expect_gold_red, last >= horizon),
-            f"{len(carry)} red turn(s) up to T{horizon}",
+            f"{len(carry)} red turn(s) by the rule up to T{horizon}; the diary's own gold/turn is "
+            f"below 10 on {below} of those {len(covered)} turn(s)",
         ),
     ]
 

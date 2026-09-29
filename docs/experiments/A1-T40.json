@@ -487,7 +487,7 @@
     {
       "prediction": "P4 gold floor red on <10 turns",
       "status": "OPEN",
-      "detail": "0 red turn(s) up to T60"
+      "detail": "0 red turn(s) by the rule up to T60; the diary's own gold/turn is below 10 on 40 of those 40 turn(s)"
     }
   ]
 }

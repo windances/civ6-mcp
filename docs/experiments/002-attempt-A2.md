@@ -1,4 +1,4 @@
-﻿# Attempt A2 - the same doctrine, with a target inside the window
+# Attempt A2 - the same doctrine, with a target inside the window
 
 **Status: in progress** (the session `sacred-garnet-vault-35` is playing it; started 2026-09-29 14:02).
 
@@ -123,9 +123,9 @@ A1's figures beside A2's come from the same instrument over `A1-T40.json`.
 | establishment turn so far (Q1 wants <= T60) | **not reached at T40.** The record reads **siege 0/2**, melee 2/2 (four Warriors held), ram 0/1, ranged **4/4**, **cavalry 1/1** (first cavalry **T38**), recon 0/2. The screens were complete on **T28**, and the siege half is at zero with Engineering still ~10 turns out. **The diary's own `ESTABLISHMENT:` lines disagree with the record 11 times** (T29-T40, always `melee claimed 2 vs 3-4 held`). One column of that disagreement was the **instrument's** fault and is now fixed: the role map did not know `UNIT_HEAVY_CHARIOT`, so the Heavy Chariot was invisible to every role and the executor's own `cavalry 1` was scored against a map reading 0 - the game's own `UNITTYPE_CAVALRY` rows in `Units.xml` are the authority, the map now carries the unit, and re-measuring A2's T40 snapshot moved the cavalry slot from `0/1` to `1/1` and dropped the cavalry entries from the mismatch list. The eleven that remain are the executor's: it under-counted its own melee, and the line follows task 031's table where melee is a target of 2. The record wins; the next stretch's line must print both the table count and the held count. |
 | the army's start, the siege order, and the first economy order after Engineering (Q2) | army start **T1** (`UNIT_WARRIOR`); first siege order **never**; first building order `BUILDING_GRANARY T28` - and it was **refused** (`CANNOT_PRODUCE`, Pottery was never researched), so the log holds an order and the city holds no building. Nothing was ordered after Engineering because Engineering has not landed: **Q2 is untested at T40, not violated.** |
 | the economy at T20 / T40, against A1's | T20: science **4.0 vs A1 4.5**, gold/turn 5.0 vs 5.0. T40: science **5.9 vs 7.9**, gold/turn **8.9 vs 6.0**, culture 6.0 vs 4.3, military **156 vs 139**, pop 9 vs 8, cities 2 vs 2, **improvements 5 vs 2**, **districts 0 vs 1**. A2 is behind on science and ahead on gold, improvements and army - it bought screens and mines where A1 bought a Campus. |
-| `carrying-capacity` red turns so far (Q4 allows < 10) | the instrument counts **0 red turns** to T40 (gold/turn 5.0 from T1 to ~T25, **8.9** at T40), but both 10-TURN REVIEWS printed the floor **red** over the same turns (`+7.0` at T30 and `+6.0` at T40, "with the army counted"). The two measures disagree; the record should carry both, and Q4's answer depends on which one is asked. |
+| `carrying-capacity` red turns so far (Q4 allows < 10) | **The criterion named a measure that cannot fire in its own window, and the substance is the opposite of what a zero suggests.** `carrying-capacity` is gated `when: turn() >= 60` in `prompts/checks/turn-checks.md`, and Q4's horizon is T60 - so the rule's count is **0 by construction** (it appears in no `CHECK FAILED` line in either attempt's log). The other two measures of the same floor disagree with that zero and agree with each other: `end_turn`'s 10-turn review printed `carrying capacity: gold/turn +5.0 with military 38 - BELOW the +10 the directive requires with the army counted` at **T19**, and `+7.0`/military 118 and `+6.0`/military 139 at **T29**/**T39**; the diary's own `gold_per_turn` is below 10 on **every one of the forty turns** (5.0 rising to 8.9). So the army was **not** paid for to the directive's +10 standard in that window - Q4's "held so far" was an artefact of the gate, and this row previously recorded it as held. The rule's own window (T60-T80) is still ahead of the attempt and will answer it on its own terms. |
 | contact: has the target been seen, and at what distance does `get_staging_plan` put it | 耶路撒冷 **(50,22) was seen at T10** and met (Religious city-state, player 6, one envoy held); it is ~5-6 tiles from A2's forward units and 10 from 西安. At T40 `get_staging_plan(50,22)` returned **18 ring tiles, 1 placed, 3 unplaced**, the Heavy Chariot and two Slingers `TOO FAR (d9-d12)`, **`supply hexes cut 0/6`**, and **`ASSAULT OPENS ... with 0 shooter(s) in position`**. Its `arrive T+1` column is not credible (it prints T+1 for a unit 5-6 tiles out), so the deadline is written from the ring distances and not from that column. Walls, HP and garrison: **still unread by any tool** after 40 turns. |
-| verdict so far on Q1-Q4 | **OPEN / untested so far / OPEN / held-so-far.** Q1 is open on the clock and dead by arithmetic (a first Catapult ~T60 leaves no second one inside the attempt); **Q2 is untested so far**, not violated - Engineering had not landed by T40 (`techs_completed` 2 = Mining and The Wheel; the session's own T30 hypothesis put Engineering at T44-T48), and this T40 row is a **mid-window checkpoint, not the attempt's end**: task 031 runs to *a city is kept, or T80* with `expires: T90`, so Q2's answer arrives around T60-T70. Q3 is open but was never approached (no recon unit, exploration 7%, `ASSAULT OPENS ... with 0 shooter(s) in position`); Q4 is the one prediction the attempt supports so far. |
+| verdict so far on Q1-Q4 | **OPEN / untested so far / OPEN / mis-specified.** Q1 is open on the clock and dead by arithmetic (a first Catapult ~T60 leaves no second one inside the attempt); **Q2 is untested so far**, not violated - Engineering had not landed by T40 (`techs_completed` 2 = Mining and The Wheel; the session's own T30 hypothesis put Engineering at T44-T48), and this T40 row is a **mid-window checkpoint, not the attempt's end**: task 031 runs to *a city is kept, or T80* with `expires: T90`, so Q2's answer arrives around T60-T70. Q3 is open but was never approached (no recon unit, exploration 7%, `ASSAULT OPENS ... with 0 shooter(s) in position`); **Q4 was answered by a measure that could not fire** - the rule it named starts at T60 and the horizon is T60, while the review's own line and the diary's own number both put the economy under the floor on every turn. |
 
 **The one paragraph.** What this window bought that A1's could not is a **testable Q2 and a completed
 screen establishment**: at T40 A2 holds four Slingers, four Warriors, a Heavy Chariot, five improvements
@@ -139,6 +139,31 @@ before the siege exists, toward a rally point three tiles east of 耶路撒冷's
 and the shooting opens the turn the Catapults arrive** instead of ten turns after it. The target's
 distance was never the constraint; the Engineering beeline is - and that is the answer A2 was built to
 be able to give.
+
+## The gate, answered in play: Engineering T48, both Catapults ordered the same turn
+
+This is Q2's answer, written the turn it happened rather than reconstructed afterwards. The three turns
+the task asked for:
+
+| what | turn | evidence |
+|---|---|---|
+| **Engineering completed** | **T48** | the T47 -> T48 result carried `>> Research complete: 工程!`; the tech read `98%, 1 turns` at T47 and `None` was pending after the completion |
+| **西安 ordered UNIT_CATAPULT** | **T48** | `PRODUCING|UNIT_CATAPULT|6 turns` (~T54) |
+| **太原 ordered UNIT_CATAPULT** | **T48** | `PRODUCING|UNIT_CATAPULT|8 turns` (~T56); 太原's Water Mill finished the same turn, so its queue was free |
+| **first economy order after Engineering** | **none placed at T48** | the only builds in flight were placed *before* Engineering: 西安's Trader (ordered T46) and 太原's Water Mill (finished T48). This row is filled in when the order is placed; if the second Catapult completes with no economy order placed, Q2 holds on the strict reading of 031's falsifier |
+
+The order of asking is the measurement, so it is recorded with what was deliberately *not* done: no
+Granary, Campus, Water Mill or Trader order was placed after Engineering and before the second Catapult.
+The one economy order that was in flight at the gate - 西安's Trader - had been placed at **T46**, two
+turns before the tech existed. That is the reason 西安 was building a Trader rather than the Granary the
+directive's own build order would have put next: the bridge item was chosen at T41 to be cheap and
+strictly pre-gate, so that the gate turn had a free choice in it rather than a nearly-finished building.
+
+**The multiplier is visible in the estimates.** Unmodified, a 120-production Catapult is 11 turns in 西安
+(11 production) and 17 in 太原 (7) - the tool answers **6** and **8**. POLICY_AGOGE (+50% to Ancient and
+Classical military units) has been in the military slot since the first half, and T41 added God of the
+Forge (+25% to the same class), so +75% is stacked on the siege half for the first time in either attempt.
+Q1's deadline - "the establishment is complete by T60" - is therefore measured against **T54 and T56**.
 
 ## One tooling finding A2 produced, with its numbers
 
