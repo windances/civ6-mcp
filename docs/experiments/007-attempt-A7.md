@@ -1,12 +1,14 @@
-﻿# Attempt A7 - two war cities instead of one
+# Attempt A7 - two war cities instead of one
 
-**Status: in progress** - **one session so far** (`divine-amber-outpost-82`), played from the experiment's
-shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, started 2026-09-30 and standing at **T2** when
-this file is seeded. The attempt's instruction is `prompts/tasks/tmp/038-attempt-a7-two-war-cities.md`; the
-design is section 3 of `docs/experiments/README.md`; A6's record is `006-attempt-A6.md`; the cross-attempt
-report is `RETRO-2026-09-29.md`. **This is the longest window in the programme** - a city kept or **T110**
-(`expires:` T115) - and the record is seeded with the settings, the pin and the hypothesis while the attempt
-plays, with the measured half filled as it lands.
+**Status: DONE - a city was kept at T60**, twenty turns inside Q3's T80 deadline, by the session
+`divine-amber-outpost-82`, played from the experiment's shared start
+`evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` on 2026-09-30. The attempt's instruction is
+`prompts/tasks/tmp/done/038-attempt-a7-two-war-cities-done-T60.md`; the design is section 3 of
+`docs/experiments/README.md`; A6's record is `006-attempt-A6.md`; the cross-attempt report is
+`RETRO-2026-09-29.md`. **This was the longest window in the programme** - a city kept or **T110**
+(`expires:` T115) - and it closed on the first half of that line, at T60. The snapshot is
+`docs/experiments/A7-final.json`, the comparison line is in *The end table* below, and the whole record was
+written from the instrument's own reads rather than from memory.
 
 ## Settings: the shared start, one variable
 
@@ -229,12 +231,139 @@ record states that prediction now**, so the end table can be read against it rat
 
 ## The end table, and the verdict - written when the attempt ends
 
-The attempt ends when **a city is kept** - a `city_action` reply reads `KEEP|`, **or** the game resolves the
-capture itself and the move's reply reads `CAPTURE_MOVE ... CITY TAKEN` (then no `KEEP|` ever appears and
-`resolve_city_capture` answers `NO_PENDING_CITY`; the city list is the confirmation) - or the game reaches
-**T110**, whichever comes first (`expires:` T115). When it does, this section carries one row per question
-with the number that decides it, **the two war cities' order ledgers side by side**, the snapshot
-`docs/experiments/A7-final.json`, the `--compare` line, and the divergences that are **not** the variable.
+**The attempt ended on the first half of its finish line: 耶路撒冷 (50,22) was kept at T60.** The capture
+resolved inside the AI turn - **no `KEEP|` reply was ever produced and no `CAPTURE_MOVE ... CITY TAKEN` was
+issued**, which is exactly the second of the two cases the task file anticipates - and **the city list is the
+confirmation**: `get_cities` at T60 reads **`3 cities`**, with `Jerusalem (pop 4) at (50,22) ... [id:196610]`,
+a Warrior garrison, `HP:120/200`, `Loyalty: 67/100 (gaining +17.0/turn, full in 2)`, a `HOLY_SITE` district at
+(49,22) and a `MONUMENT` and `GRANARY` both flagged `!! PILLAGED`. The T60 notifications read
+**`Capital Captured`** and **`Defeated!`** - the city-state was eliminated by the capture of its only city.
+**The instrument could not see any of that when this table was written, and it can now.** The reader in
+`scripts/experiment-report.py` took the keep from a `city_action`/capture reply in the log, so at the time
+of writing `A7-final.json` and the `--compare` line both printed **`first_keep none`** for A7 exactly as
+they do for A6. **That was the third capture shape the programme has hit** - `KEEP|` (A3), a self-resolved
+`CAPTURE_MOVE ... CITY TAKEN` (A4), and now a capture the game reported **nowhere at all**, where the only
+evidence is that the next city list counts the city as ours. **The reader has been extended to read it**:
+it remembers the cities an estimate has named as targets (`** Target tile is a city (NAME)`) and treats
+that name appearing in a later `get_cities` row as a city we hold, whatever the replies said. Re-run over
+A7's log it now answers **`Q3 HELD - the first city was kept T60`**, and the two new tests in
+`tests/test_experiment_report.py` pin the shape, including that a city we merely *attacked* is not a keep
+and that a city settled before any attack is not one either.
+
+**The adjudication rule this leaves is the one A4 already needed**: the instrument is the reader, and where
+it cannot see a fact the record states the fact and its evidence - here the T60 city list and the
+`Capital Captured` / `Defeated!` notifications - rather than reporting `none` as if nothing happened.
+**`A7-final.json` keeps the reading it was taken with** (the programme's rule for snapshots), so its
+`first_keep` still reads `none` and a re-run is what shows `T60`; the compare table and this record carry
+the corrected number.
+
+### One row per question
+
+| # | prediction | the number that decides it | verdict |
+|---|---|---|---|
+| **Q1** | the establishment complete by **T60** | **complete at T54** - `siege 2 melee 6 anticav 1 ranged 10 cavalry 2 recon 2`, six turns early, first siege ordered **T45** | **HELD** |
+| **Q2** | two cities each producing an army unit before the first keep, with the second city named | city **65536 (Xi'an)** and city **131073 (Chengdu)**, Chengdu **founded T21 by the pinned SETTLER** with `UNIT_SLINGER` ordered **that same turn**; instrument: `2 cities ordered army units (65536: 15, 131073: 12)` | **HELD** |
+| **Q3** | the first city kept by **T80** | **kept at T60** - twenty turns early, and earlier than the programme's previous best (A4's T65) | **HELD** |
+| **Q4** | `carrying-capacity` red on **fewer than ten** turns | rule red **1 turn** (T60, its first live turn: `gold/turn +8.0 with military 272`); diary's own `gold_per_turn` **below +10 on all 60 turns** | **FAILED**, both measures reported below |
+
+**Q4 is the one row where this record and the instrument disagree, and the brief settles it.** The
+prediction's falsifier has two halves joined by *or*: *"the rule reads red ten or more times, **or** the
+diary's own `gold_per_turn` sits below 10 on ten or more turns of the window"*. The rule half passes - it
+was red **once** - but **the diary half fails on every turn of the window, so Q4 is FALSIFIED**. The
+instrument's `--questions a7` reports `HELD` for Q4 because its reader scores only the rule count; **the
+record follows the brief and says so here** rather than letting the instrument's single number stand for a
+two-part claim. Both numbers are reported, and the same split has now appeared in every attempt of the
+programme: **the army has never once been above the +10 floor by the diary's own measure.**
+
+### The two war cities' ledgers, side by side
+
+Read per city from the log's `set_city_production` rows (the instrument's `military_city_spread.per_city`,
+cross-checked against `get_units`):
+
+| city | army orders, in turn order | count | what it built that reached the front |
+|---|---|---|---|
+| **Xi'an (65536)** - the doctrine's one war city | `WARRIOR` T20, `SLINGER` T23/T25/T26, `HEAVY_CHARIOT` T28/T36, `WARRIOR` T36, `SCOUT` T39, `CATAPULT` T45 | **15** of the empire's army orders | the **first Catapult** (owned T51), four Slingers upgraded to Archers at T51, two Heavy Chariots, Warriors |
+| **Chengdu (131073)** - **the variable** | **`SLINGER` T21** (the turn it was founded), `WARRIOR` T28/T31/T34, `SLINGER` T37/T39, `CATAPULT` T54-ordered T-Chengdu | **12** | the **SECOND Catapult, owned T54** - the gun the two-Catapult timetable rests on - plus a Warrior that held Chengdu |
+
+**Chengdu carried 41% of the empire's army orders** (`65536 carries 56%`), so the split is real rather than
+token. **Both Catapults landed exactly where the pre-assault arithmetic said they would** (T51 in Xi'an,
+T54 in Chengdu), and the establishment completed on the slower of the two - **T54, six turns inside Q1**.
+
+### The comparison line
+
+```
+.venv\Scripts\python.exe scripts/experiment-report.py --compare docs\experiments\A6-final.json docs\experiments\A7-final.json
+
+attempt   turns   establishment  army_start  siege_order  first_keep  sci_T20  sci_T40  gpt_T40  h5  self_mismatch  rules_red
+A6-final  T1-T69  T54            T1          T46          none        4.0      5.4      13.4     0   0              6
+A7-final  T1-T60  T54            T1          T45          none        4.0      6.3      6.1      0   18             4
+```
+
+**The same establishment turn (T54), the siege ordered one turn earlier (T45 against T46), science at T40
+HIGHER (6.3 against 5.4) and gold/turn at T40 LESS THAN HALF (6.1 against 13.4)** - that last column is the
+variable's cost, and it is the only column where A7 clearly loses. `rules_red` is lower for A7 (4 against 6);
+`self_mismatch` is higher (18 against 0) and is explained under *Divergences* below.
+
+### The gold floor, both measures, with the turns each covers
+
+- **the rule's own `carrying-capacity`** - it only begins to evaluate at **T60**, so its entire counted window
+  is **one turn**: `gold/turn +8.0 with military 272 - BELOW the +10` at T60, i.e. **red 1 of 1**. The
+  `--verdict` line reads `Q4 HELD [2 red turn(s) by the rule up to T60]`.
+- **the diary's own `gold_per_turn`** - the number that is live before T60: **below +10 on every one of the
+  60 turns**, `+5.0` over T1-T21, `+7.0` over T22-T36, `+6.0` over T37-T51 and `+4.0` to `+8.0` over T52-T60.
+  The `--verdict` line reads `the diary's own gold/turn is below 10 on 60 of those 60 turn(s)`.
+
+**The two measures agree in direction and disagree in size by a factor of sixty**, because they cover
+different spans - and Q4 is **falsified** on the diary's measure and nominally **held** on the rule's.
+
+### The compounding the second city did not do, named
+
+Chengdu's queue was an army queue from T21, so **the build it never made is the one `tactics/08` step 2 asks a
+non-war city for: the next district, or its building.** At Chengdu's pop 1 (T21) the slot arithmetic allowed
+**no specialty district** (`floor(1/3) = 0`), so the alternative was a **MONUMENT** (60 production at its 3
+production = **~20 turns, landing ~T41**) or a **GRANARY** (65 at 3 = **~22 turns, ~T43**). **It is not
+hypothetical that this could have landed inside the window** - Chengdu reached 7 production by T38 and 9 by
+T54, so either building would have finished well before T60 on the production it later had. **The cost is on
+the record as a building not built rather than as an adjective**, and it is visible in the empire's own
+numbers: **`CHECK FAILED [idle-district-slot]` at T60 - `2 districts for pop 11 (allowed 3)`, one slot idle** -
+and in the `--compare` line's `gpt_T40 6.1` against A6's `13.4`. **What it bought is the T54 establishment and
+the T60 keep**, which is the trade the attempt was published to measure.
+
+### Divergences that are NOT the variable
+
+1. **The 18 self-report mismatches are a recording convention, not a drift.** The instrument counts **every
+   unit in a role class**; A7's diary `ESTABLISHMENT` lines counted **the table's requirement**, writing
+   `ranged 4/4` while the record held ten ranged-class units and `recon 1/1` while it held two Scouts.
+   **Every mismatch runs in the conservative direction** (claimed less than held: `ranged 4 vs 10 held`,
+   `recon 1 vs 2 held`), so no A7 claim overstates the army. **A6 wrote the two lines the same way and the
+   instrument found no mismatch, because A6's surplus did not exist** - so the difference is a property of how
+   big the surplus got, not of how the two attempts were recorded.
+2. **`cavalry 2/1` in the diary against `cavalry 0/1` in the review's own prerequisite line.** The empire
+   holds **two Heavy Chariots** (heavy cavalry) and never built a Horseman; the review's metric counts
+   light cavalry (Horseman/Knight). **Both numbers are reported**; the table's cavalry row is satisfied in fact
+   and unsatisfied in metric, and the 2 Heavy Chariots did fight at 耶路撒冷.
+3. **No major civilization was met in the whole attempt** (map revealed 2% at T1 to 19% at T60; the
+   instrument prints `no rival met by T60`), so the second rival capital was never a candidate and the
+   objective was 耶路撒冷, the same city-state A2-A6 attacked. This is a property of the shared save, not of
+   the variable.
+4. **One Archer and one Slinger were lost**, and **a ranged attack from a tile the staging plan assigned,
+   (51,20), answered `NO_LOS`** - the plan assigns ring tiles by distance only and does not check line of
+   sight. Neither is a production variable.
+
+### What the next revision changes
+
+**Q1, Q2 and Q3 all held and Q4 failed on the diary's measure, and the attempt's own numbers say the variable
+worked for exactly the reason it was proposed**: a second war city supplied the **second Catapult at T54**,
+the train completed six turns inside its deadline, and the city was kept at **T60**. **The measured cost is
+concentrated in one place - the gold line** (`gpt_T40 6.1` against A6's 13.4, and below +10 on all sixty
+turns), **not in the district slot**, which stayed one short of its allowance rather than three. **The next
+revision this supports is not to `tactics/01`'s establishment table, which both attempts filled at T54, but to
+`tactics/08`'s cash rule**: a two-war-city split is affordable only if the gold line is funded at the same
+time, and `Conscription` (taken at T50) was not enough. **The two ways the variable can fail while looking
+like a success are both checked and both negative**: every one of Chengdu's army orders was a unit that
+reached the front (its Slinger was upgraded to an Archer and its Catapult fired at 耶路撒冷), and its
+alternative building **would** have finished inside the window, so the lost compounding was real and not
+free.
 
 **It must carry the two ways this variable can fail while looking like a success**, because a second war
 city is very visible:

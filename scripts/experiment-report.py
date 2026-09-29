@@ -102,6 +102,11 @@ CAPTURE_RE = re.compile(r"\b(KEEP|RAZE|LIBERATE_FOUNDER|LIBERATE_PREVIOUS)\|", r
 #: accepted production orders), so a reader that only looked for `KEEP|` would score the attempt as
 #: having kept nothing. The move's own line is the evidence, and it is matched here.
 CAPTURE_TAKEN_RE = re.compile(r"CAPTURE_MOVE\|[^\n]{0,120}?CITY TAKEN", re.I)
+#: The city an estimate is aimed at, named in the line that says the target tile is a city:
+#: `** Target tile is a city (Jerusalem) ...`. Used with a later `get_cities` row to catch a capture
+#: the game reported nowhere (A7 at T60 - a melee attack took the city with no `KEEP|` and no
+#: `CAPTURE_MOVE`, and the only evidence is that the next city list counts it as ours).
+CITY_ATTACKED_RE = re.compile(r"is a city \(([^)]{1,40})\)")
 RULE_RE = re.compile(r"CHECK FAILED \[([a-z0-9\-]+)\]")
 ACHIEVED_RE = re.compile(r"CHECK ACHIEVED[^\n]*?\[([a-z0-9\-]+)\]")
 ORDER_RE = re.compile(r'"item_name":\s*"([A-Za-z_0-9]+)"')
@@ -1849,15 +1854,28 @@ def refusal_counts(rows: list[dict]) -> collections.Counter:
 def captures(rows: list[dict]) -> list[tuple[int, str]]:
     """City keeps/razes, deduplicated - the same reply appears in both `result` and its summary.
 
-    Two shapes count, because the game produces two. The explicit one is a `KEEP|`/`RAZE|` reply from
-    `city_action`. The implicit one is a `CAPTURE_MOVE` whose own line says `CITY TAKEN`: there the game
+    **Three shapes count, because the game produces three.** The explicit one is a `KEEP|`/`RAZE|` reply
+    from `city_action`. The second is a `CAPTURE_MOVE` whose own line says `CITY TAKEN`: there the game
     resolved the capture itself, no keep/raze decision was ever pending, and every later
     `resolve_city_capture` answers `NO_PENDING_CITY` - so `KEEP|` never appears even though the city is
-    ours. A4 measured exactly that at T65, and this reader scored its capture as nothing until the
-    second pattern was added.
+    ours (A4 measured that at T65). **The third was measured on A7 at T60 and produces no capture reply
+    at all**: a melee attack took the city during the inter-turn, so the log holds neither `KEEP|` nor
+    `CAPTURE_MOVE` - the only evidence is that the next `get_cities` row **lists the city as ours**.
+    That shape is read here by remembering the cities we have attacked (the estimate's
+    `** Target tile is a city (NAME)` line) and looking for those names in later `get_cities` rows;
+    a city we attacked appearing in our own city list is a city we hold, whatever the replies said.
     """
     seen: set[tuple[int, str]] = set()
     out: list[tuple[int, str]] = []
+    # Pass 1: the names of every city an estimate named as a target, with the first turn it was named.
+    attacked: dict[str, int] = {}
+    for row in rows:
+        blob = json.dumps(row, ensure_ascii=False)
+        for match in CITY_ATTACKED_RE.finditer(blob):
+            name = match.group(1).strip()
+            if name and name not in attacked:
+                attacked[name] = row.get("turn") or 0
+    # Pass 2: the two reply shapes.
     for row in rows:
         blob = json.dumps(row, ensure_ascii=False)
         for pattern in (CAPTURE_RE, CAPTURE_TAKEN_RE):
@@ -1868,6 +1886,23 @@ def captures(rows: list[dict]) -> list[tuple[int, str]]:
                     continue
                 seen.add(key)
                 out.append((row.get("turn") or 0, snippet))
+    # Pass 3: a city we attacked that a later city list shows as ours.
+    for row in rows:
+        if row.get("tool") != "get_cities":
+            continue
+        turn = row.get("turn") or 0
+        blob = json.dumps(row, ensure_ascii=False)
+        for name, attack_turn in attacked.items():
+            if turn < attack_turn or f"{name} (pop " not in blob:
+                continue
+            key = (turn, f"city list: {name}"[:28])
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(
+                (turn, f"kept {name} (listed in this turn's get_cities as ours, after being attacked)")
+            )
+    out.sort(key=lambda pair: pair[0])
     return out
 
 

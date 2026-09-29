@@ -774,6 +774,58 @@ def test_verdict_a7_holds_on_a_capture_the_game_resolved_itself():
     assert "T65" in questions[2][2]
 
 
+def test_a_capture_the_game_reported_nowhere_is_read_from_the_city_list():
+    """Measured on A7 at T60: a melee attack took the city with **no capture reply at all**.
+
+    The log holds no `KEEP|` and no `CAPTURE_MOVE ... CITY TAKEN` for it - the only evidence is that the
+    next `get_cities` row lists the city as ours, and that the same city had been named as an attack
+    target earlier. Without this shape A7's keep - the earliest in the programme - reads as `none`.
+    """
+    attacked = {
+        "turn": 54,
+        "tool": "unit_action",
+        "result": "Combat Estimate (Melee): UNIT_WARRIOR (CS:20, HP:23) vs CITY_CENTER (CS:0, HP:81) "
+                  "** Target tile is a city (Jerusalem) (CITY_CENTER is a non-combatant ...)",
+    }
+    owned = {
+        "turn": 60,
+        "tool": "get_cities",
+        "result": "3 cities: Xi'an (pop 6) at (60,22) ... [id:65536] ... Chengdu (pop 4) at (53,21) "
+                  "... [id:131073] ... Jerusalem (pop 4) at (50,22) ... [id:196610]",
+    }
+    assert [t for t, _ in report.captures([attacked, owned])] == [60]
+
+    # A city we attacked but never took is NOT a keep, however often it is listed by others: the name
+    # has to appear in OUR city list (`NAME (pop `), and only after the turn it was attacked.
+    not_ours = {
+        "turn": 60,
+        "tool": "get_map_area",
+        "result": "tile (50,22): CITY_CENTER Jerusalem, owned by another player",
+    }
+    assert report.captures([attacked, not_ours]) == []
+
+    # And a city listed as ours BEFORE it was ever attacked is ours by settling, not by capture.
+    settled = {
+        "turn": 21,
+        "tool": "get_cities",
+        "result": "2 cities: Xi'an (pop 6) ... Chengdu (pop 1) at (53,21) ... [id:131073]",
+    }
+    got = report.captures([settled, attacked, owned])
+    assert [t for t, _ in got] == [60], "the settle at T21 must not be read as a capture"
+    assert "Jerusalem" in got[0][1]
+
+
+def test_the_capture_list_is_ordered_and_earliest_first():
+    """Callers take `min(...)`; the list is sorted so a reader sees the same order the keep turn does."""
+    rows = [
+        {"turn": 60, "tool": "get_cities",
+         "result": "3 cities: Xi'an (pop 6) ... Jerusalem (pop 4) at (50,22) ... [id:196610]"},
+        {"turn": 54, "tool": "unit_action",
+         "result": "Combat Estimate (Melee): ... ** Target tile is a city (Jerusalem) ..."},
+    ]
+    assert [t for t, _ in report.captures(rows)] == [60]
+
+
 def _a3_frames(turns: list[int]) -> dict[int, dict]:
     by_turn = frames({t: {"WARRIOR": 1} for t in turns})
     for turn in turns:

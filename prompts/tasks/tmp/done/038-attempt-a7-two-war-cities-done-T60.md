@@ -142,3 +142,10 @@ city comes to exist; if the second city is taken instead, the record says which 
      at: 2026-09-30T06:28:44+08:00
      chinese backup: prompts/tasks/cn/038-attempt-a7-two-war-cities.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 038 --done --turn 60
+     at: 2026-09-30T07:40:24+08:00
+     status: done at T60
+     chinese backup: prompts/tasks/cn/038-attempt-a7-two-war-cities.cn.md
+-->

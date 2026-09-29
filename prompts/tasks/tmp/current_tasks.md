@@ -105,4 +105,5 @@ Task 035 was retired as `done/035-attempt-a4-the-encampment-before-the-second-si
 Task 036 was retired as `done/036-attempt-a5-the-chops-go-into-units-expired-T70.md`.
 
 Task 037 was retired as `done/037-attempt-a6-the-first-siege-unit-is-bought-done-T70.md`.
-| `038-attempt-a7-two-war-cities.md` | 2026-09-30 | turn 115 | whether a second war-production city pays for the compounding it costs, from the shared start | turn 110 is reached, or a city is kept (a city_action reply reads KEEP|, or the move's reply reads |
+
+Task 038 was retired as `done/038-attempt-a7-two-war-cities-done-T60.md`.
