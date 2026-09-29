@@ -171,6 +171,14 @@ be**. The same turn ordered the second, produced one:
 opens** early - because A5 is the standing cautionary case of a train that arrived early beside a war that
 did not, and the march, not the gun, is what A5's record blames.
 
+**And the war half is answered at T52, before the attempt ends**: the log carries
+**`T52 send_diplomatic_action -> WAR_REQUESTED|DECLARE_SURPRISE_WAR on Jerusalem`**, the game's own reply.
+The instrument reads it as **`HELD Q3 war declared by T55, against A2's T60 [war declared T52]`**. So the
+purchase did what the variable claimed: **the first siege unit arrived at T46 (seven turns before A2's
+completion) and the war opened at T52, eight turns before A2's T60** - and A5, whose first gun was only
+three turns early, opened at T59 and never took a city. **Whether T52 turns into a keep is the open half**,
+and the march is what it depends on.
+
 ## The end table, and the verdict - written when the attempt ends
 
 The attempt ends when **a city is kept** - a `city_action` reply reads `KEEP|`, **or** the game resolves the
