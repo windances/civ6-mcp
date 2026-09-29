@@ -279,6 +279,27 @@ Both shots also read `city still 200/200` on the immediate reply, which is the d
 (`AGENTS.md`: judge a city's progress from `SIEGE PROGRESS` and a later read, never from the reply) - and
 the third time this attempt met that trap, after the melee no-op at T35 and the ranged `pre_hp` echo.
 
+**And the authoritative block agrees with the stale read: after two Catapult shots the pool has not
+moved.** The `end_turn` that closed T66 printed:
+
+```
+>> SIEGE PROGRESS (T67):
+ 耶路撒冷: city hp 200/200; supply line 5/6 cut - the city is still healing
+-- SIEGE POSTURE (T67) ...
+ SIEGE FIRE: 2/3 siege unit(s) inside range 2 of the target - OUT OF RANGE: UNIT_CATAPULT at distance 5
+```
+
+with `use-your-attacks`, `screen-the-siege`, `cut-the-supply` and `carrying-capacity` all failing in the
+same result. So the position at the end of the first war turn is: two of three Catapults in range, both
+fired, the city at **200/200**, one adjacent hex (`49,22`) still open, and - per `cut-the-supply`'s own
+text, citing the manual - *a city heals about twenty points a turn while any adjacent hex is outside our
+zone of control*. Two shots that each deliver less than ten points are therefore indistinguishable from
+zero after healing, and **no tool will say how much a shot delivers**: the attack reply prints
+`Est damage to defender: n/a (the city is the target, not this unit)` by design, and the pool is the only
+feedback. That is the gap to watch for the rest of the assault - if the pool keeps reading 200 while two
+Catapults fire every turn, the train cannot out-damage the heal and Q3 fails for an arithmetic reason no
+tool surfaced in advance; if it falls, the same block will show it.
+
 ## One tooling finding A2 produced, with its numbers
 
 At T35 a melee attack was ordered from an adjacent tile and the reply began `enemy HP:72 -> 72/100` - the
