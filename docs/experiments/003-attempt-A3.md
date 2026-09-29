@@ -241,6 +241,44 @@ still dead and the attempt's capture half is blocked by the tool for the second 
 more turns later than the army was ready. That is a tool cost, not a production one, and the end table says
 so - A1's capture half was decided by the map, A2's by a tool, and A3's by a tool *twice*.
 
+**Verified live at T61, and it is what this attempt's assault rests on.** Session 3's declaration answered
+
+```
+WAR_REQUESTED|DECLARE_SURPRISE_WAR on 耶路撒冷 - no diplomacy session exists for this player, so the war is
+requested through the same player operation the game's own declare-war popup uses, not by a session; the war
+state settles on the next frame, so confirm it with get_diplomacy
+```
+
+and the war is real, not merely requested: at the same turn a Catapult took a **city** estimate
+(`UNIT_CATAPULT vs CITY_CENTER (CS:0, HP:200)`) and fired - `RANGE_ATTACK|target:耶路撒冷 (city) at (50,22)`
+- where under the blocked state the same order answered `NOT_AT_WAR` and a move answered `BLOCKED
+(city-state territory)`. **So the two lost turns were the tool's, and the branch is now exercised by the
+attempt it exists for.**
+
+## Q2's evidence: every city this attempt has read says `walls: none`
+
+**The wall phase is unaskable on this map, and the reads say so rather than an assumption.** As of T61:
+
+| city | read | source |
+|---|---|---|
+| 耶路撒冷 (the target, city-state) | **`city hp: 200/200, walls: none`** | the first range attack, T61 |
+| 霍巴特 (Australia's capital, pop 5) | `walls none` | `get_diplomacy`, T60 and T61 |
+| 特赫基昂加-努伊-阿-库珀 (Maori, pop 4) | `walls none` | `get_diplomacy`, T60 and T61 |
+
+Our own city, by contrast, is **offered** walls - `get_city_production` at T61 lists
+`BUILDING_WALLS (cost 80, 5 turns, buy: 210g)` - so this is not a game where walls do not exist; it is a
+position where no city being attacked has built one by T61. `tactics/07`'s Gate 0 was satisfiable (seven
+candidates were known by T44), and the answer Gate 0 produced is that none of them is walled.
+
+**Two consequences, and the record keeps them apart.** Q2's own falsifier is "no city with `walls > 0` is
+found and attacked inside the window (unaskable - report the reads)", so A3's Q2 will be answered in the
+terms the design allowed, with the table above as the evidence. But that also means **the programme's
+central question is still unmeasured after two attempts** - A2's target read `walls: none` too - and the
+honest conclusion is narrower than "the train works against walls": *on this start, at this tech level,
+nothing attacked had walls*. A city-state builds Ancient Walls after Masonry and out of its own production,
+so a later read could differ; the reads above are stamped T60-T61, and the brief requires re-reading cities
+seen earlier, which is why this table names its turns.
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
