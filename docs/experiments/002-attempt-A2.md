@@ -223,6 +223,41 @@ one task 031's `overrides:` line names. Two things belong in the record beside i
   where the attempt's last open question - *can two Catapults and three Warriors take it before T80* - will
   be answered.
 
+## Why the declaration did not stick, and what it cost
+
+The three declarations above were not a session mistake - **the tool cannot declare war on a city-state**,
+and the attempt's capture half was blocked by that from T60 to T66. The session verified it four ways over
+three turns: surprise war twice and formal war all answering `WARN:WAR_UNCERTAIN`; `get_diplomacy` showing
+no war; a move onto the ring answering `BLOCKED (city-state territory (耶路撒冷) - need suzerainty or Open
+Borders)`; and a Catapult ordered onto the city answering `NOT_AT_WAR` (whose estimate did reveal the city
+pool: **200 HP**).
+
+The cause is in this repo, not in the game. Every war action goes through a **diplomacy session**
+(`src/civ_mcp/lua/diplomacy.py:414-427`: `RequestSession` -> `FindOpenSessionID`), and a city-state has no
+session to open - so `sid` is nil, `sessionCompleted` stays false, and the code falls through to a
+`WARN:WAR_UNCERTAIN` message that was written for the benign "the engine has not synced yet" case. The
+warning hid "the session never opened".
+
+**The game's own answer was in its UI Lua.** `Base/Assets/UI/Popups/DeclareWarPopup.lua:76-82` declares war
+with a **player operation** on the branch that has no casus belli - which is the branch a city-state always
+takes:
+
+```lua
+parameters[PlayerOperations.PARAM_PLAYER_ONE] = eAttackingPlayer
+parameters[PlayerOperations.PARAM_PLAYER_TWO] = eDefendingPlayer
+UI.RequestPlayerOperation(eAttackingPlayer, PlayerOperations.DIPLOMACY_DECLARE_WAR, parameters)
+```
+
+Run against this position through the FireTuner connection at T66, with the session stopped:
+`IsAtWarWith(6)` went **false -> true** and `CanDeclareWarOn(6)` **true -> false**. The war this attempt
+needed is therefore **on**, and the tool is fixed with it: `build_send_diplo_action` now declares a
+city-state war through that operation and returns `OK:WAR_REQUESTED|...` instead of the uncertain warning,
+with `tests/test_city_state_war_declaration.py` pinning the branch, the gate and the early return.
+
+The honest shape of the two attempts' capture halves is therefore a mirror image: **A1's was decided by the
+map** (33 tiles, no rival met), **A2's was decided by a tool** (a declaration that silently did nothing),
+and in neither case by the production the experiment set out to measure.
+
 ## One tooling finding A2 produced, with its numbers
 
 At T35 a melee attack was ordered from an adjacent tile and the reply began `enemy HP:72 -> 72/100` - the

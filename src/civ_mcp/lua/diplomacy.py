@@ -407,8 +407,44 @@ end"""
     close_session_lua = "" if is_war else "    DiplomacyManager.CloseSession(sid)"
     cleanup_lua = "" if is_war else _lua_close_diplo_session()
 
+    # A city-state has no diplomacy session to open, so the session machinery below reports
+    # `WARN:WAR_UNCERTAIN` forever and no war is declared - measured in attempt A2, which staged its
+    # army on 耶路撒冷's ring at T57 and then spent T60-T65 re-declaring with no effect, blocking the
+    # assault. The game's own declare-war popup uses a **player operation** for the branch with no casus
+    # belli (`DeclareWarPopup.lua:76-82`), and a city-state is always that branch:
+    #     parameters[PlayerOperations.PARAM_PLAYER_ONE] = attacker
+    #     parameters[PlayerOperations.PARAM_PLAYER_TWO] = defender
+    #     UI.RequestPlayerOperation(attacker, PlayerOperations.DIPLOMACY_DECLARE_WAR, parameters)
+    # Verified live on the A2 position: `IsAtWarWith` false -> true, `CanDeclareWarOn` true -> false.
+    minor_war_block = ""
+    if is_war:
+        minor_war_block = f"""
+-- City-states are declared on by player operation, not by a diplomacy session (see the builder).
+local targetIsMinor = false
+pcall(function() targetIsMinor = Players[target]:IsMinorCiv() end)
+if targetIsMinor then
+    local parameters = {{}}
+    parameters[PlayerOperations.PARAM_PLAYER_ONE] = me
+    parameters[PlayerOperations.PARAM_PLAYER_TWO] = target
+    local requested = pcall(function()
+        UI.RequestPlayerOperation(me, PlayerOperations.DIPLOMACY_DECLARE_WAR, parameters)
+    end)
+    local minorName = Locale.Lookup(PlayerConfigurations[target]:GetCivilizationShortDescription())
+    if requested then
+        print("OK:WAR_REQUESTED|{action_name} on " .. minorName .. " - a city-state is declared on by "
+            .. "the same player operation the game's own declare-war popup uses, not by a diplomacy "
+            .. "session; the war state settles on the next frame, so confirm it with get_diplomacy")
+    else
+        print("ERR:WAR_BLOCKED|" .. minorName .. " - the player operation was refused")
+    end
+    print("{SENTINEL}")
+    return
+end
+"""
+
     return f"""
 {validation_block}
+{minor_war_block}
 -- Clean stale session for THIS target only (not all session IDs).
 -- Mass-closing sessions via IsSessionIDOpen loop corrupts AI diplomacy state.
 local staleSid = DiplomacyManager.FindOpenSessionID(me, target)
