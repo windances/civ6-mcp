@@ -165,6 +165,27 @@ built at **+75%** (Agoge + God of the Forge), and a siege unit **cannot attack u
 so the question this record still owes is whether a Catapult can fire at range 2 **at a city** - the only
 target it will ever have.
 
+**The blocker the attempt hit at T60, and it is a tooling one, not a doctrine one.** With the
+establishment complete and two Catapults standing on the firing tiles (50,24) and (51,23) at distance 2
+from 耶路撒冷, the declaration could not be made. `send_diplomatic_action(6, DECLARE_SURPRISE_WAR)`
+answered `WARN:WAR_UNCERTAIN|... session completed but war state not yet confirmed`, twice, and
+`DECLARE_FORMAL_WAR` answered the same; `get_diplomacy` then showed no war, a move onto the ring answered
+`CAPTURE_MOVE|BLOCKED (city-state territory (耶路撒冷) - need suzerainty or Open Borders)`, and an attack
+on the city tile answered `NOT_AT_WAR`. The cause is in `src/civ_mcp/lua/diplomacy.py`: every war action is
+delivered by opening a **diplomacy session** (`DiplomacyManager.RequestSession`) and adding responses to
+it, and **a city-state has no diplomacy session to open** - `FindOpenSessionID` returns nothing,
+`sessionCompleted` stays false, and control falls through to the `WARN:WAR_UNCERTAIN` branch, which is
+indistinguishable from a genuine uncertain success. The diagnostic in `src/civ_mcp/lua/units.py` (line
+301) confirms it independently: the border refusal is printed only on the `not atWar` branch. **So this
+attempt's capture half is blocked by the tool, not by the map, the doctrine or the production** - the
+exact inversion of A1, whose capture half was decided by the map. The army is staged and ready; what it
+needs is a declaration the tooling cannot make, and the answer is the human's UI.
+
+**What the refusal did buy.** The rejected attack printed the target's pool on its estimate line -
+`UNIT_CATAPULT (CS:35, HP:100) vs CITY_CENTER (CS:0, HP:200)` - so **耶路撒冷's HP pool is 200**, the
+first HP figure any tool has ever produced for it. No `walls:` value has appeared on any line yet, so the
+wall question is still open and still the one prerequisite unread at the end of the window.
+
 The order of asking is the measurement, so it is recorded with what was deliberately *not* done: no
 Granary, Campus, Water Mill or Trader order was placed after Engineering and before the second Catapult.
 The one economy order that was in flight at the gate - 西安's Trader - had been placed at **T46**, two
@@ -177,6 +198,30 @@ strictly pre-gate, so that the gate turn had a free choice in it rather than a n
 Classical military units) has been in the military slot since the first half, and T41 added God of the
 Forge (+25% to the same class), so +75% is stacked on the siege half for the first time in either attempt.
 Q1's deadline - "the establishment is complete by T60" - is therefore measured against **T54 and T56**.
+
+## The war opens at T60, and the one thing still unread
+
+The army staged onto the target's ring first and declared war second:
+
+| turn | what the record holds |
+|---|---|
+| T57 | `get_staging_plan(50,22)` - **18 ring tile(s), 4 unit(s) placed, 4 unplaced**, `ISSUE THE MOVE ...` |
+| T59 | the army is in place: two Catapults at **(50,24)** and **(51,23)** - within range 2 of 耶路撒冷 (50,22) - three Warriors at (52,21)/(52,22)/(54,22), an Archer at (53,21), the Heavy Chariot at (54,24), the third Catapult at (58,23) still coming |
+| T60 | `send_diplomatic_action(other_player_id=6, action="DECLARE_SURPRISE_WAR")` - answered `WARN:WAR_UNCERTAIN\|... war state not yet confirmed for 耶路撒冷. Check next turn.` - then the same call again, then `DECLARE_FORMAL_WAR`, all three with the same warning |
+
+Player 6 is 耶路撒冷 (the city-state read at T10 as `Religious, 1 envoys [player 6]`), so the target is the
+one task 031's `overrides:` line names. Two things belong in the record beside it:
+
+- **Three declarations in one turn, because the warning invites a retry.** `WARN:WAR_UNCERTAIN` says the
+  state will be confirmed next turn; `AGENTS.md`'s war rule says the same thing for the engine (*declare on
+  turn N, position that turn, attack on N+1*), and the session read the warning as a failure and escalated
+  the declaration form twice. Nothing was broken by it - a city-state cannot be more declared-at - but a
+  warning that reads like an error is a tool-shaped trap, and this is the count.
+- **The target's walls, HP and garrison still have not been read by any tool.** Six turns of staging, and
+  the reads near (50,22) are `get_map_area` terrain from T41-T42 and the ring census. `tactics/07`'s first
+  gate is that a candidate city is visible; the army standing at its gate with the wall numbers unknown is
+  where the attempt's last open question - *can two Catapults and three Warriors take it before T80* - will
+  be answered.
 
 ## One tooling finding A2 produced, with its numbers
 
