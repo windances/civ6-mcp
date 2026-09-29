@@ -90,6 +90,25 @@ spread between three attempts rather than a confound unique to it. **The product
 variable is therefore against A5 and A6** - the two attempts under the same guard and the same corrected
 `tactics/01` - and against A2-A4 only with the belief difference named.
 
+**Re-read at T42, and both queues are still army units.** The variable is holding rather than being a
+founding-turn gesture, which is what Q2 asks:
+
+| turn | Xi'an (65536) | the second city (131073) |
+|---|---|---|
+| T32 | `HEAVY_CHARIOT` | - |
+| T34 | - | `WARRIOR` |
+| T36 | `WARRIOR` | - |
+| T37 | `SLINGER` | `SLINGER` |
+| T39 | `SCOUT` | `SLINGER` |
+| T40 | `TRADER` | - |
+
+**Both cities have ordered army units on the same turn twice** (T37 and T39), which is the parallelism the
+variable is for. **The research line is the thing to watch**: `TECH_MINING` T1, `THE_WHEEL` T8 (complete
+T22) and **`TECH_ENGINEERING` set at T23**, still researching at **T34** - so Engineering is due about
+**T46**, four to five turns behind A6's T43-onward pace and the reason the first Catapult is not on the board
+at T42. **Q1 is therefore live but tight**, and the record reads the establishment at the T50 and T60
+checkpoints rather than assuming it.
+
 ## The hypothesis, with the numbers that falsify it
 
 | # | prediction | falsified when |
