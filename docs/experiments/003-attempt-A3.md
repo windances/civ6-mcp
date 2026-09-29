@@ -1,4 +1,4 @@
-# Attempt A3 - the same doctrine against a walled target
+﻿# Attempt A3 - the same doctrine against a walled target
 
 **Status: in progress** (session `flint-indigo-rampart-32`, from the experiment's shared T1 start; started
 2026-09-29). The attempt's instruction is `prompts/tasks/tmp/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.md`;
@@ -32,10 +32,12 @@ protocol requires it of A3 and the file went out without it.
 | 1 | `UNIT_SCOUT` | **T1** - matched (and it is the corrected table's recon row: the first attempt in the programme to open with it on purpose) |
 | 2 | `UNIT_SLINGER` | **T5** - matched |
 | 3 | `UNIT_SETTLER` | **T6** - matched |
-| 4 | `UNIT_BUILDER` | not placed yet at T9 |
+| 4 | `UNIT_BUILDER` | **T19 (the second city) and T22 (the capital)** - matched, with the Builder coming from the city the Settler founded rather than from 西安 first; the record notes that because it is a deviation in *which* city, not in the order |
 
-Research follows A1's and A2's shape: `TECH_MINING` T1, `TECH_THE_WHEEL` T8 - the beeline A2 rode to
-Engineering at T48, which is the gate H1 is measured at.
+Research follows A1's and A2's shape: `TECH_MINING` T1, `TECH_THE_WHEEL` T8, **`TECH_ENGINEERING` T22** -
+the same turn A2 began it, which is the gate H1 is measured at (A2's landed T48, and the two attempts
+started it on the same turn, so the tech timeline is comparable). Civics: Craftsmanship T11, Foreign Trade
+T20, State Workforce T24.
 
 ## The hypothesis, with the numbers that falsify it
 
