@@ -426,6 +426,24 @@ def first_military_order(rows: list[dict]) -> tuple[int, str] | None:
     return None
 
 
+def contacts(by_turn: dict[int, dict]) -> list[tuple[int, str]]:
+    """The turn each rival first appears in the diary's `diplo_states` - first contact, from the record.
+
+    A conquest attempt with no contacts has no target, and the diary records contact itself: the keys
+    of `diplo_states` are the civilisations this empire has met. `exploration_pct` (also in the diary)
+    says how much of the map is revealed, which is the other half of the same question - an attempt can
+    fail P3 for scouting reasons long before it fails for military ones.
+    """
+    seen: set[str] = set()
+    out: list[tuple[int, str]] = []
+    for turn in sorted(by_turn):
+        names = set((by_turn[turn].get("diplo_states") or {}).keys())
+        for name in sorted(names - seen):
+            out.append((turn, name))
+        seen |= names
+    return out
+
+
 SELF_REPORT_RE = re.compile(
     r"ESTABLISHMENT:\s*siege\s*(\d+)\s*/\s*2.*?melee\s*(\d+)\s*/\s*2.*?ram\s*(\d+)\s*/\s*1"
     r".*?ranged\s*(\d+)\s*/\s*4.*?cavalry\s*(\d+)\s*/\s*1",
@@ -648,6 +666,19 @@ def print_verdict(
             print(f"  the army began on T{first_military[0]} ({first_military[1]})")
 
     print_doctrine(by_turn, rows)
+
+    met = contacts(by_turn)
+    first, last = _first_turn(by_turn), _last_turn(by_turn)
+    print("\n-- exploration and contact (the other half of 'can we take a city') --")
+    print(
+        f"  map revealed: {by_turn[first].get('exploration_pct')}% at T{first} -> "
+        f"{by_turn[last].get('exploration_pct')}% at T{last}"
+    )
+    if met:
+        for turn, name in met:
+            print(f"  first contact T{turn:<4} {name}")
+    else:
+        print(f"  no rival met by T{last}: there is no city to aim at yet")
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")
@@ -924,6 +955,11 @@ def main() -> int:
         "captures": captures(rows),
         "tool_calls": dict(tool_calls(rows)),
         "establishment": establishment(by_turn),
+        "contacts": contacts(by_turn),
+        "exploration_pct": {
+            "first": by_turn[_first_turn(by_turn)].get("exploration_pct"),
+            "last": by_turn[_last_turn(by_turn)].get("exploration_pct"),
+        },
         "orders": order_summary(rows),
         "doctrine": {
             "forbidden_orders": forbidden_orders(rows),

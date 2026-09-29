@@ -281,6 +281,22 @@ def test_attempt_rows_compare_two_snapshots_on_the_same_columns():
         assert key in row and key in empty
 
 
+def test_contacts_report_first_contact_from_the_diary():
+    """A conquest attempt with no contacts has no target, and the diary records contact itself."""
+    by_turn = frames({1: {"WARRIOR": 1}, 20: {"WARRIOR": 1}, 40: {"WARRIOR": 1}})
+    by_turn[40]["diplo_states"] = {"Rome": {"state": 2}, "Egypt": {"state": 2}}
+    by_turn[20]["diplo_states"] = {}
+    assert report.contacts(by_turn) == [(40, "Egypt"), (40, "Rome")]
+
+    # A rival already met stays out of the list on later turns, and a new one is added when it appears.
+    later = frames({40: {"WARRIOR": 1}, 60: {"WARRIOR": 1}})
+    later[40]["diplo_states"] = {"Rome": {"state": 2}}
+    later[60]["diplo_states"] = {"Rome": {"state": 2}, "Egypt": {"state": 3}}
+    assert report.contacts(later) == [(40, "Rome"), (60, "Egypt")]
+
+    assert report.contacts(frames({1: {"WARRIOR": 1}})) == []
+
+
 def test_boundaries_survive_a_diary_with_gaps():
     """A turn nobody played must not be asked for - the boundaries are recorded turns, not multiples."""
     by_turn = frames({1: {"WARRIOR": 1}, 9: {"WARRIOR": 1}, 21: {"WARRIOR": 1}, 41: {"WARRIOR": 1}})
