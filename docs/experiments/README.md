@@ -131,6 +131,17 @@ first. A2 therefore changes **one thing that makes the question answerable** - t
 and holds everything else: the same save, the same doctrine as written, the same executor. Where the
 plan variations go is after the question is answerable, not before.
 
+**The variable is not the only thing that moves, and that is measured rather than assumed.** A1 and A2
+ran under "the same doctrine as written" and their opening builds still differ: A1 asked for `SCOUT T1,
+SLINGER T5, SETTLER T6, BUILDER T15, GRANARY T18, WARRIOR T20`, A2 for `WARRIOR T1, SLINGER T7, SETTLER
+T11, BUILDER T18` - the same kinds in the same order **except the recon unit replaced by a second melee**,
+and every later slot 1-5 turns later. By T10 the two attempts already differ in composition (military 34
+against 31), before the target has had any effect at all. The doctrine fixes *what the army is made of*
+(H2's table) and not *what the city is asked for first*, so "one variable" needs the opening written down:
+**from A3 on the task file pins the first four production orders, and the attempt's record says whether
+the executor matched them.** A2 carries the deviation and reads its verdicts with it in hand - which is
+why a difference between A1 and A2 is a candidate cause, not a single cause.
+
 Two consequences to write into A2's task file rather than discover in it:
 
 - **A city-state is a legitimate target for this experiment and not for the standing directive.** The

@@ -49,6 +49,22 @@ but a snapshot lost to an overwrite is now recoverable rather than lost.
 variable" claim is read off the record instead of asserted; the first divergence the record shows is the
 T10 military figure, **34 for A1 against 31 for A2**.
 
+**The measured deviation from "one variable".** The two sessions ran the same doctrine and still opened
+differently (read from each run's own `set_city_production` rows):
+
+| | A1 | A2 |
+|---|---|---|
+| the first six orders | `SCOUT T1, SLINGER T5, SETTLER T6, BUILDER T15, GRANARY T18, WARRIOR T20` | `WARRIOR T1, SLINGER T7, SETTLER T11, BUILDER T18` |
+
+Same kinds in the same order except that **A2's first build is a second Warrior, not the Scout** - so the
+attempt has **no recon unit at all** (4 units at T18: Warrior (60,22), Warrior (56,23) at 31 HP, Slinger
+(60,22), Settler (60,22)) - and every later slot is 1-5 turns later. The doctrine fixes the army's
+composition, not the city's first order, so this is a property of the doctrine rather than a slip: the
+protocol now pins the opening build from A3 on. The consequence to carry into the T40 review is concrete:
+`tactics/07`'s Gate 0 is *a candidate city is actually visible*, the target is still in fog, and this
+attempt's only westward unit is a wounded Warrior - so Q3's deadline is exposed to a failure mode A1's
+window never tested.
+
 ## The hypothesis, with the numbers that falsify it
 
 | # | Prediction | Falsified when |
