@@ -44,7 +44,7 @@
 - 尝试在**拿下一座城**（`city_action` 回执读到 `KEEP|`）或棋局到达 **T70** 时结束，以先到者为准。`expires:` 为 T75。
 - 结束时取快照：
   `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <本会话> --from 1 --to <最后一回合> --step 10 --verdict --questions a5 --save docs/experiments/A5-final.json`
-  （`--questions a5` 就是本次尝试上面自己的四行；如果这个模式还不在 `scripts/experiment-report.py` 里——它今天的 `--questions` 选项是 `generic`、`a2`、`a3`——就跟着它们一起加上，正如当初为 `a2` 和 `a3` 各自的四行加上一样），跑
+  （`--questions a5` 就是本次尝试上面自己的四行，而且这个模式已经在插桩里了——它是在本次尝试发布之前加好并验证过的），跑
   `.venv\Scripts\python.exe scripts\experiment-report.py --compare docs\experiments\A4-final.json docs\experiments\A5-final.json`，
   写 `docs/experiments/005-attempt-A5.md`，并把 A5 的半程写进复盘。
 - 然后退役本文件，并在日记的 `tooling` 行写明结束于哪一回合。

@@ -92,9 +92,8 @@ city comes to exist; if the second city is taken instead, the record says which 
   **turn 110**, whichever comes first. `expires:` is T115.
 - At the end: take the snapshot with
   `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <this session> --from 1 --to <last turn> --step 10 --verdict --questions a7 --save docs/experiments/A7-final.json`
-  (`--questions a7` is this attempt's own four rows above; if that mode is not in
-  `scripts/experiment-report.py` yet - its `--questions` choices are `generic`, `a2`, `a3` today - add it
-  with them, as `a2` and `a3` were added for theirs), run
+  (`--questions a7` is this attempt's own four rows above, and the mode is in the instrument - it was added
+  and verified before this attempt was published), run
   `.venv\Scripts\python.exe scripts\experiment-report.py --compare docs\experiments\A6-final.json docs\experiments\A7-final.json`,
   write `docs/experiments/007-attempt-A7.md`, and add A7's half to the retro.
 - Then retire this file and record the turn in the diary's `tooling` line.

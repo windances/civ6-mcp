@@ -52,10 +52,11 @@ even then ("the pin's fourth order (`BUILDER`) not placed at T12").
 **What that costs.** A3 differs from A2 in three ways, not two: the corrected table, the target's defences,
 and an opening that is not the pinned one. Q1 (the establishment complete by T60) is the verdict that
 depends on the opening, so it is read with that qualification, and A4's Q2 - which uses A3's keep turn as
-its bound - inherits the caveat. The sink for this is mechanical, and it is being extended with this
-attempt's snapshot: `scripts/experiment-report.py` prints a `pin:` block giving the attempt's first four
-orders and `MATCHED`/`DEVIATED`, so no attempt's pin can be glossed in prose again; A4-A7's task files carry
-the consequence that a deviated opening is **re-run from the shared start** rather than reasoned about.
+its bound - inherits the caveat. The sink for this is mechanical and it has **landed**: run against this
+attempt's own log, `scripts/experiment-report.py` now prints `PIN opening: DEVIATED - opening order 4 was
+UNIT_WARRIOR on T15, not UNIT_BUILDER - the pin did not hold` in the ordinary `--verdict` output and in
+every snapshot, so no attempt's pin can be glossed in prose again; A4-A7's task files carry the consequence
+that a deviated opening is **re-run from the shared start** rather than reasoned about.
 
 **A second difference that is the tool's, not A3's: the pantheon, and it is measured rather than assumed.**
 A2's first session could not found a pantheon **at all** - `choose_pantheon` at T21 answered

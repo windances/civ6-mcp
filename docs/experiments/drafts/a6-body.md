@@ -112,9 +112,8 @@ unit stays in the queue, and `0f214eb` is why the war is compared against A3 rat
   **turn 70**, whichever comes first. `expires:` is T75.
 - At the end: take the snapshot with
   `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <this session> --from 1 --to <last turn> --step 10 --verdict --questions a6 --save docs/experiments/A6-final.json`
-  (`--questions a6` is this attempt's own four rows above; if that mode is not in
-  `scripts/experiment-report.py` yet - its `--questions` choices are `generic`, `a2`, `a3` today - add it
-  with them, as `a2` and `a3` were added for theirs), run
+  (`--questions a6` is this attempt's own four rows above, and the mode is in the instrument - it was added
+  and verified before this attempt was published), run
   `.venv\Scripts\python.exe scripts\experiment-report.py --compare docs\experiments\A5-final.json docs\experiments\A6-final.json`,
   write `docs/experiments/006-attempt-A6.md`, and add A6's half to the retro.
 - Then retire this file and record the turn in the diary's `tooling` line.
