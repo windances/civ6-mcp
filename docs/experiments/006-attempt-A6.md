@@ -179,6 +179,38 @@ completion) and the war opened at T52, eight turns before A2's T60** - and A5, w
 three turns early, opened at T59 and never took a city. **Whether T52 turns into a keep is the open half**,
 and the march is what it depends on.
 
+## The establishment, and the train at the war's opening
+
+The instrument, run over A6's own session, reads:
+
+```
+COMPLETE at T54   siege=2  melee=2  anticav=1  ranged=4  cavalry=1  recon=1
+first siege: T46   first melee: T1   first anticav: T54   first ranged: T10   first cavalry: T33   first recon: T5
+PIN opening: held
+```
+
+**`COMPLETE at T54`, filled exactly** - every row on the table's number, no row over strength - which is
+**six turns inside Q1's deadline** and, on the compare table, the **joint-earliest establishment in the
+programme** with A4's T54, one turn behind A3's T53 and **three turns ahead of A5's T57**.
+
+**And the train was whole on the turn the war opened**, which is the thing Q3 asks:
+
+| unit | how | turn |
+|---|---|---|
+| first Catapult | **bought** at T46 (`cost=320g (had 396g)`) | owned **T46** |
+| second Catapult | **produced** in the same city, ordered T46 at 6 turns | the `finished building UNIT_CATAPULT` line sits in **T51's** `end_turn`, so owned from **T52** |
+| **the war** | `WAR_REQUESTED\|DECLARE_SURPRISE_WAR on Jerusalem` | **T52** - the same turn the second gun exists |
+
+**So A6 fought its war with a complete train and a complete establishment for the first time in the
+programme**: A5 opened at T59 with the table still three turns short, A4 at T62 with `siege 2/2` but its
+table only complete from T54 by luck of timing, and A2 at T60 with `ram 0/1` missing. **The two clocks the
+variable was supposed to move both moved**: the first gun seven turns earlier and the war eight turns
+earlier than A2, with the establishment complete six turns inside its deadline.
+
+**Q4 is the only question still open**, and its shape is A2's: the red window runs to T60 and the attempt
+stands at T54, so the rule's zero is not final; the diary's own `gold_per_turn` is below the +10 floor on
+**39 of those 54 turns**. The cost of the purchase is read in the end table against A2's ten red turns.
+
 ## The end table, and the verdict - written when the attempt ends
 
 The attempt ends when **a city is kept** - a `city_action` reply reads `KEEP|`, **or** the game resolves the
