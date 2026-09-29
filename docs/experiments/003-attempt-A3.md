@@ -29,10 +29,13 @@ protocol requires it of A3 and the file went out without it.
 
 | order | promised | the record |
 |---|---|---|
-| 1 | `UNIT_SCOUT` | not yet tabulated |
-| 2 | `UNIT_SLINGER` | not yet tabulated |
-| 3 | `UNIT_SETTLER` | not yet tabulated |
-| 4 | `UNIT_BUILDER` | not yet tabulated |
+| 1 | `UNIT_SCOUT` | **T1** - matched (and it is the corrected table's recon row: the first attempt in the programme to open with it on purpose) |
+| 2 | `UNIT_SLINGER` | **T5** - matched |
+| 3 | `UNIT_SETTLER` | **T6** - matched |
+| 4 | `UNIT_BUILDER` | not placed yet at T9 |
+
+Research follows A1's and A2's shape: `TECH_MINING` T1, `TECH_THE_WHEEL` T8 - the beeline A2 rode to
+Engineering at T48, which is the gate H1 is measured at.
 
 ## The hypothesis, with the numbers that falsify it
 
