@@ -143,3 +143,10 @@ rather than attacking an unwalled one and calling it a wall test.
      at: 2026-09-29T20:22:06+08:00
      chinese backup: prompts/tasks/cn/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 034 --done --turn 72
+     at: 2026-09-30T00:47:04+08:00
+     status: done at T72
+     chinese backup: prompts/tasks/cn/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start.cn.md
+-->
