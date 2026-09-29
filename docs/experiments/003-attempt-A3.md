@@ -374,6 +374,24 @@ is `restart_and_load("0_MCP_0070")`, the autosave the HANG line names.
 the same column as A2's six war-declaration turns and A3's own T59-T60. The resolution and its cost are in the
 end table below.
 
+**And the cause is in the log, not in the screen.** When the session went back to work it read
+`get_world_congress`, which answered
+
+```
+World Congress: FIRES THIS TURN - use queue_wc_votes() before end_turn()!
+Favor: 38 | Vote costs (cumulative): 1 vote=free, 2=6, 3=...
+```
+
+**The World Congress fires synchronously inside `end_turn()`** (`AGENTS.md`: "register votes before calling
+end_turn", and a session that has not is the case that blocks). So the ten-minute `end_turn` was not a stuck
+AI turn in the ordinary sense - it was the game waiting on the Congress with this session's votes unregistered,
+and the second `end_turn` reproduced it because the votes were still unregistered. The tool's own HANG wording
+("AI turn processing appears stuck") names the wrong subsystem, and the recovery sequence it suggests ignores
+the one piece of state that was actually pending: **`dismiss_popup` has nothing to dismiss because the
+Congress is not a popup**, it is an inter-turn phase, and no amount of screen-reading shows it as a dialog.
+That is worth carrying in the programme's notes: **before treating a stuck `end_turn` as an AI hang, read
+`get_world_congress`** - it costs one call and it is the difference between a recovery and a relaunch.
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
