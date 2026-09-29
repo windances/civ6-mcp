@@ -135,10 +135,33 @@ this attempt's business includes scouting, settling and infrastructure. **A1's h
 mis-specified**: the doctrine's establishment table describes what a *war* needs, and a window that also
 demands expansion cannot pay for it by T60. The review should judge **H1's ordering** (is the assault
 asked for before the merely nice, once an assault is planned) and **the cost**, and it should not read a
-missed P2 as the doctrine failing. This note is here so that judgement is made with the arithmetic in
+missed P2 as the doctrine fails. This note is here so that judgement is made with the arithmetic in
 front of it rather than after the fact.
 
+**Sharpened at T24 by the session's own account of itself.** It is *not* taking the Ancient Walls
+eureka, and its own estimate is **Engineering at T40-45** (diary, T20 and T24 `hypothesis`), with ranged
+4/4 about T33 at two turns per Slinger. Take that seriously and P2 stops being tight and becomes
+**impossible**: Engineering ~T42, then two Catapults at 80 production each and ~6-8 production per turn
+is a further 20-26 turns, so the siege half of the table lands around **T62-T70** - before the two melee,
+four ranged, ram and cavalry that the table also asks for. The window's own telemetry corroborates the
+cost side: the ten turns T10-T20 bought one Settler, one Builder, one city and two techs **and 0% of the
+establishment** (the session's own words), with expansion compounding science 2.5 -> 5.5 by T24.
+
+So the honest verdict for P2 is not "missed" but "**not askable of a sixty-turn window**" - and the
+useful question the experiment can answer is what a *reachable* establishment window is (the session's
+own arithmetic suggests siege from about T45 and the screens from T33, which is a T75-T90 establishment,
+not a T60 one). That belongs in the next attempt's hypothesis, not in an apology for this one.
+
 ## What this attempt already found (2026-09-29, before its first played turn)
+
+- **A candidate correction to a rule, from the attempt's own tooling line.** `issue-the-calls-furthest-first`
+  fired again at T24 (3 stops) and the session's argument is that the cause is **terrain, not a column
+  queueing**: every tile around the capital is hills, jungle or forest at mv2-mv3, so almost any
+  multi-tile order stops mid-path whatever order the calls go in. That is testable against the log
+  (stops per turn against the terrain of the tiles crossed) and it matters because the rule was added to
+  fix a *jam* - and the retro that added it listed "the stop count is told, not enforced" as still open.
+  If a terrain-caused stop and a queue-caused stop look the same to the rule, the rule is measuring the
+  map as much as the plan. **For the T40 review, not settled here.**
 
 - **A turn was taken and reverted, and it found a rules bypass.** To prove the `end_turn` path before
   anyone depends on it, `scripts/auto-turns.py --turns 1` played T1. `end_turn` worked (`Turn 1 -> 2`,
