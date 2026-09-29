@@ -1,7 +1,7 @@
 ﻿# TEMP TASK 032 - attempt A2, second half: T41 to the first siege order
 
 added:     2026-09-29 (human instruction: 继续)
-expires:   turn 85 - 30 turn(s) from T41, the turn the match stands on (read from the save); a hard stop,
+expires:   turn 85 - 30 turn(s) from T44, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
 done when: turn 80 is reached, or a set_city_production reply reads PRODUCING|UNIT_CATAPULT (with that turn
            written into docs/experiments/002-attempt-A2.md), or a city_action reply reads KEEP| -
@@ -69,8 +69,14 @@ it is the gate that both attempts died on.
 - The attempt ends when a city is kept (`city_action` reply reads `KEEP|`) or the game
   reaches **T80**, whichever comes first. `expires:` is T85.
 - At the end: take the snapshot with
-  `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <this session> --from 1 --to <last turn> --step 10 --save docs/experiments/A2-final.json`,
-  run `--compare docs/experiments/A1-T40.json docs/experiments/A2-final.json`, complete
+  `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run sacred-garnet-vault-35,pale-pearl-aqueduct-92 --from 1 --to <last turn> --step 10 --verdict --ids Q1,Q2,Q3,Q4 --save docs/experiments/A2-final.json`
+  **Both session names are needed**: this attempt spans a resume (T1-T40 in
+  `sacred-garnet-vault-35`, T41 on in `pale-pearl-aqueduct-92`), and the instrument attributes diary
+  rows by session time - naming only this session drops the first thirty-nine turns and the report
+  starts at T41. `--ids Q1,Q2,Q3,Q4` prints this attempt's own prediction labels instead of A1's
+  `P1`-`P4`. Then run
+  `.venv\Scripts\python.exe scripts\experiment-report.py --compare docs\experiments\A1-T40.json docs\experiments\A2-final.json`,
+  complete
   `docs/experiments/002-attempt-A2.md` (the T40 table stays as the checkpoint; the end
   table goes below it) and update `docs/experiments/RETRO-2026-09-29.md` with A2's final
   half - including whether H1 was held, broken, or still unaskable.
@@ -88,7 +94,7 @@ it is the gate that both attempts died on.
   turn your session did not play is not yours to describe.
 
 <!-- published by scripts/temp-task.py
-     command: python scripts/temp-task.py add --title "attempt A2, second half: T41 to the first siege order" --instruction 继续 --why "resume attempt A2 past its mid-window checkpoint so the first siege order can be read" --done-when "turn 80 is reached, or a set_city_production reply reads PRODUCING|UNIT_CATAPULT (with that turn written into docs/experiments/002-attempt-A2.md), or a city_action reply reads KEEP| - whichever comes first" --overrides "task 031's stop-at-the-end-of-T40 instruction, and only that: the checkpoint it names is behind the game, which stands at T41. 031's scope, its finish line and its target stay in force, and this file adds no other exception." --scope "this match only: attempt A2 continued from the position the game stands on (T41, save 0_MCP_0041), running 031's settings, doctrine and target unchanged" --expires-turn 85 --body-file .tmp\a2-resume-body.md --cn @.tmp\a2-resume-cn.md
-     at: 2026-09-29T16:29:08+08:00
+     command: python scripts/temp-task.py add --replace --title "attempt A2, second half: T41 to the first siege order" --instruction 继续 --why "resume attempt A2 past its mid-window checkpoint so the first siege order can be read" --done-when "turn 80 is reached, or a set_city_production reply reads PRODUCING|UNIT_CATAPULT (with that turn written into docs/experiments/002-attempt-A2.md), or a city_action reply reads KEEP| - whichever comes first" --overrides "task 031's stop-at-the-end-of-T40 instruction, and only that: the checkpoint it names is behind the game, which stands at T41. 031's scope, its finish line and its target stay in force, and this file adds no other exception." --scope "this match only: attempt A2 continued from the position the game stands on (T41, save 0_MCP_0041), running 031's settings, doctrine and target unchanged" --expires-turn 85 --body-file .tmp\a2-resume-body.md --cn @.tmp\a2-resume-cn.md
+     at: 2026-09-29T16:42:00+08:00
      chinese backup: prompts/tasks/cn/032-attempt-a2-second-half-t41-to-the-first-siege-order.cn.md
 -->

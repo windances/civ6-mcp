@@ -28,8 +28,11 @@ T40 检查点已经过去——棋局停在 **T41**，任务 031 的"停止"指�
 
 - 尝试在**拿下城池**（`city_action` 回执读到 `KEEP|`）或棋局到达 **T80** 时结束，以先到者为准。`expires:` 为 T85。
 - 结束时：用
-  `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run <本会话> --from 1 --to <最后一回合> --step 10 --save docs/experiments/A2-final.json`
-  取快照，跑 `--compare docs/experiments/A1-T40.json docs/experiments/A2-final.json`，补完 `docs/experiments/002-attempt-A2.md`（T40 的表保留为检查点，终点表写在其下），并把 A2 的后半程写进 `docs/experiments/RETRO-2026-09-29.md`——包括 H1 是成立、被打破、还是仍然问不出来。
+  `.venv\Scripts\python.exe scripts\experiment-report.py --game china_911679432 --run sacred-garnet-vault-35,pale-pearl-aqueduct-92 --from 1 --to <最后一回合> --step 10 --verdict --ids Q1,Q2,Q3,Q4 --save docs/experiments/A2-final.json`
+  **两个会话名都要写**：这次尝试跨了一次续跑（T1–T40 在 `sacred-garnet-vault-35`，T41 起在
+  `pale-pearl-aqueduct-92`），插桩是按会话时间给日记行归属的——只写本会话会把前三十九回合丢掉，报告
+  从 T41 开始。`--ids Q1,Q2,Q3,Q4` 打印这次尝试自己的预测编号，而不是 A1 的 `P1`–`P4`。然后跑
+  `.venv\Scripts\python.exe scripts\experiment-report.py --compare docs\experiments\A1-T40.json docs\experiments\A2-final.json`，补完 `docs/experiments/002-attempt-A2.md`（T40 的表保留为检查点，终点表写在其下），并把 A2 的后半程写进 `docs/experiments/RETRO-2026-09-29.md`——包括 H1 是成立、被打破、还是仍然问不出来。
 - 然后**把本文件与 031 一起退役**（031 的窗口随尝试一起结束），并在日记的 `tooling` 行写明各自结束于哪一回合。
 
 ## 这次尝试已经付过代价的诚实条款
