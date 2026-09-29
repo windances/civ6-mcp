@@ -57,18 +57,27 @@ def build_choose_pantheon(belief_type: str) -> str:
 
     The faith check is not decoration. Measured 2026-09-29 on a fresh match (T1, a capital just
     founded, `faith_balance 0`): with no guard at all the operation went through, the pantheon was
-    granted, and the empire was left at **-16 faith** - a pantheon nobody paid for. The threshold is
-    the game's own `RELIGION_PANTHEON_MIN_FAITH`
-    (`Base/Assets/Gameplay/Data/GlobalParameters.xml:475`, value 25) rather than a number written here.
+    granted, and the empire was left at **-16 faith** - a pantheon nobody paid for.
+
+    **The gate is the game's own availability test, `PlayerReligion:CanCreatePantheon()`**, which is
+    what the install's own interface uses: `Base/Assets/UI/LaunchBar.lua:138` offers the pantheon on
+    exactly `pReligion:GetPantheon() < 0 and pReligion:CanCreatePantheon()`. It replaces a comparison
+    against the flat `RELIGION_PANTHEON_MIN_FAITH`
+    (`Base/Assets/Gameplay/Data/GlobalParameters.xml:475`, value 25), which is the **standard-speed**
+    cost and therefore refuses pantheons the game is already offering. **That was measured twice, and
+    both times the guard was the thing that was wrong**: A4 was offered the game's own
+    `ENDTURN_BLOCKING_PANTHEON` at T19 and then refused at T20 with `faith 23 < 25`, and A3 was offered
+    at T22 (`Faith: 13` at T21) and refused at T23 with `faith 17`. Quick's `CostMultiplier` is 67
+    (25 x 0.67 = 16.75), so the flat 25 held A3 four turns (T22 -> T26). The parameter survives below
+    **only as the fallback** for a build where the accessor is missing, which is the one case in which
+    a threshold has to stand in for the game's own answer.
 
     **`tonumber` is load-bearing** (measured 2026-09-29, attempt A2 at T21): in this build the
     parameter's `.Value` column comes back as a **string**, so `faith < minFaith` raised
     `operator < is not supported for number < string` on every call and the tool could not found a
-    pantheon at all - a guard that refuses everything is not a guard. Two notes for whoever tunes it
-    next: the value is the **standard-speed** cost, while the game itself offers the pantheon earlier
-    on Quick (25 x 0.67, about 17 faith - which is when A2's prompt actually appeared), so this check
-    is conservative on faster speeds; and the real protection against a negative balance is that the
-    operation is requested only after the comparison, which the ordering is what keeps.
+    pantheon at all - a guard that refuses everything is not a guard. The real protection against a
+    negative balance is that the operation is requested only after the checks, which the ordering is
+    what keeps.
     """
     return f"""
 local me = Game.GetLocalPlayer()
@@ -78,7 +87,11 @@ local belief = GameInfo.Beliefs["{belief_type}"]
 if belief == nil then {_bail(f"ERR:BELIEF_NOT_FOUND|{belief_type}")} end
 local minFaith = tonumber(GameInfo.GlobalParameters["RELIGION_PANTHEON_MIN_FAITH"].Value)
 local faith = pReligion:GetFaithBalance()
-if faith < minFaith then {_bail_lua('"ERR:NOT_ENOUGH_FAITH|faith " .. faith .. " < " .. minFaith')} end
+-- The game's own answer first; the parameter is the fallback, not the gate.
+local canCreate = nil
+pcall(function() canCreate = pReligion:CanCreatePantheon() end)
+if canCreate == false then {_bail_lua('"ERR:NOT_ENOUGH_FAITH|the game reports the pantheon is not available yet (" .. faith .. " faith, standard-speed cost " .. minFaith .. ")"')} end
+if canCreate == nil and faith < minFaith then {_bail_lua('"ERR:NOT_ENOUGH_FAITH|faith " .. faith .. " < " .. minFaith .. " (the game\'s own availability test was unavailable, so the standard-speed threshold stands in)"')} end
 local params = {{}}
 params[PlayerOperations.PARAM_BELIEF_TYPE] = belief.Hash
 UI.RequestPlayerOperation(me, PlayerOperations.FOUND_PANTHEON, params)
