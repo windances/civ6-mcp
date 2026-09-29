@@ -408,7 +408,12 @@ for i, c in Players[me]:GetCities():Members() do
         end
     end)
     pcall(function()
-        local breaks = "[\r\n]+"
+        -- The pattern is built with string.char rather than written as a Lua escape, because this
+        -- text lives inside a Python triple-quoted string: an escape written here reaches the game as
+        -- real control characters, which end the Lua string literal on the spot. That is the
+        -- unfinished-string syntax error measured 2026-09-29, which broke every get_cities call
+        -- until it was found. Same idiom as the map query above.
+        local breaks = "[" .. string.char(9) .. string.char(10) .. string.char(13) .. "]"
         pwAdvice = tostring(c:GetPowerAdvice() or ""):gsub("|", "/"):gsub(breaks, " ")
     end)
     print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit .. "|" .. loyOutcome .. "|" .. string.format("%.1f|%.1f|%.1f|%s", pwReq, pwFree, pwTemp, pwFull) .. "|" .. pwAdvice)
