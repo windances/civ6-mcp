@@ -86,6 +86,14 @@ Every attempt reports the same table, extracted by the same command:
 * **The production orders** - the first order in each category, the turn the army began, and the turn
   the siege train was first asked for. The diary holds what the empire *has*; the log holds what it
   *chose*, and the doctrine is about the choosing.
+* **The doctrine checks** - the claims in `tactics/01` that a log can settle without a judgement call:
+  **H5** (no ram and no tower is ever bought - the human's instruction, so a single order of one is a
+  violation with a turn on it), **H6** (how many distinct cities were asked for military units),
+  **H4** (upgrades against new builds), and **H1/H2** (the order the roles were first asked for).
+  Alongside them, **the diary's own `ESTABLISHMENT:` line is printed next to the record's numbers for
+  the same turn**: a claim the record does not support comes out as `MISMATCH - siege claimed 2 vs 1
+  held` rather than being read as fact. The line is requested every ten turns, so a turn without one
+  is not a failure.
 * **The economy at T20 / T40 / T60** - science, culture, gold/turn, pop, cities, districts,
   improvements. This is what the military build cost.
 * **The rule table** - `CHECK FAILED` counts per rule. A doctrine that keeps its own rules red is
@@ -113,11 +121,14 @@ The rules that keep this honest:
    never written as a measurement.
 2. **The verdict is a comparison, not a narrative.** "H1 held" is only allowed next to the two
    numbers it is claimed for.
-3. **A finding that changes the doctrine goes into the doctrine**, not only into this directory:
+3. **Where the two records disagree, the record wins.** The diary is the agent's own account of the
+   turn and the log is what the tool answered; when the self-report and the instrument part company,
+   the review says so and quotes both, because "the claim was plausible" is not evidence.
+4. **A finding that changes the doctrine goes into the doctrine**, not only into this directory:
    `prompts/tactics/01` for a production rule, `turn-checks.md` for a rule the engine can enforce,
    `pending/` when its metric does not exist yet, a task file for a bounded objective. This is the
    same ladder `docs/retrospectives/` uses; a finding that lands nowhere is a diary entry and will
    be lost.
-4. **The diary keeps the last write per turn.** After a rollback, the early turns belong to the
+5. **The diary keeps the last write per turn.** After a rollback, the early turns belong to the
    abandoned branch while the logs still hold both. An attempt that was rolled back says so at the
    top of its record, or its numbers will be read as one continuous game.

@@ -31,6 +31,11 @@ Reported, per attempt:
     and `purchase_item` calls: the first order in each category and the first turn a siege unit was
     ordered. The diary holds what the empire **has** and the log holds what it **chose**, and the
     doctrine is a claim about the choosing
+  * **the doctrine checks** - the claims in `prompts/tactics/01` a log can settle without a judgement
+    call: H5 (no ram and no tower is ever bought), H6 (how many cities were asked for units), H4
+    (upgrades against new builds) and H1/H2 (the order the roles were asked for). Plus the diary's own
+    `ESTABLISHMENT:` line beside the record's numbers, so a self-report the record does not support is
+    visible as a MISMATCH instead of being read as fact
   * the capture line - which turn a city was kept, from the tool reply, not from the prose
   * the rule table - `CHECK FAILED [id]` counts, i.e. which doctrine rules the attempt violated
   * the refusal table - STOPPED_MID_PATH and friends, i.e. what the orders cost
@@ -331,6 +336,100 @@ def order_summary(rows: list[dict]) -> dict:
     return {"counts": dict(counts), "firsts": firsts, "total": sum(counts.values())}
 
 
+# --------------------------------------------------------------------------- doctrine checks
+#
+# `prompts/tactics/01-unit-production.md` makes claims a log can settle without a judgement call:
+# a unit that is forbidden to buy, a role that must be asked for first, a city count, an upgrade
+# count. They are counts rather than opinions about a turn, which is what makes them checkable.
+
+FORBIDDEN_UNITS = ("BATTERING_RAM", "SIEGE_TOWER")  # H5, human instruction 2026-09-26
+
+
+def forbidden_orders(rows: list[dict]) -> list[tuple[int, str, str]]:
+    """Every order or purchase of a unit the doctrine forbids - each one violates H5."""
+    return [
+        (turn, name, kind)
+        for turn, name, kind in orders(rows)
+        if unit_type_of(name) in FORBIDDEN_UNITS
+    ]
+
+
+def military_city_spread(rows: list[dict]) -> dict:
+    """How many distinct cities were asked to build a military unit (H6: one war city)."""
+    per_city: collections.Counter = collections.Counter()
+    for row in rows:
+        if row.get("tool") not in ORDER_TOOLS:
+            continue
+        params = row.get("params") or {}
+        if str(params.get("item_type") or "").upper() != "UNIT":
+            continue
+        if role_of_item(params.get("item_name") or ""):
+            per_city[str(params.get("city_id"))] += 1
+    return {"cities": len(per_city), "per_city": dict(per_city)}
+
+
+def upgrades(rows: list[dict]) -> list[tuple[int, str]]:
+    """`upgrade_unit` calls in turn order - H4's 'an old unit plus gold is a new unit'."""
+    out = [
+        (row.get("turn") or 0, str((row.get("params") or {}).get("unit_id") or ""))
+        for row in rows
+        if row.get("tool") == "upgrade_unit"
+    ]
+    out.sort(key=lambda entry: entry[0])
+    return out
+
+
+def role_order_sequence(rows: list[dict]) -> list[tuple[int, str, str]]:
+    """The first turn each role was asked for as a *unit order*, earliest first (H1/H2)."""
+    firsts: dict[str, tuple[int, str]] = {}
+    for turn, name, kind in orders(rows):
+        if str(kind).upper() != "UNIT":
+            continue
+        role = role_of_item(name)
+        if role and role not in firsts:
+            firsts[role] = (turn, name)
+    return sorted((turn, role, name) for role, (turn, name) in firsts.items())
+
+
+SELF_REPORT_RE = re.compile(
+    r"ESTABLISHMENT:\s*siege\s*(\d+)\s*/\s*2.*?melee\s*(\d+)\s*/\s*2.*?ram\s*(\d+)\s*/\s*1"
+    r".*?ranged\s*(\d+)\s*/\s*4.*?cavalry\s*(\d+)\s*/\s*1",
+    re.I | re.S,
+)
+
+
+def self_reports(by_turn: dict[int, dict]) -> list[dict]:
+    """The diary's own `ESTABLISHMENT:` lines, beside what the record says for the same turn.
+
+    The task asks the session to write
+    `ESTABLISHMENT: siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1 at T<n>`. The instrument
+    computes the same numbers from `unit_composition`, so the two can be compared - and a claim the
+    record does not support is exactly the failure this check exists to catch. A turn without such a
+    line is not a failure: the line is requested every ten turns, not every turn.
+    """
+    out: list[dict] = []
+    for turn in sorted(by_turn):
+        text = (by_turn[turn].get("reflections") or {}).get("strategic") or ""
+        match = SELF_REPORT_RE.search(text)
+        if not match:
+            continue
+        claimed = {role: int(match.group(i)) for i, role in enumerate(ESTABLISHMENT, start=1)}
+        actual = role_counts(by_turn[turn].get("unit_composition"))
+        out.append(
+            {
+                "turn": turn,
+                "claimed": claimed,
+                "actual": actual,
+                "mismatch": {
+                    role: (claimed[role], actual[role])
+                    for role in ESTABLISHMENT
+                    if claimed[role] != actual[role]
+                },
+            }
+        )
+    return out
+
+
 def rule_turns(rows: list[dict]) -> dict[str, list[int]]:
     """Which turns each rule was red on, deduplicated: a turn can be evaluated more than once."""
     out: dict[str, set[int]] = collections.defaultdict(set)
@@ -395,6 +494,53 @@ def verdict(
     ]
 
 
+def print_doctrine(by_turn: dict[int, dict], rows: list[dict]) -> None:
+    """The doctrine's mechanical claims, and whether the diary's own account matches the record."""
+    print("\n-- doctrine checks (from the log; prompts/tactics/01) --")
+
+    forbidden = forbidden_orders(rows)
+    if forbidden:
+        for turn, name, kind in forbidden:
+            print(f"  H5 VIOLATED: {name} ordered on T{turn} ({kind}) - no ram and no tower is bought")
+    else:
+        print("  H5 clean: neither a ram nor a siege tower was ever ordered or bought")
+
+    spread = military_city_spread(rows)
+    if spread["cities"]:
+        worst = ", ".join(
+            f"city {city}: {count}"
+            for city, count in sorted(spread["per_city"].items(), key=lambda kv: -kv[1])[:4]
+        )
+        print(f"  H6 war cities: {spread['cities']} distinct cities were asked for military units ({worst})")
+    else:
+        print("  H6 war cities: no military unit has been ordered yet")
+
+    ups = upgrades(rows)
+    if ups:
+        print(f"  H4 upgrades: {len(ups)} upgrade_unit call(s), first on T{ups[0][0]}")
+    else:
+        print("  H4 upgrades: none")
+
+    sequence = role_order_sequence(rows)
+    if sequence:
+        print("  H1/H2 the order of asking: " + ", ".join(f"{role} T{turn}" for turn, role, _ in sequence))
+    else:
+        print("  H1/H2 the order of asking: no role-mapped unit has been ordered yet")
+
+    reports = self_reports(by_turn)
+    if not reports:
+        print("  self-report: no ESTABLISHMENT line in the diary yet (it is asked for every ten turns)")
+    for report in reports:
+        if report["mismatch"]:
+            detail = ", ".join(
+                f"{role} claimed {claimed} vs {actual} held"
+                for role, (claimed, actual) in report["mismatch"].items()
+            )
+            print(f"  self-report T{report['turn']}: MISMATCH - {detail}")
+        else:
+            print(f"  self-report T{report['turn']}: agrees with the record")
+
+
 def print_verdict(
     by_turn: dict[int, dict],
     rows: list[dict],
@@ -439,6 +585,8 @@ def print_verdict(
         )
         if first_military:
             print(f"  the army began on T{first_military[0]} ({first_military[1]})")
+
+    print_doctrine(by_turn, rows)
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")
@@ -622,6 +770,14 @@ def main() -> int:
             "captures": captures(rows),
             "tool_calls": dict(tool_calls(rows)),
             "establishment": establishment(by_turn),
+            "orders": order_summary(rows),
+            "doctrine": {
+                "forbidden_orders": forbidden_orders(rows),
+                "military_city_spread": military_city_spread(rows),
+                "upgrades": upgrades(rows),
+                "role_order_sequence": role_order_sequence(rows),
+                "self_reports": self_reports(by_turn),
+            },
             "verdict": [
                 {"prediction": name, "held": held, "detail": detail}
                 for name, held, detail in verdict(

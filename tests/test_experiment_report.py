@@ -171,3 +171,56 @@ def test_orders_are_ordered_by_turn_not_by_log_position():
     summary = report.order_summary(rows)
     # Both are units, so the category's first is the earlier turn - not the earlier row.
     assert summary["firsts"]["units"] == (25, "UNIT_CATAPULT")
+
+
+def test_doctrine_checks_answer_the_mechanical_claims():
+    rows = [
+        {"turn": 30, "tool": "set_city_production",
+         "params": {"city_id": 11, "item_type": "UNIT", "item_name": "UNIT_ARCHER"}},
+        {"turn": 34, "tool": "set_city_production",
+         "params": {"city_id": 11, "item_type": "UNIT", "item_name": "UNIT_CATAPULT"}},
+        {"turn": 36, "tool": "set_city_production",
+         "params": {"city_id": 22, "item_type": "UNIT", "item_name": "UNIT_WARRIOR"}},
+        {"turn": 40, "tool": "set_city_production",
+         "params": {"city_id": 22, "item_type": "UNIT", "item_name": "UNIT_BATTERING_RAM"}},
+        {"turn": 44, "tool": "upgrade_unit", "params": {"unit_id": 7}},
+        {"turn": 46, "tool": "upgrade_unit", "params": {"unit_id": 9}},
+    ]
+    # H5: the ram is the violation, and it is named with its turn.
+    assert report.forbidden_orders(rows) == [(40, "UNIT_BATTERING_RAM", "UNIT")]
+    # H6: two cities were asked for military units, each with its own count.
+    spread = report.military_city_spread(rows)
+    assert spread["cities"] == 2
+    assert spread["per_city"] == {"11": 2, "22": 2}
+    # H4: both upgrades, in turn order.
+    assert report.upgrades(rows) == [(44, "7"), (46, "9")]
+    # H1/H2: what was asked for, and when, earliest first.
+    assert report.role_order_sequence(rows) == [
+        (30, "ranged", "UNIT_ARCHER"),
+        (34, "siege", "UNIT_CATAPULT"),
+        (36, "melee", "UNIT_WARRIOR"),
+        (40, "ram", "UNIT_BATTERING_RAM"),
+    ]
+
+
+def test_self_report_mismatch_is_visible_and_agreement_is_quiet():
+    """The diary's claim about itself is checked against the record, not believed."""
+    honest = frames({40: {"CATAPULT": 2, "WARRIOR": 2, "ARCHER": 4, "HORSEMAN": 1, "BATTERING_RAM": 1}})
+    honest[40]["reflections"] = {
+        "strategic": "T40: cities 4, pop 12. ESTABLISHMENT: siege 2/2 melee 2/2 ram 1/1 "
+                     "ranged 4/4 cavalry 1/1 at T40. WAR READY: T40"
+    }
+    got = report.self_reports(honest)
+    assert len(got) == 1 and got[0]["turn"] == 40 and got[0]["mismatch"] == {}
+
+    inflated = frames({40: {"CATAPULT": 1, "WARRIOR": 2, "ARCHER": 2, "HORSEMAN": 0, "BATTERING_RAM": 0}})
+    inflated[40]["reflections"] = {
+        "strategic": "ESTABLISHMENT: siege 2/2 melee 2/2 ram 1/1 ranged 4/4 cavalry 1/1 at T40"
+    }
+    got = report.self_reports(inflated)
+    assert got[0]["claimed"]["siege"] == 2
+    assert got[0]["actual"]["siege"] == 1
+    assert got[0]["mismatch"] == {"siege": (2, 1), "ram": (1, 0), "ranged": (4, 2), "cavalry": (1, 0)}
+
+    # A turn with no such line is simply not a report.
+    assert report.self_reports(frames({1: {"WARRIOR": 1}})) == []
