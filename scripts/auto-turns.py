@@ -25,8 +25,12 @@ enemy unit is within three tiles of ours or of one of our cities, or `at_war` is
 where the tactics files apply and where a script has no business deciding.
 
 Usage:
-  .venv\\Scripts\\python.exe .tools\\auto-turns.py --turns 5 --dry-run     # orders nothing
-  .venv\\Scripts\\python.exe .tools\\auto-turns.py --turns 20
+  .venv\\Scripts\\python.exe scripts\\auto-turns.py --turns 5 --dry-run     # orders nothing
+  .venv\\Scripts\\python.exe scripts\\auto-turns.py --turns 20
+
+A city the plan does not name falls back to `UNIT_BUILDER` then `BUILDING_GRANARY`, so the runner
+works on a match it was not written for - it was written for a four-city match, and its per-city plan
+and its diary prose used to name those cities even when playing another one.
 """
 
 from __future__ import annotations
@@ -413,7 +417,7 @@ class Runner:
             f"{c.name} pop{c.population} {c.currently_building}({c.production_turns_left}t)" for c in cities
         )
         reflections = {
-            "tactical": f"T{turn} played by .tools/auto-turns.py (coarse development mode). "
+            "tactical": f"T{turn} played by scripts/auto-turns.py (coarse development mode). "
                         + ("; ".join(actions) if actions else "no orders were needed this turn"),
             "strategic": f"T{turn}: {overview.num_cities} cities, pop {overview.total_population}, "
                          f"score {overview.score}, science {overview.science_yield}, culture "
@@ -424,14 +428,19 @@ class Runner:
             "tooling": f"auto-turns.py turn {turn}: "
                        + ("no refusals" if not any("Error" in a or "CANNOT" in a for a in actions)
                           else "; ".join(a for a in actions if "Error" in a or "CANNOT" in a)),
+            # These two lines are written into the diary of *whatever match the runner is playing*, so
+            # they name nothing match-specific: an earlier version said "西安's Campus", which was true
+            # of the four-city match this runner was written for and would have been planted in the
+            # diary of every later one - the instrument reads that diary.
             "planning": "Hold the development line: builders walk the task list URGENT -> HIGH -> "
-                        "NORMAL, every city's queue stays filled from its plan, research follows "
-                        "RESEARCH_ORDER and civics CIVIC_ORDER, a Builder is bought above "
-                        f"{self.args.buy_at} gold. Science has to come from 西安's Campus at pop 6.",
+                        "NORMAL, every city's queue stays filled from its plan (CITY_PLAN by name, "
+                        "Builder then Granary for a city it does not name), research follows "
+                        "RESEARCH_ORDER and civics CIVIC_ORDER, and a Builder is bought above "
+                        f"{self.args.buy_at} gold. No military decision is made here.",
             "hypothesis": "The runner hands back the moment an enemy is within three tiles or a war "
-                          "starts, which is where the tactics files take over; until then the "
-                          f"measurable expectation is that {PANTHEON} keeps culture rising and the "
-                          "Campus in 西安 lands within ten turns of pop 6.",
+                          "starts, which is where the tactics files take over. Until then the "
+                          "measurable expectation is that every queue stays non-empty, the "
+                          f"improvement count rises, and {PANTHEON} is taken when faith allows.",
         }
         rows: list[dict] = []
         for player in snapshot.players:
