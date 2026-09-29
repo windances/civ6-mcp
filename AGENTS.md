@@ -190,6 +190,12 @@ Each turn in order:
    scoreboard position, military imbalance) - and every one of them has a rule attached. **What each
    block means, and which measurement produced it, is `docs/turn-result-blocks.md`**; read that
    before acting on a block you have not seen before.
+   **The strategy directive is delivered once per change, not once per turn** - `take_update()`
+   returns nothing while the directive is unchanged, and it reports on the first call in a process to
+   cover a stale skill load. Seeing it in one `end_turn` result is not evidence that it repeats, and
+   budgeting context as though it did overstates the cost of a long run by an order of magnitude.
+   The corollary is a rule for whoever is watching a session: **do not re-write the skill's DIRECTIVE
+   block while a session is playing** - the change lands in its next `end_turn` result.
 
 ## Looking things up: `search_knowledge`
 
