@@ -299,6 +299,60 @@ deadline - and it is against `walls: none`, so the fall is the train's raw damag
 The record keeps the two facts apart: **A3 keeps a city on schedule, and it is not the city the attempt was
 designed around.**
 
+## The finish line is not met by this capture, and the attempt says so itself
+
+A3's brief ends the attempt when **a city whose wall pool read above zero is kept**, or at **T110**. 耶路撒冷
+is `walls: none`, so the capture does **not** end it: the attempt continues to look for a walled target inside
+its T80 window and then to T110, re-reading cities already seen (Ancient Walls appear after Masonry and cost a
+city-state its own production, so a city unwalled at T61 may wall later). **The session reached that
+conclusion on its own** - its T66 diary reasons that "since 耶路撒冷 is unwalled, the attempt continues to T110
+or until a walled city is kept" - which is the brief working as written rather than a session overrunning.
+
+That has two consequences the record states plainly:
+
+- **Q2's answer is neither "no" nor "yes"**: the instrument reports it `UNASKABLE` once this capture is on the
+  log (the terminal status added for exactly this case), and the evidence is the `walls: none` reads and any
+  later ones.
+- **The window after the capture is not padding**: it is where a walled target would have to appear for the
+  attempt's own question to be measurable at all. If the attempt reaches T110 with no `walls > 0` read, the
+  honest conclusion is the narrow one already recorded - *on this start, at this tech level, nothing attacked
+  had walls* - and the programme's central question goes into A4-A7 unanswered.
+
+## The first city is kept at T67 - three of the four questions have answers
+
+The capture, in the log's own words: `unit_action(move 50,22)` answered
+`CAPTURE_MOVE|50,22|from:50,24|now_at:50,22|...|CITY TAKEN - resolve keep/raze with city_action`, the first
+`resolve_city_capture(keep)` answered **`NO_PENDING_CITY|No rebelled or captured city pending decision`**, and
+the retry answered **`KEEP|耶路撒冷 (pop 5, id:196610, captured)`**. The failed first call is the documented
+shape of this tool - a capture reply is not the state - and the record keeps it because a reader comparing
+this attempt's log with A2's will see the same race.
+
+The instrument over all three sessions at T67:
+
+```
+HELD      Q1 establishment complete by T60 (corrected table)   [establishment T53]
+OPEN      Q2 a walled target changes the arithmetic measurably [no city with a wall pool above zero was
+                                                               attacked by T67 - unaskable on this map]
+HELD      Q3 first enemy city kept by T80                      [first keep T67]
+HELD      Q4 gold floor red on <10 turns                       [7 red turn(s) by the rule up to T67;
+                                                                the diary's own gold/turn is below 10 on
+                                                                48 of those 62 turn(s)]
+```
+
+**Q3's number is T67: one turn earlier than A2's T68**, inside Q2's own band, and **it is now A4's Q2 bound** -
+A4's brief compares its capture turn against this one. **Q2 stays `OPEN` on purpose** while the attempt hunts
+for a walled target, and turns `UNASKABLE` once T80 passes with none; the terminal status keys on the
+question's own bound rather than on "a city was kept", because this keep was of an unwalled city and the
+attempt is still looking (`b0fcb6f`).
+
+**Q4's `HELD` is a window artifact, and the record says so rather than banking it.** The rule the criterion
+names is gated `when: turn() >= 60` and the floor's horizon is the first keep, so T67 gave it **8 evaluated
+turns** - and going red on 7 of 8 is under the allowance almost by construction. The diary's own measure,
+which is live over the whole window, says the opposite of health: below the +10 floor on **48 of 62 turns**,
+which is exactly what A1 and A2 showed. This is the mirror image of A1/A2's zero-evaluated-turns problem (their
+horizon was T60, so the rule could never fire) and it is the reason Q4 names two measures: **a criterion whose
+window opens at T60 and closes at T67 cannot decide whether the army was paid for.**
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
