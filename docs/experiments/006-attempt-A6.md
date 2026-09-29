@@ -49,9 +49,15 @@ not the opening, so the pin is the condition the attempt's numbers are comparabl
 | order | promised | the record |
 |---|---|---|
 | 1 | `UNIT_SCOUT` | **T1 - matched** (`set_city_production(city_id=65536, UNIT_SCOUT) -> PRODUCING\|UNIT_SCOUT\|4 turns`, the same turn `TECH_MINING` was set) |
-| 2 | `UNIT_SLINGER` | **not yet placed at T4** |
-| 3 | `UNIT_SETTLER` | **not yet placed at T4** |
-| 4 | `UNIT_BUILDER` | **not yet placed at T4** |
+| 2 | `UNIT_SLINGER` | **T5 - matched** (`PRODUCING\|UNIT_SLINGER\|5 turns`) |
+| 3 | `UNIT_SETTLER` | **T10 - matched** (`PRODUCING\|UNIT_SETTLER\|9 turns`) |
+| 4 | `UNIT_BUILDER` | **T18 - matched** (`PRODUCING\|UNIT_BUILDER\|3 turns`) |
+
+**All four matched, and the instrument certifies it** - run over A6's own session at T19:
+**`PIN opening: held - the pinned opening held: UNIT_SCOUT, UNIT_SLINGER, UNIT_SETTLER, UNIT_BUILDER in
+that order`**, with **`H5 clean`** beside it (no ram, no tower). **A6 is the third attempt in the programme
+whose pinned opening the instrument certifies** (A4 and A5 are the others), so it is comparable with them
+on the opening - which is the condition the purchase variable needs.
 
 **A deviation is a re-run, not an explanation** (the brief's own rule): A3's fourth order was
 `UNIT_WARRIOR` at T15 with the pin in force, so the pin now carries a mechanical sink rather than a request
@@ -95,7 +101,7 @@ Read at **T4**, which is where the seeded state stands and is therefore mostly e
 
 | question | answer at T4 |
 |---|---|
-| the opening build, against the pin | **one of four matched**: `UNIT_SCOUT` T1. Orders 2-4 had not been placed |
+| the opening build, against the pin | at T4 **one of four matched**; **by T19 all four are matched and the instrument certifies it** - see the pin table and the re-read below |
 | the research line | `TECH_MINING` set at T1 |
 | the treasury | T1 read `Gold: 6 (+5/turn)`; the funding window has not started |
 | the purchase | **not yet** - it waits on Engineering and on 320 gold |
@@ -112,6 +118,24 @@ retro's ledger:
 - **Two whole movement turns can be lost to AI diplomacy pauses** (A5 lost T57 and T59, every unit at 0
   moves). In an attempt whose margin is a handful of turns, that is the largest uncontrolled cost in the
   window, and it should be recorded as such rather than absorbed.
+
+**Re-read at T19, and the funding half has an early warning on it.** The pin is complete and certified (the
+table above). The treasury, read from this attempt's own `get_game_overview` rows:
+
+| turn | gold | gold/turn |
+|---|---|---|
+| T1 | **6** | +5 |
+| T9 | **72** | +5 |
+| T12 | **87** | +5 |
+
+**At +5/turn the treasury needs about forty-seven more turns from T12 to reach the 320 a Catapult costs**,
+which would put the purchase around **T59** - nine turns past Q2's T50 deadline, and past the point where
+the train matters. **So the variable's funding half currently fails on arithmetic unless gold/turn rises**,
+and the record says so now rather than at the deadline: what would change it is the second city, a trade
+route, improved luxury tiles, or a government/policy change, and **A3 reached 347 by T48 on this same
+start**, so the route exists. **This is an early warning and not a verdict** - Q2's deadline is T50 and the
+trajectory has seventeen turns to change - but it is the number to watch, and the record reads the treasury
+at every checkpoint so the turn it crosses 320 (or the turn it becomes clear it will not) is on the page.
 
 ## The end table, and the verdict - written when the attempt ends
 
