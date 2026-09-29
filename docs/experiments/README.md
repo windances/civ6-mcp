@@ -246,7 +246,14 @@ Every attempt reports the same table, extracted by the same command:
   the tech at N+1** - measured on A4 across the whole line (Mining T7 -> T8, Bronze Working T21 -> T22,
   Masonry T38 -> T39, Engineering T42 -> T43), and the T43 `UNIT_CATAPULT` order proves the tech was
   owned by then. A record that compares the log's line with the diary's list without the offset reads a
-  disagreement that is not there.
+  disagreement that is not there. **The offset is not a tech rule - it is what an `end_turn` result *is*,
+  so it applies to every completion line**, and A4 measured it twice more on the same attempt: a
+  `>> Xi'an finished building DISTRICT_ENCAMPMENT` line inside the `Turn 31 -> 32` result means the
+  district **stands from T32** (and the order's own `5 turns` at T27 ends in exactly that transition),
+  while the same attempt's `UNIT_CATAPULT` completion inside `Turn 48 -> 49` is why the instrument reads
+  `first siege: T49`. **Write the turn the thing exists, and cite the reporting turn beside it when the
+  two are compared** - A4's record had the district at T31 in four places until the session's own closing
+  summary forced the correction.
 * **The doctrine checks** - the claims in `tactics/01` that a log can settle without a judgement call:
   **H5** (no ram and no tower is ever bought - the human's instruction, so a single order of one is a
   violation with a turn on it), **H6** (how many distinct cities were asked for military units),

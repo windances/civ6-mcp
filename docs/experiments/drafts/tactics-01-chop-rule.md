@@ -1,13 +1,18 @@
-# Staged doctrine edit for A5 - apply only after A3's window closes
+# Staged doctrine edit for A5 - landed 2026-09-30, after A4's window closed
 
-**Why staged and not applied now.** `prompts/tactics/01-unit-production.md` is read by the
-advisors of the *running* session (A3). Adding a chop rule while A3 plays would introduce an
-uncontrolled behaviour into A3's own window - the same reasoning the retro already records for
+**Landed.** The rule below is now in `prompts/tactics/01-unit-production.md`, inserted as the
+sub-paragraph of item 3 in `## Production order`. It was held until **A4's** window closed, not A3's as
+this file first said: the reasoning is the same either way - the file is read by the advisors of whichever
+session is *running*, so adding a chop rule while one plays introduces an uncontrolled behaviour into that
+attempt's own window, the same argument the retro records for `turn-checks.md`. A4's task retired itself at
+**T66** and its record was closed, which is the boundary this waited for; A5 is the attempt the rule exists
+for, and it could not be published before the rule was in the doctrine.
+
+**Why staged and not applied at the time.** `prompts/tactics/01-unit-production.md` is read by the
+advisors of the *running* session. Adding a chop rule while an attempt plays would introduce an
+uncontrolled behaviour into that attempt's own window - the same reasoning the retro already records for
 `turn-checks.md` ("editing `turn-checks.md` mid-attempt would stop the rule firing and erase the
-measurement it was producing"). A3's variable is the target's defences; its opening is already
-one confound (task 034's pinned opening was broken at T15), and it does not need a second.
-
-Apply this in the commit that retires task 034, before A5 is published.
+measurement it was producing").
 
 ## The edit
 

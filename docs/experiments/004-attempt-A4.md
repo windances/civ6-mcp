@@ -153,15 +153,20 @@ Engineering was set at **T31**, so the Encampment (due about **T32**) will be st
 siege unit exists, and the question is whether that is worth what it cost. The record will carry the completion
 turn, the first and second siege-unit orders, and the Great General beside it.
 
-**And the completion is measured: `T31`.** The log's own line is
-`>> Xi'an finished building DISTRICT_ENCAMPMENT. Now: nothing.` - ordered at T27, complete at **T31**, four
-turns of the capital's production plus the 35 gold the placement fix cost. **So the ordering A4 was built to
-test is satisfied well inside the window: the Encampment exists before any siege unit does.** What is already
-visible beside it is the price, and it is not only those 35 gold: **Engineering read 11% and 25 turns at T34**,
-where A3's landed at T43 and A2's at T48 - the research line went through Bronze Working for the district, and
-the capital then spent T27-T31 on the district and T33 on its Barracks. Whether the general's aura repays that
-is what Q2-Q4 are for, and the first hard number is unfavourable: **the siege train cannot exist before about
-T59 unless something changes.**
+**And the completion is measured: the district stands from `T32`.** The log's own line is
+`>> Xi'an finished building DISTRICT_ENCAMPMENT. Now: nothing.`, and it sits inside the **`Turn 31 -> 32`**
+`end_turn` - so by the same one-turn offset this record documents for `Research complete` lines, the
+reporting turn is T31 and **the district exists from T32**. **This paragraph said `T31` until the session's
+own closing summary was read against it**, and the correction is worth keeping visible: the offset is not a
+tech-only rule, it applies to every completion line, and the order's own quote agrees with T32 -
+`PRODUCING|DISTRICT_ENCAMPMENT|5 turns` at T27 is five turns of capital production (T27-T31) ending in the
+T31 -> T32 transition, not four. So the Encampment cost **35 gold and five capital turns, standing from
+T32**. **The ordering A4 was built to test is satisfied well inside the window: the Encampment exists before
+any siege unit does.** What is already visible beside it is the price, and it is not only those 35 gold:
+**Engineering read 11% and 25 turns at T34**, where A3's landed at T43 and A2's at T48 - the research line
+went through Bronze Working for the district, and the capital then spent T27-T31 on the district and T33 on
+its Barracks. Whether the general's aura repays that is what Q2-Q4 are for, and the first hard number is
+unfavourable: **the siege train cannot exist before about T59 unless something changes.**
 
 Two more facts this attempt has produced, and the row keeps them:
 
@@ -226,7 +231,7 @@ COMPLETE at T54`**.
 | question | answer at T46 |
 |---|---|
 | the establishment under the corrected table (Q1 wants <= T60) | **not complete at T46** - `siege 0/2` (the Catapult ordered T43, 5 turns, due ~T48) and `cavalry 0/1` by the map at T45, though the `UNIT_HEAVY_CHARIOT` ordered T42 **completed at T45**; screens (melee + anti-cavalry) 3, ranged 4, recon 1. The instrument: `NOT complete at T45 short: cavalry 0/1 siege 0/2` |
-| the Encampment (Q2): offered, ordered, completed, and its tile | **offered T27, ordered T27, complete T31, on (58,22)** - the tile the attempt bought for `cost:35` the same turn, in the capital (the war city by `tactics/08:81`'s highest-production rule). **It completed before any siege unit existed**, so the ordering Q2 tests is satisfied; the cost is 35 gold + four capital turns (T27-T31) + the Barracks it then built (T33, complete T38) |
+| the Encampment (Q2): offered, ordered, completed, and its tile | **offered T27, ordered T27, standing from T32, on (58,22)** - the tile the attempt bought for `cost:35` the same turn, in the capital (the war city by `tactics/08:81`'s highest-production rule). The completion line sits in the `Turn 31 -> 32` `end_turn`, which is why the reporting turn is T31 and the district stands from **T32**. **It was standing before any siege unit existed**, so the ordering Q2 tests is satisfied; the cost is 35 gold + five capital turns (T27-T31, the order's own `5 turns`) + the Barracks it then built (T33, complete T38) |
 | the Great General (Q3): recruited, never activated, and where it stands | **not recruited** - `get_great_people` at T32 reads `Trung Trac - Unclaimed - your points: 0/40`, and at T39 `7/40`. The Encampment has earned points of its own (7 by T39) but no general exists and **no `activate` has been called on one**. The lever is the district's own project, offered at T33 (`PROJECT_ENHANCE_DISTRICT_ENCAMPMENT`, cost 25, 3 turns) and **never ordered** |
 | the order of asking at the gate (H1's test, Engineering -> first siege order) | **HELD** - Engineering owned **T43**, `UNIT_CATAPULT` ordered **T43**, no `BUILDING`/`DISTRICT` order since. The instrument agrees: `HELD ... [Engineering T43; first siege order T43, no economy order since]` |
 | the first keep, against A3's T67 (Q4's capture half) | **not yet measured** - no `KEEP|`, and **no rival met at 16% explored**, so the target is still a city-state |
@@ -241,8 +246,8 @@ the attempt's own log says so**: the first Catapult was ordered T43 (5 turns) an
 UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|5 turns`) and finished inside **T53's**. With the one-turn offset
 above, the train is **owned from T49 and T54**. So:
 
-- **Q2's ordering is not a near thing: the Encampment completed at T31 and the second siege unit was ordered
-  at T49 - eighteen turns apart.** The district cannot have been a consequence of the train, and the train did
+- **Q2's ordering is not a near thing: the Encampment stands from T32 and the second siege unit was ordered
+  at T49 - seventeen turns apart.** The district cannot have been a consequence of the train, and the train did
   not have to wait on the district. That is exactly what Q2 asked.
 - **The first economy order after the gate landed at T53**, and it is a `BUILDING_GRANARY` in **Changsha** (the
   second city, `city_id=131073`) - **ten turns after the gate** (T43 -> T53) and after the second Catapult had
@@ -267,7 +272,7 @@ military is a claim A4 can now be measured against instead of assumed.
 `PROJECT_ENHANCE_DISTRICT_ENCAMPMENT` order exists** - so the Encampment has earned seven points in eight
 turns and no general. With the second Catapult owned from T54 and no war declared, the district is standing
 while its presumed payoff is not, which is precisely the case the brief's honesty note says to state plainly:
-**the Encampment's cost is measured (35 gold, four capital turns, a research line through Bronze Working) and
+**the Encampment's cost is measured (35 gold, five capital turns, a research line through Bronze Working) and
 its benefit is, so far, zero - the record will not read an unchanged capture turn as the district paying off.**
 
 **And A4 supplies the sharpest measurement yet of a tooling defect the retro carried as owed.** The pantheon
@@ -364,6 +369,18 @@ Snapshot: `docs/experiments/A4-final.json`. **A4 is the fastest capture in the p
 T67 and A2's T68), it is the second attempt to complete the corrected table, and it is the first with a
 certified pinned opening and the first with a Great General.**
 
+**The session closed the attempt itself, and its own summary is the second witness to these numbers.**
+It retired task 035 at **T66** with `scripts/temp-task.py retire 035 --done --turn 66`, re-synced the
+register to `IN FORCE NOW: none`, ran the text gate over 209 documents and the protocol suite green, and
+wrote its own half of the retro. **Two of its findings were reached independently of this record and agree
+with it**: that the combat estimate contains neither the general's `+5` nor Oligarchy's `+4`, and that A4's
+two-turn edge cannot be credited to the aura. **One of them corrected this record**: its summary reports the
+district **standing from T32**, and checking that against the log showed the four `T31` claims above to be
+the reporting-turn error this record had already documented for tech lines - so the correction is recorded
+rather than quietly absorbed. It also read the shared diary as containing "another A4 session"; the rows it
+was seeing are **A3's** (its second city is 北京 where A4's is Changsha), which is the same
+shared-diary collision the record already names.
+
 **The divergences that are not the variable, and they are large enough that the two-turn difference must not
 be attributed to the district:**
 
@@ -385,7 +402,7 @@ be attributed to the district:**
 was *an Encampment that yields no Great General by the first shot*, and A4's district **did** yield one - 41
 points by T56, recruited two turns before the declaration, never activated. **So the mechanism is not
 missing; what remains unmeasured is its size.** The district's cost is fully on the record (35 gold, a
-four-turn queue, the Barracks it built next, and a research line through Bronze Working), the general
+five-turn queue, the Barracks it built next, and a research line through Bronze Working), the general
 existed and stood with the train, and the city fell two turns earlier than the same doctrine's previous
 attempt - but the programme has no aura-less control arm under identical science, and the tool that would
 have shown the aura working is blind to it. **The two-turn difference is a correlation the next attempt

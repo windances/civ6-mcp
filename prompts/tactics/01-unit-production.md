@@ -53,6 +53,18 @@ the front (`one-garrison-per-city`).
    (same day: 已经有攻城锤，就参战).
 2. **Then the screens**: melee to hold the front tile, ranged to fire from range 2.
 3. **Then the economy buildings** the empire is short of (food first where a city is stalled).
+
+   **One exception, and it is a timing one: while the train is the bottleneck, a feature removal
+   (chop or harvest) in a city that is building a unit goes into that unit.** A chop is production
+   the city already owns, it arrives in one turn, and the buildings it would otherwise fund are
+   worth less than a Catapult that exists five turns earlier. **Governor Magnus in the
+   war-production city is what makes this worth doing**: his base ability Groundbreaker
+   (`GOVERNOR_PROMOTION_RESOURCE_MANAGER_GROUNDBREAKER`, `BaseAbility="true"`, +50% to plot
+   harvests and feature removals in his city) is held from the moment he is appointed there - it is
+   not a promotion to spend, and `promote_governor` on it answers `ERR:ALREADY_PROMOTED`. The
+   effect is only banked when the feature actually disappears, and a tile outside the city's owned
+   ring is refused, so the record names the city and the tile for every chop. Attempt **A5** is
+   this exception measured against the economy it defers.
 4. **Wonders only after the war machine is complete.** For China a wonder is a research
    building (Dynastic Cycle grants a Eureka *and* an Inspiration), but a wonder does not break a
    wall.
