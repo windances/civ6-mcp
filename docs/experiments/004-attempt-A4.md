@@ -109,6 +109,25 @@ rows are honestly empty:
 | the opening build, against the pin | **two of four matched**: `UNIT_SCOUT` T1 and `UNIT_SLINGER` T5. The third and fourth orders (`SETTLER`, `BUILDER`) **had not been placed by T8**, so the instrument reads the pin `undecided` - not matched - and this row moves only when the next two orders land |
 | the research line (this attempt's own divergence) | `TECH_MINING` T1, **`TECH_BRONZE_WORKING` T8** - the Encampment's prerequisite, and the reason A4's research differs from A1-A3's The Wheel -> Engineering |
 | production orders, all of them | `SCOUT` T1, `SLINGER` T5 - two of the pinned four; nothing else had been placed by T8 |
+
+**The pin held, and the Encampment's first obstacle is placement rather than production** (both read from the
+session's own log at T22, and both are the measurements this row exists for):
+
+- **`PIN opening: held`** - the instrument's own line, once all four orders existed:
+  `UNIT_SCOUT, UNIT_SLINGER, UNIT_SETTLER, UNIT_BUILDER in that order` (`SCOUT` T1, `SLINGER` T5, `SETTLER`
+  T10, `BUILDER` T18). **This is the first attempt in the programme whose pinned opening the instrument
+  certifies**, which is what makes A4 a clean baseline for A5-A7 - A3's reads `DEVIATED` and A1/A2 were played
+  before the pin existed. The one divergence to keep beside it is a timing one: `SETTLER` was ordered at
+  **T10** where A1, A2 and A3 all ordered theirs at **T6**, so every downstream turn in this attempt sits
+  four turns later than theirs.
+- **`get_district_advisor(city_id=65536, DISTRICT_ENCAMPMENT)` -> `No valid placement tiles for
+  DISTRICT_ENCAMPMENT.`**, and the same for the second city (`city_id=131073`) called on the same turn it was
+  founded (`FOUNDED|55,21`, T22). So at T22 **neither city can host the Encampment**: the district may not
+  touch the city centre and has to stand on a tile the city owns, and the capital's ring does not offer one
+  yet. **The variable's cost begins as a placement problem, not a production one** - and the doctrine has no
+  fallback written for it (`tactics/08` says the war city builds the Encampment, and says nothing about what
+  to do when the war city cannot). The attempt has to solve it with border expansion, a tile purchase or the
+  second city's own ring; which of those it does, and what it costs, belongs on this row as it happens.
 | the establishment under the corrected table (Q1 wants <= T60) | **not yet measured** - the table's rows are read at the checkpoints, and no establishment read exists for this attempt yet |
 | the Encampment (Q2): offered, ordered, completed, and its tile | **not yet measured** - no `DISTRICT_ENCAMPMENT` order is in the log at T8, and the district offer has not been read |
 | the Great General (Q3): recruited, never activated, and where it stands | **not yet measured** - no `get_great_people` read and no general |
