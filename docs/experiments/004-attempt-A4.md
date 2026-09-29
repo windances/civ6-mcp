@@ -230,6 +230,42 @@ number is the instrument's: **siege 0/2 at T46, the first Catapult in production
 | the economy at T20 / T40 / T60 against A1's, A2's and A3's | **partly measured** - `T35 BUILDING_MONUMENT`, `T39 BUILDING_WALLS` (complete T42) and `T42 UNIT_HEAVY_CHARIOT` are the orders between the Barracks and the gate, and the capital spent T27-T31 on the district: the research line paid Bronze Working (T22) for the district and Engineering arrived at T43 where A3's landed at T43 and A2's at T48 |
 | the verdict so far on Q1-Q4 | **Q2 satisfied, Q4's rule half green and its diary half red, Q1 and Q3 open** - the instrument prints `HELD` for the gate question and `OPEN` for Q1/Q3/Q4 as the deadlines have not arrived |
 
+**Re-read at T54, and the variable is now decisive rather than merely satisfied.** The earlier note in this
+record predicted "the siege train cannot exist before about T59 unless something changes"; **it was wrong, and
+the attempt's own log says so**: the first Catapult was ordered T43 (5 turns) and finished inside **T48's**
+`end_turn`, and the **second was ordered at T49** in the war city (`set_city_production(city_id=65536,
+UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|5 turns`) and finished inside **T53's**. With the one-turn offset
+above, the train is **owned from T49 and T54**. So:
+
+- **Q2's ordering is not a near thing: the Encampment completed at T31 and the second siege unit was ordered
+  at T49 - eighteen turns apart.** The district cannot have been a consequence of the train, and the train did
+  not have to wait on the district. That is exactly what Q2 asked.
+- **The first economy order after the gate landed at T53**, and it is a `BUILDING_GRANARY` in **Changsha** (the
+  second city, `city_id=131073`) - **ten turns after the gate** (T43 -> T53) and after the second Catapult had
+  been ordered. The instrument states both halves on one line: `HELD ... [Engineering T43; first siege order
+  T43, first economy order T53]`. **The shape is A2's** - A2's first post-gate order was also a Granary in its
+  second city, at T55 - which is the comparison A5's Q3 is built on.
+- **The establishment is complete at T54.** At T53 the instrument reads `NOT complete at T53  short: siege
+  1/2` with every other row satisfied (`cavalry` first owned T46, `anticav` T33, `recon` T5, ranged 4/4,
+  screens 3), and the second Catapult is owned from T54 - so **Q1 is met at T54, one turn after A3's T53 and
+  six turns inside the T60 deadline**, subject only to the T54 diary row confirming it. `PIN opening: held`
+  still stands.
+
+**One order in this window belongs on the doctrine's own ledger and is recorded rather than glossed.** T54
+`set_city_production(city_id=65536, BUILDING_GRANARY)` is an **economy order in the war city** - the city
+`tactics/08:81` says builds "units, siege and the Encampment/Barracks, and nothing else for the duration". The
+war has not opened, the establishment is complete and the district is standing, so no army is being starved of
+turns; but it is the first economy order in the war city after the gate, and the rule that the war city stays
+military is a claim A4 can now be measured against instead of assumed.
+
+**And the mechanism Q3 asked about is still missing at the moment the train completes.** The last
+`get_great_people` read in the log is **T39, reading `7/40`** (the T32 read was `0/40`), and **no
+`PROJECT_ENHANCE_DISTRICT_ENCAMPMENT` order exists** - so the Encampment has earned seven points in eight
+turns and no general. With the second Catapult owned from T54 and no war declared, the district is standing
+while its presumed payoff is not, which is precisely the case the brief's honesty note says to state plainly:
+**the Encampment's cost is measured (35 gold, four capital turns, a research line through Bronze Working) and
+its benefit is, so far, zero - the record will not read an unchanged capture turn as the district paying off.**
+
 ## The end table, and the verdict - written when the attempt ends
 
 The attempt ends when **a city is kept** (a `city_action` reply reads `KEEP|`) or the game reaches
