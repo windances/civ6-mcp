@@ -511,8 +511,20 @@ class GameState:
                             f"~{pre_hp - capped}/{pre_hp} (estimate - the city read lags the hit)"
                         )
                     else:
-                        damage_info = f"|damage dealt:none read (city still {city_hp}/{city_max})"
-                        followup_str = f"city {city_hp}/{city_max} (read unchanged)"
+                        # Do NOT say "none": measured in attempt A2 (T66-T67), this branch printed
+                        # `damage dealt:none read` on both shots of the turn whose pool the next
+                        # SIEGE PROGRESS block read as `130/200 (-70 over 2 turn(s))` - the damage had
+                        # landed and the read was a turn behind it. The same string had already been
+                        # recorded as misleading three times (`docs/task-history.md:377`, the naval
+                        # no-op retrospective, task 021's table). It says what it knows: this read did
+                        # not move, and the pool is the record.
+                        damage_info = (
+                            f"|damage not visible in this read (city still {city_hp}/{city_max} on this "
+                            f"frame - a later read is the fact)"
+                        )
+                        followup_str = (
+                            f"city {city_hp}/{city_max} (this read unchanged; judge from SIEGE PROGRESS)"
+                        )
                 elif eliminated and pre_hp is not None:
                     damage_info = f"|damage dealt:{pre_hp} (killed)"
                     followup_str = "Target eliminated"

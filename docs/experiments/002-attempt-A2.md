@@ -279,26 +279,31 @@ Both shots also read `city still 200/200` on the immediate reply, which is the d
 (`AGENTS.md`: judge a city's progress from `SIEGE PROGRESS` and a later read, never from the reply) - and
 the third time this attempt met that trap, after the melee no-op at T35 and the ranged `pre_hp` echo.
 
-**And the authoritative block agrees with the stale read: after two Catapult shots the pool has not
-moved.** The `end_turn` that closed T66 printed:
+**And the reply's own wording is what made that look like zero damage - the pool was falling.** The
+`end_turn` that closed T66 printed `耶路撒冷: city hp 200/200; supply line 5/6 cut - the city is still
+healing`, and every attack reply on both turns said `damage dealt:none read`. The next turn's block
+settled it:
 
 ```
->> SIEGE PROGRESS (T67):
- 耶路撒冷: city hp 200/200; supply line 5/6 cut - the city is still healing
--- SIEGE POSTURE (T67) ...
- SIEGE FIRE: 2/3 siege unit(s) inside range 2 of the target - OUT OF RANGE: UNIT_CATAPULT at distance 5
+T67  RANGE_ATTACK|target:耶路撒冷 (city)|pre_hp:130/200|...|damage dealt:none read (city still 130/200)
+T67  >> SIEGE PROGRESS (T67):
+     耶路撒冷: city hp 130/200 (-70 over 2 turn(s)); supply line 6/6 cut - no open hex, so it is NOT healing this turn
 ```
 
-with `use-your-attacks`, `screen-the-siege`, `cut-the-supply` and `carrying-capacity` all failing in the
-same result. So the position at the end of the first war turn is: two of three Catapults in range, both
-fired, the city at **200/200**, one adjacent hex (`49,22`) still open, and - per `cut-the-supply`'s own
-text, citing the manual - *a city heals about twenty points a turn while any adjacent hex is outside our
-zone of control*. Two shots that each deliver less than ten points are therefore indistinguishable from
-zero after healing, and **no tool will say how much a shot delivers**: the attack reply prints
-`Est damage to defender: n/a (the city is the target, not this unit)` by design, and the pool is the only
-feedback. That is the gap to watch for the rest of the assault - if the pool keeps reading 200 while two
-Catapults fire every turn, the train cannot out-damage the heal and Q3 fails for an arithmetic reason no
-tool surfaced in advance; if it falls, the same block will show it.
+So the first turn's two shots **did 70 damage** - two Catapults at Bombard 35 - and the string
+`damage dealt:none read` printed on both of them anyway. That is a *claim the tool cannot support*, and it
+has form: `docs/task-history.md:377` records "three shots read `damage dealt:none read` while the damage
+had landed", the naval no-op retrospective records the same, and task 021's table calls the pooled fields
+the record and the prose stale. It misled this session's own orchestrator, which wrote "the pool has not
+moved" into the paragraph above before the T67 block arrived. **Fixed in the tool** (`game_state.py`): the
+branch now prints `damage not visible in this read (city still N/M on this frame - a later read is the
+fact)` and the follow-up line says `judge from SIEGE PROGRESS`, with
+`tests/test_city_damage_reply_wording.py` pinning that no `damage dealt:none` claim can be emitted again.
+
+**The arithmetic therefore closes, and the doctrine's own rule is what closed it.** Two shots a turn at 35
+each is 70 a turn against a 200-point pool, and T67's session cut the last open hex (`49,22`) so the block
+reads `6/6 cut - no open hex, so it is NOT healing this turn`. A full-cut city under two Catapults is
+three turns from an empty pool, and the melee is already on the ring.
 
 ## One tooling finding A2 produced, with its numbers
 
