@@ -184,6 +184,40 @@ attempt is a measurement of a weakly-executed variable rather than a refutation 
 record will say exactly that in the end table, with the chop count, their measured contribution, and the
 city's production as the reason the predicted five turns did not appear.
 
+**The window's questions are decided at T59, and the variable's prediction is falsified.** The instrument
+over A5's own session:
+
+```
+HELD       Q1 establishment complete by T60 (corrected table)      [establishment T57]
+FALSIFIED  Q2 establishment 5+ turns earlier than A2's T55 (by T50) [the corrected table completed T57, against A2's siege train at T55]
+HELD       Q3 the economy behind by <5 turns (first post-gate economy order by T60)  [after the T43 gate: T44 (BUILDING_WATER_MILL), against A2's T55]
+OPEN       Q4 gold floor red on <10 turns  [0 red turn(s) by the rule up to T60; the diary's own gold/turn is below 10 on 57 of those 57 turn(s)]
+```
+
+- **Q1 HELD.** The corrected table is complete at **T57**: the second `UNIT_CATAPULT` finished inside T56's
+  `end_turn`, so it is owned from T57 - three turns inside the deadline.
+- **Q2 FALSIFIED, and it is the attempt's answer.** The establishment arrived at **T57**, which is **two
+  turns later than A2's T55** and four turns later than **A4's T54** table - not five turns earlier. **The
+  chops did not buy the advance the variable predicted.**
+- **Q3 HELD**, and by a lot: the first `BUILDING`/`DISTRICT` order after the Engineering gate is a **Water
+  Mill in Shenyang at T44**, against A2's T55 - so the economy was not deferred, which is the half the
+  variable was supposed to cost. **The cost did not appear either.**
+- **Q4 is still open**, and its two measures still disagree: the rule counts **zero** red turns up to T60
+  while the diary's own `gold_per_turn` is below the +10 floor on **every one of the 57 turns** read.
+
+**How to read the falsification, stated now rather than argued later.** A5 executed the variable and executed
+it thinly: **two chops**, one whose contribution is indistinguishable from one turn of natural production and
+one worth about a turn, against a war city whose **each Catapult took 7 turns** at `Prod ~10` with
+`SLOW GROWTH: 24 turns to next pop`. A2's two Catapults came in 5 and 7 turns with **God of the Forge and
+Agoge stacked**. **So the measurement is of a variable worth about one turn applied to an item that needed
+five turns moved** - which is a statement about how little this attempt chopped, not evidence that chops
+cannot work. The end table will carry that distinction with the chop count beside it, and the next attempt
+that chops (A7 runs two war cities; A6 buys the train) inherits the number it has to beat.
+
+**And the war opened at T59**: `WAR_REQUESTED|DECLARE_SURPRISE_WAR on Jerusalem` - the same city-state A2,
+A3 and A4 attacked, which keeps the compare lines on one target. A rival (Australia) has appeared in the
+threat lines, so contact has been made this time.
+
 **And that exposes the measurement problem the brief only anticipated - now measured**: `remove_feature`
 answers `REMOVING_FEATURE\|<feature> at x,y` and names no production, so the queue's turn count is the only
 route to the gain - and **a queue item that is two turns out becomes one turn out in one turn with or without
