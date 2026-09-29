@@ -92,10 +92,14 @@ that the army now has somewhere to go.
 Commands, with A2's own session in the log filter:
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35 --from 1 --to 40 --verdict
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35 --from 1 --to 40 --verdict --ids Q1,Q2,Q3,Q4
 .venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35 --from 1 --to 40 --step 10 --save docs/experiments/A2-T40.json
 .venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A1-T40.json docs/experiments/A2-T40.json
 ```
+
+`--ids Q1,Q2,Q3,Q4` is this attempt's own labelling: the instrument's defaults are A1's `P1`-`P4`, and
+printing one attempt's ids over the other's record puts two names on one prediction. The second half's
+final snapshot (`pale-pearl-aqueduct-92`) carries the same flag.
 
 ## One instrument change between the two attempts, and why it does not break the compare
 

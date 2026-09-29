@@ -689,6 +689,7 @@ def verdict(
     expect_est: int = 60,
     expect_city: int = 80,
     expect_gold_red: int = 10,
+    ids: tuple[str, ...] = ("P1", "P2", "P3", "P4"),
 ) -> list[tuple[str, str, str]]:
     """The attempt's predictions, answered from the record.
 
@@ -698,10 +699,15 @@ def verdict(
     numbers, and a window inside an attempt that is not the attempt's end would otherwise be judged
     against limits it was never meant to meet.
 
+    `ids` is the same courtesy for the labels: A1 called its predictions P1-P4 and A2 called its own
+    Q1-Q4, so printing one attempt's ids over the other's record puts two names on one prediction.
+
     P1 asks about the **order**, not the inventory: the doctrine is a claim about what the empire asks
     for, and the log holds that. Ownership is the fallback for a siege unit that was bought or
     inherited rather than queued, and the label says which one answered.
     """
+    if len(ids) != 4:
+        raise ValueError(f"verdict needs four prediction ids, got {len(ids)}: {ids!r}")
     est = establishment(by_turn)
     cap = captures(rows)
     keep_turn = min((t for t, _ in cap), default=None)
@@ -715,22 +721,22 @@ def verdict(
     how = "ordered" if ordered is not None else "owned"
     return [
         (
-            f"P1 a siege unit early ({how} one by T{early})",
+            f"{ids[0]} a siege unit early ({how} one by T{early})",
             _status(bool(siege_turn and siege_turn <= early), last >= early),
             f"first siege unit {how} {'T' + str(siege_turn) if siege_turn else 'never'}",
         ),
         (
-            f"P2 establishment complete by T{expect_est}",
+            f"{ids[1]} establishment complete by T{expect_est}",
             _status(bool(est["turn"] and est["turn"] <= expect_est), last >= expect_est),
             f"establishment {'T' + str(est['turn']) if est['turn'] else 'not reached by T' + str(est['last_turn'])}",
         ),
         (
-            f"P3 first enemy city kept by T{expect_city}",
+            f"{ids[2]} first enemy city kept by T{expect_city}",
             _status(bool(keep_turn and keep_turn <= expect_city), last >= expect_city),
             f"first keep {'T' + str(keep_turn) if keep_turn else 'none'}",
         ),
         (
-            f"P4 gold floor red on <{expect_gold_red} turns",
+            f"{ids[3]} gold floor red on <{expect_gold_red} turns",
             _survival_status(len(carry) >= expect_gold_red, last >= horizon),
             f"{len(carry)} red turn(s) up to T{horizon}",
         ),
@@ -798,6 +804,7 @@ def print_verdict(
     expect_est: int = 60,
     expect_city: int = 80,
     expect_gold_red: int = 10,
+    ids: tuple[str, ...] = ("P1", "P2", "P3", "P4"),
 ) -> None:
     est = establishment(by_turn)
     print("-- establishment (prompts/tactics/01-unit-production.md) --")
@@ -852,7 +859,7 @@ def print_verdict(
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")
-    results = verdict(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    results = verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
     for name, status, detail in results:
         print(f"  {status:<9s} {name}  [{detail}]")
     if any(status == OPEN for _n, status, _d in results):
@@ -999,6 +1006,7 @@ def print_text(
     expect_est: int = 60,
     expect_city: int = 80,
     expect_gold_red: int = 10,
+    ids: tuple[str, ...] = ("P1", "P2", "P3", "P4"),
 ) -> None:
     first, last = _first_turn(by_turn), _last_turn(by_turn)
     print(f"== attempt {game}: T{first} -> T{last} ==")
@@ -1062,7 +1070,7 @@ def print_text(
     print("  most used: " + ", ".join(f"{t}:{n}" for t, n in calls.most_common(8)))
 
     print()
-    print_verdict(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    print_verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
 
 
 def main() -> int:
@@ -1081,11 +1089,21 @@ def main() -> int:
                     help="the attempt's own first-city deadline (default 80: A1's)")
     ap.add_argument("--expect-gold-red", type=int, default=10,
                     help="how many turns under the gold floor the attempt allows (default 10: A1's)")
+    ap.add_argument("--ids", default="P1,P2,P3,P4",
+                    help="the attempt's own prediction labels for the verdict, comma separated "
+                         "(default P1,P2,P3,P4: A1's; A2's are Q1,Q2,Q3,Q4)")
     ap.add_argument("--run", help="keep only one session's log rows (attempts share a game key)")
     ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
     ap.add_argument("--compare", nargs="+",
                     help="compare saved attempt reports (files written by --save) and exit")
     args = ap.parse_args()
+    args.ids = tuple(part.strip() for part in args.ids.split(",") if part.strip())
+    if len(args.ids) != 4:
+        print(
+            f"--ids needs four labels - one per prediction - not {len(args.ids)}: {','.join(args.ids)}",
+            file=sys.stderr,
+        )
+        return 2
 
     if args.compare:
         return print_compare([pathlib.Path(p) for p in args.compare])
@@ -1165,7 +1183,7 @@ def main() -> int:
         "verdict": [
             {"prediction": name, "status": status, "detail": detail}
             for name, status, detail in verdict(
-                by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red
+                by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids
             )
         ],
     }
@@ -1182,10 +1200,13 @@ def main() -> int:
 
     if args.verdict:
         print(f"== attempt {args.game}: T{_first_turn(by_turn)} -> T{_last_turn(by_turn)} ==")
-        print_verdict(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
+        print_verdict(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids)
         return 0
 
-    print_text(args.game, args.step, by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
+    print_text(
+        args.game, args.step, by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red,
+        args.ids,
+    )
     return 0
 
 

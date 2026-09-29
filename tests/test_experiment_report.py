@@ -16,6 +16,8 @@ import importlib.util
 import json
 import pathlib
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 spec = importlib.util.spec_from_file_location(
@@ -446,6 +448,24 @@ def test_the_cavalry_role_carries_the_game_s_cavalry_tag():
     # The anti-cavalry line upgrades into two more names than it had.
     for unit in ("SPEARMAN", "PIKEMAN", "PIKE_AND_SHOT", "AT_CREW", "MODERN_AT"):
         assert report.role_counts({unit: 1}).get("anticav") == 1, unit
+
+
+def test_verdict_prints_the_attempt_s_own_prediction_ids():
+    """A1 called its predictions P1-P4 and A2 called its own Q1-Q4.
+
+    Printing the first attempt's ids over the second attempt's record puts two names on one
+    prediction, and the A2 review is written against Q1-Q4 - so the labels are passed in, and a caller
+    that passes the wrong number of them is told instead of getting a short list.
+    """
+    by_turn = frames({1: {"WARRIOR": 1}, 40: {"WARRIOR": 1}})
+    default = report.verdict(by_turn, [])
+    assert [name.split()[0] for name, _s, _d in default] == ["P1", "P2", "P3", "P4"]
+    mine = report.verdict(by_turn, [], ids=("Q1", "Q2", "Q3", "Q4"))
+    assert [name.split()[0] for name, _s, _d in mine] == ["Q1", "Q2", "Q3", "Q4"]
+    # The same four predictions, measured the same way: only the label moved.
+    assert [d for _n, _s, d in default] == [d for _n, _s, d in mine]
+    with pytest.raises(ValueError):
+        report.verdict(by_turn, [], ids=("Q1", "Q2"))
 
 
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
