@@ -64,9 +64,16 @@ Commands, with A3's own session in the log filter:
 
 ## Mid-window review (end of T40 / T60) - filled as the attempt passes them
 
+**The instrument is ready for this attempt, and the attribution was rehearsed before the numbers matter.**
+A3 re-plays T1-T40, and A1 and A2 wrote diary rows for those same turns on the same game key - three
+candidates per turn. Run against the partial log at T12, the report attributes T1-T12 to A3's own rows
+(T10: military 21, faith 2.0 - neither A1's 34 nor A2's 31) and **names** T13-T60 as unattributed rather
+than borrowing the earlier attempts' rows. The establishment reads the corrected table:
+`screens (melee + anti-cavalry): 1   recon: 1`.
+
 | question | answer |
 |---|---|
-| the opening build, against the pin | not yet measured |
+| the opening build, against the pin | **matched so far**: `SCOUT` T1, `SLINGER` T5, `SETTLER` T6; the pin's fourth order (`BUILDER`) not placed at T12 |
 | the establishment under the corrected table (Q1 wants <= T60) | not yet measured |
 | the order of asking at the gate (H1's second test) | not yet measured |
 | the wall pool: has any city been seen with `walls > 0` | **no city with a wall pool has been attacked yet** (checked at T77 of the previous branch: our three cities and the one met city-state all read `walls: 0/0`) |
