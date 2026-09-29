@@ -130,7 +130,7 @@ unattributed rather than borrowed):
 | production orders, all of them | `SCOUT` T1, `SLINGER` T5, `SETTLER` T6, `WARRIOR` T15, `SLINGER` T18, `BUILDER` T19 (second city 131073), `SLINGER` T20, `BUILDER` T22 (capital) - 8 units, all of them army roles, and `H5 clean` (no ram, no siege tower ordered or bought) |
 | the pre-gate economy orders (H1's own context) | session 2 spent on the economy **before** the gate: `UNIT_TRADER` T30, `BUILDING_WATER_MILL` T33 (capital) and T35 (second city). A2's pre-gate spend was `UNIT_BUILDER` T43 and `UNIT_TRADER` T46 - so A3 arrives at its gate with more economy already bought, and H1's claim is about the **gate turn's** choice, which both attempts had free. The comparison is only fair if the gate turn is read the same way in both, and the instrument does that |
 | **the target set, read at T44** (Q2's raw material) | **six city-states plus a free city are known**: 安善 (Scientific), 桑给巴尔 (Trade), **耶路撒冷** (Religious - the one A2 captured), 撒马尔罕 (Trade), 欣盖提 (Religious), and **自由城市 (`player 62`, Unknown)**. Explored **18% of land (241/1323 tiles)** by T44, against A2's **7%** at T68 with no scout ever built. This is the corrected table's recon row doing exactly what the correction was for: A2 met one city-state and Babylon; A3 has seven candidates to read for a wall pool, and `tactics/07`'s Gate 0 - "a candidate city is actually visible" - is satisfiable on this position |
-| **the establishment at T49** (11 turns left of Q1) | **`siege 1/2`, `anticav 0/1`** - and both are moving: the first Catapult (ordered T43 at `6 turns`) is **built at T48**, and at **T49 two Spearmen were ordered, one in each city**, which is the corrected table's **anti-cavalry row being filled for the first time in the programme**. A2 never built one and `counter-the-cavalry` was red for its whole assault; the instrument's order sequence reads `recon T1, ranged T5, melee T15, cavalry T26, siege T43, anticav T49`. Screens 2, recon 2 (a second Scout at T46). Only **one** Catapult has been ordered where A2 ordered both on its gate turn, so Q1's siege half rests on a second order arriving in the next few turns |
+| **the establishment at T49** (11 turns left of Q1) | **`siege 2/2` in hand, and half of it was bought.** The first Catapult (ordered **T43**, the gate turn, `6 turns`) was **built at T48**; the second was **bought at T48** in the second city: `purchase_item(city_id=131073, UNIT_CATAPULT, YIELD_GOLD)` answered **`PURCHASED\|UNIT_CATAPULT\|cost=320g (had 347g)`**. At **T49 two Spearmen were ordered, one in each city** - the corrected table's **anti-cavalry row being filled for the first time in the programme**: A2 never built one and `counter-the-cavalry` was red for its whole assault. The instrument's order sequence reads `recon T1, ranged T5, melee T15, cavalry T26, siege T43, anticav T49`; screens 2, recon 2 (a second Scout at T46). **The purchase reaches past this attempt**: 320g is the exact price A6's arithmetic was rebuilt on, and A3's treasury held **347g at T48** - so A6's funding arm is a *measured* possibility on this start rather than a predicted one, while A6's variable stays distinct (it buys the **first** unit; A3 bought the **second**). **Correction, and it is why this row was rewritten twice:** its first version said one Catapult had been ordered, read off the tail of the log - the T48 purchase row was there all along. A list read by its tail is the failure this record exists to catch, and the correction is kept visible rather than silently overwritten |
 
 ## The Engineering gate, measured - T43, and H1 holds for the second time
 
@@ -160,6 +160,38 @@ attributable to more than the corrected table, and it is the third such differen
 the pantheon, the governor). None of them is the target's defences, which is what A3 was built to test -
 and the delivery of the train is not what A3's questions are about, so the divergence is recorded as
 context rather than as a falsification.
+
+## Q1 is answered - the corrected table is complete at T53, the first time in the programme
+
+The instrument, run over both of A3's sessions at T54:
+
+```
+COMPLETE at T53   siege=2  melee=2  anticav=2  ranged=4  cavalry=1  recon=2
+screens (melee + anti-cavalry): 4   recon: 2
+first siege   : T48
+first anticav : T53
+HELD      Q1 establishment complete by T60 (corrected table)  [establishment T53]
+```
+
+**Seven turns inside the deadline, and it is the first attempt in the programme to complete the table.**
+A1 never had the tech inside its window; A2's corrected-table establishment is `not reached` in its own
+snapshot (`A2-final.json`: `"turn": null`), because it was short `ram 0/1` and `ranged 3/4` at T60 - and the
+ram row is now conditional, so what A2 actually missed was ranged and the two rows the correction added.
+A3 has all six, and **two of them over strength**: `anticav 2/1` (two Spearmen, T49) and `recon 2/1` (two
+Scouts, T1 and T46). Over-strength is A2's own pattern repeating - it fielded three Catapults against a
+table of two - and the record names it rather than counting it as a clean completion.
+
+**The two rows the correction added are the ones that moved.** `first anticav T53` is the first
+anti-cavalry unit this programme has ever fielded; `recon` was already A3's opening order. That is the
+correction doing what it was written for (`counter-the-cavalry` was red for the whole of A2's assault, with
+nothing in the army able to answer a Heavy Chariot), and it is worth stating plainly because **A3 is the
+attempt that had to carry the correction's own confound**: its table is not the table A2 was measured
+against.
+
+**The gold floor, at the same read** (Q4, and the two measures still disagree): `0 red turn(s) by the rule
+up to T60` because the rule is gated `when: turn() >= 60`, while the diary's own `gold_per_turn` is below
++10 on **47 of 52** turns. Q4 therefore stays `OPEN` until the gate opens, and the substantive number is
+the diary's - which is the same finding A1 and A2 produced.
 
 ## The end table, and the verdict - written when the attempt ends
 

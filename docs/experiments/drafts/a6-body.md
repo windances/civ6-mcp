@@ -50,6 +50,12 @@ estimate and not its facts - **the record reads them again in its own position a
   a purchase inside the window means this attempt's own treasury runs ahead of A2's - which is what the
   variable's first half is for. The record states the turn the treasury reaches 320, and that turn is Q2's
   number.
+- **A3 has since measured the other half, and it is the reason this prediction is live rather than
+  impossible**: at **T48** its treasury held **347 gold** and it bought a Catapult, the reply reading
+  `PURCHASED|UNIT_CATAPULT|cost=320g (had 347g)`. So the price *is* payable on this start once the treasury
+  is not spent elsewhere - no trade, no luxury sale, just income and restraint. What A6 adds is buying the
+  **first** unit rather than the second, and the record should read A3's purchase as the evidence that the
+  funding arm exists while noting that A3 is therefore not a production-only baseline.
 
 ## The opening build is pinned
 

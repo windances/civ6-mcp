@@ -130,7 +130,13 @@ maintenance down - and state the turn the price is actually reached). **Two (640
 impossible before about T70.** A6 therefore buys the **first** unit and produces the second, and its claim
 is a five-turn gain on one unit - if the funding can be found at all - rather than a five-turn-earlier war.
 This is A1's "P2 impossible by arithmetic" arriving one attempt later and one level down, and it was found by
-pre-flight arithmetic rather than at hour three. **A4-A7 also
+pre-flight arithmetic rather than at hour three. **A3 then measured the funding arm for real** (T48 of its own
+run): its treasury held **347g**, and it bought a Catapult for **`cost=320g (had 347g)`** - so on this start
+the price *is* payable around T48 once the treasury is not spent elsewhere, and A6's prediction (bought by
+T50) is a live question rather than an impossibility. A6's variable stays distinct because **A3 bought the
+second unit where A6 buys the first**, and A3's record notes the overlap: an attempt that has already
+exercised a purchase is not a clean "production-only" baseline for the attempt that varies purchasing.
+**A4-A7 also
 compare a war's opening turn against the previous attempt, not against A2**: A2's T60 included six turns
 lost to the city-state war-declaration bug that `0f214eb` fixed before A3 ran, so A2 is no longer a clean
 war-timing baseline - the fixed tool is part of what A3 onward plays with.
