@@ -258,6 +258,27 @@ The honest shape of the two attempts' capture halves is therefore a mirror image
 map** (33 tiles, no rival met), **A2's was decided by a tool** (a declaration that silently did nothing),
 and in neither case by the production the experiment set out to measure.
 
+## The first shots, and the last unread number
+
+The resumed session (`volcanic-indigo-caravan-23`) opened fire at **T66**: both forward Catapults attacked
+the city from range 2, and the result line carries the fact that no tool had been able to read for
+twenty-six turns:
+
+```
+RANGE_ATTACK|target:耶路撒冷 (city) at (50,22)|pre_hp:200/200|your HP:100|range:2 dist:2|
+damage dealt:none read (city still 200/200)|city hp: 200/200, walls: none
+```
+
+**耶路撒冷 has no walls.** That is the number `tactics/07`'s gates wanted and neither attempt could get,
+and it changes the arithmetic Q3 turns on: with no wall pool to break first, the Catapults' damage goes
+straight into the 200-point city pool, so a two- or three-Catapult train firing every turn is a matter of
+a few turns rather than a wall-breaking siege - provided the army survives what the city-state sortied
+against it (five units at T66, one of them a Heavy Chariot **adjacent to both Catapults**).
+
+Both shots also read `city still 200/200` on the immediate reply, which is the documented stale read
+(`AGENTS.md`: judge a city's progress from `SIEGE PROGRESS` and a later read, never from the reply) - and
+the third time this attempt met that trap, after the melee no-op at T35 and the ranged `pre_hp` echo.
+
 ## One tooling finding A2 produced, with its numbers
 
 At T35 a melee attack was ordered from an adjacent tile and the reply began `enemy HP:72 -> 72/100` - the
