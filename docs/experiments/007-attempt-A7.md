@@ -140,6 +140,26 @@ orders, which is a second war city by any reading rather than a token order. The
 short **`anticav 0/1` and `siege 0/2`** - the train is building and the anti-cavalry unit is not yet
 ordered.
 
+**And both Catapults landed exactly where the arithmetic above said they would.** The second war city is
+**Chengdu** (131073):
+
+| unit | city | the completion line | owned from |
+|---|---|---|---|
+| the first Catapult | **Xi'an** | `>> Xi'an finished building UNIT_CATAPULT` in **T50's** `end_turn` | **T51** |
+| the second Catapult | **Chengdu** | `>> Chengdu finished building UNIT_CATAPULT` in **T53's** `end_turn` | **T54** |
+
+The instrument then reads **`COMPLETE at T54  siege=2 melee=6 anticav=1 ranged=10 cavalry=2 recon=2`** -
+**six turns inside Q1's deadline and joint-earliest in the programme with A4 and A6**, and **heavily over
+strength in every row the two-city split touches** (six melee, ten ranged, two cavalry against the table's
+2/4/1). **The variable is therefore delivered in full: two cities each built a Catapult, and the train
+completed the turn the slower of them finished** - which is what the arithmetic predicted before either
+order was placed.
+
+**And the war opened at T56**: `WAR_REQUESTED|DECLARE_SURPRISE_WAR on Jerusalem`, the same city-state A2-A6
+attacked. So at the declaration A7 had a complete establishment, a two-city train, God of the Forge from
+T23, and **the question the attempt exists to answer - whether that becomes a city kept by T80 - is the only
+one left open**, with Q2 (two cities producing before the keep) already satisfied by construction.
+
 ## The hypothesis, with the numbers that falsify it
 
 | # | prediction | falsified when |
