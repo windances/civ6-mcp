@@ -1,0 +1,699 @@
+{
+  "game": "china_911679432",
+  "run": "unbroken-cerulean-herald-09",
+  "first_turn": 1,
+  "last_turn": 69,
+  "economy": [
+    {
+      "turn": 1,
+      "science": 2.5,
+      "culture": 1.3,
+      "gold": 6.0,
+      "gold_per_turn": 5.0,
+      "faith": 0.0,
+      "military": 20,
+      "pop": 1,
+      "cities": 1,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 0,
+      "territory": 7,
+      "techs_completed": 0,
+      "civics_completed": 0,
+      "tourism": 0,
+      "era_score": 1,
+      "units_total": 1,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 2
+    },
+    {
+      "turn": 10,
+      "science": 3.5,
+      "culture": 1.9,
+      "gold": 51.0,
+      "gold_per_turn": 5.0,
+      "faith": 0.0,
+      "military": 34,
+      "pop": 3,
+      "cities": 1,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 0,
+      "territory": 8,
+      "techs_completed": 1,
+      "civics_completed": 0,
+      "tourism": 0,
+      "era_score": 2,
+      "units_total": 3,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 4
+    },
+    {
+      "turn": 20,
+      "science": 4.0,
+      "culture": 2.2,
+      "gold": 101.0,
+      "gold_per_turn": 5.0,
+      "faith": 9.0,
+      "military": 42,
+      "pop": 4,
+      "cities": 1,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 0,
+      "territory": 9,
+      "techs_completed": 1,
+      "civics_completed": 1,
+      "tourism": 0,
+      "era_score": 2,
+      "units_total": 5,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 6
+    },
+    {
+      "turn": 30,
+      "science": 5.9,
+      "culture": 4.3,
+      "gold": 168.0,
+      "gold_per_turn": 7.9,
+      "faith": 3.0,
+      "military": 132,
+      "pop": 8,
+      "cities": 2,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 2,
+      "territory": 17,
+      "techs_completed": 2,
+      "civics_completed": 2,
+      "tourism": 0,
+      "era_score": 5,
+      "units_total": 9,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 8
+    },
+    {
+      "turn": 40,
+      "science": 7.8,
+      "culture": 6.7,
+      "gold": 240.0,
+      "gold_per_turn": 6.9,
+      "faith": 19.0,
+      "military": 228,
+      "pop": 10,
+      "cities": 2,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 2,
+      "territory": 20,
+      "techs_completed": 2,
+      "civics_completed": 5,
+      "tourism": 0,
+      "era_score": 5,
+      "units_total": 15,
+      "trade": {
+        "capacity": 1,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 9
+    },
+    {
+      "turn": 50,
+      "science": 8.1,
+      "culture": 6.2,
+      "gold": 153.1,
+      "gold_per_turn": 8.7,
+      "faith": 39.0,
+      "military": 310,
+      "pop": 10,
+      "cities": 2,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 2,
+      "territory": 22,
+      "techs_completed": 6,
+      "civics_completed": 7,
+      "tourism": 0,
+      "era_score": 11,
+      "units_total": 20,
+      "trade": {
+        "capacity": 1,
+        "active": 1,
+        "domestic": 1,
+        "international": 0
+      },
+      "exploration_pct": 9
+    },
+    {
+      "turn": 60,
+      "science": 8.6,
+      "culture": 6.5,
+      "gold": 147.1,
+      "gold_per_turn": 7.7,
+      "faith": 58.0,
+      "military": 390,
+      "pop": 11,
+      "cities": 2,
+      "districts": 1,
+      "wonders": 0,
+      "improvements": 2,
+      "territory": 23,
+      "techs_completed": 9,
+      "civics_completed": 7,
+      "tourism": 0,
+      "era_score": 18,
+      "units_total": 21,
+      "trade": {
+        "capacity": 1,
+        "active": 1,
+        "domestic": 1,
+        "international": 0
+      },
+      "exploration_pct": 10
+    },
+    {
+      "turn": 69,
+      "science": 10.1,
+      "culture": 6.8,
+      "gold": 215.2,
+      "gold_per_turn": 7.0,
+      "faith": 66.4,
+      "military": 384,
+      "pop": 13,
+      "cities": 2,
+      "districts": 2,
+      "wonders": 0,
+      "improvements": 2,
+      "territory": 24,
+      "techs_completed": 10,
+      "civics_completed": 8,
+      "tourism": 0,
+      "era_score": 18,
+      "units_total": 22,
+      "trade": {
+        "capacity": 1,
+        "active": 1,
+        "domestic": 1,
+        "international": 0
+      },
+      "exploration_pct": 10
+    }
+  ],
+  "delta": {
+    "span": 68,
+    "total": {
+      "science": 7.6,
+      "culture": 5.5,
+      "gold": 209.2,
+      "gold_per_turn": 2.0,
+      "faith": 66.4,
+      "military": 364.0,
+      "pop": 12.0,
+      "cities": 1.0,
+      "districts": 2.0,
+      "wonders": 0.0,
+      "improvements": 2.0,
+      "territory": 17.0,
+      "techs_completed": 10.0,
+      "civics_completed": 8.0,
+      "tourism": 0.0,
+      "era_score": 17.0
+    },
+    "per_turn": {
+      "science": 0.112,
+      "culture": 0.081,
+      "gold": 3.076,
+      "gold_per_turn": 0.029,
+      "faith": 0.976,
+      "military": 5.353,
+      "pop": 0.176,
+      "cities": 0.015,
+      "districts": 0.029,
+      "wonders": 0.0,
+      "improvements": 0.029,
+      "territory": 0.25,
+      "techs_completed": 0.147,
+      "civics_completed": 0.118,
+      "tourism": 0.0,
+      "era_score": 0.25
+    }
+  },
+  "composition": [
+    {
+      "turn": 1,
+      "units": {
+        "WARRIOR": 1
+      }
+    },
+    {
+      "turn": 10,
+      "units": {
+        "SCOUT": 2,
+        "WARRIOR": 1
+      }
+    },
+    {
+      "turn": 20,
+      "units": {
+        "BUILDER": 1,
+        "WARRIOR": 1,
+        "SCOUT": 2,
+        "SETTLER": 1
+      }
+    },
+    {
+      "turn": 30,
+      "units": {
+        "WARRIOR": 2,
+        "BUILDER": 1,
+        "SCOUT": 2,
+        "SLINGER": 4
+      }
+    },
+    {
+      "turn": 40,
+      "units": {
+        "WARRIOR": 5,
+        "HEAVY_CHARIOT": 1,
+        "SCOUT": 2,
+        "SLINGER": 6,
+        "BUILDER": 1
+      }
+    },
+    {
+      "turn": 50,
+      "units": {
+        "CATAPULT": 1,
+        "BUILDER": 1,
+        "SCOUT": 2,
+        "SPEARMAN": 1,
+        "SLINGER": 7,
+        "WARRIOR": 6,
+        "TRADER": 1,
+        "HEAVY_CHARIOT": 1
+      }
+    },
+    {
+      "turn": 60,
+      "units": {
+        "HEAVY_CHARIOT": 1,
+        "SCOUT": 2,
+        "SLINGER": 4,
+        "TRADER": 1,
+        "BUILDER": 1,
+        "CATAPULT": 2,
+        "ARCHER": 3,
+        "SPEARMAN": 1,
+        "WARRIOR": 6
+      }
+    },
+    {
+      "turn": 69,
+      "units": {
+        "SCOUT": 2,
+        "SLINGER": 4,
+        "HEAVY_CHARIOT": 1,
+        "BUILDER": 1,
+        "ARCHER": 3,
+        "WARRIOR": 8,
+        "SPEARMAN": 1,
+        "TRADER": 1,
+        "CATAPULT": 1
+      }
+    }
+  ],
+  "rules": {
+    "screen-the-siege": 7,
+    "idle-district-slot": 11,
+    "carrying-capacity": 9,
+    "use-your-attacks": 8,
+    "cut-the-supply": 4
+  },
+  "rule_turns": {
+    "carrying-capacity": [
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67
+    ],
+    "cut-the-supply": [
+      62,
+      63,
+      66,
+      67
+    ],
+    "idle-district-slot": [
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "screen-the-siege": [
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63
+    ],
+    "use-your-attacks": [
+      60,
+      61,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ]
+  },
+  "achieved": [],
+  "refusals": {
+    "STOPPED_MID_PATH": 182,
+    "NO_MOVES": 17,
+    "BLOCKED": 12,
+    "STOPPED_SHORT": 13,
+    "ZOC": 1,
+    "TOO FAR": 3
+  },
+  "captures": [],
+  "tool_calls": {
+    "get_game_overview": 17,
+    "get_units": 40,
+    "get_cities": 7,
+    "get_tech_civics": 2,
+    "get_governors": 3,
+    "get_map_area": 8,
+    "get_notifications": 2,
+    "set_research": 19,
+    "set_city_production": 33,
+    "unit_action": 202,
+    "skip_remaining_units": 71,
+    "end_turn": 71,
+    "get_policies": 3,
+    "set_policies": 4,
+    "get_settle_advisor": 1,
+    "get_city_states": 1,
+    "get_pantheon_beliefs": 1,
+    "get_unit_promotions": 4,
+    "choose_pantheon": 1,
+    "promote_unit": 2,
+    "get_city_production": 1,
+    "appoint_governor": 2,
+    "assign_governor": 2,
+    "get_dedications": 1,
+    "choose_dedication": 1,
+    "get_builder_tasks": 1,
+    "purchase_item": 5,
+    "change_government": 1,
+    "get_staging_plan": 1,
+    "upgrade_unit": 3,
+    "send_envoy": 1,
+    "get_pending_diplomacy": 1,
+    "respond_to_diplomacy": 4,
+    "get_district_advisor": 1,
+    "send_diplomatic_action": 1,
+    "get_diplomacy": 1
+  },
+  "establishment": {
+    "turn": 57,
+    "counts": {
+      "siege": 2,
+      "melee": 6,
+      "anticav": 1,
+      "ram": 0,
+      "ranged": 7,
+      "cavalry": 1,
+      "recon": 2
+    },
+    "short": {},
+    "last_turn": 57
+  },
+  "contacts": [
+    [
+      57,
+      "Australia"
+    ]
+  ],
+  "exploration_pct": {
+    "first": 2,
+    "last": 10
+  },
+  "orders": {
+    "counts": {
+      "units": 29,
+      "buildings": 5,
+      "districts": 4
+    },
+    "firsts": {
+      "units": [
+        1,
+        "UNIT_SCOUT"
+      ],
+      "buildings": [
+        21,
+        "BUILDING_MONUMENT"
+      ],
+      "districts": [
+        58,
+        "DISTRICT_CAMPUS"
+      ]
+    },
+    "total": 38
+  },
+  "doctrine": {
+    "forbidden_orders": [],
+    "military_city_spread": {
+      "cities": 1,
+      "per_city": {
+        "65536": 24
+      },
+      "all_orders_per_city": {
+        "65536": 30,
+        "131073": 8
+      },
+      "total_army_orders": 24,
+      "busiest_city": "65536",
+      "busiest_share": 1.0,
+      "war_cities": [
+        "65536"
+      ]
+    },
+    "upgrades": [
+      [
+        53,
+        "458755"
+      ],
+      [
+        53,
+        "589830"
+      ],
+      [
+        53,
+        "1048589"
+      ]
+    ],
+    "role_order_sequence": [
+      [
+        1,
+        "recon",
+        "UNIT_SCOUT"
+      ],
+      [
+        5,
+        "ranged",
+        "UNIT_SLINGER"
+      ],
+      [
+        22,
+        "melee",
+        "UNIT_WARRIOR"
+      ],
+      [
+        29,
+        "cavalry",
+        "UNIT_HEAVY_CHARIOT"
+      ],
+      [
+        43,
+        "siege",
+        "UNIT_CATAPULT"
+      ],
+      [
+        45,
+        "anticav",
+        "UNIT_SPEARMAN"
+      ]
+    ],
+    "first_military_order": [
+      1,
+      "UNIT_SCOUT"
+    ],
+    "self_reports": [
+      {
+        "turn": 2,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ranged": 0,
+          "cavalry": 0,
+          "anticav": 0,
+          "recon": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 10,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ranged": 0,
+          "cavalry": 0,
+          "anticav": 0,
+          "recon": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 2
+        },
+        "mismatch": {
+          "recon": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "turn": 20,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ranged": 0,
+          "cavalry": 0,
+          "anticav": 0,
+          "recon": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 2
+        },
+        "mismatch": {
+          "recon": [
+            1,
+            2
+          ]
+        }
+      }
+    ]
+  },
+  "pin": {
+    "promised": [
+      "UNIT_SCOUT",
+      "UNIT_SLINGER",
+      "UNIT_SETTLER",
+      "UNIT_BUILDER"
+    ],
+    "orders": [
+      [
+        1,
+        "UNIT_SCOUT",
+        "65536"
+      ],
+      [
+        5,
+        "UNIT_SLINGER",
+        "65536"
+      ],
+      [
+        6,
+        "UNIT_SETTLER",
+        "65536"
+      ],
+      [
+        15,
+        "UNIT_BUILDER",
+        "65536"
+      ]
+    ],
+    "placed": 4,
+    "matched": true,
+    "first_deviation": null,
+    "note": "the pinned opening held: UNIT_SCOUT, UNIT_SLINGER, UNIT_SETTLER, UNIT_BUILDER in that order"
+  },
+  "verdict": [
+    {
+      "prediction": "Q1 establishment complete by T60 (corrected table)",
+      "status": "HELD",
+      "detail": "establishment T57; falsified when T60 passes with a role still short"
+    },
+    {
+      "prediction": "Q2 establishment 5+ turns earlier than A2's T55 (by T50)",
+      "status": "FALSIFIED",
+      "detail": "the corrected table completed T57, against A2's siege train at T55; held when <= T50, falsified by a later turn"
+    },
+    {
+      "prediction": "Q3 the economy behind by <5 turns (first economy order after the gate, by T60)",
+      "status": "HELD",
+      "detail": "first economy order after the T43 gate: T44 (BUILDING_WATER_MILL), against A2's T55; held when <= T60, falsified by a later turn"
+    },
+    {
+      "prediction": "Q4 gold floor red on <10 turns",
+      "status": "HELD",
+      "detail": "2 red turn(s) by the rule up to T60; the diary's own gold/turn is below 10 on 58 of those 58 turn(s); falsified when the rule counts 10 or more"
+    }
+  ]
+}

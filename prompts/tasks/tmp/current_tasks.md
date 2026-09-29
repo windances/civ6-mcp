@@ -101,4 +101,5 @@ Task 033 was retired as `done/033-attempt-a2-third-phase-the-assault-on-the-city
 Task 034 was retired as `done/034-attempt-a3-the-same-doctrine-against-a-walled-target-from-the-shared-t1-start-done-T72.md`.
 
 Task 035 was retired as `done/035-attempt-a4-the-encampment-before-the-second-siege-unit-done-T66.md`.
-| `036-attempt-a5-the-chops-go-into-units.md` | 2026-09-30 | turn 75 | whether the chops belong to the units instead of the buildings, from the experiment's shared start | turn 70 is reached, or a city is kept (a city_action reply reads KEEP|, or the move's reply reads |
+
+Task 036 was retired as `done/036-attempt-a5-the-chops-go-into-units-expired-T70.md`.

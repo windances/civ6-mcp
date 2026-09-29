@@ -150,3 +150,10 @@ A2's first economy order came at **T55**.
      at: 2026-09-30T02:56:40+08:00
      chinese backup: prompts/tasks/cn/036-attempt-a5-the-chops-go-into-units.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 036 --expired --turn 70
+     at: 2026-09-30T04:25:27+08:00
+     status: expired at T70
+     chinese backup: prompts/tasks/cn/036-attempt-a5-the-chops-go-into-units.cn.md
+-->
