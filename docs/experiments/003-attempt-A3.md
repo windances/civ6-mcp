@@ -409,6 +409,39 @@ this non-elevated process. **So the load is done by hand**, and the attempt resu
 this costs the attempt is wall-clock, not state: the T67 capture and every verdict that rests on it are already
 in the log and in this record.
 
+### The load does have a click-free path, and it works
+
+Before asking a human for the three menu clicks, the input block was measured rather than assumed, and it is
+total: `SetCursorPos(1917, 1016)` **returns False** and leaves the cursor at the user's own position
+`(5055, 1366)`; `mouse_event` with `MOUSEEVENTF_MOVE|ABSOLUTE` moves nothing; `SendInput` reports **1** for a
+mouse move (accepted) with the cursor still unmoved, and **0** for a keystroke (nothing sent). `.tools/click-text.py`
+uses the same calls and therefore reports "clicked" while the menu does not move - the failure is in this
+environment's input channel, not in the menu coordinates (the desktop metrics explain the rest: the primary
+display is **2560x1440 logical** while the game window is 3840x2160 at (0,0), so a DPI-unaware caller would also
+be off-target).
+
+**What does work is Lua, and it needs no clicking at all.** The module carries a menu-load tier built for
+exactly this - `game_lifecycle.load_game_save` asks the game's own FrontEnd states for the save list and calls
+`Network.LoadGame` on the entry - and it was driven directly, outside the MCP, with a twenty-line script
+(`.tmp/lua-load.py`, which is scratch and deliberately not committed):
+
+```
+=== list_saves ===
+  1. 0_MCP_0070
+  ... (filesystem scan, sorted by date)
+=== load_save(1) ===
+Network.LeaveGame(); Network.LoadGame(...)
+```
+
+The game then went through its loading screen and put up **"CHINESE EMPIRE JOINS THE WORLD STAGE"** - the
+leader-introduction screen, which is the one step that still wants a person, since it is dismissed by input
+and input is what this environment cannot inject. Two further facts worth carrying: `game_lifecycle.load_save`
+(the index-based call) is **InGame-only** and answers `GameCore_Tuner/InGame states not found` from the main
+menu, so the working call is `load_game_save(name)`, not `load_save(index)`; and **after a load the game's
+tuner moved from 4318 to 4319** while `GameConnection` is hardcoded to 4318 - a mismatch that will bite any
+MCP session started right after a recovery load, and one to check with
+`Get-NetTCPConnection -State Listen | ? LocalPort -in 4318,4319` before blaming the session.
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
