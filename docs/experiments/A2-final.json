@@ -1,0 +1,1654 @@
+{
+  "game": "china_911679432",
+  "run": "sacred-garnet-vault-35,pale-pearl-aqueduct-92,volcanic-indigo-caravan-23",
+  "first_turn": 1,
+  "last_turn": 68,
+  "economy": [
+    {
+      "turn": 1,
+      "science": 2.5,
+      "culture": 1.3,
+      "gold": 6.0,
+      "gold_per_turn": 5.0,
+      "faith": 0.0,
+      "military": 20,
+      "pop": 1,
+      "cities": 1,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 0,
+      "territory": 7,
+      "techs_completed": 0,
+      "civics_completed": 0,
+      "tourism": 0,
+      "era_score": 1,
+      "units_total": 1,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 2
+    },
+    {
+      "turn": 10,
+      "science": 3.5,
+      "culture": 1.9,
+      "gold": 51.0,
+      "gold_per_turn": 5.0,
+      "faith": 0.0,
+      "military": 31,
+      "pop": 3,
+      "cities": 1,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 0,
+      "territory": 8,
+      "techs_completed": 1,
+      "civics_completed": 0,
+      "tourism": 0,
+      "era_score": 4,
+      "units_total": 2,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 5
+    },
+    {
+      "turn": 20,
+      "science": 4.0,
+      "culture": 2.2,
+      "gold": 101.0,
+      "gold_per_turn": 5.0,
+      "faith": 17.0,
+      "military": 53,
+      "pop": 4,
+      "cities": 1,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 0,
+      "territory": 9,
+      "techs_completed": 1,
+      "civics_completed": 1,
+      "tourism": 0,
+      "era_score": 4,
+      "units_total": 4,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 6
+    },
+    {
+      "turn": 30,
+      "science": 5.0,
+      "culture": 2.8,
+      "gold": 160.8,
+      "gold_per_turn": 6.3,
+      "faith": 35.8,
+      "military": 133,
+      "pop": 7,
+      "cities": 2,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 2,
+      "territory": 17,
+      "techs_completed": 2,
+      "civics_completed": 2,
+      "tourism": 0,
+      "era_score": 5,
+      "units_total": 8,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 6
+    },
+    {
+      "turn": 40,
+      "science": 5.9,
+      "culture": 6.0,
+      "gold": 243.4,
+      "gold_per_turn": 8.9,
+      "faith": 53.8,
+      "military": 156,
+      "pop": 9,
+      "cities": 2,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 5,
+      "territory": 19,
+      "techs_completed": 2,
+      "civics_completed": 3,
+      "tourism": 0,
+      "era_score": 5,
+      "units_total": 11,
+      "trade": {
+        "capacity": 0,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 7
+    },
+    {
+      "turn": 50,
+      "science": 13.3,
+      "culture": 7.2,
+      "gold": 274.4,
+      "gold_per_turn": 6.1,
+      "faith": 55.8,
+      "military": 132,
+      "pop": 10,
+      "cities": 2,
+      "districts": 0,
+      "wonders": 0,
+      "improvements": 6,
+      "territory": 20,
+      "techs_completed": 5,
+      "civics_completed": 6,
+      "tourism": 0,
+      "era_score": 12,
+      "units_total": 12,
+      "trade": {
+        "capacity": 1,
+        "active": 0,
+        "domestic": 0,
+        "international": 0
+      },
+      "exploration_pct": 8
+    },
+    {
+      "turn": 60,
+      "science": 16.3,
+      "culture": 8.2,
+      "gold": 229.8,
+      "gold_per_turn": 8.0,
+      "faith": 74.6,
+      "military": 272,
+      "pop": 11,
+      "cities": 2,
+      "districts": 2,
+      "wonders": 0,
+      "improvements": 10,
+      "territory": 22,
+      "techs_completed": 11,
+      "civics_completed": 8,
+      "tourism": 0,
+      "era_score": 20,
+      "units_total": 14,
+      "trade": {
+        "capacity": 1,
+        "active": 1,
+        "domestic": 0,
+        "international": 1
+      },
+      "exploration_pct": 14
+    },
+    {
+      "turn": 68,
+      "science": 26.0,
+      "culture": 9.3,
+      "gold": 294.8,
+      "gold_per_turn": 6.0,
+      "faith": 88.6,
+      "military": 231,
+      "pop": 18,
+      "cities": 3,
+      "districts": 4,
+      "wonders": 0,
+      "improvements": 10,
+      "territory": 31,
+      "techs_completed": 12,
+      "civics_completed": 9,
+      "tourism": 0,
+      "era_score": 21,
+      "units_total": 13,
+      "trade": {
+        "capacity": 1,
+        "active": 1,
+        "domestic": 0,
+        "international": 1
+      },
+      "exploration_pct": 15
+    }
+  ],
+  "delta": {
+    "span": 67,
+    "total": {
+      "science": 23.5,
+      "culture": 8.0,
+      "gold": 288.8,
+      "gold_per_turn": 1.0,
+      "faith": 88.6,
+      "military": 211.0,
+      "pop": 17.0,
+      "cities": 2.0,
+      "districts": 4.0,
+      "wonders": 0.0,
+      "improvements": 10.0,
+      "territory": 24.0,
+      "techs_completed": 12.0,
+      "civics_completed": 9.0,
+      "tourism": 0.0,
+      "era_score": 20.0
+    },
+    "per_turn": {
+      "science": 0.351,
+      "culture": 0.119,
+      "gold": 4.31,
+      "gold_per_turn": 0.015,
+      "faith": 1.322,
+      "military": 3.149,
+      "pop": 0.254,
+      "cities": 0.03,
+      "districts": 0.06,
+      "wonders": 0.0,
+      "improvements": 0.149,
+      "territory": 0.358,
+      "techs_completed": 0.179,
+      "civics_completed": 0.134,
+      "tourism": 0.0,
+      "era_score": 0.299
+    }
+  },
+  "composition": [
+    {
+      "turn": 1,
+      "units": {
+        "WARRIOR": 1
+      }
+    },
+    {
+      "turn": 10,
+      "units": {
+        "WARRIOR": 2
+      }
+    },
+    {
+      "turn": 20,
+      "units": {
+        "SETTLER": 1,
+        "WARRIOR": 2,
+        "SLINGER": 1
+      }
+    },
+    {
+      "turn": 30,
+      "units": {
+        "WARRIOR": 3,
+        "BUILDER": 1,
+        "SLINGER": 4
+      }
+    },
+    {
+      "turn": 40,
+      "units": {
+        "HEAVY_CHARIOT": 1,
+        "SLINGER": 4,
+        "BUILDER": 2,
+        "WARRIOR": 4
+      }
+    },
+    {
+      "turn": 50,
+      "units": {
+        "SLINGER": 3,
+        "WARRIOR": 4,
+        "ARCHER": 1,
+        "BUILDER": 3,
+        "HEAVY_CHARIOT": 1
+      }
+    },
+    {
+      "turn": 60,
+      "units": {
+        "TRADER": 2,
+        "HEAVY_CHARIOT": 1,
+        "WARRIOR": 4,
+        "CATAPULT": 3,
+        "BUILDER": 1,
+        "ARCHER": 3
+      }
+    },
+    {
+      "turn": 68,
+      "units": {
+        "TRADER": 2,
+        "WARRIOR": 3,
+        "BUILDER": 1,
+        "HEAVY_CHARIOT": 1,
+        "ARCHER": 3,
+        "CATAPULT": 3
+      }
+    }
+  ],
+  "rules": {
+    "issue-the-calls-furthest-first": 13,
+    "screen-the-siege": 6,
+    "idle-district-slot": 15,
+    "carrying-capacity": 10,
+    "use-your-attacks": 3,
+    "cut-the-supply": 1
+  },
+  "rule_turns": {
+    "carrying-capacity": [
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68
+    ],
+    "cut-the-supply": [
+      66
+    ],
+    "idle-district-slot": [
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68
+    ],
+    "issue-the-calls-furthest-first": [
+      35,
+      41,
+      44,
+      45,
+      53,
+      56,
+      57,
+      58,
+      66
+    ],
+    "screen-the-siege": [
+      53,
+      54,
+      58,
+      61,
+      66,
+      67
+    ],
+    "use-your-attacks": [
+      61,
+      66,
+      67
+    ]
+  },
+  "achieved": [],
+  "refusals": {
+    "STOPPED_MID_PATH": 119,
+    "NO_MOVES": 10,
+    "BLOCKED": 20,
+    "TOO FAR": 7,
+    "ERR:": 6,
+    "STOPPED_SHORT": 9,
+    "ZOC": 3
+  },
+  "captures": [
+    [
+      68,
+      "KEEP|耶路撒冷 (pop 5, id:196610, captured)\", \"res"
+    ]
+  ],
+  "tool_calls": {
+    "get_game_overview": 22,
+    "get_units": 74,
+    "get_cities": 19,
+    "get_tech_civics": 9,
+    "get_map_area": 24,
+    "set_research": 22,
+    "set_city_production": 28,
+    "unit_action": 295,
+    "skip_remaining_units": 70,
+    "end_turn": 68,
+    "get_staging_plan": 3,
+    "get_diplomacy": 10,
+    "get_city_states": 3,
+    "get_policies": 4,
+    "get_city_production": 3,
+    "set_policies": 3,
+    "get_settle_advisor": 1,
+    "get_pantheon_beliefs": 2,
+    "choose_pantheon": 4,
+    "get_builder_tasks": 9,
+    "get_governors": 2,
+    "appoint_governor": 1,
+    "get_unit_promotions": 14,
+    "assign_governor": 1,
+    "promote_unit": 5,
+    "get_dedications": 1,
+    "choose_dedication": 1,
+    "get_pathing_estimate": 12,
+    "get_notifications": 3,
+    "promote_governor": 1,
+    "upgrade_unit": 6,
+    "change_government": 1,
+    "send_envoy": 2,
+    "get_district_advisor": 3,
+    "get_trade_destinations": 1,
+    "send_diplomatic_action": 3,
+    "get_pending_diplomacy": 2,
+    "dismiss_popup": 1,
+    "get_trade_routes": 1,
+    "resolve_city_capture": 1
+  },
+  "establishment": {
+    "turn": null,
+    "counts": {
+      "siege": 3,
+      "melee": 3,
+      "anticav": 0,
+      "ram": 0,
+      "ranged": 3,
+      "cavalry": 1,
+      "recon": 0
+    },
+    "short": {
+      "ram": [
+        0,
+        1
+      ],
+      "ranged": [
+        3,
+        4
+      ]
+    },
+    "last_turn": 68
+  },
+  "contacts": [],
+  "exploration_pct": {
+    "first": 2,
+    "last": 15
+  },
+  "orders": {
+    "counts": {
+      "units": 17,
+      "buildings": 8,
+      "districts": 3
+    },
+    "firsts": {
+      "units": [
+        1,
+        "UNIT_WARRIOR"
+      ],
+      "buildings": [
+        28,
+        "BUILDING_GRANARY"
+      ],
+      "districts": [
+        59,
+        "DISTRICT_CAMPUS"
+      ]
+    },
+    "total": 28
+  },
+  "doctrine": {
+    "forbidden_orders": [],
+    "military_city_spread": {
+      "cities": 2,
+      "per_city": {
+        "65536": 8,
+        "131073": 3
+      },
+      "all_orders_per_city": {
+        "65536": 19,
+        "131073": 7,
+        "65537": 1,
+        "196610": 1
+      },
+      "total_army_orders": 11,
+      "busiest_city": "65536",
+      "busiest_share": 0.727,
+      "war_cities": []
+    },
+    "upgrades": [
+      [
+        50,
+        "262146"
+      ],
+      [
+        50,
+        "524293"
+      ],
+      [
+        50,
+        "458755"
+      ],
+      [
+        51,
+        "524293"
+      ],
+      [
+        51,
+        "589830"
+      ],
+      [
+        52,
+        "458755"
+      ]
+    ],
+    "role_order_sequence": [
+      [
+        1,
+        "melee",
+        "UNIT_WARRIOR"
+      ],
+      [
+        7,
+        "ranged",
+        "UNIT_SLINGER"
+      ],
+      [
+        33,
+        "cavalry",
+        "UNIT_HEAVY_CHARIOT"
+      ],
+      [
+        48,
+        "siege",
+        "UNIT_CATAPULT"
+      ]
+    ],
+    "first_military_order": [
+      1,
+      "UNIT_WARRIOR"
+    ],
+    "self_reports": [
+      {
+        "turn": 1,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 2,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 3,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 4,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 5,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 6,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 8,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 9,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 10,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 11,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 12,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 13,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 14,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 15,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 16,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 17,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 18,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 19,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 20,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 21,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 22,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 23,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 24,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 1,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 27,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 3,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 2,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 3,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 29,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 30,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 31,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 32,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 33,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 34,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 35,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 36,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 37,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 39,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 3,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            3
+          ]
+        }
+      },
+      {
+        "turn": 40,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 41,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 42,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 43,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 44,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 45,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 46,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 47,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 48,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 49,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 50,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 51,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      },
+      {
+        "turn": 52,
+        "claimed": {
+          "siege": 0,
+          "melee": 2,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 4,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 4,
+          "cavalry": 1,
+          "recon": 0
+        },
+        "mismatch": {
+          "melee": [
+            2,
+            4
+          ]
+        }
+      }
+    ]
+  },
+  "verdict": [
+    {
+      "prediction": "Q1 establishment complete by T60",
+      "status": "FALSIFIED",
+      "detail": "establishment not reached by T68"
+    },
+    {
+      "prediction": "Q2 the siege train ordered before any economy order after Engineering",
+      "status": "HELD",
+      "detail": "Engineering T48; first siege order T48, first economy order T55"
+    },
+    {
+      "prediction": "Q3 first enemy city kept by T80",
+      "status": "HELD",
+      "detail": "first keep T68"
+    },
+    {
+      "prediction": "Q4 gold floor red on <10 turns",
+      "status": "FALSIFIED",
+      "detail": "10 red turn(s) by the rule up to T68; the diary's own gold/turn is below 10 on 68 of those 68 turn(s)"
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 ﻿# Attempt A2 - the same doctrine, with a target inside the window
 
-**Status: in progress** (the session `sacred-garnet-vault-35` is playing it; started 2026-09-29 14:02).
+**Status: ENDED - the city was kept at T68.** Three sessions played it: `sacred-garnet-vault-35`
+(T1-T40), `pale-pearl-aqueduct-92` (T41-T65) and `volcanic-indigo-caravan-23` (T66-T68); started
+2026-09-29 14:02, ended the same day on the capture, twelve turns inside the T80 deadline. The verdict
+and the end table are at the bottom of this file.
 
 The experiment is `docs/experiments/README.md`; the instruction is
 `prompts/tasks/tmp/031-military-production-attempt-a2.md`; A1's record and its T40 review are
@@ -356,3 +359,70 @@ thrown away and the turn closed on a discarded legal action.
   was destroyed and its **captured Builder was recaptured with three charges** - a unit no city ever
   produced. It is part of why improvements reach 5 at T40, so any comparison of "production spent per
   improvement" between attempts has to name it or it will credit A2 with production it never spent.
+
+## The end table, and the verdict: the city was kept at T68
+
+The attempt's finish line was met on **T68** - two turns after the war opened and twelve turns inside the
+deadline Q3 set. The snapshot has to name **all three sessions**, because the instrument attributes diary
+rows by session time and naming only the current one drops every turn before T66:
+
+```
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35,pale-pearl-aqueduct-92,volcanic-indigo-caravan-23 --from 1 --to 68 --step 10 --verdict --questions a2 --save docs/experiments/A2-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --compare docs\experiments\A1-T40.json docs\experiments\A2-final.json
+```
+
+| attempt | turns | establishment | army start | siege order | first keep | sci T20 | sci T40 | gpt T40 | H5 | self-mismatch | rules red |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| A1-T40 | T1-T40 | not reached | T1 | never | none | 4.5 | 7.9 | 6.0 | 0 | 0 | 1 |
+| **A2-final** | **T1-T68** | not reached | T1 | **T48** | **T68** | 4.0 | 5.9 | 8.9 | 0 | **23** | **6** |
+
+### The verdict, question by question
+
+| # | prediction | verdict | the numbers |
+|---|---|---|---|
+| Q1 | the establishment is complete **by T60** | **FALSIFIED by the table** | `short: ram 0/1, ranged 3/4`. Two facts qualify it and neither rescues it. The **ram slot is unsatisfiable as the doctrine is written** - the same file's human instruction forbids buying one - so its zero measures the table, not the session; and the **siege half over-delivered**, 3 Catapults against the table's 2 (first ordered T48, completed T53/T55/T58). What is genuinely short is one ranged unit: a Slinger was lost to barbarians around T50 and never rebuilt. |
+| Q2 | once Engineering exists, the **siege train is ordered before economy buildings** | **HELD** | `Engineering T48; first siege order T48, first economy order T55` - seven turns, and both Catapults were ordered the same turn the tech landed. The only order in flight at the gate was 西安's Trader (T46), placed while Engineering was still researching, so the gate turn had a free choice in it. This is the experiment's headline: the first test H1 has ever had. |
+| Q3 | the **first city is kept by T80** | **HELD** | `first keep T68` - `KEEP\|耶路撒冷 (pop 5, id:196610, captured)`, twelve turns early and the first city either attempt has taken. |
+| Q4 | the army is paid for: gold floor red on **fewer than ten turns** | **FALSIFIED** | `10 red turn(s) by the rule up to T68; the diary's own gold/turn is below 10 on 68 of those 68 turn(s)`. The rule only began evaluating at T60 and went red the first time it ran; on the diary's own number the army was never paid for to the directive's +10 standard. This is a finding about the doctrine's ceiling, not about a production order. |
+
+### The capture, in the city's own numbers
+
+Every figure below is a **live** read off an attack estimate line (`vs CITY_CENTER (CS:0, HP:N)`), because
+the alternative - `SIEGE PROGRESS` and the attack reply - is a replayed or lagging read.
+
+| turn | the pool | what moved it |
+|---|---|---|
+| T66 | 200 -> **130** | the war is live; both forward Catapults fire from (50,24) and (51,23) at range 2, ~70 net of the ~20 the city healed back on the AI turn |
+| T67 | 130 -> **24** | both Catapults fire again (~106); Archer 1114114 (Volley) takes the ring Archer at (51,22) from 63 to 3, Warrior 655367 kills it (~17) **and advances onto the ring tile**; the last open supply hex (49,22) is covered by the Warrior that moved to (49,21) |
+| T68 | **44** -> **0** | the city healed 20 while one hex was still open; the live read at the top of the turn is 44, and **one** Catapult hit empties it. Warrior 131073 moves from (49,21) onto (50,22) and `city_action` answers `KEEP\|` |
+
+**The two turns are what the doctrine promises and the reply cannot show.** Both Catapult shots on T66
+read `damage dealt:none read (city still 200/200)`, and T67's `SIEGE PROGRESS` block still printed
+`200/200` - the recorded, lagging read. The pool had moved 70 the first turn and 106 the second.
+
+### What the assault cost
+
+- **One unit lost: Warrior 655367**, killed at (51,22) on the AI turn after it took the ring tile - the
+  ring tile it had just cleared.
+- **Catapult 1310723: 100 -> 75 -> 25/100.** The city-state's Heavy Chariot was **adjacent to both
+  forward Catapults on every turn of the assault** and hit this one twice; it was never screened,
+  because no tile of ours could be *strictly closer* to an enemy that was already adjacent
+  (`screen-the-siege` was red for the whole assault, and correctly).
+- Catapult 1245188: 100 -> 80. Warrior 131073: 100 -> 81 -> 61 -> **39/100** at the capture.
+- **Two turns of fire** from the declaration to the capture, for a 200-point pool: 200 -> 130 -> 24 -> 0.
+- The city-state's **field army was never beaten**: six units at its peak (a Heavy Chariot, two
+  Warriors, three Archers), and it dissolved when the city fell rather than being destroyed in the field.
+- The captured city: **pop 5, HP 100/200, loyalty 50/100 gaining +14/turn**, Monument and Granary
+  pillaged, a Holy Site at (49,22), 2 production/turn and **838 turns to grow**.
+
+### The walls, which were the last unread number
+
+**`walls: none`.** Twenty-six turns of staging, six of them spent at the gate, produced no wall reading
+from any tool; the first Catapult shot printed it in one line. 耶路撒冷 never had a wall pool at any
+point in the assault, so **the doctrine's entire wall phase - the reason the train exists - never ran.**
+What the city actually defended itself with were three things the establishment table has no slot for:
+its **garrison** (an Archer that moved into the city tile on the last turn), its **field army**, and its
+**healing** (~20 a turn while one of its six adjacent hexes stayed outside our zone of control). The
+prediction worth carrying to A3 is therefore narrow and testable: this attempt measured the train against
+a target that removed the variable the train was built for, and it still cost a Warrior and nearly a
+Catapult - so the walled case, not the distance, is the next thing to put in front of it.
