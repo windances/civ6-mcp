@@ -153,7 +153,17 @@ the task asked for:
 | **Engineering completed** | **T48** | the T47 -> T48 result carried `>> Research complete: 工程!`; the tech read `98%, 1 turns` at T47 and `None` was pending after the completion |
 | **西安 ordered UNIT_CATAPULT** | **T48** | `PRODUCING|UNIT_CATAPULT|6 turns` (~T54) |
 | **太原 ordered UNIT_CATAPULT** | **T48** | `PRODUCING|UNIT_CATAPULT|8 turns` (~T56); 太原's Water Mill finished the same turn, so its queue was free |
-| **first economy order after Engineering** | **none placed at T48** | the only builds in flight were placed *before* Engineering: 西安's Trader (ordered T46) and 太原's Water Mill (finished T48). This row is filled in when the order is placed; if the second Catapult completes with no economy order placed, Q2 holds on the strict reading of 031's falsifier |
+| **first economy order after Engineering** | **T55, `BUILDING_GRANARY` in 太原** | `PRODUCING|BUILDING_GRANARY|5 turns`, placed the same turn 太原's Catapult completed (`>> 太原 finished building UNIT_CATAPULT`). The order therefore came **after the second Catapult existed**, seven turns after Engineering, with two Catapults built and a third already queued in 西安. **Q2 is not falsified.** |
+
+**The second Catapult, and the shape of the siege half when the gate closed.** 太原's Catapult completed
+at **T55** (`New unit: 石弩 (UNIT_CATAPULT) at (55,23)`) - the turn the attempt first holds **2/2 siege
+units** - and a third was already in production in 西安 (ordered T53, ~5 turns). The whole gap between
+Engineering (T48) and the second Catapult (T55) was filled with military orders only, and the first
+economy order waited until the second Catapult existed. Two facts belong beside it: the Catapults were
+built at **+75%** (Agoge + God of the Forge), and a siege unit **cannot attack units at all**
+(`SIEGE_CANNOT_ATTACK_UNITS` returned at T55 when one was ordered onto a barbarian Archer at range 2),
+so the question this record still owes is whether a Catapult can fire at range 2 **at a city** - the only
+target it will ever have.
 
 The order of asking is the measurement, so it is recorded with what was deliberately *not* done: no
 Granary, Campus, Water Mill or Trader order was placed after Engineering and before the second Catapult.
