@@ -66,6 +66,18 @@ Commands, with A2's own session in the log filter:
 .venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A1-T40.json docs/experiments/A2-T40.json
 ```
 
+## One instrument change between the two attempts, and why it does not break the compare
+
+The H6 measure (`tactics/08`: *one war city, everything else compounds*) was a **count of cities that
+ordered any army unit**, which a single stray Warrior in a second city satisfies - so H6 could go green
+without the concentration the rule is about. It was rewritten to count **army-role orders per city**
+(recon and civilian orders excluded), report the busiest city's share, and name the cities where army
+orders are at least half of that city's orders. A1's snapshot was regenerated with the new shape, so both
+attempts are read by the same instrument; under either reading A1 is **one** war city carrying 100% of its
+six army orders (`131073` ordered five things and none of them military), so A1's T40 conclusion is
+unchanged - the record was re-measured, not reinterpreted. The old blunt count stays in the record beside
+the new one.
+
 ## Mid-window review (end of T40) - written when the session stops there
 
 | question | answer |
