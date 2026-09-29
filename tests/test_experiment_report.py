@@ -635,6 +635,85 @@ def test_the_a2_question_set_asks_a2_s_own_four():
     assert generic[0][0].startswith("P1 a siege unit early")
 
 
+def _attack_row(turn: int, walls: str, city_hp: str = "200/200") -> dict:
+    """An attack reply on a city: the line the wall pool is read from."""
+    return {
+        "turn": turn,
+        "tool": "unit_action",
+        "params": {"action": "attack"},
+        "result": f"CITY_ATTACK|city hp: {city_hp}, walls: {walls}",
+    }
+
+
+def _keep_row(turn: int) -> dict:
+    return {"turn": turn, "tool": "resolve_city_capture", "params": {"action": "keep"},
+            "result": "KEEP|耶路撒冷 (pop 5, id:196610, captured)"}
+
+
+def _a3_frames(turns: list[int]) -> dict[int, dict]:
+    by_turn = frames({t: {"WARRIOR": 1} for t in turns})
+    for turn in turns:
+        by_turn[turn]["gold_per_turn"] = 7.0
+    return by_turn
+
+
+def test_the_a3_question_set_measures_the_wall_phase():
+    """A3's Q2 is the one question no attempt has had: was there a wall, and how long did it take?
+
+    The pool is read off the attack replies (`walls: N/M`, and `walls: none` when there is none), so the
+    instrument can answer it rather than describing it. A2 could not: every shot of its assault read
+    `walls: none`.
+    """
+    # A walled city, breached, kept inside the window: the claim holds.
+    by_turn = _a3_frames([1, 60, 68, 70, 74])
+    rows = [
+        _attack_row(68, "100/100"),
+        _attack_row(70, "0/100"),
+        _keep_row(74),
+    ]
+    wall = report.wall_phase(by_turn, rows)
+    assert wall["status"] == report.HELD
+    assert wall["first_wall_turn"] == 68 and wall["walls_down_turn"] == 70 and wall["keep_turn"] == 74
+    assert "walls first read T68" in wall["detail"] and "breached T70" in wall["detail"]
+
+    # No wall pool above zero anywhere: unaskable, and the detail says so rather than calling it a miss.
+    wall = report.wall_phase(by_turn, [])
+    assert wall["status"] == report.OPEN
+    assert "unaskable" in wall["detail"]
+
+    # Unwalled reads do not count as walls - `walls: none` is what A2 saw on every shot.
+    no_walls = [_attack_row(66, "none"), _attack_row(68, "none")]
+    assert report.wall_phase(by_turn, no_walls)["status"] == report.OPEN
+
+    # Breached but not yet kept: open, with the breach on the record.
+    wall = report.wall_phase(by_turn, [_attack_row(68, "100/100"), _attack_row(70, "0/100")])
+    assert wall["status"] == report.OPEN and wall["walls_down_turn"] == 70
+
+    # Kept too early: walls did not slow anything down.
+    early = [_attack_row(60, "100/100"), _keep_row(62)]
+    wall = report.wall_phase(_a3_frames([1, 60, 62]), early)
+    assert wall["status"] == report.FALSIFIED and "earlier than T68" in wall["detail"]
+
+    # Kept too late: outside the window's other end.
+    late = [_attack_row(60, "100/100"), _attack_row(62, "0/100"), _keep_row(81)]
+    wall = report.wall_phase(_a3_frames([1, 60, 62, 81]), late)
+    assert wall["status"] == report.FALSIFIED and "later than T80" in wall["detail"]
+
+
+def test_the_a3_question_set_asks_a3_s_own_four():
+    by_turn = _a3_frames([1, 48, 60, 74])
+    by_turn[48]["techs"] = ["TECH_MINING", "TECH_ENGINEERING"]
+    by_turn[1]["unit_composition"] = {"WARRIOR": 1}
+    by_turn[48]["unit_composition"] = {"WARRIOR": 2, "ARCHER": 4, "CATAPULT": 2, "SPEARMAN": 1, "SCOUT": 1}
+    rows = [_attack_row(68, "100/100"), _attack_row(70, "0/100"), _keep_row(74)]
+    questions = report.verdict_a3(by_turn, rows)
+    assert [name.split()[0] for name, _s, _d in questions] == ["Q1", "Q2", "Q3", "Q4"]
+    assert "corrected table" in questions[0][0]
+    assert questions[1][1] == report.HELD
+    assert questions[1][0].startswith("Q2 a walled target")
+    assert questions[3][1] == report.HELD  # 7.0 gold/turn is under the floor: the rule counts, not the diary
+
+
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
     """A1's T40 read `gold_T40 6.0` beside a treasury of 236 - the column was gold **per turn**.
 

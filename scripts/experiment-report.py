@@ -656,6 +656,120 @@ def verdict_a2(
     ]
 
 
+#: An attack reply reports a city's walls as `walls: {hp}/{max}` when there are any, and `walls: none`
+#: when there are not (`game_state.py`, the branch that reports the city pool whether or not it has
+#: walls). A3's whole question is whether that number was ever above zero.
+WALL_RE = re.compile(r"walls:\s*(\d+)\s*/\s*(\d+)")
+
+#: A3's window, written from its own queue in task 034: A2 kept its (unwalled) city on T68, and the
+#: attempt's late bound is T80. A walled city kept before the early bound falsifies the claim that the
+#: wall phase changes the arithmetic - nothing slowed down.
+A3_EARLY_KEEP = 68
+A3_LATE_KEEP = 80
+
+
+def wall_phase(by_turn: dict[int, dict], rows: list[dict]) -> dict:
+    """A3's Q2, measured: was there a wall to break, and how many turns did it take?
+
+    The wall pool is read off the attack replies, which print `|city hp: N/M, walls: W/M` for a walled
+    city and `walls: none` for an unwalled one - so this is the one question the record can answer with
+    a number rather than an impression, and A2 could not answer it at all (`walls: none` on every shot).
+
+    Status: HELD when a city with a wall pool was breached and kept inside A3's window, FALSIFIED when
+    one was kept outside it, and OPEN when either nothing with walls was attacked (the detail says
+    *unaskable*, which is a finding about the map rather than a miss) or no city has fallen yet.
+    """
+    reads: list[tuple[int, int, int]] = []
+    for row in rows:
+        for match in WALL_RE.finditer(row.get("result") or ""):
+            hp, top = int(match.group(1)), int(match.group(2))
+            if top > 0:
+                reads.append((row.get("turn") or 0, hp, top))
+    keep = min((turn for turn, _ in captures(rows)), default=None)
+    last = _last_turn(by_turn)
+    out = {
+        "first_wall_turn": None,
+        "walls_down_turn": None,
+        "keep_turn": keep,
+        "reads": len(reads),
+    }
+    if not reads:
+        out.update(
+            status=OPEN,
+            detail=f"no city with a wall pool above zero was attacked by T{last} - the wall phase is "
+                   f"unaskable on this map, which is the attempt's own answer to give",
+        )
+        return out
+    first_wall = min(turn for turn, _hp, _top in reads)
+    breached = min((turn for turn, hp, _top in reads if hp == 0 and turn >= first_wall), default=None)
+    out.update(first_wall_turn=first_wall, walls_down_turn=breached)
+    if keep is None:
+        out.update(
+            status=OPEN,
+            detail=f"walls first read above zero on T{first_wall}"
+                   + (f", breached T{breached}" if breached is not None else ", not yet breached")
+                   + f"; no city kept by T{last}",
+        )
+        return out
+    if keep < A3_EARLY_KEEP:
+        out.update(
+            status=FALSIFIED,
+            detail=f"walls first read T{first_wall}"
+                   + (f", breached T{breached}" if breached is not None else "")
+                   + f", city kept T{keep} - earlier than T{A3_EARLY_KEEP}, so the wall phase did not "
+                     f"slow anything",
+        )
+        return out
+    if keep > A3_LATE_KEEP:
+        out.update(
+            status=FALSIFIED,
+            detail=f"walls first read T{first_wall}"
+                   + (f", breached T{breached}" if breached is not None else "")
+                   + f", city kept T{keep} - later than T{A3_LATE_KEEP}",
+        )
+        return out
+    out.update(
+        status=HELD,
+        detail=f"walls first read T{first_wall}"
+               + (f", breached T{breached}" if breached is not None else ", breach not read")
+               + f", city kept T{keep} - inside the T{A3_EARLY_KEEP}-T{A3_LATE_KEEP} window",
+    )
+    return out
+
+
+def verdict_a3(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, str, str]]:
+    """A3's four questions (task 034, `docs/experiments/README.md`'s A3 row).
+
+    Q1 is the establishment deadline under the corrected table, **Q2 is the wall phase** - the
+    measurement no attempt has had - and Q3/Q4 are the generic slots 3 and 4, answered the same way.
+    """
+    generic = {
+        slot: (name, status, detail)
+        for slot, (name, status, detail) in zip(
+            ("P1", "P2", "P3", "P4"),
+            verdict(by_turn, rows, expect_est, expect_city, expect_gold_red),
+            strict=True,
+        )
+    }
+    wall = wall_phase(by_turn, rows)
+    return [
+        (
+            f"Q1 establishment complete by T{expect_est} (corrected table)",
+            generic["P2"][1],
+            generic["P2"][2],
+        ),
+        ("Q2 a walled target changes the arithmetic measurably", wall["status"], wall["detail"]),
+        (f"Q3 first enemy city kept by T{expect_city}", generic["P3"][1], generic["P3"][2]),
+        (f"Q4 gold floor red on <{expect_gold_red} turns", generic["P4"][1], generic["P4"][2]),
+    ]
+
+
 def order_summary(rows: list[dict]) -> dict:
     """The first order in each category, and how many of each the attempt made."""
     counts: collections.Counter = collections.Counter()
@@ -1042,6 +1156,8 @@ def print_verdict(
     results = (
         verdict_a2(by_turn, rows, expect_est, expect_city, expect_gold_red)
         if questions == "a2"
+        else verdict_a3(by_turn, rows, expect_est, expect_city, expect_gold_red)
+        if questions == "a3"
         else verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
     )
     for name, status, detail in results:
@@ -1277,10 +1393,11 @@ def main() -> int:
     ap.add_argument("--ids", default="P1,P2,P3,P4",
                     help="the attempt's own prediction labels for the verdict, comma separated "
                          "(default P1,P2,P3,P4: A1's; A2's are Q1,Q2,Q3,Q4)")
-    ap.add_argument("--questions", choices=("generic", "a2"), default="generic",
-                    help="which four questions to answer: the generic P1-P4 slots (default), or A2's "
-                         "own Q1-Q4 (its Q2 is the ordering after Engineering, which no generic slot "
-                         "measures)")
+    ap.add_argument("--questions", choices=("generic", "a2", "a3"), default="generic",
+                    help="which four questions to answer: the generic P1-P4 slots (default), A2's own "
+                         "Q1-Q4 (its Q2 is the ordering after Engineering, which no generic slot "
+                         "measures), or A3's own Q1-Q4 (its Q2 is the wall phase - whether a city's "
+                         "wall pool was ever above zero and how many turns it took to breach)")
     ap.add_argument("--run", help="keep one or more sessions' rows (comma separated when an attempt "
                                   "spans a resume); attempts share a game key")
     ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
@@ -1375,6 +1492,8 @@ def main() -> int:
             for name, status, detail in (
                 verdict_a2(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
                 if args.questions == "a2"
+                else verdict_a3(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
+                if args.questions == "a3"
                 else verdict(
                     by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids
                 )
