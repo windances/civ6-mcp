@@ -224,3 +224,58 @@ def test_self_report_mismatch_is_visible_and_agreement_is_quiet():
 
     # A turn with no such line is simply not a report.
     assert report.self_reports(frames({1: {"WARRIOR": 1}})) == []
+
+
+def test_attempt_rows_compare_two_snapshots_on_the_same_columns():
+    """`--compare` reads what `--save` wrote, because the diary will belong to the next attempt."""
+    payload = {
+        "game": "china_911679432",
+        "run": "run-a",
+        "first_turn": 1,
+        "last_turn": 40,
+        "economy": [{"turn": 20, "science": 21.4, "gold_per_turn": 9.0},
+                    {"turn": 40, "science": 38.9, "gold_per_turn": 14.2}],
+        "establishment": {"turn": 47},
+        "captures": [[61, '"KEEP|City"']],
+        "rules": {"carrying-capacity": 3},
+        "doctrine": {
+            "first_military_order": [22, "UNIT_ARCHER"],
+            "role_order_sequence": [[22, "ranged", "UNIT_ARCHER"], [35, "siege", "UNIT_CATAPULT"]],
+            "forbidden_orders": [[30, "UNIT_BATTERING_RAM", "UNIT"]],
+            "self_reports": [{"turn": 40, "mismatch": {"siege": (2, 1)}}],
+        },
+    }
+    row = report.attempt_row("A1", payload)
+    assert row["establishment"] == "T47"
+    assert row["army_start"] == "T22"
+    assert row["siege_order"] == "T35"
+    assert row["first_keep"] == "T61"
+    assert row["sci_T20"] == 21.4 and row["gold_T40"] == 14.2
+    assert row["h5"] == 1  # the forbidden ram was ordered
+    assert row["self_mismatch"] == 1
+    assert row["rules_red"] == 1
+
+    empty = report.attempt_row("A2", {"game": "g", "first_turn": 1, "last_turn": 12})
+    assert empty["establishment"] == "not reached"
+    assert empty["army_start"] == "-" and empty["siege_order"] == "never" and empty["first_keep"] == "none"
+    assert empty["h5"] == 0 and empty["self_mismatch"] == 0
+    # Every compared column is present on both rows, so the table cannot go ragged.
+    for key in report.COMPARE_COLUMNS:
+        assert key in row and key in empty
+
+
+def test_boundaries_survive_a_diary_with_gaps():
+    """A turn nobody played must not be asked for - the boundaries are recorded turns, not multiples."""
+    by_turn = frames({1: {"WARRIOR": 1}, 9: {"WARRIOR": 1}, 21: {"WARRIOR": 1}, 41: {"WARRIOR": 1}})
+    got = report.boundaries(by_turn, 10)
+    # T10, T20 and T30 were never played: T21 answers for T10 and T20, T41 for T30 and T40. T9 is not
+    # a boundary - it precedes the first multiple of the step and is neither the first nor the last row.
+    assert got == [1, 21, 41]
+    assert all(turn in by_turn for turn in got)
+    # The economy table reads only turns it was given, so it cannot raise.
+    table = report.economy_table(by_turn, 10)
+    assert [entry["turn"] for entry in table] == got
+    assert report.boundaries({}, 10) == []
+    # A diary with no gaps is the ordinary case: exactly the multiples, plus the first and last row.
+    dense = frames({turn: {"WARRIOR": 1} for turn in range(1, 42)})
+    assert report.boundaries(dense, 10) == [1, 10, 20, 30, 40, 41]

@@ -56,6 +56,19 @@ meets a barbarian camp the last one missed is not a worse strategy. A finding th
 turns under the gold floor - and on the economy at fixed turns, **not on the final outcome**. "It lost
 the city" is not a datum about a production doctrine unless the process numbers explain why.
 
+**One consequence of sharing a save, which bites if it is forgotten.** Attempts share a game key -
+`<civ>_<seed>` - so they share `diary_<game>.jsonl`, and **each attempt overwrites the turn rows the
+last one wrote**. An attempt's numbers therefore have to be snapshotted *while it is the current one*:
+
+```
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run <session> --save A1.json
+```
+
+`--save` writes the whole report as JSON - it is the attempt's record, so the review quotes it rather
+than re-deriving anything later; `--compare A1.json A2.json` prints one line per attempt on the same
+columns; `--run` narrows the log to one session, which is how the doctrine checks stay inside the
+attempt they belong to. The diary itself is not attempt-scoped and cannot be made so.
+
 ## 3. The one variable per attempt
 
 An attempt changes **exactly one** thing. Everything else is the doctrine as written, so a

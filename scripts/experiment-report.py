@@ -15,7 +15,14 @@ compared without re-deriving anything by hand.
     .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432
     .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432 --step 10 --json
     .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432 --verdict
+    .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432 --run <session> --save A1.json
+    .venv\\Scripts\\python.exe scripts/experiment-report.py --compare A1.json A2.json
     .venv\\Scripts\\python.exe scripts/experiment-report.py --list
+
+**Attempts share a game key, because they start from the same save** - so they also share the diary
+file, and each attempt overwrites the turn rows the last one wrote. `--save` snapshots an attempt's
+numbers while it is still the current one, `--compare` reads those snapshots, and `--run` keeps one
+session's log rows when the log family holds several attempts.
 
 Reported, per attempt:
 
@@ -155,18 +162,29 @@ def diary_rows(game: str) -> dict[int, dict]:
     return by_turn
 
 
-def log_rows(game: str) -> list[dict]:
+def log_rows(game: str, run: str | None = None) -> list[dict]:
+    """Every logged call for the game, oldest first. `run` keeps one session's rows only.
+
+    Attempts share a game key: they start from the same save, so the seed - and therefore
+    `diary_<game>.jsonl` and the log family - is the same for all of them. A log row carries the
+    session that made it, so an attempt's log rows are separable even though its diary rows are not.
+    """
     rows: list[dict] = []
     for path in sorted(DATA.glob(f"log_{game}_*.jsonl")):
+        if run and run not in path.name:
+            continue
         with path.open(encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
                 if not line:
                     continue
                 try:
-                    rows.append(json.loads(line))
+                    row = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                if run and (row.get("session") or row.get("run_id") or "") not in ("", run):
+                    continue
+                rows.append(row)
     rows.sort(key=lambda r: r.get("ts") or 0)
     return rows
 
@@ -183,13 +201,22 @@ def _last_turn(by_turn: dict[int, dict]) -> int:
 
 
 def boundaries(by_turn: dict[int, dict], step: int) -> list[int]:
-    """The turns to print: the first turn, then every multiple of `step`, then the last turn."""
-    first, last = _first_turn(by_turn), _last_turn(by_turn)
-    turns = [first]
-    turns += [t for t in range(((first // step) + 1) * step, last + 1, step)]
-    if last not in turns:
-        turns.append(last)
-    return sorted(set(turns))
+    """One **recorded** turn near each multiple of `step`, plus the first and the last.
+
+    A diary can have gaps - turns nobody played, or turns a rollback removed - so the boundary is the
+    first recorded turn at or after each multiple, never the multiple itself. Asking for T240 when no
+    row exists at T240 is how this function used to raise `KeyError: 240`.
+    """
+    turns = sorted(by_turn)
+    if not turns:
+        return []
+    picked = {turns[0], turns[-1]}
+    start = ((turns[0] // step) + 1) * step
+    for multiple in range(start, turns[-1] + 1, step):
+        candidate = next((turn for turn in turns if turn >= multiple), None)
+        if candidate is not None:
+            picked.add(candidate)
+    return sorted(picked)
 
 
 def economy_table(by_turn: dict[int, dict], step: int) -> list[dict]:
@@ -391,6 +418,14 @@ def role_order_sequence(rows: list[dict]) -> list[tuple[int, str, str]]:
     return sorted((turn, role, name) for role, (turn, name) in firsts.items())
 
 
+def first_military_order(rows: list[dict]) -> tuple[int, str] | None:
+    """The turn the army began: the first order of any unit that fills a role in the table."""
+    for turn, name, _kind in orders(rows):
+        if role_of_item(name):
+            return (turn, name)
+    return None
+
+
 SELF_REPORT_RE = re.compile(
     r"ESTABLISHMENT:\s*siege\s*(\d+)\s*/\s*2.*?melee\s*(\d+)\s*/\s*2.*?ram\s*(\d+)\s*/\s*1"
     r".*?ranged\s*(\d+)\s*/\s*4.*?cavalry\s*(\d+)\s*/\s*1",
@@ -580,9 +615,7 @@ def print_verdict(
         ordered = first_order_turn(rows, "siege")
         if ordered is not None:
             print(f"  the siege train was first ordered on T{ordered}")
-        first_military = next(
-            ((turn, name) for turn, name, _kind in orders(rows) if role_of_item(name)), None
-        )
+        first_military = first_military_order(rows)
         if first_military:
             print(f"  the army began on T{first_military[0]} ({first_military[1]})")
 
@@ -635,6 +668,86 @@ def captures(rows: list[dict]) -> list[tuple[int, str]]:
 
 def tool_calls(rows: list[dict]) -> collections.Counter:
     return collections.Counter(row.get("tool") for row in rows)
+
+
+# --------------------------------------------------------------------------- across attempts
+#
+# Attempts share a game key, because they start from the same save. That means they share the diary
+# file too, and each attempt overwrites the turn rows the last one wrote. **So an attempt's numbers
+# have to be snapshotted while it is the current one** (`--save`), and the comparison reads those
+# snapshots - not the diary, which by then belongs to whoever played last.
+
+
+def attempt_row(name: str, payload: dict) -> dict:
+    """The comparable columns of one attempt's saved report."""
+    economy = {entry.get("turn"): entry for entry in payload.get("economy") or []}
+
+    def at(turn: int) -> dict:
+        return economy.get(turn) or {}
+
+    doctrine = payload.get("doctrine") or {}
+    establishment = (payload.get("establishment") or {}).get("turn")
+    army = doctrine.get("first_military_order")
+    sequence = {role: turn for turn, role, _name in (doctrine.get("role_order_sequence") or [])}
+    keeps = [entry[0] for entry in (payload.get("captures") or []) if entry]
+    mismatches = sum(
+        1 for report in (doctrine.get("self_reports") or []) if report.get("mismatch")
+    )
+    return {
+        "attempt": name,
+        "turns": f"T{payload.get('first_turn')}-T{payload.get('last_turn')}",
+        "establishment": f"T{establishment}" if establishment else "not reached",
+        "army_start": f"T{army[0]}" if army else "-",
+        "siege_order": f"T{sequence['siege']}" if "siege" in sequence else "never",
+        "first_keep": f"T{min(keeps)}" if keeps else "none",
+        "sci_T20": at(20).get("science", "-"),
+        "sci_T40": at(40).get("science", "-"),
+        "gold_T40": at(40).get("gold_per_turn", "-"),
+        "h5": len(doctrine.get("forbidden_orders") or []),
+        "self_mismatch": mismatches,
+        "rules_red": len(payload.get("rules") or {}),
+    }
+
+
+COMPARE_COLUMNS = (
+    "turns",
+    "establishment",
+    "army_start",
+    "siege_order",
+    "first_keep",
+    "sci_T20",
+    "sci_T40",
+    "gold_T40",
+    "h5",
+    "self_mismatch",
+    "rules_red",
+)
+
+
+def print_compare(paths: list[pathlib.Path]) -> int:
+    """One line per attempt, from the snapshots `--save` wrote."""
+    rows: list[dict] = []
+    for path in paths:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:  # noqa: PERF203 - one bad file, not a stop
+            print(f"  {path}: unreadable ({exc})", file=sys.stderr)
+            continue
+        rows.append(attempt_row(path.stem, payload))
+    if not rows:
+        print("nothing to compare", file=sys.stderr)
+        return 2
+    header = ["attempt"] + list(COMPARE_COLUMNS)
+    widths = [max(len(h), *(len(str(r.get(h, "-"))) for r in rows)) for h in header]
+    print("  ".join(h.ljust(w) for h, w in zip(header, widths)))
+    for row in rows:
+        print("  ".join(str(row.get(h, "-")).ljust(w) for h, w in zip(header, widths)))
+    print(
+        "\ncolumns: establishment = the turn the army matched tactics/01's table; army_start = first "
+        "role-mapped unit ordered;\nsiege_order = first siege order; h5 = ram/tower orders (must be 0); "
+        "self_mismatch = diary ESTABLISHMENT lines the record contradicts."
+    )
+    return 0
 
 
 # --------------------------------------------------------------------------- printing
@@ -730,7 +843,14 @@ def main() -> int:
                     help="the attempt's own first-city deadline (default 80: A1's)")
     ap.add_argument("--expect-gold-red", type=int, default=10,
                     help="how many turns under the gold floor the attempt allows (default 10: A1's)")
+    ap.add_argument("--run", help="keep only one session's log rows (attempts share a game key)")
+    ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
+    ap.add_argument("--compare", nargs="+",
+                    help="compare saved attempt reports (files written by --save) and exit")
     args = ap.parse_args()
+
+    if args.compare:
+        return print_compare([pathlib.Path(p) for p in args.compare])
 
     if args.list or not args.game:
         for key in games():
@@ -743,7 +863,7 @@ def main() -> int:
     if not by_turn:
         print(f"no diary rows for {args.game}", file=sys.stderr)
         return 2
-    rows = log_rows(args.game)
+    rows = log_rows(args.game, args.run)
     if args.start is not None:
         by_turn = {t: r for t, r in by_turn.items() if t >= args.start}
         rows = [r for r in rows if (r.get("turn") or 0) >= args.start]
@@ -754,37 +874,46 @@ def main() -> int:
         print("no diary rows in that turn range", file=sys.stderr)
         return 2
 
+    counts, achieved = rule_counts(rows)
+    payload = {
+        "game": args.game,
+        "run": args.run,
+        "first_turn": _first_turn(by_turn),
+        "last_turn": _last_turn(by_turn),
+        "economy": economy_table(by_turn, args.step),
+        "delta": deltas(by_turn),
+        "composition": [{"turn": t, "units": c} for t, c in composition(by_turn, args.step)],
+        "rules": dict(counts),
+        "rule_turns": rule_turns(rows),
+        "achieved": achieved,
+        "refusals": dict(refusal_counts(rows)),
+        "captures": captures(rows),
+        "tool_calls": dict(tool_calls(rows)),
+        "establishment": establishment(by_turn),
+        "orders": order_summary(rows),
+        "doctrine": {
+            "forbidden_orders": forbidden_orders(rows),
+            "military_city_spread": military_city_spread(rows),
+            "upgrades": upgrades(rows),
+            "role_order_sequence": role_order_sequence(rows),
+            "first_military_order": first_military_order(rows),
+            "self_reports": self_reports(by_turn),
+        },
+        "verdict": [
+            {"prediction": name, "held": held, "detail": detail}
+            for name, held, detail in verdict(
+                by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red
+            )
+        ],
+    }
+
+    if args.save:
+        out = pathlib.Path(args.save)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"wrote {out}  (this attempt's numbers survive the next attempt overwriting the diary)")
+
     if args.json:
-        counts, achieved = rule_counts(rows)
-        payload = {
-            "game": args.game,
-            "first_turn": _first_turn(by_turn),
-            "last_turn": _last_turn(by_turn),
-            "economy": economy_table(by_turn, args.step),
-            "delta": deltas(by_turn),
-            "composition": [{"turn": t, "units": c} for t, c in composition(by_turn, args.step)],
-            "rules": dict(counts),
-            "rule_turns": rule_turns(rows),
-            "achieved": achieved,
-            "refusals": dict(refusal_counts(rows)),
-            "captures": captures(rows),
-            "tool_calls": dict(tool_calls(rows)),
-            "establishment": establishment(by_turn),
-            "orders": order_summary(rows),
-            "doctrine": {
-                "forbidden_orders": forbidden_orders(rows),
-                "military_city_spread": military_city_spread(rows),
-                "upgrades": upgrades(rows),
-                "role_order_sequence": role_order_sequence(rows),
-                "self_reports": self_reports(by_turn),
-            },
-            "verdict": [
-                {"prediction": name, "held": held, "detail": detail}
-                for name, held, detail in verdict(
-                    by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red
-                )
-            ],
-        }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
 
