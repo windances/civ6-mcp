@@ -1,4 +1,4 @@
-# Attempt A2 - the same doctrine, with a target inside the window
+﻿# Attempt A2 - the same doctrine, with a target inside the window
 
 **Status: in progress** (the session `sacred-garnet-vault-35` is playing it; started 2026-09-29 14:02).
 
