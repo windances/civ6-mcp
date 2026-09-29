@@ -128,6 +128,22 @@ session's own log at T22, and both are the measurements this row exists for):
   fallback written for it (`tactics/08` says the war city builds the Encampment, and says nothing about what
   to do when the war city cannot). The attempt has to solve it with border expansion, a tile purchase or the
   second city's own ring; which of those it does, and what it costs, belongs on this row as it happens.
+
+**And it happened at T27 - the variable's cost is measured, and it is not only production.** The session
+**bought a tile**: `purchase_tile(58,22)` answered `TILE_PURCHASED|(58,22)|cost:35`, the same turn's
+`get_district_advisor(DISTRICT_ENCAMPMENT)` then offered exactly **1 tile**, and the district was ordered in
+the capital the same turn:
+
+```
+T27 set_city_production(city_id=65536, DISTRICT_ENCAMPMENT) -> PRODUCING|DISTRICT_ENCAMPMENT|5 turns
+```
+
+So **A4 pays 35 gold and five turns of the capital's production for its variable**, and the gold half is the
+half the doctrine never mentions: `tactics/08` says the war city builds the Encampment and is silent about the
+ring it may not be able to build it on. **The ordering the attempt was built to test is still to come** -
+Engineering was set at **T31**, so the Encampment (due about **T32**) will be standing well before any second
+siege unit exists, and the question is whether that is worth what it cost. The record will carry the completion
+turn, the first and second siege-unit orders, and the Great General beside it.
 | the establishment under the corrected table (Q1 wants <= T60) | **not yet measured** - the table's rows are read at the checkpoints, and no establishment read exists for this attempt yet |
 | the Encampment (Q2): offered, ordered, completed, and its tile | **not yet measured** - no `DISTRICT_ENCAMPMENT` order is in the log at T8, and the district offer has not been read |
 | the Great General (Q3): recruited, never activated, and where it stands | **not yet measured** - no `get_great_people` read and no general |
