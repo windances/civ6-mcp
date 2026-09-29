@@ -103,4 +103,5 @@ Task 034 was retired as `done/034-attempt-a3-the-same-doctrine-against-a-walled-
 Task 035 was retired as `done/035-attempt-a4-the-encampment-before-the-second-siege-unit-done-T66.md`.
 
 Task 036 was retired as `done/036-attempt-a5-the-chops-go-into-units-expired-T70.md`.
-| `037-attempt-a6-the-first-siege-unit-is-bought.md` | 2026-09-30 | turn 75 | whether gold can put the first siege unit in hand earlier than production can, from the shared start | turn 70 is reached, or a city is kept (a city_action reply reads KEEP|, or the move's reply reads |
+
+Task 037 was retired as `done/037-attempt-a6-the-first-siege-unit-is-bought-done-T70.md`.

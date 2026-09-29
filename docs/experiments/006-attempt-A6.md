@@ -1,13 +1,15 @@
-# Attempt A6 - the first siege unit is bought with gold
+﻿# Attempt A6 - the first siege unit is bought with gold
 
-**Status: in progress** - **one session so far** (`phantom-mahogany-phalanx-89`), played from the
-experiment's shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, started 2026-09-30 and standing at
-**T4** when this file is seeded. The attempt's instruction is
+**Status: COMPLETE** - **one session** (`phantom-mahogany-phalanx-89`), played from the experiment's
+shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` and finished at **T70**, the window's last turn.
+**No city was kept.** The session verified the shared start from the game rather than from memory at T1
+(西安 (60,22) pop 1, Prod 5, no research, an empty queue, exactly one Warrior, gold 6, score 8, 2%
+explored) and never rolled back or reloaded. The attempt's instruction is
 `prompts/tasks/tmp/037-attempt-a6-the-first-siege-unit-is-bought.md`; the design is section 3 of
 `docs/experiments/README.md`; A5's record is `005-attempt-A5.md`; the cross-attempt report is
-`RETRO-2026-09-29.md`. **The record is seeded with the settings, the pin and the hypothesis while the
-attempt plays, and the measured half is filled as it lands** - the attempt's own session writes its half
-too, and the two are reconciled here.
+`RETRO-2026-09-29.md` (section 8 is A6's half). *This file was seeded while the attempt played and
+carried its mid-window readings; the end table below is the measured close, reconciled against the
+instrument.*
 
 ## Settings: the shared start, one variable
 
@@ -164,7 +166,7 @@ be**. The same turn ordered the second, produced one:
 | the price and the balance | **`cost=320g (had 396g)`** - the treasury had been above the price since **T43** (356), so **the gold was not the binding clock**; Engineering was, exactly as the re-read above predicted |
 | the first siege unit, against every prior attempt | **the earliest in the programme**: A6 bought at **T46**, against A4's first Catapult **owned T49**, A5's **T50**, A3's **T53** and A2's **T53** - **seven turns earlier than A2's completion**, which is more than the "four or five turns" the variable promised |
 | the second unit | ordered the same turn in the same city, **6 turns** (about T52), against A2's second completing **T55** and Q3's bound |
-| the funding-half audit | **the Catapult is the only `purchase_item` row in the entire attempt so far**, and there is **no `purchase_tile` row and no trade row at all** - so the 396 gold was raised by income and restraint, which is the first half of the variable measured rather than asserted |
+| the funding-half audit | **the Catapult is the only `purchase_item` row in the entire attempt**, and there is **no `purchase_tile` row and no trade row at all** - so the gold was raised without selling anything. **One correction to this row's first wording, which said "by income and restraint": part of it was neither.** The session's own end table records that **T9's 72 gold included +26 from the goody hut at (53,20)**, so the funding half is income, restraint **and one map windfall** - the audit is still clean (nothing was sold), but "income and restraint" overstates how deliberate all of it was, and the number that matters is the **+10 to +13 gold/turn the empire reached on its own by T30-T43** |
 
 **Two things this does not yet establish**, and they are the ones the end table has to answer: whether the
 **train** is complete by A2's T55 (the second Catapult is in the queue at 6 turns), and whether the **war
@@ -211,23 +213,60 @@ earlier than A2, with the establishment complete six turns inside its deadline.
 stands at T54, so the rule's zero is not final; the diary's own `gold_per_turn` is below the +10 floor on
 **39 of those 54 turns**. The cost of the purchase is read in the end table against A2's ten red turns.
 
-## The end table, and the verdict - written when the attempt ends
+## The end table, and the verdict
 
-The attempt ends when **a city is kept** - a `city_action` reply reads `KEEP|`, **or** the game resolves the
-capture itself and the move's reply reads `CAPTURE_MOVE ... CITY TAKEN` (then no `KEEP|` ever appears and
-`resolve_city_capture` answers `NO_PENDING_CITY`; the city list is the confirmation) - or the game reaches
-**T70**, whichever comes first (`expires:` T75). When it does, this section carries one row per question
-with the number that decides it, the purchase row, the gold ledger over the funding window, the snapshot
-`docs/experiments/A6-final.json`, the `--compare` line, and the divergences that are **not** the variable.
+**The attempt ended at T70 with no city kept.** The instrument, run over A6's own session:
 
-**It must carry the two ways this variable can fail while looking like a success**, because a purchase is a
-very visible act:
+```
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run phantom-mahogany-phalanx-89 --from 1 --to 70 --step 10 --verdict --questions a6 --save docs/experiments/A6-final.json
+.venv\Scripts\python.exe scripts/experiment-report.py --compare docs\experiments\A5-final.json docs\experiments\A6-final.json
+```
 
-- **gold that was never actually raised**: if the treasury is replenished by a trade, a luxury sale or a
-  lucky goody hut rather than by restraint and income, then the funding half of the variable was not
-  executed - and the record lists **every** `purchase_item`/`purchase_tile` row and every trade, so that is
-  checkable rather than asserted;
-- **a train that arrives early and a war that does not**: Q3 is deliberately about the train *and* the
-  opening, and A5 is the cautionary case - its first Catapult was three turns early and its war still
-  opened late enough that the city was never taken. A fast purchase beside a late war is the variable's
-  cost without its benefit.
+| # | prediction | the number | verdict |
+|---|---|---|---|
+| Q1 | establishment complete by T60 | **COMPLETE at T54** (`siege 2 melee 2 anticav 1 ranged 4 cavalry 1 recon 1`, filled exactly, no row over strength) | **HELD**, six turns inside |
+| Q2 | the first siege unit bought by T50 | **T46** - `PURCHASED\|UNIT_CATAPULT\|cost=320g (had 396g)`; the first turn Engineering was owned | **HELD**, four turns inside - and seven turns before A2's T53 completion |
+| Q3 | train 2/2 by A2's T55, war against A3's opening | second Catapult **owned T52**; `WAR_REQUESTED\|DECLARE_SURPRISE_WAR on Jerusalem` at **T52**, against A2's T60 | **HELD** |
+| Q4 | carrying-capacity red on more than A2's ten turns | **2 red turns** by the rule up to T60 - *"the purchase turned out free"*; the diary's own `gold_per_turn` below the +10 floor on **45 of 60 turns** | **FALSIFIED**: the cost did not appear |
+
+**The purchase row, and the audit behind it.** `T46 purchase_item(city_id=65536, "UNIT", "UNIT_CATAPULT",
+YIELD_GOLD) -> PURCHASED|UNIT_CATAPULT|cost=320g (had 396g)`, leaving **76g**. **The Catapult is the only
+`purchase_item` row in the entire attempt**; there is no `purchase_tile` row and no trade row at all.
+
+**The gold ledger over the funding window** (this attempt's own `get_game_overview` reads): T1 **6** (+5),
+T9 **72** (+5, +26 of it the goody hut at (53,20)), T12 **87** (+5), T20 **139** (+7), T30 **218** (+10),
+**T43 356** (+13), T46 **396** -> 76 after the purchase. The price was crossed about **T43**, so the
+funding arm finished three turns before it could be spent.
+
+**What actually set the purchase turn was the TECH, not the gold** - the attempt's own inversion of its
+premise. `Engineering` read **29 turns at T30** (the treasury already at 218), 15 at T40, **3 at T43** -
+and the ten turns of that chain's early loss are attributable to one decision: **the second city was
+founded on (54,22), the COPPER tile, the only mineable resource in reach, so THE WHEEL's Eureka ("mine a
+resource") was forfeited.** The lever that recovered it was **Pingala's `Researcher` promotion** (+1
+science per citizen), which took the empire from 5.5 to **13.9 science/turn** and cut Engineering from 15
+turns to 3 in a single step.
+
+**The two ways this variable can fail while looking like a success were both checked, and neither
+happened**: the gold was raised by income and restraint (no sale, no trade, no tile purchase - the single
+purchase row is the evidence), and the train did not arrive beside a late war (the second Catapult was
+owned **the same turn the war opened**, T52).
+
+**The divergences that are NOT the variable**, recorded so they are not read as its cost:
+
+- **the assault's failure is a formation failure.** 耶路撒冷 read **`walls: none`** throughout and was
+  **200/200 on the last turn**. `screen-the-siege` was red on the turns the guns fired and Catapult
+  983051 was destroyed at T60 after five turns of `EXPOSED - nothing closer to the enemy`; **only one gun
+  was ever in range at once** (`SIEGE FIRE: 1/2`); the supply line never got past **2/6 cut**, so the city
+  healed ~20 a turn; the ring geometry cost T53, T57 and T65 to `STOPPED_SHORT`; and **legal attacks were
+  discarded with `force=True` on six turns** (T57-T62, T68-T70), which is the executor's error and not the
+  map's.
+- **six units were lost**: Archer 1048588 (T55), Warrior 131073 (T56), Warrior 458757 (T59), Catapult
+  1245186 (T60), Trader 786440 with its route plundered (T60), Archer 1114121 (T67).
+- **the second city, 太原 (Taiyuan), founded T27 at (54,22), never produced inside the window** - its
+  founding on the COPPER is the mistake that cost the Eureka, and at 3 production it could not have built
+  a Catapult in time in any case.
+
+**On the compare table** (`A5-final` vs `A6-final`): establishment **T57 -> T54**, siege order T43 ->
+T46, `gpt_T40` **6.9 -> 13.4**, `self_mismatch` **2 -> 0**, `rules_red` 5 -> 6, `first_keep` none for
+both. **A6 moved the first gun seven turns earlier than A2 and did not move the outcome at all** - which
+is the finding A7 and the next revision of the assault doctrine have to carry.

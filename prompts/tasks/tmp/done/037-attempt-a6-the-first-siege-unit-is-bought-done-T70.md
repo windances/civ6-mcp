@@ -171,3 +171,10 @@ unit stays in the queue, and `0f214eb` is why the war is compared against A3 rat
      at: 2026-09-30T04:47:17+08:00
      chinese backup: prompts/tasks/cn/037-attempt-a6-the-first-siege-unit-is-bought.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 037 --done --turn 70
+     at: 2026-09-30T06:17:11+08:00
+     status: done at T70
+     chinese backup: prompts/tasks/cn/037-attempt-a6-the-first-siege-unit-is-bought.cn.md
+-->
