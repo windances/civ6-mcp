@@ -72,15 +72,23 @@ Publishing A4 while 034 is still in force puts **two variables in one attempt**,
 ```
 .venv\Scripts\python.exe scripts\temp-task.py retire 034 --done --turn <the turn A3 ended on>
 .venv\Scripts\python.exe scripts\temp-task.py add ^
-  --title "TEMP TASK 035 - attempt A4: the Encampment after the second city, from the shared T1 start" ^
-  --instruction "继续A3 ~ A7" --slug "attempt-a4-the-encampment-after-the-second-city" ^
+  --title "TEMP TASK 035 - attempt A4: the Encampment before the second siege unit, from the shared T1 start" ^
+  --instruction "继续A3 ~ A7" --slug "attempt-a4-the-encampment-before-the-second-siege-unit" ^
   --scope "@docs/experiments/drafts/a4-scope.txt" ^
   --overrides "@docs/experiments/drafts/a4-overrides.txt" ^
   --done-when "@docs/experiments/drafts/a4-done-when.txt" ^
-  --why "the Encampment's place in the queue, tested from the experiment's shared start" ^
+  --why "the Encampment's place in the war city's queue, tested from the experiment's shared start" ^
   --expires-turn 115 --body-file docs/experiments/drafts/a4-body.md ^
   --cn @docs/experiments/drafts/a4-cn.md
 ```
+
+**Both commands were dry-run on 2026-09-29 (T57) and print the plan they would write**, so the one-shot at the
+end of the attempt is a copy of something already seen: `add ... --dry-run` prints the file name, the register
+row, the `IN FORCE NOW` line and the recorded command; `retire 034 --done --turn N --dry-run` prints the
+`done/...-done-T<N>.md` name and that `IN FORCE NOW` becomes `none`. Two things the dry runs showed: the
+A4 title and slug must carry the **re-scoped** variable (before the second siege unit, not "after the second
+city"), and `add` alone leaves 034 listed as well - **the retire is what makes the new file the only
+instruction in force**, which is why they move in one commit.
 
 Then `python scripts/fix-text-encoding.py` and `python .tools/kb.py index` (the index is derived and goes
 stale the moment the task files change). `docs/experiments/drafts/a4-publish.md` carries the A5-A7 commands

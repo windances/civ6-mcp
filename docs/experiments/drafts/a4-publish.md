@@ -40,20 +40,29 @@ session that is playing, so two of them in force at once is two variables in one
 
 | number | attempt | body | cn | title | numbers |
 |---|---|---|---|---|---|
-| 036 | A5 - the chops go into units | `docs/experiments/drafts/a5-body.md` | `docs/experiments/drafts/a5-cn.md` | `TEMP TASK 036 - attempt A5: the chops go into units, from the shared T1 start` | `--turns`/`--expires-turn 75` |
-| 037 | A6 - the siege train is bought | `docs/experiments/drafts/a6-body.md` | `docs/experiments/drafts/a6-cn.md` | `TEMP TASK 037 - attempt A6: the siege train is bought with gold, from the shared T1 start` | `--expires-turn 75` |
+| 036 | A5 - the chops go into units | `docs/experiments/drafts/a5-body.md` | `docs/experiments/drafts/a5-cn.md` | `TEMP TASK 036 - attempt A5: the chops go into units, from the shared T1 start` | `--expires-turn 75` |
+| 037 | A6 - the first siege unit is bought | `docs/experiments/drafts/a6-body.md` | `docs/experiments/drafts/a6-cn.md` | `TEMP TASK 037 - attempt A6: the first siege unit is bought with gold, from the shared T1 start` | `--expires-turn 75` |
 | 038 | A7 - two war cities | `docs/experiments/drafts/a7-body.md` | `docs/experiments/drafts/a7-cn.md` | `TEMP TASK 038 - attempt A7: two war cities instead of one, from the shared T1 start` | `--expires-turn 115` |
 
-Each takes `--slug attempt-a5-the-chops-go-into-units`, `attempt-a6-the-siege-train-is-bought`,
-`attempt-a7-two-war-cities` (or close), `--instruction "继续A3 ~ A7"`, `--added` left to default, and:
+Each takes `--instruction "继续A3 ~ A7"`, `--added` left to default, and:
 
+- `--slug` `attempt-a5-the-chops-go-into-units`, `attempt-a6-the-first-siege-unit-is-bought`,
+  `attempt-a7-two-war-cities`
 - `--scope @docs/experiments/drafts/a5-scope.txt` / `a6-scope.txt` / `a7-scope.txt` - written
 - `--overrides @docs/experiments/drafts/a5-overrides.txt` / `a6-overrides.txt` / `a7-overrides.txt` - written
 - `--done-when @docs/experiments/drafts/a5-done-when.txt` / `a6-done-when.txt` / `a7-done-when.txt` - written
+- `--body-file docs/experiments/drafts/a5-body.md` / `a6-body.md` / `a7-body.md`
+- `--cn @docs/experiments/drafts/a5-cn.md` / `a6-cn.md` / `a7-cn.md`
 - `--why` (one ASCII line, no coordinate):
   - A5 `whether the chops belong to the units instead of the buildings, from the experiment's shared start`
   - A6 `whether gold can put the first siege unit in hand earlier than production can, from the shared start`
   - A7 `whether a second war-production city pays for the compounding it costs, from the shared start`
+
+**All four publish commands were dry-run at T57 on 2026-09-29** and each prints `task:`, `expires:`,
+`chinese backup:` and `dry run: nothing written`, so the argument list above is known to parse and the
+fragments and CN backups are known to exist. The dry runs also show why the numbering is per-attempt: run
+while 034 is still in force each one proposes **035**, and only a publish that follows a retirement gets the
+next number - which is the sequencing the table's numbers assume.
 
 **A6's `overrides:` names the rule it deliberately breaks** (`carrying-capacity` going red is the variable's
 measured cost, recorded in the diary each turn it fires, not a blocker). A5 and A7 override nothing.
