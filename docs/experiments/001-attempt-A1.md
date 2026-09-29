@@ -84,6 +84,29 @@ the turn the siege train was first asked for.
 | refusals (`STOPPED_MID_PATH` etc.) | not yet measured |
 | verdict on P1-P4 | not yet measured |
 
+## Mid-window review (end of T40) - written when the session stops there
+
+Task 030 orders the session to stop at the end of **turn 40** and report, and this is where that
+review goes. It is written from the instrument, not from the diary's own summary:
+
+```
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --verdict
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --from 1 --to 40 --step 10
+```
+
+| question | answer |
+|---|---|
+| establishment turn so far (P2 wants <= T60) | not yet measured |
+| the army's start - the first order of any role-mapped unit | not yet measured |
+| the siege train's first order (P1 wants <= T45) | not yet measured |
+| the economy at T20 / T40, against the plan | not yet measured |
+| `carrying-capacity` red turns so far (P4 allows < 10) | not yet measured |
+| the nearest rival city and its distance in tiles | not yet measured |
+| verdict so far on P1-P4 | not yet measured |
+
+Then one paragraph, and only one: what the window actually bought, and **the single thing** the next
+stretch changes. A mid-window review that lists five intentions changes nothing.
+
 ## What this attempt already found (2026-09-29, before turn 1)
 
 - **RESOLVED, and the directive was wrong: the boost is 50%, not 60%.** At game start the leader
