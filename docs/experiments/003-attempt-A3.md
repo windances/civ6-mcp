@@ -1,4 +1,4 @@
-# Attempt A3 - the same doctrine against a walled target
+﻿# Attempt A3 - the same doctrine against a walled target
 
 **Status: in progress** - **two sessions so far**, both from the experiment's shared T1 start, started
 2026-09-29. Session 1 `flint-indigo-rampart-32` played **T1-T25** and died mid-turn at T25 (20:56:59):
@@ -56,6 +56,23 @@ its bound - inherits the caveat. The sink for this is mechanical, and it is bein
 attempt's snapshot: `scripts/experiment-report.py` prints a `pin:` block giving the attempt's first four
 orders and `MATCHED`/`DEVIATED`, so no attempt's pin can be glossed in prose again; A4-A7's task files carry
 the consequence that a deviated opening is **re-run from the shared start** rather than reasoned about.
+
+**A second difference that is the tool's, not A3's: the pantheon, and it is measured rather than assumed.**
+A2's first session could not found a pantheon **at all** - `choose_pantheon` at T21 answered
+`ERR:Runtime Error ... operator < is not supported for number < string` on every call - so A2 played its
+whole productive window with no pantheon and founded God of the Forge only at **T41**, in its second
+session. A3 asked at **T23** (`Error: NOT_ENOUGH_FAITH|faith 17 < 25`) and again at **T25**
+(`faith 23 < 25`) - and **founded 锻造之神 at T26** (`PANTHEON_FOUNDED|锻造之神`, the first turn the guard
+let it through: session 2 asked again the moment the turn started). The guard is numeric since `37bb7a9`
+(the A1/A2 crash is gone), but it compares faith against the **standard-speed** cost of 25 while this match
+is **Quick**, where the game's own offer arrives at about 17 - so those two refusals are the tool's
+documented conservatism (`src/civ_mcp/lua/religion.py:70` says so itself) and they cost A3 two turns of
+asking, not a pantheon. So A3 plays T1-T25 with no pantheon and
+**T26 onward with God of the Forge, fifteen turns earlier than A2's T41** - if A3's siege half lands
+earlier than A2's T48/T55, the pantheon is one of the reasons and the record says so rather than attributing
+it all to the target's defences. (The refusals are in the log as `choose_pantheon` rows with their `ERR:`
+text, and that row-level detail is why this paragraph exists: the session's own reasoning said "Pantheon
+available - taking God of the Forge" at T25, and the reply it got was a refusal. A call is not a result.)
 
 Research follows A1's and A2's shape: `TECH_MINING` T1, `TECH_THE_WHEEL` T8, **`TECH_ENGINEERING` T22** -
 the same turn A2 began it, which is the gate H1 is measured at (A2's landed T48, and the two attempts
