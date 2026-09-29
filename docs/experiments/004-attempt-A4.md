@@ -157,6 +157,20 @@ T59 unless something changes.**
 
 Two more facts this attempt has produced, and the row keeps them:
 
+**The gate is now measured, and its evidence is the log rather than the diary - the record says which.**
+A4's own log carries the whole research line as `Research complete` lines: **Mining T7, Bronze Working T21,
+The Wheel T30, Masonry T38, Engineering T42**, and the next turn ordered the train:
+`T43 set_city_production(city_id=65536, UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|5 turns`, with T42's other
+order being a unit (`UNIT_HEAVY_CHARIOT`) and the last economy order before the gate being the Barracks at T33.
+**So H1's ordering holds for A4: siege first, no economy order between Engineering and the train.** The
+instrument, however, reads the gate off the **diary**, and at T42/T43 it answers `Engineering has not landed by
+T42`. The cause is visible in the diary itself: those turns carry **several rows from different attempts** (T42
+has rows at 08:40, 13:26 and later), and A3 and A4 have the *same shape* on them
+(`research=TECH_ENGINEERING, techs=[TECH_MINING, TECH_THE_WHEEL]` - A3 landed its Engineering at T43 too), so
+the attribution can hand A4's read a row that is not A4's. **Everything in this record that depends on the
+gate therefore cites A4's log line, and the snapshot's own gate field has to be read with that caveat** - it is
+the shared-diary problem the retro already names, arriving on the one turn both attempts share.
+
 - **`get_great_people` at T32**: `Great General: Trung Trac (Classical Era) - Unclaimed - your points: 0/40`.
   The mechanism Q3 asks about is live and **not yet earned**: the Encampment is standing and has produced no
   general points of its own. What it produced instead is the *offer* of its own project
