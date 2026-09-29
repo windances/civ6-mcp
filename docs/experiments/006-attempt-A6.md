@@ -127,15 +127,17 @@ table above). The treasury, read from this attempt's own `get_game_overview` row
 | T1 | **6** | +5 |
 | T9 | **72** | +5 |
 | T12 | **87** | +5 |
+| **T20** | **139** | **+7** |
 
-**At +5/turn the treasury needs about forty-seven more turns from T12 to reach the 320 a Catapult costs**,
-which would put the purchase around **T59** - nine turns past Q2's T50 deadline, and past the point where
-the train matters. **So the variable's funding half currently fails on arithmetic unless gold/turn rises**,
-and the record says so now rather than at the deadline: what would change it is the second city, a trade
-route, improved luxury tiles, or a government/policy change, and **A3 reached 347 by T48 on this same
-start**, so the route exists. **This is an early warning and not a verdict** - Q2's deadline is T50 and the
-trajectory has seventeen turns to change - but it is the number to watch, and the record reads the treasury
-at every checkpoint so the turn it crosses 320 (or the turn it becomes clear it will not) is on the page.
+**At +5/turn the treasury would need about forty-seven more turns from T12 to reach the 320 a Catapult
+costs** - about **T59**, nine turns past Q2's T50 deadline. **But income rose to +7/turn by T20**, and from
+T20's 139 that is about **twenty-six more turns, i.e. about T46** - inside the deadline with four turns to
+spare, before counting the trade route, the second city and any luxury the empire sells. **So the warning
+stands as a warning and not as a verdict, and the number moved the right way between T12 and T20**, which
+is what the checkpoint is for: the funding half is **feasible on arithmetic if income holds or improves**,
+and the record reads the treasury at every checkpoint so the turn it crosses 320 (or the turn it becomes
+clear it will not) is on the page. **A3 reached 347 by T48 on this same start**, so the route is not
+hypothetical.
 
 ## The end table, and the verdict - written when the attempt ends
 
