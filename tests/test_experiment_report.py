@@ -554,6 +554,75 @@ def test_the_gold_floor_detail_reports_both_measures():
     assert "below 10 on 1 of those 2 turn(s)" in detail
 
 
+def _order_row(turn: int, name: str, kind: str = "UNIT") -> dict:
+    """A logged production order: the shape `orders()` reads."""
+    return {"turn": turn, "tool": "set_city_production", "params": {"item_name": name, "item_type": kind}}
+
+
+def _diary_with_tech(turn: int, techs: list[str]) -> dict:
+    row = _diary_row(turn, "2026-09-29T07:00:00+00:00")
+    row["techs"] = techs
+    return row
+
+
+def test_the_engineering_gate_reads_the_order_of_asking():
+    """A2's Q2 has no generic slot: it is about what was asked for *after* Engineering landed.
+
+    The generic P1 asks about a calendar deadline and reads this attempt's T48 order as late; the
+    question the attempt actually asked is whether the siege train came before the economy once the
+    tech existed. The gate is HELD, FALSIFIED or OPEN - never a deadline.
+    """
+    before = {1: _diary_with_tech(1, ["TECH_MINING"])}
+    landed = {1: _diary_with_tech(1, ["TECH_MINING"]), 48: _diary_with_tech(48, ["TECH_MINING", "TECH_ENGINEERING"])}
+
+    # Engineering has not landed: the order is unaskable, not missed.
+    gate = report.engineering_gate(before, [])
+    assert gate["status"] == report.OPEN and "unaskable" in gate["detail"]
+
+    # The attempt's own case: both Catapults ordered the same turn the tech landed, no economy order.
+    siege_only = [_order_row(43, "UNIT_BUILDER"), _order_row(46, "UNIT_TRADER"), _order_row(48, "UNIT_CATAPULT")]
+    gate = report.engineering_gate(landed, siege_only)
+    assert gate["status"] == report.HELD
+    assert "Engineering T48" in gate["detail"] and "first siege order T48" in gate["detail"]
+    assert "no economy order since" in gate["detail"]
+
+    # An economy order after the gate is fine as long as it comes after the siege order.
+    siege_first = [*siege_only, _order_row(52, "BUILDING_GRANARY", "BUILDING")]
+    assert report.engineering_gate(landed, siege_first)["status"] == report.HELD
+
+    # A building before the siege train breaks the claim, and the detail names both turns.
+    economy_first = [_order_row(49, "BUILDING_GRANARY", "BUILDING"), _order_row(52, "UNIT_CATAPULT")]
+    gate = report.engineering_gate(landed, economy_first)
+    assert gate["status"] == report.FALSIFIED
+    assert "economy order T49" in gate["detail"] and "T52" in gate["detail"]
+
+    # Orders placed before the gate do not decide it.
+    pre_gate = [_order_row(20, "BUILDING_MONUMENT", "BUILDING"), _order_row(22, "UNIT_CATAPULT")]
+    gate = report.engineering_gate(landed, pre_gate)
+    assert gate["status"] == report.OPEN and "neither" in gate["detail"]
+
+
+def test_the_a2_question_set_asks_a2_s_own_four():
+    """A2's Q1 is the generic slot 2 and its Q2 has no slot, so position alone would mislabel them."""
+    by_turn = {
+        1: _diary_with_tech(1, ["TECH_MINING"]),
+        48: _diary_with_tech(48, ["TECH_MINING", "TECH_ENGINEERING"]),
+    }
+    by_turn[1]["unit_composition"] = {"WARRIOR": 1}
+    by_turn[48]["unit_composition"] = {"WARRIOR": 4, "SLINGER": 4, "HEAVY_CHARIOT": 1}
+    by_turn[1]["gold_per_turn"] = 5.0
+    by_turn[48]["gold_per_turn"] = 7.0
+    rows = [_order_row(48, "UNIT_CATAPULT")]
+    questions = report.verdict_a2(by_turn, rows)
+    assert [name.split()[0] for name, _s, _d in questions] == ["Q1", "Q2", "Q3", "Q4"]
+    assert questions[0][0].startswith("Q1 establishment complete by T60")
+    assert questions[1][1] == report.HELD
+    assert questions[2][0].startswith("Q3 first enemy city kept by T80")
+    # And the generic set is untouched: its slot 1 is A1's calendar question, not A2's Q1.
+    generic = report.verdict(by_turn, rows)
+    assert generic[0][0].startswith("P1 a siege unit early")
+
+
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
     """A1's T40 read `gold_T40 6.0` beside a treasury of 236 - the column was gold **per turn**.
 

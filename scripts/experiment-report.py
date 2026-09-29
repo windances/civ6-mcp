@@ -544,12 +544,103 @@ def orders(rows: list[dict]) -> list[tuple[int, str, str]]:
     return out
 
 
-def first_order_turn(rows: list[dict], role: str) -> int | None:
-    """The first turn a unit of that role was *ordered* - the doctrine's own quantity."""
+def first_order_turn(rows: list[dict], role: str, since: int | None = None) -> int | None:
+    """The first turn a unit of that role was *ordered* - the doctrine's own quantity.
+
+    `since` keeps only orders placed on or after that turn, which is what a claim about *ordering after
+    a tech* needs: the same siege order can be the answer or irrelevant depending on which side of the
+    gate it falls.
+    """
     for turn, name, _kind in orders(rows):
+        if since is not None and turn < since:
+            continue
         if role_of_item(name) == role:
             return turn
     return None
+
+
+def engineering_gate(by_turn: dict[int, dict], rows: list[dict]) -> dict:
+    """A2's Q2, measured: after Engineering lands, is the siege train ordered before economy?
+
+    A2's question is about the **order of asking after a tech**, and none of the four generic
+    predictions is: the closest (A1's P1, "a siege unit early") asks about a calendar deadline and
+    reports this attempt's T48 as late. The record's facts are the tech's landing turn, the first siege
+    order after it, and the first building or district order after it.
+
+    Returns `status` in the instrument's vocabulary: HELD when the siege order came first or nothing
+    else has been ordered yet, FALSIFIED when an economy order came first, OPEN when Engineering has
+    not landed inside the attempt.
+    """
+    landed = next(
+        (turn for turn in sorted(by_turn) if "TECH_ENGINEERING" in (by_turn[turn].get("techs") or [])),
+        None,
+    )
+    if landed is None:
+        return {
+            "status": OPEN,
+            "detail": f"Engineering has not landed by T{_last_turn(by_turn)}, so the order is unaskable",
+            "engineering_turn": None,
+        }
+    siege = first_order_turn(rows, "siege", since=landed)
+    economy = next(
+        (
+            turn
+            for turn, _name, kind in orders(rows)
+            if turn >= landed and kind.upper() in ("BUILDING", "DISTRICT")
+        ),
+        None,
+    )
+    if siege is None and economy is None:
+        return {
+            "status": OPEN,
+            "detail": f"Engineering landed T{landed}; neither the siege train nor an economy order has "
+                      f"been placed since",
+            "engineering_turn": landed,
+        }
+    if siege is not None and (economy is None or siege <= economy):
+        return {
+            "status": HELD,
+            "detail": f"Engineering T{landed}; first siege order T{siege}"
+                      + (f", first economy order T{economy}" if economy is not None else ", no economy order since"),
+            "engineering_turn": landed,
+        }
+    return {
+        "status": FALSIFIED,
+        "detail": f"Engineering T{landed}; economy order T{economy} came before the first siege order "
+                  f"({'T' + str(siege) if siege is not None else 'none'})",
+        "engineering_turn": landed,
+    }
+
+
+def verdict_a2(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, str, str]]:
+    """A2's four questions as A2 wrote them (`docs/experiments/002-attempt-A2.md`).
+
+    Its Q1 is the establishment deadline (the generic slot 2), its Q2 is the ordering after Engineering
+    (not a generic slot at all), and Q3/Q4 are the generic slots 3 and 4 - so relabelling the generic
+    four by position would put A2's Q1 on the "siege early by T45" line. This answers the four the
+    attempt asked, in its own order, from the same record.
+    """
+    generic = {
+        slot: (name, status, detail)
+        for slot, (name, status, detail) in zip(
+            ("P1", "P2", "P3", "P4"),
+            verdict(by_turn, rows, expect_est, expect_city, expect_gold_red),
+            strict=True,
+        )
+    }
+    gate = engineering_gate(by_turn, rows)
+    return [
+        (f"Q1 establishment complete by T{expect_est}", generic["P2"][1], generic["P2"][2]),
+        ("Q2 the siege train ordered before any economy order after Engineering", gate["status"], gate["detail"]),
+        (f"Q3 first enemy city kept by T{expect_city}", generic["P3"][1], generic["P3"][2]),
+        (f"Q4 gold floor red on <{expect_gold_red} turns", generic["P4"][1], generic["P4"][2]),
+    ]
 
 
 def order_summary(rows: list[dict]) -> dict:
@@ -879,6 +970,7 @@ def print_verdict(
     expect_city: int = 80,
     expect_gold_red: int = 10,
     ids: tuple[str, ...] = ("P1", "P2", "P3", "P4"),
+    questions: str = "generic",
 ) -> None:
     est = establishment(by_turn)
     print("-- establishment (prompts/tactics/01-unit-production.md) --")
@@ -933,7 +1025,11 @@ def print_verdict(
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")
-    results = verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
+    results = (
+        verdict_a2(by_turn, rows, expect_est, expect_city, expect_gold_red)
+        if questions == "a2"
+        else verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
+    )
     for name, status, detail in results:
         print(f"  {status:<9s} {name}  [{detail}]")
     if any(status == OPEN for _n, status, _d in results):
@@ -1081,6 +1177,7 @@ def print_text(
     expect_city: int = 80,
     expect_gold_red: int = 10,
     ids: tuple[str, ...] = ("P1", "P2", "P3", "P4"),
+    questions: str = "generic",
 ) -> None:
     first, last = _first_turn(by_turn), _last_turn(by_turn)
     print(f"== attempt {game}: T{first} -> T{last} ==")
@@ -1144,7 +1241,7 @@ def print_text(
     print("  most used: " + ", ".join(f"{t}:{n}" for t, n in calls.most_common(8)))
 
     print()
-    print_verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
+    print_verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids, questions)
 
 
 def main() -> int:
@@ -1166,6 +1263,10 @@ def main() -> int:
     ap.add_argument("--ids", default="P1,P2,P3,P4",
                     help="the attempt's own prediction labels for the verdict, comma separated "
                          "(default P1,P2,P3,P4: A1's; A2's are Q1,Q2,Q3,Q4)")
+    ap.add_argument("--questions", choices=("generic", "a2"), default="generic",
+                    help="which four questions to answer: the generic P1-P4 slots (default), or A2's "
+                         "own Q1-Q4 (its Q2 is the ordering after Engineering, which no generic slot "
+                         "measures)")
     ap.add_argument("--run", help="keep one or more sessions' rows (comma separated when an attempt "
                                   "spans a resume); attempts share a game key")
     ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
@@ -1257,8 +1358,12 @@ def main() -> int:
         },
         "verdict": [
             {"prediction": name, "status": status, "detail": detail}
-            for name, status, detail in verdict(
-                by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids
+            for name, status, detail in (
+                verdict_a2(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
+                if args.questions == "a2"
+                else verdict(
+                    by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids
+                )
             )
         ],
     }
@@ -1275,12 +1380,15 @@ def main() -> int:
 
     if args.verdict:
         print(f"== attempt {args.game}: T{_first_turn(by_turn)} -> T{_last_turn(by_turn)} ==")
-        print_verdict(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids)
+        print_verdict(
+            by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids,
+            args.questions,
+        )
         return 0
 
     print_text(
         args.game, args.step, by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red,
-        args.ids,
+        args.ids, args.questions,
     )
     return 0
 

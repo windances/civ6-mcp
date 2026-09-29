@@ -92,14 +92,17 @@ that the army now has somewhere to go.
 Commands, with A2's own session in the log filter:
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35 --from 1 --to 40 --verdict --ids Q1,Q2,Q3,Q4
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35,pale-pearl-aqueduct-92 --from 1 --to 40 --verdict --questions a2
 .venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run sacred-garnet-vault-35 --from 1 --to 40 --step 10 --save docs/experiments/A2-T40.json
 .venv\Scripts\python.exe scripts/experiment-report.py --compare docs/experiments/A1-T40.json docs/experiments/A2-T40.json
 ```
 
-`--ids Q1,Q2,Q3,Q4` is this attempt's own labelling: the instrument's defaults are A1's `P1`-`P4`, and
-printing one attempt's ids over the other's record puts two names on one prediction. The second half's
-final snapshot (`pale-pearl-aqueduct-92`) carries the same flag.
+`--questions a2` answers **this attempt's** four questions from the record. Its `--ids` sibling only
+relabels the four generic slots, and A2's questions do not sit in those slots: its **Q1** is the
+establishment deadline (the generic slot 2), its **Q2** is the ordering after Engineering, which no
+generic slot measures at all, and only Q3/Q4 line up with slots 3/4. The final snapshot of the second
+half (`pale-pearl-aqueduct-92`, whose T1-T40 rows belong to `sacred-garnet-vault-35`) carries the same
+flag.
 
 ## One instrument change between the two attempts, and why it does not break the compare
 
