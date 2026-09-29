@@ -109,6 +109,35 @@ review goes. It is written from the instrument, not from the diary's own summary
 Then one paragraph, and only one: what the window actually bought, and **the single thing** the next
 stretch changes. A mid-window review that lists five intentions changes nothing.
 
+## An arithmetic note before the T40 review: what P2's deadline actually asks for
+
+Written at T10, from the game's own numbers and the attempt's own telemetry, because it changes what a
+missed P2 would mean.
+
+| item | base | on Quick (x0.67) | source |
+|---|---|---|---|
+| `TECH_ENGINEERING` (the Catapult's tech) | 200 | **134** | `Base/Assets/Gameplay/Data/Technologies.xml:96` |
+| its eureka - *construct a building: Ancient Walls* | Boost 50 | **67** with the Walls | `Technologies.xml:472`; GS China boosts are 50% (the ruleset note above) |
+| one Catapult | 120 | **80 production** | `prompts/tactics/01-unit-production.md` section Numbers |
+| **the table's two siege units** | 240 | **160 production** | arithmetic |
+| Game speed scales every cost | - | Quick x0.67 | `GameSpeeds.xml` (`GAMESPEED_QUICK`), tabulated at `docs/production-speed.md:79` |
+
+The attempt's own numbers at T10: **science 4.0/turn, one city at pop 3, ~5-8 production**. The siege
+half of the table alone therefore costs about **20-26 turns of that city's entire output**, and the rest
+of the table (2 melee, 4 ranged, 1 ram, 1 cavalry) sits on top of it, while the Settlers that make the
+expansion are built in the same queue.
+
+**So P2 is not a test of whether the doctrine can be executed; it is a test of whether expansion can be
+stopped.** Engineering lands around T20-T25 only if the Walls eureka is taken, and paying 160 production
+for two Catapults by T60 means the empire stops settling and stops building infrastructure at about T25.
+`docs/china-production-by-victory.md` section 1 and task 030 both say the opposite - expansion first, and
+this attempt's business includes scouting, settling and infrastructure. **A1's hypothesis was
+mis-specified**: the doctrine's establishment table describes what a *war* needs, and a window that also
+demands expansion cannot pay for it by T60. The review should judge **H1's ordering** (is the assault
+asked for before the merely nice, once an assault is planned) and **the cost**, and it should not read a
+missed P2 as the doctrine failing. This note is here so that judgement is made with the arithmetic in
+front of it rather than after the fact.
+
 ## What this attempt already found (2026-09-29, before its first played turn)
 
 - **A turn was taken and reverted, and it found a rules bypass.** To prove the `end_turn` path before
