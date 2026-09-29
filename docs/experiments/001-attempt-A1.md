@@ -196,14 +196,26 @@ impossible cannot answer a question about production.
 
 ## What this attempt already found (2026-09-29, before its first played turn)
 
-- **A candidate correction to a rule, from the attempt's own tooling line.** `issue-the-calls-furthest-first`
-  fired again at T24 (3 stops) and the session's argument is that the cause is **terrain, not a column
-  queueing**: every tile around the capital is hills, jungle or forest at mv2-mv3, so almost any
-  multi-tile order stops mid-path whatever order the calls go in. That is testable against the log
-  (stops per turn against the terrain of the tiles crossed) and it matters because the rule was added to
-  fix a *jam* - and the retro that added it listed "the stop count is told, not enforced" as still open.
-  If a terrain-caused stop and a queue-caused stop look the same to the rule, the rule is measuring the
-  map as much as the plan. **For the T40 review, not settled here.**
+- **SETTLED at T32, and the rule is measuring the map: a correction to `issue-the-calls-furthest-first`.**
+  The session argued at T24 that its 3 stops were terrain (hills, jungle and forest at mv2-mv3 all round
+  the capital) rather than a column queueing behind itself, which is the jam the rule was written for.
+  The log decides it, because every refusal carries its reason: over T1-T32 there were **37
+  `STOPPED_MID_PATH`, and all 37 read `(moves exhausted)`** - not one names another unit in the way. The
+  rest of the refusals are the map as well: 6 `water tile - land units need Shipbuilding tech to embark`,
+  4 `impassable mountain`, and only 2 of the ambiguous `tile appears passable - path may be blocked by
+  intermediate tiles`. The rate is 37/32 = **1.2 stops a turn**, against 2.6 measured in the previous
+  match's T272-T287 window and 3.2 over T228-T299 - on rougher ground, with **fewer** stops, which is
+  what terrain-caused stopping looks like (each order stops once, then arrives next turn) rather than
+  what queueing looks like (units piling up behind each other).
+  **And the rule is the only one that fired**: `CHECK FAILED [issue-the-calls-furthest-first]`, 3 times,
+  is the attempt's entire red list. So the one rule that fires is the one whose diagnosis does not fit
+  the evidence, while the check's own count cannot tell a map-caused stop from a plan-caused one.
+  **The fix belongs after this attempt ends, not during it** - editing `turn-checks.md` now would stop
+  the rule firing mid-window and erase the tail of this measurement. The shape of the fix: the metric
+  behind the rule has to carry *why* the order stopped (the tool already prints the reason), so that a
+  stop caused by mv2-mv3 terrain is exempt and a stop caused by the column's own order is not.
+  The upstream retro (`docs/retrospectives/2026-09-28-city-captures-T228-T294.md`) listed this as "the
+  stop count is told, not enforced"; the sharper statement is that it was **told by the wrong signal**.
 
 - **A turn was taken and reverted, and it found a rules bypass.** To prove the `end_turn` path before
   anyone depends on it, `scripts/auto-turns.py --turns 1` played T1. `end_turn` worked (`Turn 1 -> 2`,
