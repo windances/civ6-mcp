@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import datetime
 import json
 import pathlib
 import re
@@ -135,16 +136,32 @@ def games() -> list[str]:
     return [key for _, key in sorted(out, reverse=True)]
 
 
-def diary_rows(game: str) -> dict[int, dict]:
-    """The agent's own rows, keyed by turn (last write per turn wins).
+def _epoch(stamp: object) -> float | None:
+    """A diary row's ISO timestamp as epoch seconds; `None` when the row does not carry one.
+
+    The log's `ts` is already epoch seconds and the diary's `timestamp` is an ISO string in UTC, so
+    attribution has to put the two on one scale before it can compare them.
+    """
+    if isinstance(stamp, (int, float)):
+        return float(stamp)
+    if not isinstance(stamp, str):
+        return None
+    try:
+        return datetime.datetime.fromisoformat(stamp).timestamp()
+    except ValueError:
+        return None
+
+
+def diary_candidates(game: str) -> dict[int, list[dict]]:
+    """Every agent row per turn, in file order. A turn may have several: attempts share the key.
 
     A game with no diary yet - a match that has just been created and not played - is not an error:
     it is an attempt with no rows, and the caller prints exactly that.
     """
     path = DATA / f"diary_{game}.jsonl"
-    by_turn: dict[int, dict] = {}
+    out: dict[int, list[dict]] = {}
     if not path.exists():
-        return by_turn
+        return out
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -158,8 +175,88 @@ def diary_rows(game: str) -> dict[int, dict]:
                 continue
             turn = row.get("turn")
             if isinstance(turn, int):
-                by_turn[turn] = row
-    return by_turn
+                out.setdefault(turn, []).append(row)
+    return out
+
+
+def diary_rows(game: str) -> dict[int, dict]:
+    """The agent's own rows, keyed by turn (last write per turn wins).
+
+    That is the right answer for the attempt currently playing and the **wrong** answer for an
+    earlier one once a later attempt has played the same turns - see `diary_rows_for_run`.
+    """
+    return {turn: rows[-1] for turn, rows in diary_candidates(game).items()}
+
+
+def run_turn_windows(game: str, run: str) -> dict[int, tuple[float, float]]:
+    """Each turn of one session, as the epoch range its own log rows span.
+
+    FireTuner serves one connection at a time, so a session's calls do not interleave with another
+    session's - which is what makes time a usable stand-in for the session id a diary row lacks.
+    """
+    windows: dict[int, tuple[float, float]] = {}
+    for row in log_rows(game, run):
+        turn, ts = row.get("turn"), row.get("ts")
+        if not isinstance(turn, int) or not isinstance(ts, (int, float)):
+            continue
+        lo, hi = windows.get(turn, (float(ts), float(ts)))
+        windows[turn] = (min(lo, float(ts)), max(hi, float(ts)))
+    return windows
+
+
+#: Two diary rows for one turn this close to the session's own window cannot be told apart. Guessing
+#: would put one attempt's economy in the other's table, so the turn is named and left out instead.
+AMBIGUOUS_SECONDS = 120.0
+
+
+def attribute_diary(
+    candidates: dict[int, list[dict]],
+    windows: dict[int, tuple[float, float]],
+    span: tuple[float, float] | None = None,
+) -> tuple[dict[int, dict], list[int]]:
+    """One session's diary rows, recovered by time; returns them and the turns that cannot be.
+
+    A diary row carries no session, and attempts share the game key, so after a later attempt plays
+    the same turns the file holds two agent rows per turn and last-write-per-turn hands the later
+    attempt's numbers to the earlier one. That is not hypothetical: re-reading A1 after A2 had
+    reached T10 reported A2's military 31/tourism 0/era 4 where A1's row said 34/8/2, under A1's name.
+    Each row is assigned to the turn's own window when the log has one (a session resumed after
+    another played the same turns), to the session's overall span otherwise.
+    """
+    by_turn: dict[int, dict] = {}
+    ambiguous: list[int] = []
+    for turn, rows in candidates.items():
+        window = windows.get(turn) or span
+        if window is None:
+            ambiguous.append(turn)
+            continue
+        lo, hi = window
+        scored: list[tuple[float, dict]] = []
+        for row in rows:
+            at = _epoch(row.get("timestamp"))
+            if at is None:
+                continue
+            distance = lo - at if at < lo else (at - hi if at > hi else 0.0)
+            scored.append((distance, row))
+        if not scored:
+            ambiguous.append(turn)
+            continue
+        scored.sort(key=lambda pair: pair[0])
+        if len(scored) > 1 and scored[1][0] - scored[0][0] < AMBIGUOUS_SECONDS:
+            ambiguous.append(turn)
+            continue
+        by_turn[turn] = scored[0][1]
+    return by_turn, sorted(ambiguous)
+
+
+def diary_rows_for_run(game: str, run: str) -> tuple[dict[int, dict], list[int]]:
+    """One session's rows even after another attempt overwrote the same turns in the shared diary."""
+    windows = run_turn_windows(game, run)
+    span = None
+    if windows:
+        span = (min(lo for lo, _ in windows.values()), max(hi for _, hi in windows.values()))
+    return attribute_diary(diary_candidates(game), windows, span)
+
 
 
 def log_rows(game: str, run: str | None = None) -> list[dict]:
@@ -198,6 +295,12 @@ def _first_turn(by_turn: dict[int, dict]) -> int:
 
 def _last_turn(by_turn: dict[int, dict]) -> int:
     return max(by_turn) if by_turn else 1
+
+
+def _turn_list(turns: list[int], limit: int = 8) -> str:
+    """`T4, T5, T6` for a message; a long run of turns is abbreviated rather than wrapped."""
+    head = ", ".join(f"T{turn}" for turn in turns[:limit])
+    return f"{head} and {len(turns) - limit} more" if len(turns) > limit else head
 
 
 def boundaries(by_turn: dict[int, dict], step: int) -> list[int]:
@@ -963,11 +1066,30 @@ def main() -> int:
         return 0
 
     sys.stdout.reconfigure(encoding="utf-8")
-    by_turn = diary_rows(args.game)
-    if not by_turn:
-        print(f"no diary rows for {args.game}", file=sys.stderr)
-        return 2
     rows = log_rows(args.game, args.run)
+    unattributed: list[int] = []
+    if args.run:
+        # The diary is shared by every attempt on this key and keeps the last write per turn, so a
+        # plain read would hand this attempt the later one's economy. Attribute by session time.
+        by_turn, unattributed = diary_rows_for_run(args.game, args.run)
+    else:
+        by_turn = diary_rows(args.game)
+    if not by_turn:
+        if unattributed:
+            print(
+                f"no diary row could be attributed to {args.run}: the turns in the file "
+                f"({_turn_list(unattributed)}) were written by another session at the same time",
+                file=sys.stderr,
+            )
+        else:
+            print(f"no diary rows for {args.game}", file=sys.stderr)
+        return 2
+    if unattributed:
+        print(
+            f"  NOTE: {_turn_list(unattributed)} left out: more than one attempt wrote that turn and "
+            f"time cannot tell them apart, so no number is attributed to {args.run} there.",
+            file=sys.stdout,
+        )
     if args.start is not None:
         by_turn = {t: r for t, r in by_turn.items() if t >= args.start}
         rows = [r for r in rows if (r.get("turn") or 0) >= args.start]

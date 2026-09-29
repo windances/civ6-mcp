@@ -343,6 +343,70 @@ def test_boundaries_survive_a_diary_with_gaps():
     assert report.boundaries(dense, 10) == [1, 10, 20, 30, 40, 41]
 
 
+def _diary_row(turn: int, stamp: str, **fields) -> dict:
+    """An agent diary row: the only two fields the attribution reads, plus whatever it is carrying."""
+    return {"turn": turn, "is_agent": True, "timestamp": stamp, **fields}
+
+
+def test_attribute_diary_recovers_the_earlier_attempt_by_time():
+    """A1's T10 read 34 military until A2 overwrote the shared diary with its own T10 row.
+
+    The rows carry no session, so the session's own log window is what separates them - the two
+    attempts cannot overlap in time because FireTuner serves one connection at a time.
+    """
+    candidates = {
+        10: [
+            _diary_row(10, "2026-09-29T05:24:30+00:00", military=34, tourism=8, era_score=2),
+            _diary_row(10, "2026-09-29T06:16:05+00:00", military=31, tourism=0, era_score=4),
+        ]
+    }
+    windows = {10: (report._epoch("2026-09-29T05:24:00+00:00"), report._epoch("2026-09-29T05:24:40+00:00"))}
+    by_turn, ambiguous = report.attribute_diary(candidates, windows)
+    assert ambiguous == []
+    assert by_turn[10]["military"] == 34  # A1's row, not the last write
+    assert by_turn[10]["tourism"] == 8
+
+    # The recovery is scoped to the run: plain last-write over the same rows still answers A2's.
+    assert candidates[10][-1]["military"] == 31
+
+
+def test_attribute_diary_names_a_turn_it_cannot_tell_apart():
+    """Two rows written inside the same session window are not guessed at - the turn is named."""
+    windows = {4: (report._epoch("2026-09-29T06:00:00+00:00"), report._epoch("2026-09-29T06:05:00+00:00"))}
+    both_inside = {
+        4: [
+            _diary_row(4, "2026-09-29T06:01:00+00:00", military=20),
+            _diary_row(4, "2026-09-29T06:02:00+00:00", military=21),
+        ]
+    }
+    by_turn, ambiguous = report.attribute_diary(both_inside, windows)
+    assert by_turn == {} and ambiguous == [4]
+
+    # A turn the session's log never covered is not attributed either: no window, no answer.
+    by_turn, ambiguous = report.attribute_diary({9: [_diary_row(9, "2026-09-29T06:01:00+00:00")]}, windows)
+    assert by_turn == {} and ambiguous == [9]
+
+    # A single row inside its window is the ordinary case.
+    by_turn, ambiguous = report.attribute_diary({4: [both_inside[4][0]]}, windows)
+    assert ambiguous == [] and by_turn[4]["military"] == 20
+
+
+def test_attribute_diary_falls_back_to_the_session_span():
+    """A session resumed after another played the same turns has no per-turn window left to use."""
+    span = (report._epoch("2026-09-29T07:00:00+00:00"), report._epoch("2026-09-29T07:30:00+00:00"))
+    candidates = {
+        20: [
+            _diary_row(20, "2026-09-29T05:40:00+00:00", military=99),  # another session's row
+            _diary_row(20, "2026-09-29T07:04:00+00:00", military=44),
+        ]
+    }
+    by_turn, ambiguous = report.attribute_diary(candidates, {}, span)
+    assert ambiguous == [] and by_turn[20]["military"] == 44
+    # Without the span there is nothing to attribute against, so the turn is reported, not invented.
+    by_turn, ambiguous = report.attribute_diary(candidates, {}, None)
+    assert by_turn == {} and ambiguous == [20]
+
+
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
     """A1's T40 read `gold_T40 6.0` beside a treasury of 236 - the column was gold **per turn**.
 
