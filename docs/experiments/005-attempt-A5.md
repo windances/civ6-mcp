@@ -36,7 +36,7 @@ ability is in force:
 |---|---|---|
 | appointed | the `appoint_governor` reply | **T34** - `APPOINT_REQUESTED\|Magnus - verify with get_governors()` |
 | assigned to the war city (西安) | the `assign_governor` reply | **T34** - `ASSIGNED\|Magnus to Xi'an` |
-| `established=1` there | `get_governors` | **not yet** at T34 - the same read says `(5 turns to establish)`, so it reads established about **T39**. The read is `Appointed (1): Magnus (GOVERNOR_THE_RESOURCE_MANAGER) - Xi'an (5 turns to establish)` |
+| `established=1` there | `get_governors` | **T39** - the read drops the parenthetical and says `Appointed (1): Magnus (GOVERNOR_THE_RESOURCE_MANAGER) - Xi'an (established)`, five turns after the T34 appointment, exactly as the T34 read predicted |
 | the ability is in force | `GOVERNOR_PROMOTION_RESOURCE_MANAGER_GROUNDBREAKER` has dropped off the `GOV_PROMO` list, and `promote_governor` with it answers `ERR:ALREADY_PROMOTED` - **that answer is the record of the ability, not a failure** | **T34, and this is the clean evidence**: the T34 `get_governors` lists Magnus's available promotions as Surplus Logistics, Provision, Industrialist, Black Marketeer and Vertical Integration - **`GROUNDBREAKER` is absent from that list**, which is what a level-0 `BaseAbility` looks like once its holder is appointed. The session has not called `promote_governor` with it, so the `ERR:ALREADY_PROMOTED` half is not on the record; the absence is |
 
 The governor point comes from `CIVIC_STATE_WORKFORCE`, which the session took at **T23** and completed
@@ -121,6 +121,26 @@ The establishment is being built in parallel: 西安 is the war city and its que
 `SLINGER` T26, `SLINGER` T28, `HEAVY_CHARIOT` T29, while the second city (founded (57,25) at T21) has been
 given a Monument. The next things to look for are the **first `remove_feature`** with its city, tile,
 feature, turn and the queue item that absorbed the production, and the **Engineering gate**.
+
+## The chop table - one row per chop
+
+This is the attempt's central evidence, and it carries what the record *can* establish rather than what the
+variable is supposed to buy.
+
+| # | turn | city | tile | feature | the queue item that absorbed it | what can be established about the gain |
+|---|---|---|---|---|---|---|
+| 1 | **T40** | 西安 (65536) | (60,20) | `FEATURE_FOREST` on a **SILK** tile, owned by China | 西安's queue held **`UNIT_WARRIOR`** - the T39 order set it at **2 turns** and the T40 order, issued after the chop, reads **1 turn** | **the gain is not separable, and the record says so rather than estimating**: exactly one turn of ordinary production elapsed between those two reads, so `2 -> 1` is what the queue would have read with no chop at all. What **is** on the record is the tile itself: at T39 it reads `PLAINS FOREST [SILK+] {F:1 P:2 C:1}` and at T42 `PLAINS [SILK+] {F:1 P:1 C:1}` - the forest is gone and the tile's own production fell by one |
+| - | T39, twice | 西安 | (60,21) | `FEATURE_JUNGLE` | - | **refused**: `Error: CANNOT_REMOVE\|Cannot remove FEATURE_JUNGLE at (60,21)`. The tile carries **no "(owned by China)"** marker in the map reads, which is the refusal the brief documents; the builder was moved to the owned SILK tile instead |
+| - | T42 | 西安 | (59,22) | `FEATURE_JUNGLE` | - | **refused the same way**, and likewise unowned |
+
+**And that exposes the measurement problem the brief only anticipated - now measured**: `remove_feature`
+answers `REMOVING_FEATURE\|<feature> at x,y` and names no production, so the queue's turn count is the only
+route to the gain - and **a queue item that is two turns out becomes one turn out in one turn with or without
+a chop**. A chop into an item with a small remaining count cannot be measured this way at all. The record
+will therefore either read a chop against an item with enough turns left that the drop is larger than one, or
+it will state that the contribution could not be read; **it will not estimate it**. That is a limitation of
+the instrument, not of the session's play - the session chopped an owned feature into a unit queue item with
+Magnus established in that city, which is the variable executed.
 
 **One tool finding comes from this window and is on the ledger rather than in this record's results**: at
 T20 the session issued `unit_action(unit_id=393217, ...)` for a unit id that **its own `get_units` read did
