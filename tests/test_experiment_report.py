@@ -281,6 +281,34 @@ def test_attempt_rows_compare_two_snapshots_on_the_same_columns():
         assert key in row and key in empty
 
 
+def test_h6_measures_concentration_not_the_city_count():
+    """`tactics/08` claims one war city: a count of cities cannot tell that from one stray order."""
+    rows = [
+        {"turn": 30, "tool": "set_city_production",
+         "params": {"city_id": 11, "item_type": "UNIT", "item_name": "UNIT_WARRIOR"}},
+        {"turn": 32, "tool": "set_city_production",
+         "params": {"city_id": 11, "item_type": "UNIT", "item_name": "UNIT_SLINGER"}},
+        {"turn": 34, "tool": "set_city_production",
+         "params": {"city_id": 11, "item_type": "UNIT", "item_name": "UNIT_CATAPULT"}},
+        {"turn": 36, "tool": "set_city_production",
+         "params": {"city_id": 11, "item_type": "BUILDING", "item_name": "BUILDING_GRANARY"}},
+        # A single stray order in the second city, and no army order there since.
+        {"turn": 38, "tool": "set_city_production",
+         "params": {"city_id": 22, "item_type": "UNIT", "item_name": "UNIT_WARRIOR"}},
+        {"turn": 40, "tool": "set_city_production",
+         "params": {"city_id": 22, "item_type": "BUILDING", "item_name": "BUILDING_MONUMENT"}},
+        # A Scout is recon, not the army, and must not count as a war order.
+        {"turn": 41, "tool": "set_city_production",
+         "params": {"city_id": 22, "item_type": "UNIT", "item_name": "UNIT_SCOUT"}},
+    ]
+    spread = report.military_city_spread(rows)
+    assert spread["cities"] == 2  # the old blunt count, kept for comparability
+    assert spread["total_army_orders"] == 4  # the Scout is not one of them
+    assert spread["busiest_city"] == "11"
+    assert spread["busiest_share"] == 0.75  # 3 of the 4 army orders
+    assert spread["war_cities"] == ["11"]  # 3 army orders against 1 building; city 22 is 1 against 3
+    assert spread["all_orders_per_city"] == {"11": 4, "22": 3}
+
 def test_contacts_report_first_contact_from_the_diary():
     """A conquest attempt with no contacts has no target, and the diary records contact itself."""
     by_turn = frames({1: {"WARRIOR": 1}, 20: {"WARRIOR": 1}, 40: {"WARRIOR": 1}})

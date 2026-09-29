@@ -328,11 +328,20 @@
   "doctrine": {
     "forbidden_orders": [],
     "military_city_spread": {
-      "cities": 2,
+      "cities": 1,
       "per_city": {
-        "65536": 7,
-        "131073": 1
-      }
+        "65536": 6
+      },
+      "all_orders_per_city": {
+        "65536": 12,
+        "131073": 5
+      },
+      "total_army_orders": 6,
+      "busiest_city": "65536",
+      "busiest_share": 1.0,
+      "war_cities": [
+        "65536"
+      ]
     },
     "upgrades": [],
     "role_order_sequence": [
@@ -357,6 +366,46 @@
       "UNIT_SCOUT"
     ],
     "self_reports": [
+      {
+        "turn": 1,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
+      {
+        "turn": 2,
+        "claimed": {
+          "siege": 0,
+          "melee": 1,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0
+        },
+        "actual": {
+          "siege": 0,
+          "melee": 1,
+          "anticav": 0,
+          "ram": 0,
+          "ranged": 0,
+          "cavalry": 0,
+          "recon": 0
+        },
+        "mismatch": {}
+      },
       {
         "turn": 10,
         "claimed": {

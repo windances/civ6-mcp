@@ -382,17 +382,45 @@ def forbidden_orders(rows: list[dict]) -> list[tuple[int, str, str]]:
 
 
 def military_city_spread(rows: list[dict]) -> dict:
-    """How many distinct cities were asked to build a military unit (H6: one war city)."""
-    per_city: collections.Counter = collections.Counter()
+    """H6's claim is **concentration**, so the honest measure is the share, not the city count.
+
+    `tactics/08` says "one war city; everything else compounds". A1 was first measured as the number of
+    distinct cities that ever ordered a unit, which reported two at T30 - the capital with seven orders
+    and the second city with one - and read as a violation when the attempt had simply built a single
+    unit outside the capital. The count cannot tell concentration from a rounding error.
+
+    What is reported now: the army orders per city (roles in the establishment, plus anti-cavalry -
+    recon and civilians are not the army), the busiest city's **share** of them, and the cities where
+    army orders are at least half of everything that city was asked to build. The old count is kept in
+    `cities` so an attempt's history stays comparable across this change.
+    """
+    army_roles = set(ESTABLISHMENT) | {"anticav"}
+    army_per_city: collections.Counter = collections.Counter()
+    all_per_city: collections.Counter = collections.Counter()
     for row in rows:
         if row.get("tool") not in ORDER_TOOLS:
             continue
         params = row.get("params") or {}
+        city = str(params.get("city_id") or "?")
+        all_per_city[city] += 1
         if str(params.get("item_type") or "").upper() != "UNIT":
             continue
-        if role_of_item(params.get("item_name") or ""):
-            per_city[str(params.get("city_id"))] += 1
-    return {"cities": len(per_city), "per_city": dict(per_city)}
+        if role_of_item(params.get("item_name") or "") in army_roles:
+            army_per_city[city] += 1
+    total = sum(army_per_city.values())
+    busiest_city, busiest = army_per_city.most_common(1)[0] if army_per_city else (None, 0)
+    war_cities = sorted(
+        city for city, count in army_per_city.items() if count * 2 >= all_per_city[city]
+    )
+    return {
+        "cities": len(army_per_city),  # the old, blunt count - kept so past attempts stay comparable
+        "per_city": dict(army_per_city),
+        "all_orders_per_city": dict(all_per_city),
+        "total_army_orders": total,
+        "busiest_city": busiest_city,
+        "busiest_share": round(busiest / total, 3) if total else 0.0,
+        "war_cities": war_cities,
+    }
 
 
 def upgrades(rows: list[dict]) -> list[tuple[int, str]]:
@@ -592,9 +620,17 @@ def print_doctrine(by_turn: dict[int, dict], rows: list[dict]) -> None:
             f"city {city}: {count}"
             for city, count in sorted(spread["per_city"].items(), key=lambda kv: -kv[1])[:4]
         )
-        print(f"  H6 war cities: {spread['cities']} distinct cities were asked for military units ({worst})")
+        share = f"{spread['busiest_city']} carries {spread['busiest_share']:.0%} of them"
+        print(
+            f"  H6 war cities: {spread['cities']} cities ordered army units "
+            f"({worst}); {share}"
+        )
+        print(
+            "     war cities (army orders at least half of that city's orders): "
+            + (", ".join(spread["war_cities"]) if spread["war_cities"] else "none")
+        )
     else:
-        print("  H6 war cities: no military unit has been ordered yet")
+        print("  H6 war cities: no army unit has been ordered yet")
 
     ups = upgrades(rows)
     if ups:
