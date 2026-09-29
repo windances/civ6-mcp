@@ -106,7 +106,11 @@ this rule now carries the re-run consequence instead of asking for an explanatio
    the general with the stack: the aura reaches land units within 2 tiles, and a general that is activated
    is a general that is gone.
 6. **Every ten turns**: `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:` and the `10-TURN REVIEW`'s three
-   questions, with numbers.
+   questions, with numbers. In the `ESTABLISHMENT:` line a role's numerator is **units held in the field**,
+   because the instrument compares it against the map and scores a difference as `MISMATCH`. **A unit still
+   in production is not held**: write it after the token in its own words
+   (`siege 1/2, 1 building due ~T48`) and never in the numerator. Two attempts wrote `siege 1/2 building`
+   with zero siege units built and were scored as claiming a unit they did not have.
 
 ## The finish line, and what to leave behind
 

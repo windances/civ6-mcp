@@ -37,7 +37,7 @@
 3. **工程学 → `UNIT_CATAPULT`，早于任何经济建筑**（H1；它在 A2 的 T48 成立），并让战争城的队列在**整个砍伐窗口**里始终装着一个**单位**：砍伐把产能存入队列当时装着的东西，所以 `tactics/08` 的分工就是框架——战争城造军队，其余每座城复利——记录要写明每次砍伐时在生产的是什么。
 4. **把砍伐送进军队，每一次砍伐单独一行记录**：城市、地块、地貌、回合、产能进了哪个队列项，以及建造者剩余的次数。`remove_feature` 在所属城市环之外的地块上会被拒绝，所以每次砍伐都要写明城市与地块，并在每次之后重读编成表。
 5. **按 `tactics/04`/`05` 行军与集结，按 `tactics/06` 开火**：屏护在前、攻城在射程 2、最后填满开火格，然后宣战、当回合站位，在序列能开火的每一回合都开火，同时用富余单位剪断供给线。
-6. **每十回合**：写 `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:`，并用数字回答 `10-TURN REVIEW` 的三个问题。编成行由 `scripts/experiment-report.py` 里的 `SELF_REPORT_RE` 读取，它**认行里出现的每一个 `角色 持有/目标` 记号**——所以把适用的行都写上（`siege`、`melee`、`ranged`、`cavalry`、`anticav`、`recon`，拥有撞车时再写 `ram`），而且**每一行都会与记录核对**。不再有需要背下来的固定形状：`ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1 anticav 1/1 recon 1/1 at T50` 会被完整读取，旧的带 ram 那种写法也照样读。
+6. **每十回合**：写 `ESTABLISHMENT:` / `WAR READY:` / `ENEMY SEEN:`，并用数字回答 `10-TURN REVIEW` 的三个问题。`ESTABLISHMENT:` 行里每个角色的分子是**已在场的单位**——仪器会拿它与地图对照，不一致就判 `MISMATCH`；**还在生产中的单位不算持有**，要写在记号后面、用自己的话说明（`siege 1/2, 1 building due ~T48`），**不要写进分子**（A3 与 A4 都写成 `siege 1/2 building` 而一门攻城单位都没造成）。编成行由 `scripts/experiment-report.py` 里的 `SELF_REPORT_RE` 读取，它**认行里出现的每一个 `角色 持有/目标` 记号**——所以把适用的行都写上（`siege`、`melee`、`ranged`、`cavalry`、`anticav`、`recon`，拥有撞车时再写 `ram`），而且**每一行都会与记录核对**。不再有需要背下来的固定形状：`ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1 anticav 1/1 recon 1/1 at T50` 会被完整读取，旧的带 ram 那种写法也照样读。
 
 ## 终点，以及要留下什么
 

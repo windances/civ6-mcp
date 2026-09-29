@@ -1,9 +1,15 @@
 ﻿# Attempt A4 - the Encampment before the second siege unit
 
 **Status: in progress** - **one session so far** (`molten-sage-compass-31`), played from the
-experiment's shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, started 2026-09-30 and
-standing at **T8** when this file is written (T8 is its last diary row; the log's last `end_turn`
-reads `Turn 8 -> 9`, so T9 is the turn in flight). The attempt's instruction is
+experiment's shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`, and standing at **T46** when
+this section is written (the log's last `end_turn` reads `Turn 45 -> 46`). **The variable has been
+executed and the gate has held**: the Encampment was bought a tile for (35 gold) at T27, ordered the
+same turn and complete at **T31** - before any siege unit existed at all - and the first siege order
+followed the Engineering gate on **T43**, the same turn the tech was owned, with no building or
+district order since (the instrument's gate reads `HELD` from A4's own attributed diary rows as well
+as from its log). The establishment is still short: at T46 the Catapult is in production (due ~T48)
+and no siege unit is on the map yet, so Q1 is open, and no rival has been met at 16% explored. The
+attempt's instruction is
 `prompts/tasks/tmp/035-attempt-a4-the-encampment-before-the-second-siege-unit.md`; the design is
 section 3 of `docs/experiments/README.md`; A3's record is `003-attempt-A3.md` and its snapshot is
 `docs/experiments/A3-final.json`; the cross-attempt report is `RETRO-2026-09-29.md`. This file is A4's
@@ -102,7 +108,8 @@ is restarted, and a missing id silently drops the rows after it (A3 needed four)
 ## Mid-window review - filled as the attempt passes T20 / T40 / T60
 
 Read at **T8**, which is the attempt's first reporting point rather than a scheduled checkpoint, so most
-rows are honestly empty:
+rows were honestly empty; **the table is re-read at T46 further down this section, once the variable had
+been executed and the gate had passed**, and that later table is the one to read.
 
 | question | answer at T8 |
 |---|---|
@@ -157,19 +164,40 @@ T59 unless something changes.**
 
 Two more facts this attempt has produced, and the row keeps them:
 
-**The gate is now measured, and its evidence is the log rather than the diary - the record says which.**
-A4's own log carries the whole research line as `Research complete` lines: **Mining T7, Bronze Working T21,
-The Wheel T30, Masonry T38, Engineering T42**, and the next turn ordered the train:
-`T43 set_city_production(city_id=65536, UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|5 turns`, with T42's other
-order being a unit (`UNIT_HEAVY_CHARIOT`) and the last economy order before the gate being the Barracks at T33.
-**So H1's ordering holds for A4: siege first, no economy order between Engineering and the train.** The
-instrument, however, reads the gate off the **diary**, and at T42/T43 it answers `Engineering has not landed by
-T42`. The cause is visible in the diary itself: those turns carry **several rows from different attempts** (T42
-has rows at 08:40, 13:26 and later), and A3 and A4 have the *same shape* on them
-(`research=TECH_ENGINEERING, techs=[TECH_MINING, TECH_THE_WHEEL]` - A3 landed its Engineering at T43 too), so
-the attribution can hand A4's read a row that is not A4's. **Everything in this record that depends on the
-gate therefore cites A4's log line, and the snapshot's own gate field has to be read with that caveat** - it is
-the shared-diary problem the retro already names, arriving on the one turn both attempts share.
+**The gate is now measured from both sides, and the two readings only disagreed because of a one-turn
+offset the record had wrong.** A4's log carries the whole research line as `Research complete` lines -
+**Mining T7, Bronze Working T21, The Wheel T30, Masonry T38, Engineering T42** - and the diary lists the
+same techs **one turn later** (Mining T8, Bronze Working T22, Masonry T39, **Engineering T43**). **That
+offset is the diary's definition, not a disagreement**: a `Research complete` line is reported inside the
+`end_turn` *called on* T42, so the tech is **owned from T43** - and the proof is operational, because
+`T43 set_city_production(city_id=65536, UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|5 turns` could not have
+been accepted otherwise. The same +1 applies down the line: **Engineering was owned at T43**, Mining T8,
+Bronze Working T22, The Wheel T31, Masonry T39.
+
+**Three facts in the earlier version of this paragraph were wrong and are corrected here**, because the
+gate's turn is what the attempt is compared on:
+
+- **"the last economy order before the gate was the Barracks at T33" is false.** The full order list from
+  A4's log (T1 `SCOUT`, T5 `SLINGER`, T10 `SETTLER`, T18 `BUILDER`, T22 `WARRIOR`, T22 `SLINGER`,
+  T24 `SLINGER`, T25 `SPEARMAN`, T26 `SLINGER`, **T27 `DISTRICT_ENCAMPMENT`**, T30 `TRADER`,
+  T32 `SPEARMAN`, T33 `BARRACKS`, **T35 `MONUMENT`**, **T39 `WALLS`**, T42 `HEAVY_CHARIOT`,
+  **T43 `CATAPULT`**, T46 `BUILDER`) puts **`BUILDING_WALLS` at T39** after the Barracks and before the
+  gate. The instrument's gate check counts **only `BUILDING`/`DISTRICT` orders placed *since* Engineering**
+  (`experiment-report.py:710-717`), and there are none - so the check was never about the Barracks, and
+  citing a pre-gate order was beside the point as well as wrong.
+- **"Engineering T42" conflates the reporting turn with the owning turn** - see the offset above.
+- **The instrument does not fail to see the gate.** The earlier paragraph recorded
+  `Engineering has not landed by T42`; re-running it once the attempt had passed T43 answers
+  **`HELD  Q2 the siege train ordered before any economy order after Engineering  [Engineering T43; first
+  siege order T43, no economy order since]`**, reading A4's *attributed* diary rows. The earlier reading was
+  a window artefact (the run then ended at T42), not the shared-diary collision the paragraph blamed, and
+  it is corrected rather than left standing.
+
+**So H1's ordering holds for A4 on the record and in the instrument: the siege was asked for first, on the
+turn the tech was owned, and no building or district order has followed it.** The shared-diary caveat still
+stands for *other* fields - the pid-0 rows at T22 carry another attempt's `TECH_THE_WHEEL`, and the T43-T46
+rows interleave attempts - which is why every A4 number in this record that the diary also holds is cited
+with its source.
 
 - **`get_great_people` at T32**: `Great General: Trung Trac (Classical Era) - Unclaimed - your points: 0/40`.
   The mechanism Q3 asks about is live and **not yet earned**: the Encampment is standing and has produced no
@@ -179,14 +207,28 @@ the shared-diary problem the retro already names, arriving on the one turn both 
 - **An Encampment is a queue item again, not a one-off cost**: T33 `BUILDING_BARRACKS` in the capital is the
   Encampment's own building, and it competes with the army for the same city's turns - `tactics/08` lists
   "the Encampment/Barracks" together and prices neither.
-| the establishment under the corrected table (Q1 wants <= T60) | **not yet measured** - the table's rows are read at the checkpoints, and no establishment read exists for this attempt yet |
-| the Encampment (Q2): offered, ordered, completed, and its tile | **not yet measured** - no `DISTRICT_ENCAMPMENT` order is in the log at T8, and the district offer has not been read |
-| the Great General (Q3): recruited, never activated, and where it stands | **not yet measured** - no `get_great_people` read and no general |
-| the order of asking at the gate (H1's test, Engineering -> first siege order) | **not yet measured** - this attempt's line starts Mining -> Bronze Working for the district, and Engineering has not landed |
-| the first keep, against A3's T67 (Q4's capture half) | **not yet measured** |
-| the gold floor, both measures (Q4 allows < 10 red turns) | **not yet measured** - the diary's own `gold_per_turn` is live from T1, but this attempt's window is at T8 and the two-measure read is the review's job |
-| the economy at T20 / T40 / T60 against A1's, A2's and A3's | **not yet measured** |
-| the verdict so far on Q1-Q4 | all four `OPEN` at T8 - the deadlines have not arrived |
+**The self-report check fired on this attempt, and the cause is a convention the brief never stated.**
+The instrument prints the diary's own `ESTABLISHMENT:` line beside its computation, and from T43 to T46
+A4's line reads **`siege 1/2 (Catapult 1 due ~T48)`** while the map holds **0** siege units - so it is
+scored `MISMATCH - siege claimed 1 vs 0 held`, four turns running. **The session is not lying**: its own
+parenthetical says the unit is `due ~T48`, and at T43 the line read `siege 1/2 building (due ~T48)`. What
+happened is that the numerator was written as *"including the one in production"*, where
+`docs/experiments/README.md:249-252` and the diary-vs-log split it states ("the diary holds what the empire
+**has**") mean **held units in the field**. **A3 wrote the same shape on its own T43** (`siege 1/2 building
+(due ~T48)`), so this is a brief-level ambiguity two attempts fell into, not one session's error - and the
+correction is on the brief, where it reaches A5-A7 (see the retro's ledger). The record's own establishment
+number is the instrument's: **siege 0/2 at T46, the first Catapult in production, due about T48.**
+
+| question | answer at T46 |
+|---|---|
+| the establishment under the corrected table (Q1 wants <= T60) | **not complete at T46** - `siege 0/2` (the Catapult ordered T43, 5 turns, due ~T48) and `cavalry 0/1` by the map at T45, though the `UNIT_HEAVY_CHARIOT` ordered T42 **completed at T45**; screens (melee + anti-cavalry) 3, ranged 4, recon 1. The instrument: `NOT complete at T45 short: cavalry 0/1 siege 0/2` |
+| the Encampment (Q2): offered, ordered, completed, and its tile | **offered T27, ordered T27, complete T31, on (58,22)** - the tile the attempt bought for `cost:35` the same turn, in the capital (the war city by `tactics/08:81`'s highest-production rule). **It completed before any siege unit existed**, so the ordering Q2 tests is satisfied; the cost is 35 gold + four capital turns (T27-T31) + the Barracks it then built (T33, complete T38) |
+| the Great General (Q3): recruited, never activated, and where it stands | **not recruited** - `get_great_people` at T32 reads `Trung Trac - Unclaimed - your points: 0/40`, and at T39 `7/40`. The Encampment has earned points of its own (7 by T39) but no general exists and **no `activate` has been called on one**. The lever is the district's own project, offered at T33 (`PROJECT_ENHANCE_DISTRICT_ENCAMPMENT`, cost 25, 3 turns) and **never ordered** |
+| the order of asking at the gate (H1's test, Engineering -> first siege order) | **HELD** - Engineering owned **T43**, `UNIT_CATAPULT` ordered **T43**, no `BUILDING`/`DISTRICT` order since. The instrument agrees: `HELD ... [Engineering T43; first siege order T43, no economy order since]` |
+| the first keep, against A3's T67 (Q4's capture half) | **not yet measured** - no `KEEP|`, and **no rival met at 16% explored**, so the target is still a city-state |
+| the gold floor, both measures (Q4 allows < 10 red turns) | **the two measures still disagree, and both are reported**: `0 red turn(s) by the rule up to T60`, while `the diary's own gold/turn is below 10 on 42 of those 46 turn(s)`. The rule's horizon is the establishment turn, so the diary measure is the one that will decide Q4 once the army is paid for |
+| the economy at T20 / T40 / T60 against A1's, A2's and A3's | **partly measured** - `T35 BUILDING_MONUMENT`, `T39 BUILDING_WALLS` (complete T42) and `T42 UNIT_HEAVY_CHARIOT` are the orders between the Barracks and the gate, and the capital spent T27-T31 on the district: the research line paid Bronze Working (T22) for the district and Engineering arrived at T43 where A3's landed at T43 and A2's at T48 |
+| the verdict so far on Q1-Q4 | **Q2 satisfied, Q4's rule half green and its diary half red, Q1 and Q3 open** - the instrument prints `HELD` for the gate question and `OPEN` for Q1/Q3/Q4 as the deadlines have not arrived |
 
 ## The end table, and the verdict - written when the attempt ends
 

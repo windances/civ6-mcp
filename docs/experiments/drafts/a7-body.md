@@ -82,7 +82,10 @@ city comes to exist; if the second city is taken instead, the record says which 
    civilians while at war - with two war cities, the count is the split being checked). The establishment
    line is read by `SELF_REPORT_RE` in `scripts/experiment-report.py`, which takes **every `role
    held/target` token the line carries** - so write the rows that apply and **every one of them is scored
-   against the record**, the two new cities' production included.
+   against the record**, the two new cities' production included. **The numerator is units held in the
+   field** - a unit still in production is not held and goes after the token in its own words
+   (`siege 1/2, 1 building due ~T48`), never in the numerator; A3 and A4 both wrote `siege 1/2 building`
+   with no siege unit built and were scored as claiming one.
 
 ## The finish line, and what to leave behind
 

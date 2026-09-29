@@ -111,7 +111,10 @@ unit stays in the queue, and `0f214eb` is why the war is compared against A3 rat
    write the rows that apply (`siege`, `melee`, `ranged`, `cavalry`, `anticav`, `recon`, and `ram` when the
    empire owns one) and **every one of them is scored against the record**. A bought unit counts in its
    role exactly as a produced one does, which matters here: the purchase is the variable and the line is
-   where a reader sees whether the train it bought is the train on the table.
+   where a reader sees whether the train it bought is the train on the table. **The numerator is units
+   held in the field** - a unit still in production is not held and goes after the token in its own words
+   (`siege 1/2, 1 building due ~T48`), never in the numerator; A3 and A4 both wrote `siege 1/2 building`
+   with no siege unit built and were scored as claiming one.
 
 ## The finish line, and what to leave behind
 

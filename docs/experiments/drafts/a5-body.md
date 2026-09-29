@@ -91,7 +91,10 @@ A2's first economy order came at **T55**.
    questions, with numbers. The establishment line is read by `SELF_REPORT_RE` in
    `scripts/experiment-report.py`, which takes **every `role held/target` token the line carries** - so
    write the rows that apply (`siege`, `melee`, `ranged`, `cavalry`, `anticav`, `recon`, and `ram` when the
-   empire owns one) and **every one of them is scored against the record**. There is no longer a shape to
+   empire owns one) and **every one of them is scored against the record**. **The numerator is units held
+   in the field**: a unit still in production is not held and goes after the token in its own words
+   (`siege 1/2, 1 building due ~T48`), never in the numerator - A3 and A4 both wrote `siege 1/2 building`
+   with no siege unit built and were scored as claiming one. There is no longer a shape to
    memorise: `ESTABLISHMENT: siege 2/2 melee 2/2 ranged 4/4 cavalry 1/1 anticav 1/1 recon 1/1 at T50` is
    read in full, and so is the older ram-shaped line.
 

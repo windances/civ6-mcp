@@ -241,7 +241,12 @@ Every attempt reports the same table, extracted by the same command:
   `CIVIC_CIVIL_ENGINEERING` and after that the table's ram line cannot be filled at all.
 * **The production orders** - the first order in each category, the turn the army began, and the turn
   the siege train was first asked for. The diary holds what the empire *has*; the log holds what it
-  *chose*, and the doctrine is about the choosing.
+  *chose*, and the doctrine is about the choosing. **One offset to carry when the two are compared: a
+  `Research complete` line is reported inside the `end_turn` called on turn N, so the diary first lists
+  the tech at N+1** - measured on A4 across the whole line (Mining T7 -> T8, Bronze Working T21 -> T22,
+  Masonry T38 -> T39, Engineering T42 -> T43), and the T43 `UNIT_CATAPULT` order proves the tech was
+  owned by then. A record that compares the log's line with the diary's list without the offset reads a
+  disagreement that is not there.
 * **The doctrine checks** - the claims in `tactics/01` that a log can settle without a judgement call:
   **H5** (no ram and no tower is ever bought - the human's instruction, so a single order of one is a
   violation with a turn on it), **H6** (how many distinct cities were asked for military units),
@@ -249,7 +254,11 @@ Every attempt reports the same table, extracted by the same command:
   Alongside them, **the diary's own `ESTABLISHMENT:` line is printed next to the record's numbers for
   the same turn**: a claim the record does not support comes out as `MISMATCH - siege claimed 2 vs 1
   held` rather than being read as fact. The line is requested every ten turns, so a turn without one
-  is not a failure.
+  is not a failure. **The numerator is units held in the field, which is what "the diary holds what the
+  empire has" means above** - a unit still in production is not held, and it is written after the token
+  in its own words (`siege 1/2, 1 building due ~T48`), never in the numerator. **A3 and A4 both wrote
+  `siege 1/2 building` with zero siege units built**, so the ambiguity is a property of the brief and
+  not of one session; the definition is stated here and in each attempt's brief so it cannot recur.
 * **The economy at T20 / T40 / T60** - science, culture, gold/turn, pop, cities, districts,
   improvements. This is what the military build cost.
 * **The rule table** - `CHECK FAILED` counts per rule. A doctrine that keeps its own rules red is
