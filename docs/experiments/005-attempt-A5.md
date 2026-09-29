@@ -132,7 +132,7 @@ variable is supposed to buy.
 | 1 | **T40** | 西安 (65536) | (60,20) | `FEATURE_FOREST` on a **SILK** tile, owned by China | 西安's queue held **`UNIT_WARRIOR`** - the T39 order set it at **2 turns** and the T40 order, issued after the chop, reads **1 turn** | **the gain is not separable, and the record says so rather than estimating**: exactly one turn of ordinary production elapsed between those two reads, so `2 -> 1` is what the queue would have read with no chop at all. What **is** on the record is the tile itself: at T39 it reads `PLAINS FOREST [SILK+] {F:1 P:2 C:1}` and at T42 `PLAINS [SILK+] {F:1 P:1 C:1}` - the forest is gone and the tile's own production fell by one |
 | - | T39, twice | 西安 | (60,21) | `FEATURE_JUNGLE` | - | **refused**: `Error: CANNOT_REMOVE\|Cannot remove FEATURE_JUNGLE at (60,21)`. The tile carries **no "(owned by China)"** marker in the map reads, which is the refusal the brief documents; the builder was moved to the owned SILK tile instead |
 | - | T42 | 西安 | (59,22) | `FEATURE_JUNGLE` | - | **refused the same way**, and likewise unowned |
-| 2 | **T44** | **not established - see below** | (57,24) | `FEATURE_FOREST` on grass, river | **not established**, and this is the row the record is least able to close | **the destination is genuinely ambiguous and the record says so**: the only city read on that turn (T44) shows 西安 building `UNIT_CATAPULT (5 turns)` and **Shenyang `Building: nothing`**, and (57,24) is adjacent to Shenyang at (57,25) - but the same read lists 西安 as still needing a builder on a DYES tile at y=24, so **the owning city is not settled by any read available**, and with it neither is the queue item. The one clean fact beside it: **西安's Catapult fell from `7 turns` at T43 to `5 turns` at T44**, a drop larger than 西安's own ~10/turn production, and the record does **not** attribute that to this chop, because the chop may belong to the other city |
+| 2 | **T44** | **西安 - corrected, see below** | (57,24) | `FEATURE_FOREST` on grass, river | **西安's `UNIT_CATAPULT`** | **this row was first written as "not established", and that was wrong** - a read was available and this record had not looked at it. **`get_builder_tasks` at T42 says `(57,24): build LUMBER_MILL [city: Xi'an] - nearest builder id:1114126, 3 tiles`**, which names the owning city outright, and the same turn's map read marks the tile `(owned by China)`. So the chop is **inside the variable**: 西安's territory, a builder working 西安's ring, Magnus established in 西安. **And it is the first chop whose gain is readable at all**: 西安's Catapult was ordered at **7 turns** on T43 and reads **5 turns** at T44 - a **two-turn** drop where one turn of the city's own production explains one. The record therefore credits this chop with **about one turn of 西安's queue**, and says "about" because the turn counts are integers rounded up and no tool reports the production added |
 
 **The gate is now measured for A5, and it held for the third time in the programme.** The log's
 `Research complete: Engineering` line sits in **T42's** `end_turn`, so Engineering is owned from **T43** -
@@ -142,12 +142,16 @@ siege train in the war city **on that same turn**, with no `BUILDING`/`DISTRICT`
 T44). **A3, A4 and A5 have all three ordered their first Catapult on T43**, which is why their compare lines
 line up on the `siege_order` column.
 
-**And the second chop exposes the sharper version of the measurement problem**: a chop's destination is only
-recorded if the record knows **which city owns the tile** and **what that city's queue held**, and the T44
-reads settled neither - the map reads print `(owned by China)` on some tiles and not others, and no read ties
-a tile to a city. So the record states the ambiguity rather than picking a city. The distinction matters for
-the variable: a chop in **Shenyang** is outside it entirely, because Magnus is established in **西安** and
-Groundbreaker is `in city`, so a second city's chop carries no +50% and is not the thing A5 exists to test.
+**And the two chops together show what the measurement problem actually is - and it is narrower than this
+record first said.** A chop's destination is settled by **`get_builder_tasks`**, which names the owning city
+in brackets (`[city: Xi'an]`) for every tile that needs work; `get_map_area` prints only `(owned by China)`
+and never names the city. So the instrument *can* answer "whose tile is this" while a tile still needs work,
+and the record's job is to read the right tool rather than to declare the question unanswerable. **What
+remains genuinely unmeasurable is the *gain***: `remove_feature` names the feature and the tile and no
+production, and the queue's turn count moves by natural production too - so chop 1 (`2 -> 1` in one turn) is
+a wash, and chop 2 (`7 -> 5` in one turn) is worth about one turn. **The variable is being executed exactly
+as specified and the record can only say "about one turn" about its effect.** A later chop into a queue item
+with more turns left is the only way to sharpen it, and if none comes the record says that instead.
 
 **And that exposes the measurement problem the brief only anticipated - now measured**: `remove_feature`
 answers `REMOVING_FEATURE\|<feature> at x,y` and names no production, so the queue's turn count is the only
