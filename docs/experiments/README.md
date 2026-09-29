@@ -103,7 +103,7 @@ The doctrine's testable claims, each with the file that makes it:
 | # | Claim | Written in |
 |---|---|---|
 | H1 | **Siege first**: "anything the assault is missing, first" - the train exists before the war | `tactics/01` §Production order 1-2 |
-| H2 | **Establishment**: siege 2 / melee 2 / ram 1 / ranged 4 / cavalry 1 | `tactics/01` §The establishment |
+| H2 | **Establishment**: siege 2 / melee 2 / **anti-cavalry 1** / ranged 4 / cavalry 1 / **recon 1** - and the ram only if one is already owned | `tactics/01` §The establishment (**corrected 2026-09-29 after A2**: the ram left the required table because the same file forbids buying one, so its slot made "complete" unsatisfiable; recon and anti-cavalry entered it because Gate 0 needs a city actually seen and a Heavy Chariot next to the train needs an answer) |
 | H3 | **Encampment early** - it is the cheapest combat bonus (the general's +1 MP / +5 CS aura) | `tactics/01` §Numbers |
 | H4 | **Upgrade beats build** - an old unit at full health plus gold is a new unit without a queue | `tactics/01` §Numbers |
 | H5 | **No ram or tower is bought** - the Catapult is the wall-breaker | `tactics/01` §Production order 1 (human instruction) |

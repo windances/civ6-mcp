@@ -27,7 +27,10 @@ assert spec and spec.loader
 report = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(report)
 
-FULL = {"CATAPULT": 2, "WARRIOR": 2, "BATTERING_RAM": 1, "ARCHER": 4, "HORSEMAN": 1}
+# The required table as corrected after the A2 experiment (2026-09-29): the ram left it (the doctrine
+# forbids buying one) and recon and anti-cavalry entered it (Gate 0 needs a city seen, and a Heavy
+# Chariot parked next to the train needs an answer).
+FULL = {"CATAPULT": 2, "WARRIOR": 2, "SPEARMAN": 1, "ARCHER": 4, "HORSEMAN": 1, "SCOUT": 1}
 
 
 def frames(by_turn: dict[int, dict]) -> dict[int, dict]:
@@ -67,7 +70,13 @@ def test_establishment_finds_the_exact_turn_not_the_next_boundary():
         frames(
             {
                 10: {"WARRIOR": 2, "ARCHER": 2},
-                45: {"WARRIOR": 2, "ARCHER": 4, "CATAPULT": 1, "BATTERING_RAM": 1},
+                45: {
+                    "WARRIOR": 2,
+                    "ARCHER": 4,
+                    "CATAPULT": 1,
+                    "SPEARMAN": 1,
+                    "HORSEMAN": 1,
+                },  # one Catapult and no scout: still short two slots
                 47: FULL,
                 60: FULL,
             }
@@ -90,7 +99,9 @@ def test_establishment_reports_the_shortfall_when_it_never_fills():
     assert est["turn"] is None
     assert est["last_turn"] == 40
     assert est["short"]["siege"] == (1, 2)  # one siege short
-    assert est["short"]["ram"] == (0, 1)  # and no ram at all
+    assert est["short"]["recon"] == (0, 1)  # no scout, and Gate 0 needs one
+    assert est["short"]["anticav"] == (0, 1)  # nothing to answer a Heavy Chariot with
+    assert "ram" not in est["short"]  # the ram left the table: the doctrine forbids buying one
     assert "melee" not in est["short"]  # two warriors fill the melee line
 
 
@@ -208,10 +219,11 @@ def test_doctrine_checks_answer_the_mechanical_claims():
     ]
     # H5: the ram is the violation, and it is named with its turn.
     assert report.forbidden_orders(rows) == [(40, "UNIT_BATTERING_RAM", "UNIT")]
-    # H6: two cities were asked for military units, each with its own count.
+    # H6: two cities were asked for military units, each with its own count - and the ram is not one of
+    # them under the corrected table (H5 counts it separately, as a forbidden order).
     spread = report.military_city_spread(rows)
     assert spread["cities"] == 2
-    assert spread["per_city"] == {"11": 2, "22": 2}
+    assert spread["per_city"] == {"11": 2, "22": 1}
     # H4: both upgrades, in turn order.
     assert report.upgrades(rows) == [(44, "7"), (46, "9")]
     # H1/H2: what was asked for, and when, earliest first.

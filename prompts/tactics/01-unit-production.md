@@ -16,9 +16,27 @@ economy keeps compounding.
 |---|---|---|
 | Siege | 2 | Catapult → Trebuchet → Bombard |
 | Melee | 2 | Warrior → Swordsman → Man-at-Arms |
-| Ram / tower | 1 | Battering Ram (65) or Siege Tower (100) |
+| **Anti-cavalry** | **1** | Spearman → Pikeman → Pike and Shot |
 | Ranged | 4 | Slinger → Archer → Crossbowman, plus China's Crouching Tiger |
 | Cavalry | 1 | Horseman → Knight (survivor hunter, reaches past the screen) |
+| **Recon** | **1** | Scout → Ranger, or a spare cavalry unit |
+| Ram / tower | **only one already owned** | Battering Ram / Siege Tower - never bought (see the production order) |
+
+**Three rows changed after the A2 experiment (2026-09-29), and each one is a measurement rather than a
+preference:**
+
+- **`Anti-cavalry` was missing entirely.** `counter-the-cavalry` was red for the whole of A2's assault
+  because nothing in the army could answer a Heavy Chariot: the city-state parked one **adjacent to both
+  Catapults on every turn**, took a third of one gun's HP, and was never killed. The doctrine's answer to
+  a screen breach - *the screen moves up* - is unsatisfiable when the enemy is already adjacent.
+- **`Recon` was missing entirely.** A2 built no scout, explored 7% against A1's 14%, and spent
+  twenty-six turns unable to read the target's walls, HP or garrison - the numbers `tactics/07`'s gates
+  ask for. The first Catapult shot finally produced `walls: none` in one line. A role the table does not
+  name is a role the empire does not build.
+- **The ram row was unsatisfiable as written.** It asked for one ram while the human instruction two
+  paragraphs below forbids buying one, so "the establishment is complete" was a claim no obedient session
+  could satisfy: A2 read `siege 2/2, ram 0/1` at its best moment. It is now a *conditional* row - an
+  already-owned ram joins the assault, and nothing is bought for that slot.
 
 Peacetime establishment is different and smaller: **one garrison per city plus one mobile unit**.
 Once a war is on, that is the cap, not the floor - everything above one unit per city belongs at
@@ -45,13 +63,14 @@ the front (`one-garrison-per-city`).
 - Trebuchet 200 / CS 35 / 45 (Military Engineering, no resource).
 - Bombard 280 / CS 45 / 55 (needs Niter - mine it at home; an import ends when you declare war).
 - Battering Ram 65 and Siege Tower 100 are support units: they help **melee only**, must stand
-  adjacent to the target city, and **both go obsolete at `CIVIC_CIVIL_ENGINEERING`**. Build the
-  ram before that civic lands or accept that nothing but siege will ever bypass a wall again.
+  adjacent to the target city, and **both go obsolete at `CIVIC_CIVIL_ENGINEERING`**. They are never
+  bought (the production order above), and a ram the empire already owns is the only case in which one
+  joins an assault; if a wall has to come down, that is what the siege row is for.
 - Upgrades are usually the cheapest strength in the game: Slinger → Archer (Archery),
   Warrior → Swordsman (Iron Working), Horseman → Knight (Stirrups). An old unit at full health
   plus gold is a new unit without the production queue.
-- Buy when the wait costs more than the gold: a 4-turn ram bought for ~260 gold arrives now, and
-  a city that is two turns from falling does not need a 10-turn Trebuchet ordered for it.
+- Buy when the wait costs more than the gold: a Catapult bought outright arrives the turn the tech
+  lands, and a city that is two turns from falling does not need a 10-turn Trebuchet ordered for it.
 - **The Great General is a unit the army has to keep.** Great Generals are earned mostly from
   Encampment districts (`GREAT GENERALS`, p.87), and the general itself is worth
   **+1 movement and +5 combat strength to land units within 2 tiles** - so an Encampment is not

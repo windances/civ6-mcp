@@ -99,12 +99,25 @@ RULE_RE = re.compile(r"CHECK FAILED \[([a-z0-9\-]+)\]")
 ACHIEVED_RE = re.compile(r"CHECK ACHIEVED[^\n]*?\[([a-z0-9\-]+)\]")
 ORDER_RE = re.compile(r'"item_name":\s*"([A-Za-z_0-9]+)"')
 
-# The establishment table in `prompts/tactics/01-unit-production.md`, expressed as roles rather than
-# unit names: a role is filled by whatever member of its upgrade line the era allows, so the same
-# check reads correctly in the Ancient era and in the Industrial one.  `anticav` and `recon` are not
-# in the table - they are counted because a session may screen with them, and the review has to be
-# able to say so instead of reporting a phantom shortfall.
-ESTABLISHMENT = {"siege": 2, "melee": 2, "ram": 1, "ranged": 4, "cavalry": 1}
+# The required establishment, as roles rather than unit names: a role is filled by whatever member of
+# its upgrade line the era allows, so the same check reads correctly in the Ancient era and in the
+# Industrial one.
+#
+# **Corrected 2026-09-29, after the A2 experiment, to match `prompts/tactics/01-unit-production.md`**:
+# the ram left the required table (the same file forbids buying one, so its slot made "complete"
+# unsatisfiable - A2 read `siege 2/2, ram 0/1` at its best moment), and `recon` and `anticav` entered it
+# (`tactics/07`'s Gate 0 needs a candidate city *seen* and its walls read, which A2 spent twenty-six
+# turns unable to do with no scout; and `counter-the-cavalry` was red for A2's whole assault because
+# nothing could answer the Heavy Chariot parked next to both Catapults).
+# Snapshots taken before this date keep the table they were measured with, which is why the two
+# attempts' saved reports still compare on identical terms.
+ESTABLISHMENT = {"siege": 2, "melee": 2, "anticav": 1, "ranged": 4, "cavalry": 1, "recon": 1}
+
+#: The roles the *diary's* `ESTABLISHMENT:` line names, and the order it names them in. It is not the
+#: required table above: that line's shape was fixed by the task files the attempts were played under
+#: (`siege a/2 melee b/2 ram c/1 ranged d/4 cavalry e/1`), and a parser that followed the table would
+#: stop reading the rows those attempts already wrote.
+SELF_REPORT_FIELDS = ("siege", "melee", "ram", "ranged", "cavalry")
 ROLES: dict[str, tuple[str, ...]] = {
     "siege": ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY", "ROCKET_ARTILLERY"),
     "melee": (
@@ -685,7 +698,7 @@ def military_city_spread(rows: list[dict]) -> dict:
     army orders are at least half of everything that city was asked to build. The old count is kept in
     `cities` so an attempt's history stays comparable across this change.
     """
-    army_roles = set(ESTABLISHMENT) | {"anticav"}
+    army_roles = set(ESTABLISHMENT) - {"recon"}  # recon is not the army; H6 is about army production
     army_per_city: collections.Counter = collections.Counter()
     all_per_city: collections.Counter = collections.Counter()
     for row in rows:
@@ -785,7 +798,7 @@ def self_reports(by_turn: dict[int, dict]) -> list[dict]:
         match = SELF_REPORT_RE.search(text)
         if not match:
             continue
-        claimed = {role: int(match.group(i)) for i, role in enumerate(ESTABLISHMENT, start=1)}
+        claimed = {role: int(match.group(i)) for i, role in enumerate(SELF_REPORT_FIELDS, start=1)}
         actual = role_counts(by_turn[turn].get("unit_composition"))
         out.append(
             {
@@ -794,7 +807,7 @@ def self_reports(by_turn: dict[int, dict]) -> list[dict]:
                 "actual": actual,
                 "mismatch": {
                     role: (claimed[role], actual[role])
-                    for role in ESTABLISHMENT
+                    for role in SELF_REPORT_FIELDS
                     if claimed[role] != actual[role]
                 },
             }
@@ -981,10 +994,11 @@ def print_verdict(
     else:
         short = "  ".join(f"{role} {have}/{want}" for role, (have, want) in sorted(est["short"].items()))
         print(f"  NOT complete at T{est['last_turn']}   short: {short or '(none)'}")
-        if set(est["short"]) == {"ram"}:
+        if set(est["short"]) == {"recon"}:
             print(
-                "    (only the ram is missing - and both ram and siege tower go obsolete at "
-                "CIVIC_CIVIL_ENGINEERING, so from that civic on the table's ram line cannot be filled)"
+                "    (only recon is missing - and `tactics/07`'s Gate 0 is that a candidate city is "
+                "actually visible, with its walls, HP and garrison read; A2 spent twenty-six turns "
+                "unable to read any of them because no scout was ever built)"
             )
     print(
         f"  screens (melee + anti-cavalry): "
