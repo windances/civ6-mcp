@@ -479,8 +479,39 @@ observed, none is a guess.
    may listen on **4319 only** while `GameConnection` is hardcoded to **4318**, and once the InGame state
    is up both ports listen and `4318` carries the full state list (`ingame=119`).
 
-## The end table, and the verdict - written when the attempt ends
+## The end table, and the verdict
 
-Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
-turn count, what the assault cost, and one paragraph saying what a walled target changed and what it did
-not.
+**The attempt ended at T72, and it ended because the game did.** The brief's finish line is a walled keep or
+T110; A3 stopped 38 turns short of that, and the reason is not the attempt's: the game stalled in its own
+AI-turn phase **twice** - `HANG:70:0_MCP_0070` (recovered by restarting the game and reloading the save) and
+then `HANG:72:0_MCP_0072`, with the game's CPU climbing for minutes while the turn never advanced. The second
+stall closed the attempt: the session was stopped, the position is saved as `0_MCP_0072`, and the snapshot
+covers **T1-T72** over all four sessions.
+
+| question | verdict | the number |
+|---|---|---|
+| **Q1** the establishment is complete by T60 under the corrected table | **HELD** | **T53**, seven turns inside the deadline, and the first attempt in the programme to complete the corrected table (A2's is `not reached`) |
+| **Q2** a walled target changes the arithmetic measurably | **not decided - the window was cut** | the snapshot reads `OPEN`, and that is the honest reading: the attempt stopped at T72, short of Q2's own **T80** bound, so "unaskable on this map" would overclaim. What the play did establish: **every city whose pool was read says `walls: none`** - the target 耶路撒冷, Australia's 霍巴特 and Maori's 特赫基昂加-努伊-阿-库珀, and the war A3 opened on **Muscat** at T70 never produced a pool read before the stall. Eight cities, no wall |
+| **Q3** the first enemy city is kept by T80 | **HELD** | **T67** - 耶路撒冷, `KEEP\|耶路撒冷 (pop 5, id:196610, captured)`, one turn ahead of A2's T68, and now **A4's bound** |
+| **Q4** the army is paid for: `carrying-capacity` red on fewer than ten turns | **HELD, and it is a window artifact** | the rule is gated `when: turn() >= 60` and the floor's horizon is the first keep (T67), so it was evaluated on **8 turns** and read red on 7; the diary's own measure - live over the whole window - is below the +10 floor on **48 of 62 turns**, exactly as A1's and A2's. The HELD is not evidence the army was affordable |
+
+**What the snapshot says beyond the four questions** (all of it the instrument's, over the four sessions):
+
+- **`PIN opening: DEVIATED`** - the fourth order was `UNIT_WARRIOR` at T15, not `UNIT_BUILDER`. The attempt's
+  opening is not the pinned one, and A4-A7's briefs carry the consequence (a deviated opening is re-run).
+- **the self-report cross-check fires on the corrected table's own rows, for the first time**:
+  `T48 siege claimed 2 vs 1 held`, `T49-T54 recon claimed 1 vs 2 held`. The reader was extended before A3
+  wrote its first `ESTABLISHMENT:` line, and the first thing it caught was the executor under-reporting
+  **recon** - a role the pre-correction parser could not read at all.
+- **the assault's cost**: the pool went 200 → 175 → 158 → 129 → 92 → 60 → 20 → 0 over T61-T67 against
+  `walls: none`, and the city was kept on the seventh turn of fire with the supply line cut (the
+  `cut-the-supply` rule fired at T61).
+
+**What this attempt answers, and what it does not.** It answers the production questions: the corrected table
+is reachable and was reached at T53, H1 held for the second time, and the corrected table's two added rows -
+anti-cavalry and recon - were actually built, the anti-cavalry one for the first time in the programme. It does
+**not** answer the question it was designed around, and the record refuses to pretend otherwise: **no city this
+attempt attacked had walls**, and the window in which a walled one could still have appeared was cut short by
+the game. The programme's central question therefore passes to A4-A7 unmeasured, and the honest summary of the
+play is narrower than "the train works against walls": *in 72 turns on this start, eight cities were read and
+none of them was walled.*
