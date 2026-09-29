@@ -153,6 +153,37 @@ a wash, and chop 2 (`7 -> 5` in one turn) is worth about one turn. **The variabl
 as specified and the record can only say "about one turn" about its effect.** A later chop into a queue item
 with more turns left is the only way to sharpen it, and if none comes the record says that instead.
 
+**Re-read at T54, and the variable is not buying what it was supposed to.** The instrument over A5's own
+session reads:
+
+```
+NOT complete at T53   short: siege 1/2
+screens (melee + anti-cavalry): 7    recon: 2
+first siege: T50   first melee: T1   first anticav: T45   first ranged: T22   first cavalry: T33   first recon: T5
+PIN opening: held
+H6 war cities: 1 cities ordered army units (city 65536: 21); 65536 carries 100% of them
+```
+
+**Only the `siege` row is short** - melee 2, anti-cavalry 1 (T45), ranged 4 (T22), cavalry 1 (T33) and recon 2
+are all filled. The second `UNIT_CATAPULT` was ordered at **T50** at **7 turns**, so the corrected table
+completes at about **T57**. **That is the number Q2 turns on, and it is heading the wrong way**: Q2 holds only
+if the establishment lands **by T50**, and T57 would be **two turns later than A2's T55** rather than five
+turns earlier - and later than **A3's T53** and **A4's T54**, the two attempts immediately before it.
+
+**The binding constraint is visible and it is not the chops**: 西安 is at **pop 6 with `SLOW GROWTH: 24 turns
+to next pop`**, its production reads **~10/turn**, and **each Catapult takes 7 turns** there (T43 -> owned
+T50, T50 -> about T57). A2's two Catapults came in 5 and 7 turns from a city with God of the Forge and Agoge
+stacked. So this attempt's siege train is **3 turns ahead of A2 on the first Catapult (T50 against T53) and
+about 2 behind on the second**, which is a wash rather than the five-turn advance the variable predicted -
+and two chops worth a wash and about one turn cannot move a 7-turn item by five.
+
+**This is an interim reading, not the verdict** - the table completes about T57 and Q1's deadline is T60, so
+Q1 is still live. What is already clear is the shape of the answer: **the chops were executed as specified
+(owned tiles, unit queue items, Magnus established in that city) and there were only two of them, so the
+attempt is a measurement of a weakly-executed variable rather than a refutation of the mechanism** - and the
+record will say exactly that in the end table, with the chop count, their measured contribution, and the
+city's production as the reason the predicted five turns did not appear.
+
 **And that exposes the measurement problem the brief only anticipated - now measured**: `remove_feature`
 answers `REMOVING_FEATURE\|<feature> at x,y` and names no production, so the queue's turn count is the only
 route to the gain - and **a queue item that is two turns out becomes one turn out in one turn with or without
