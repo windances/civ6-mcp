@@ -109,6 +109,37 @@ T22) and **`TECH_ENGINEERING` set at T23**, still researching at **T34** - so En
 at T42. **Q1 is therefore live but tight**, and the record reads the establishment at the T50 and T60
 checkpoints rather than assuming it.
 
+## The gate holds, and the two war cities build the train in parallel
+
+**`Research complete: Engineering` sits in T44's `end_turn`, so the tech is owned from T45 - and on T45
+both war cities ordered a `UNIT_CATAPULT` in the same turn**:
+
+| city | the order | the queue read |
+|---|---|---|
+| **Xi'an (65536)** | `set_city_production(UNIT_CATAPULT)` | `PRODUCING\|UNIT_CATAPULT\|6 turns` |
+| **the second city (131073)** | `set_city_production(UNIT_CATAPULT)` | `PRODUCING\|UNIT_CATAPULT\|9 turns` |
+
+**This is the variable doing the thing it was written to do, and it is the first time in the programme a
+siege train has been built in parallel rather than one city deep** - A2-A6 all had one war city, and every
+one of them built its two Catapults sequentially. **The gate also holds for the fourth consecutive attempt**
+(Engineering owned T45 and the train ordered that same turn; A3, A4 and A5 ordered theirs at T43 and A6 at
+T46).
+
+**What the parallelism is actually worth, computed now rather than asserted at the end**: the two queues
+finish at about **T51** (Xi'an, 6 turns) and **T54** (the second city, 9 turns), so `siege 2/2` arrives
+about **T54**. Built sequentially in the faster city alone it would be **T45 + 6 + 6 = T57**. **So the
+second war city buys about three turns on the train, not the halving its queue count suggests** - because
+the second city is **1.5x slower per Catapult** (9 turns against 6), and the train's completion is set by
+the *slower* of the two, not by their sum. That is the number the end table has to weigh the lost
+compounding against, and the record states it before the attempt ends so the comparison is not made
+retrospectively.
+
+**And the instrument's H6 reads the split as real and roughly even**: `2 cities ordered army units (city
+65536: 13, city 131073: 9); 65536 carries 59% of them` - so the second city carries **41%** of the army
+orders, which is a second war city by any reading rather than a token order. The establishment at T49 is
+short **`anticav 0/1` and `siege 0/2`** - the train is building and the anti-cavalry unit is not yet
+ordered.
+
 ## The hypothesis, with the numbers that falsify it
 
 | # | prediction | falsified when |
