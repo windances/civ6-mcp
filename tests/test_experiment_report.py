@@ -33,9 +33,20 @@ spec.loader.exec_module(report)
 FULL = {"CATAPULT": 2, "WARRIOR": 2, "SPEARMAN": 1, "ARCHER": 4, "HORSEMAN": 1, "SCOUT": 1}
 
 
-def frames(by_turn: dict[int, dict]) -> dict[int, dict]:
-    """A diary frame per turn: the shape `diary_rows()` hands the tool."""
-    return {turn: {"turn": turn, "is_agent": True, "unit_composition": comp} for turn, comp in by_turn.items()}
+def frames(by_turn: dict[int, dict], techs_from: int | None = None) -> dict[int, dict]:
+    """A diary frame per turn: the shape `diary_rows()` hands the tool.
+
+    `techs_from` marks `TECH_ENGINEERING` complete from that turn on, which is what
+    `engineering_gate` reads. A5's Q3 is measured **after** the gate, so its fixtures need one: a
+    fixture without it makes the gate unaskable and every Q3 answer meaningless.
+    """
+    out: dict[int, dict] = {}
+    for turn, comp in by_turn.items():
+        row = {"turn": turn, "is_agent": True, "unit_composition": comp}
+        if techs_from is not None and turn >= techs_from:
+            row["techs"] = ["TECH_THE_WHEEL", "TECH_ENGINEERING"]
+        out[turn] = row
+    return out
 
 
 def test_role_counts_maps_upgrade_lines_and_ignores_civilians():
@@ -647,7 +658,7 @@ def _attack_row(turn: int, walls: str, city_hp: str = "200/200") -> dict:
 
 def _keep_row(turn: int) -> dict:
     return {"turn": turn, "tool": "resolve_city_capture", "params": {"action": "keep"},
-            "result": "KEEP|耶路撒冷 (pop 5, id:196610, captured)"}
+            "result": "KEEP|Yerushalayim (pop 5, id:196610, captured)"}
 
 
 def _a3_frames(turns: list[int]) -> dict[int, dict]:
@@ -741,3 +752,364 @@ def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):
     rows = [line for line in out.splitlines()[1:] if line.startswith(("A1-T40", "A2-T40"))]
     assert len(rows) == 2 and rows[0] != rows[1]
     assert "per turn" in out  # the legend disambiguates the yield columns from the treasury
+
+
+# --------------------------------------------------------------------------- A5/A6/A7
+#
+# The three new question sets are compared against A2's measured numbers, so their fixtures carry what
+# A2's record carries: a siege train, a first non-unit order, a war declaration and a red gold floor.
+# A synthetic log row is the shape `log_rows()` hands the tool - turn, ts, tool, params, result.
+
+
+def _city_order_row(turn: int, city_id: int, name: str, kind: str = "UNIT") -> dict:
+    """A logged order with the city it was placed in - A7's measure is per city."""
+    return {"turn": turn, "tool": "set_city_production",
+            "params": {"city_id": city_id, "item_type": kind, "item_name": name}}
+
+
+def _purchase_row(turn: int, name: str, city_id: int = 11) -> dict:
+    """A logged purchase - the row A6's variable is read from."""
+    return {"turn": turn, "tool": "purchase_item",
+            "params": {"city_id": city_id, "item_type": "UNIT", "item_name": name,
+                       "yield_type": "YIELD_GOLD"}}
+
+
+def _war_row(turn: int) -> dict:
+    """The game's own acknowledgement of a declaration (`src/civ_mcp/lua/diplomacy.py`)."""
+    return {"turn": turn, "tool": "send_diplomatic_action",
+            "params": {"other_player_id": 6, "action": "DECLARE_SURPRISE_WAR"},
+            "result": "OK:WAR_REQUESTED|DECLARE_SURPRISE_WAR on the city-state"}
+
+
+def _red_row(turn: int) -> dict:
+    """A turn the gold floor's rule read red."""
+    return {"turn": turn, "tool": "end_turn", "params": {},
+            "result": "CHECK FAILED [carrying-capacity] gold/turn +6.0 with military 156"}
+
+
+def _floored(by_turn: dict[int, dict], gold_per_turn: float = 12.0) -> dict[int, dict]:
+    """The frames with an income on every turn, so the floor's second measure is a real number."""
+    for row in by_turn.values():
+        row["gold_per_turn"] = gold_per_turn
+    return by_turn
+
+
+def test_pin_check_holds_deviates_and_stays_undecided():
+    """A3's run is why this exists: the pin was in force and the fourth order was a Warrior at T15.
+
+    The promise is about the executor, and until this check nothing mechanical read it - so the three
+    states are pinned separately, because "fewer than four orders placed" is an undecided pin and not a
+    held one.
+    """
+    opening = [
+        _city_order_row(1, 11, "UNIT_SCOUT"),
+        _city_order_row(5, 11, "UNIT_SLINGER"),
+        _city_order_row(6, 11, "UNIT_SETTLER"),
+        _city_order_row(15, 11, "UNIT_BUILDER"),
+    ]
+    pin = report.pin_check(opening)
+    assert pin["matched"] is True and pin["first_deviation"] is None
+    assert pin["orders"] == [
+        (1, "UNIT_SCOUT", "11"),
+        (5, "UNIT_SLINGER", "11"),
+        (6, "UNIT_SETTLER", "11"),
+        (15, "UNIT_BUILDER", "11"),
+    ]
+    assert "held" in pin["note"]
+
+    # A3's own shape: three positions as promised and a Warrior where the Builder was promised.
+    deviated = [*opening[:3], _city_order_row(15, 11, "UNIT_WARRIOR")]
+    pin = report.pin_check(deviated)
+    assert pin["matched"] is False
+    assert pin["first_deviation"] == (15, "UNIT_WARRIOR")
+    assert "opening order 4" in pin["note"] and "UNIT_WARRIOR" in pin["note"] and "T15" in pin["note"]
+
+    # Three orders placed is not a pin that held: the fourth position does not exist yet.
+    pin = report.pin_check(opening[:3])
+    assert pin["matched"] is False and pin["first_deviation"] is None
+    assert "only 3 of 4" in pin["note"] and "undecided" in pin["note"]
+
+    # A building in position 1 is a deviation like any other.
+    pin = report.pin_check([_city_order_row(2, 11, "BUILDING_MONUMENT", "BUILDING"), *opening[1:]])
+    assert pin["matched"] is False and pin["first_deviation"] == (2, "BUILDING_MONUMENT")
+
+    # The name is compared through the same normalisation the role map uses.
+    assert report.pin_check([_city_order_row(1, 11, "SCOUT"), *opening[1:]])["matched"] is True
+    assert report.pin_check([])["placed"] == 0
+
+
+def test_siege_purchases_ignores_a_produced_siege_order():
+    """A6's variable is that the train is *bought*, so a queue order of the same unit is not one."""
+    rows = [
+        _city_order_row(40, 11, "UNIT_CATAPULT"),  # produced: the thing the variable replaces
+        _purchase_row(45, "UNIT_CATAPULT"),
+        _purchase_row(44, "UNIT_ARCHER"),  # bought, but not siege
+        _purchase_row(48, "UNIT_TREBUCHET", city_id=22),
+    ]
+    assert report.siege_purchases(rows) == [(45, "UNIT_CATAPULT"), (48, "UNIT_TREBUCHET")]
+    assert report.siege_purchases([_city_order_row(40, 11, "UNIT_CATAPULT")]) == []
+    # The produced order is still an order - the two measures answer different questions.
+    assert report.first_order_turn(rows, "siege") == 40
+
+
+def test_war_declared_reads_the_games_own_reply():
+    """A2's three declarations answered WARN:WAR_UNCERTAIN and changed nothing, so this reads the reply."""
+    uncertain = {"turn": 60, "tool": "send_diplomatic_action",
+                 "params": {"other_player_id": 6, "action": "DECLARE_SURPRISE_WAR"},
+                 "result": "WARN:WAR_UNCERTAIN|session completed but war state not yet confirmed"}
+    refused = {"turn": 61, "tool": "unit_action", "params": {"action": "attack"},
+               "result": "ERR:NOT_AT_WAR"}
+    # Nothing declares: a warning and a refusal are not a war, and no row at all has no answer.
+    assert report.war_declared([uncertain, refused]) is None
+    assert report.war_declared([]) is None
+    # The earliest declaration is the turn the war opened, whatever order the log holds them in.
+    declared = _war_row(55)
+    assert report.war_declared([declared, uncertain, refused]) == 55
+    later = {**_war_row(58)}
+    assert report.war_declared([later, declared]) == 55
+
+
+def test_army_producing_cities_counts_army_orders_per_city_before_a_turn():
+    """A7's measure: per city, how many army-role units it was asked for - before the keep."""
+    rows = [
+        _city_order_row(30, 11, "UNIT_WARRIOR"),
+        _city_order_row(32, 11, "UNIT_ARCHER"),
+        _city_order_row(40, 22, "UNIT_WARRIOR"),
+        _city_order_row(50, 22, "UNIT_CATAPULT"),
+        _city_order_row(55, 11, "UNIT_SCOUT"),  # recon is not the army
+        _city_order_row(56, 11, "BUILDING_MONUMENT", "BUILDING"),  # not a unit
+    ]
+    assert report.army_producing_cities(rows) == {"11": 2, "22": 2}
+    # Strictly before: an order on the keep turn itself is after the war that matters.
+    assert report.army_producing_cities(rows, before_turn=40) == {"11": 2}
+    assert report.army_producing_cities(rows, before_turn=41) == {"11": 2, "22": 1}
+    assert report.army_producing_cities(rows, before_turn=30) == {}
+
+
+def test_the_a5_question_set_asks_a5_s_own_four():
+    """A5's variable is Q2: the establishment has to arrive 5+ turns ahead of A2's siege train at T55."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}, techs_from=47))
+    rows = [_order_row(40, "UNIT_CATAPULT"), _order_row(55, "BUILDING_GRANARY", "BUILDING")]
+    questions = report.verdict_a5(by_turn, rows)
+    assert [name.split()[0] for name, _s, _d in questions] == ["Q1", "Q2", "Q3", "Q4"]
+    assert questions[0][1] == report.HELD  # the corrected table at T47, inside T60
+    assert questions[1][1] == report.HELD
+    assert "T47" in questions[1][2] and "T55" in questions[1][2]
+    assert questions[2][1] == report.HELD
+    assert "T55" in questions[2][2] and "BUILDING_GRANARY" in questions[2][2]
+    assert "after the T47 gate" in questions[2][2]
+    assert questions[3][1] == report.HELD  # nothing red and the window has closed
+
+
+def test_a5_q3_reads_the_economy_after_the_gate_not_before_it():
+    """The measure's own failure, pinned: A2's first non-unit order was a pre-gate T28 Granary.
+
+    Read as "the first non-unit order", Q3 scored that T28 order as the economy's answer - twenty turns
+    before the train's tech existed - where the number A5 compares against (A2's T55) is its first
+    economy order *after* the gate. A pre-gate Granary must not satisfy the question, and a post-gate
+    order must.
+    """
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}, techs_from=47))
+    pre_gate = [_order_row(28, "BUILDING_GRANARY", "BUILDING"), _order_row(40, "UNIT_CATAPULT")]
+    questions = report.verdict_a5(by_turn, pre_gate)
+    assert questions[2][1] == report.FALSIFIED
+    assert "T28" not in questions[2][2]
+    assert "no building or district ordered since the T47 gate" in questions[2][2]
+
+    after_gate = [*pre_gate, _order_row(50, "BUILDING_WATER_MILL", "BUILDING")]
+    questions = report.verdict_a5(by_turn, after_gate)
+    assert questions[2][1] == report.HELD
+    assert "T50" in questions[2][2] and "BUILDING_WATER_MILL" in questions[2][2]
+
+
+def test_the_a5_question_set_falsifies_and_stays_open():
+    """A window that has not closed is OPEN, and each question names what makes it false."""
+    early = _floored(frames({1: {"WARRIOR": 1}, 40: {"WARRIOR": 1}}))
+    assert [status for _n, status, _d in report.verdict_a5(early, [])] == [report.OPEN] * 4
+
+    # Past T60 with no establishment, no gate and no economy: Q1, Q2 and Q3 all decide.
+    late = _floored(frames({1: {"WARRIOR": 1}, 60: {"WARRIOR": 1}}))
+    questions = report.verdict_a5(late, [])
+    assert questions[0][1] == report.FALSIFIED
+    assert questions[1][1] == report.FALSIFIED and "no turn to compare" in questions[1][2]
+    assert questions[2][1] == report.FALSIFIED and "no gate to measure against" in questions[2][2]
+
+    # The table completes, but at T52 it is not 5 turns earlier than A2's T55: the variable missed.
+    late_table = _floored(frames({1: {"WARRIOR": 1}, 52: FULL}))
+    questions = report.verdict_a5(late_table, [])
+    assert questions[1][1] == report.FALSIFIED and "T52" in questions[1][2]
+
+    # The economy's own deadline on its own: an order at T61 is one turn behind A2's by more than five.
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 61: FULL}))
+    questions = report.verdict_a5(by_turn, [_order_row(61, "BUILDING_GRANARY", "BUILDING")])
+    assert questions[2][1] == report.FALSIFIED and "T61" in questions[2][2]
+
+
+def test_the_a6_question_set_asks_a6_s_own_four():
+    """A6 holds when the train is bought early, the war opens early, and the price is a longer window."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 70: FULL}), gold_per_turn=6.0)
+    rows = [
+        # The pinned opening first, so the pin holds and Q1 is comparable.
+        _city_order_row(1, 11, "UNIT_SCOUT"),
+        _city_order_row(5, 11, "UNIT_SLINGER"),
+        _city_order_row(6, 11, "UNIT_SETTLER"),
+        _city_order_row(15, 11, "UNIT_BUILDER"),
+        _purchase_row(45, "UNIT_CATAPULT"),
+        _war_row(52),
+        # The keep is what sets `gold_floor`'s horizon, and the rule only runs from T60.
+        _keep_row(70),
+        *[_red_row(turn) for turn in range(60, 71)],
+    ]
+    questions = report.verdict_a6(by_turn, rows)
+    assert [name.split()[0] for name, _s, _d in questions] == ["Q1", "Q2", "Q3", "Q4"]
+    assert questions[0][1] == report.HELD
+    assert questions[1][1] == report.HELD and "bought T45" in questions[1][2]
+    assert questions[2][1] == report.HELD and "T52" in questions[2][2]
+    # 11 red turns to the T70 keep, against A2's whole-attempt 10: the predicted trade happened.
+    assert questions[3][1] == report.HELD
+    assert "11 red turn(s)" in questions[3][2] and "A2's 10" in questions[3][2]
+    # The opening matched the pin, so Q1 carries no deviation note.
+    assert "PIN DEVIATED" not in questions[0][2]
+
+
+def test_the_a6_variable_is_falsified_by_a_produced_train_or_a_late_purchase():
+    """Q2 names two distinct failures: the train was produced, or the buy came after T50."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}))
+    q2 = report.verdict_a6(by_turn, [_order_row(40, "UNIT_CATAPULT")])[1]
+    assert q2[1] == report.FALSIFIED and "produced" in q2[2] and "T40" in q2[2]
+
+    q2 = report.verdict_a6(by_turn, [_purchase_row(52, "UNIT_CATAPULT")])[1]
+    assert q2[1] == report.FALSIFIED and "T52" in q2[2]
+
+    # Nothing at all by T50: the first siege unit does not exist, so there is no early buy either.
+    q2 = report.verdict_a6(by_turn, [])[1]
+    assert q2[1] == report.FALSIFIED and "not existing at all" in q2[2]
+
+
+def test_the_a6_war_and_cost_questions_open_then_falsify():
+    """Q3 is judged at A2's own T60; Q4's price needs both an early war and a longer red window."""
+    early = _floored(frames({1: {"WARRIOR": 1}, 40: {"WARRIOR": 1}}))
+    assert [status for _n, status, _d in report.verdict_a6(early, [])] == [report.OPEN] * 4
+
+    bought = [_purchase_row(45, "UNIT_CATAPULT")]
+    # No declaration at all: Q4 decides at T55, Q3 only at A2's T60 - the two deadlines differ.
+    at_56 = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 56: FULL}))
+    questions = report.verdict_a6(at_56, bought)
+    assert questions[2][1] == report.OPEN and "no war-declaration row" in questions[2][2]
+    assert questions[3][1] == report.FALSIFIED
+    at_61 = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 61: FULL}))
+    questions = report.verdict_a6(at_61, bought)
+    assert questions[2][1] == report.FALSIFIED and "no war-declaration row" in questions[2][2]
+    assert questions[3][1] == report.FALSIFIED
+
+    # A war that opens late falsifies both the timing and the trade.
+    questions = report.verdict_a6(at_61, [*bought, _war_row(58)])
+    assert questions[2][1] == report.FALSIFIED and "T58" in questions[2][2]
+    assert questions[3][1] == report.FALSIFIED and "later than T55" in questions[3][2]
+
+    # An early war whose red window is no longer than A2's: the purchase turned out free.
+    questions = report.verdict_a6(at_61, [*bought, _war_row(52), _red_row(61), _red_row(62)])
+    assert questions[3][1] == report.FALSIFIED and "free" in questions[3][2]
+
+    # An early war with the window still running is not a verdict yet.
+    questions = report.verdict_a6(at_56, [*bought, _war_row(52)])
+    assert questions[3][1] == report.OPEN and "not final" in questions[3][2]
+
+
+def test_the_a7_question_set_asks_a7_s_own_four():
+    """A7 holds when two cities produced army units before the first city was kept."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 74: FULL}))
+    rows = [
+        _city_order_row(30, 11, "UNIT_WARRIOR"),
+        _city_order_row(32, 11, "UNIT_ARCHER"),
+        _city_order_row(40, 22, "UNIT_WARRIOR"),
+        _keep_row(74),
+    ]
+    questions = report.verdict_a7(by_turn, rows)
+    assert [name.split()[0] for name, _s, _d in questions] == ["Q1", "Q2", "Q3", "Q4"]
+    assert questions[0][1] == report.HELD
+    assert questions[1][1] == report.HELD
+    assert "city 11 2 (first T30)" in questions[1][2]
+    assert "city 22 1 (first T40)" in questions[1][2]
+    assert "second city's first army order is T40 (city 22)" in questions[1][2]
+    assert "before the keep on T74" in questions[1][2]
+    # The stricter share measure is printed, and is deliberately not the pass condition.
+    assert "stricter secondary measure" in questions[1][2] and "not the pass condition" in questions[1][2]
+    assert questions[2][1] == report.HELD and "T74" in questions[2][2]
+    assert questions[3][1] == report.HELD
+
+
+def test_the_a7_second_city_has_to_produce_before_the_keep():
+    """The window is the variable: a city that starts after the keep is not a second war city."""
+    # One city before a T74 keep, a second only after it: the variable is falsified.
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 74: FULL}))
+    rows = [
+        _city_order_row(30, 11, "UNIT_WARRIOR"),
+        _city_order_row(32, 11, "UNIT_ARCHER"),
+        _city_order_row(80, 22, "UNIT_WARRIOR"),
+        _keep_row(74),
+    ]
+    questions = report.verdict_a7(by_turn, rows)
+    assert questions[1][1] == report.FALSIFIED
+    assert "city 22" not in questions[1][2]  # the per-city counts are inside the window
+    assert questions[2][1] == report.HELD
+
+    # No keep yet and one city: the second city could still contribute, so the count is open - and the
+    # detail says the whole log is being counted because nothing was kept.
+    open_by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}))
+    questions = report.verdict_a7(open_by_turn, [_city_order_row(30, 11, "UNIT_WARRIOR")])
+    assert questions[1][1] == report.OPEN
+    assert "no city was kept by T60" in questions[1][2]
+    assert questions[2][1] == report.OPEN
+
+    # No keep by T80 and no second city: both the variable and the deadline falsify.
+    late = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 80: FULL}))
+    questions = report.verdict_a7(late, [_city_order_row(30, 11, "UNIT_WARRIOR")])
+    assert questions[1][1] == report.FALSIFIED
+    assert questions[2][1] == report.FALSIFIED and "no KEEP| row" in questions[2][2]
+
+    # A keep after T80 is outside the window.
+    too_late = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 85: FULL}))
+    rows = [_city_order_row(30, 11, "UNIT_WARRIOR"), _keep_row(85)]
+    questions = report.verdict_a7(too_late, rows)
+    assert questions[2][1] == report.FALSIFIED and "T85" in questions[2][2]
+
+
+def test_a_deviated_pin_is_printed_beside_the_new_modes_q1():
+    """A Q1 verdict read without the pin would compare an attempt whose opening was not comparable."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}))
+    opening = [
+        _city_order_row(1, 11, "UNIT_SCOUT"),
+        _city_order_row(5, 11, "UNIT_SLINGER"),
+        _city_order_row(6, 11, "UNIT_SETTLER"),
+        _city_order_row(15, 11, "UNIT_BUILDER"),
+    ]
+    deviated = [*opening[:3], _city_order_row(15, 11, "UNIT_WARRIOR")]
+    for setter in (report.verdict_a5, report.verdict_a6, report.verdict_a7):
+        assert "PIN DEVIATED" not in setter(by_turn, opening)[0][2]
+        q1 = setter(by_turn, deviated)[0]
+        assert "PIN DEVIATED" in q1[2] and "UNIT_WARRIOR" in q1[2] and "T15" in q1[2]
+    # A2's and A3's verdict text is untouched: for A3 the deviation shows in the doctrine block.
+    assert "PIN" not in report.verdict_a3(by_turn, deviated)[0][2]
+    assert "PIN" not in report.verdict_a2(by_turn, deviated)[0][2]
+
+
+def test_asked_questions_dispatches_every_named_set():
+    """The one dispatch point both `--verdict` and `--save` go through, and there is no `a4`."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}))
+    rows = [
+        _city_order_row(1, 11, "UNIT_SCOUT"),
+        _city_order_row(5, 11, "UNIT_SLINGER"),
+        _city_order_row(6, 11, "UNIT_SETTLER"),
+        _city_order_row(15, 11, "UNIT_BUILDER"),
+    ]
+    ids = {"generic": ["P1", "P2", "P3", "P4"]}
+    for name in ("generic", "a2", "a3", "a5", "a6", "a7"):
+        got = report.asked_questions(name, by_turn, rows)
+        assert [q[0].split()[0] for q in got] == ids.get(name, ["Q1", "Q2", "Q3", "Q4"]), name
+        assert all(status in (report.HELD, report.FALSIFIED, report.OPEN) for _n, status, _d in got), name
+    assert set(report.QUESTION_SETS) == {"a2", "a3", "a5", "a6", "a7"}
+    assert "a4" not in report.QUESTION_SETS
+    # The generic set is the only one that takes the caller's own labels.
+    generic = report.asked_questions("generic", by_turn, rows, ids=("X1", "X2", "X3", "X4"))
+    assert [q[0].split()[0] for q in generic] == ["X1", "X2", "X3", "X4"]

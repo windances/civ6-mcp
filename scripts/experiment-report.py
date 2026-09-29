@@ -534,15 +534,14 @@ def role_of_item(item_name: str) -> str | None:
     return None
 
 
-def orders(rows: list[dict]) -> list[tuple[int, str, str]]:
-    """Every production order and purchase in the log, as (turn, item_name, item_type).
+def _order_entries(rows: list[dict]) -> list[tuple[int, str, str, str]]:
+    """Every production order and purchase, as (turn, item_name, item_type, city_id).
 
-    Sorted by **turn**, not by timestamp. The log holds every session of the game - including the
-    branches a rollback abandoned - so rows from different sessions interleave and a later timestamp
-    can carry an earlier turn. "The first siege unit was ordered on T38" has to mean the earliest
-    turn, which list order alone does not give.
+    `orders()` is this with the city dropped; the pin check needs the city, because two cities can
+    order the same unit on the same turn (A2 ordered a Catapult in each on T48) and the opening is
+    about which order came when, not about which city placed it. The ordering rules are `orders()`'.
     """
-    out: list[tuple[int, str, str]] = []
+    out: list[tuple[int, str, str, str]] = []
     for row in rows:
         if row.get("tool") not in ORDER_TOOLS:
             continue
@@ -552,9 +551,27 @@ def orders(rows: list[dict]) -> list[tuple[int, str, str]]:
             match = ORDER_RE.search(json.dumps(params, ensure_ascii=False))
             name = match.group(1) if match else ""
         if name:
-            out.append((row.get("turn") or 0, str(name).upper(), str(params.get("item_type") or "")))
+            out.append(
+                (
+                    row.get("turn") or 0,
+                    str(name).upper(),
+                    str(params.get("item_type") or ""),
+                    str(params.get("city_id") or "?"),
+                )
+            )
     out.sort(key=lambda entry: entry[0])
     return out
+
+
+def orders(rows: list[dict]) -> list[tuple[int, str, str]]:
+    """Every production order and purchase in the log, as (turn, item_name, item_type).
+
+    Sorted by **turn**, not by timestamp. The log holds every session of the game - including the
+    branches a rollback abandoned - so rows from different sessions interleave and a later timestamp
+    can carry an earlier turn. "The first siege unit was ordered on T38" has to mean the earliest
+    turn, which list order alone does not give.
+    """
+    return [(turn, name, kind) for turn, name, kind, _city in _order_entries(rows)]
 
 
 def first_order_turn(rows: list[dict], role: str, since: int | None = None) -> int | None:
@@ -570,6 +587,100 @@ def first_order_turn(rows: list[dict], role: str, since: int | None = None) -> i
         if role_of_item(name) == role:
             return turn
     return None
+
+
+#: The opening the attempt's task file pins, from A3 on: the first four production orders, in order
+#: (`prompts/tasks/tmp/NNN-*.md`, "the attempt's record says whether the executor matched them"). It is
+#: a promise about the **executor**, and until now it was prose with no mechanical anchor: A3's file was
+#: published with this pin and the fourth order placed was `UNIT_WARRIOR` on T15, with the pin in force
+#: and no mention of it in the diary. A snapshot from now on carries the fact.
+PIN_OPENING = ("UNIT_SCOUT", "UNIT_SLINGER", "UNIT_SETTLER", "UNIT_BUILDER")
+
+
+def pin_check(rows: list[dict]) -> dict:
+    """Whether the first four production orders match the opening the task file pinned.
+
+    `matched` is true only when all four positions **exist and agree**: with fewer than four orders in
+    the log the pin is undecided, not held, and the note says what has been placed and that the rest is
+    undecided - reporting a two-order log as "matched" would be a claim the record cannot support. The
+    comparison is on the item name through `unit_type_of`, so `UNIT_SCOUT` and `SCOUT` are the same
+    order, and a deviation names the order that broke the pin with its turn.
+
+    It reads the rows it is given, so a report narrowed to one session of an attempt (`--run`) reads
+    that session's opening: an attempt's snapshot names every session it was played in, which is what
+    makes the check the attempt's own.
+    """
+    placed = [(turn, name, city) for turn, name, _kind, city in _order_entries(rows)[:4]]
+    promised = PIN_OPENING
+    first_deviation: tuple[int, str] | None = None
+    deviated_at: int | None = None
+    for index, (turn, name, _city) in enumerate(placed):
+        if unit_type_of(name) != unit_type_of(promised[index]):
+            first_deviation = (turn, name)
+            deviated_at = index
+            break
+    matched = len(placed) >= len(promised) and first_deviation is None
+    if deviated_at is not None:
+        note = (
+            f"opening order {deviated_at + 1} was {first_deviation[1]} on T{first_deviation[0]}, "
+            f"not {promised[deviated_at]} - the pin did not hold"
+        )
+    elif matched:
+        note = "the pinned opening held: " + ", ".join(promised) + " in that order"
+    else:
+        placed_text = ", ".join(f"{name} T{turn}" for turn, name, _city in placed) or "(none)"
+        note = (
+            f"only {len(placed)} of {len(promised)} opening orders placed so far ({placed_text}) - "
+            f"the rest is undecided"
+        )
+    return {
+        "promised": list(promised),
+        "orders": placed,
+        "placed": len(placed),
+        "matched": matched,
+        "first_deviation": first_deviation,
+        "note": note,
+    }
+
+
+def siege_purchases(rows: list[dict]) -> list[tuple[int, str]]:
+    """Every **bought** siege unit in the log, as (turn, item_name), earliest first.
+
+    A6's variable is that the train is paid for with gold instead of produced, so only `purchase_item`
+    rows count: a `set_city_production` of the same unit is exactly the thing the variable replaces, and
+    counting it would report the train as bought whether or not a coin was spent.
+    """
+    out: list[tuple[int, str]] = []
+    for row in rows:
+        if row.get("tool") != "purchase_item":
+            continue
+        params = row.get("params") or {}
+        name = str(params.get("item_name") or "").upper()
+        if role_of_item(name) == "siege":
+            out.append((row.get("turn") or 0, name))
+    out.sort(key=lambda entry: entry[0])
+    return out
+
+
+#: The game's own acknowledgement of a declaration: `src/civ_mcp/lua/diplomacy.py` prints
+#: `OK:WAR_REQUESTED|...` on the player operation that declares the war. Deliberately narrow - A2's
+#: three calls answered `WARN:WAR_UNCERTAIN` and changed nothing, so this reads the game's own reply.
+WAR_RE = re.compile(r"WAR_REQUESTED")
+
+
+def war_declared(rows: list[dict]) -> int | None:
+    """The earliest turn the log holds the game's own war-declaration reply, or None.
+
+    This reads the reply, not an inference: nothing here guesses a war from a `NOT_AT_WAR` refusal, from
+    a `WARN:WAR_UNCERTAIN` warning, or from an enemy appearing in the diary - only a row whose `result`
+    carries `WAR_REQUESTED` is a declaration, and its earliest turn is the turn the war opened.
+    """
+    turns = [
+        row.get("turn") or 0
+        for row in rows
+        if WAR_RE.search(str(row.get("result") or "").upper())
+    ]
+    return min(turns) if turns else None
 
 
 def engineering_gate(by_turn: dict[int, dict], rows: list[dict]) -> dict:
@@ -789,6 +900,11 @@ def order_summary(rows: list[dict]) -> dict:
 
 FORBIDDEN_UNITS = ("BATTERING_RAM", "SIEGE_TOWER")  # H5, human instruction 2026-09-26
 
+#: The army half of the establishment table, in one place: H6's concentration claim and A7's "two war
+#: cities" both count *army orders*, and recon is not the army - a Scout is `tactics/07`'s Gate 0, not
+#: the war's.
+ARMY_ROLES = frozenset(role for role in ESTABLISHMENT if role != "recon")
+
 
 def forbidden_orders(rows: list[dict]) -> list[tuple[int, str, str]]:
     """Every order or purchase of a unit the doctrine forbids - each one violates H5."""
@@ -812,7 +928,7 @@ def military_city_spread(rows: list[dict]) -> dict:
     army orders are at least half of everything that city was asked to build. The old count is kept in
     `cities` so an attempt's history stays comparable across this change.
     """
-    army_roles = set(ESTABLISHMENT) - {"recon"}  # recon is not the army; H6 is about army production
+    army_roles = ARMY_ROLES  # recon is not the army; H6 is about army production
     army_per_city: collections.Counter = collections.Counter()
     all_per_city: collections.Counter = collections.Counter()
     for row in rows:
@@ -839,6 +955,39 @@ def military_city_spread(rows: list[dict]) -> dict:
         "busiest_share": round(busiest / total, 3) if total else 0.0,
         "war_cities": war_cities,
     }
+
+
+def _army_orders_by_city(rows: list[dict], before_turn: int | None = None) -> dict[str, list[int]]:
+    """City id -> the turns it was asked for an army-role unit, earliest first.
+
+    `before_turn` keeps only orders placed **strictly before** it, which is what makes a second war city
+    a claim about the war rather than about the peace that followed it.
+    """
+    out: dict[str, list[int]] = collections.defaultdict(list)
+    for row in rows:
+        if row.get("tool") not in ORDER_TOOLS:
+            continue
+        params = row.get("params") or {}
+        if str(params.get("item_type") or "").upper() != "UNIT":
+            continue
+        if role_of_item(params.get("item_name") or "") not in ARMY_ROLES:
+            continue
+        turn = row.get("turn") or 0
+        if before_turn is not None and turn >= before_turn:
+            continue
+        out[str(params.get("city_id") or "?")].append(turn)
+    return {city: sorted(turns) for city, turns in out.items()}
+
+
+def army_producing_cities(rows: list[dict], before_turn: int | None = None) -> dict[str, int]:
+    """How many army-role unit orders each city was asked for - A7's per-city measure.
+
+    Only `UNIT` orders in the establishment's army roles count (recon and civilians are not the army),
+    only cities with at least one such order appear, and `before_turn` counts strictly earlier turns
+    only: A7's claim is that two cities were producing **before the first city was kept**, so a city
+    that starts after the keep is not a second war city.
+    """
+    return {city: len(turns) for city, turns in _army_orders_by_city(rows, before_turn).items()}
 
 
 def upgrades(rows: list[dict]) -> list[tuple[int, str]]:
@@ -967,6 +1116,44 @@ def _survival_status(exceeded: bool, deadline_reached: bool) -> str:
     return HELD if deadline_reached else OPEN
 
 
+def gold_floor(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_gold_red: int = 10,
+) -> dict:
+    """The turns under the +10 gold floor, by the two measures that disagree about it.
+
+    The rule the criterion names is `carrying-capacity`, gated (`when: turn() >= 60` in
+    `prompts/checks/turn-checks.md`), so a horizon at or before that gate can only ever report zero red
+    turns - and zero is not evidence the army was paid for. Measured on A2: the rule never fired inside
+    its window, while `end_turn`'s own 10-turn review printed `carrying capacity: gold/turn +5.0 ...
+    BELOW the +10` at T19 and +7.0/+6.0 at T29/T39. The diary's own gold/turn is therefore reported
+    beside the rule's count. The horizon is the first city kept, or the attempt's own establishment
+    limit while nothing has fallen yet ("before the city falls", not the whole log).
+
+    Returns the raw numbers beside the two strings the generic verdict's P4 prints, so a question set
+    that needs the count itself (A6 compares it with A2's) does not have to parse its own prose.
+    """
+    keep_turn = min((turn for turn, _ in captures(rows)), default=None)
+    horizon = keep_turn if keep_turn is not None else expect_est
+    carry = [turn for turn in rule_turns(rows).get("carrying-capacity", []) if turn <= horizon]
+    covered = [turn for turn in by_turn if turn <= horizon]
+    below = sum(1 for turn in covered if (by_turn[turn].get("gold_per_turn") or 0) < 10)
+    last = _last_turn(by_turn)
+    return {
+        "keep_turn": keep_turn,
+        "horizon": horizon,
+        "red": len(carry),
+        "red_turns": carry,
+        "covered": len(covered),
+        "below": below,
+        "status": _survival_status(len(carry) >= expect_gold_red, last >= horizon),
+        "detail": f"{len(carry)} red turn(s) by the rule up to T{horizon}; the diary's own gold/turn "
+                  f"is below 10 on {below} of those {len(covered)} turn(s)",
+    }
+
+
 def verdict(
     by_turn: dict[int, dict],
     rows: list[dict],
@@ -995,15 +1182,8 @@ def verdict(
     est = establishment(by_turn)
     cap = captures(rows)
     keep_turn = min((t for t, _ in cap), default=None)
-    horizon = keep_turn if keep_turn is not None else expect_est
-    carry = [t for t in rule_turns(rows).get("carrying-capacity", []) if t <= horizon]
-    # The rule the criterion names is gated (`when: turn() >= 60` in `prompts/checks/turn-checks.md`), so
-    # a horizon at or before that gate can only ever report zero red turns - and zero is not evidence the
-    # army was paid for. Measured on A2: the rule never fired inside its window, while `end_turn`'s own
-    # 10-turn review printed `carrying capacity: gold/turn +5.0 ... BELOW the +10` at T19 and +7.0/+6.0 at
-    # T29/T39. The diary's own gold/turn is therefore reported beside the rule's count.
-    covered = [turn for turn in by_turn if turn <= horizon]
-    below = sum(1 for turn in covered if (by_turn[turn].get("gold_per_turn") or 0) < 10)
+    # The floor's two measures are `gold_floor`'s, so A5/A6/A7 read the same numbers this prints.
+    floor = gold_floor(by_turn, rows, expect_est, expect_gold_red)
     owned = first_role_turn(by_turn, "siege")
     ordered = first_order_turn(rows, "siege")
     early = max(1, expect_est * 3 // 4)
@@ -1028,16 +1208,449 @@ def verdict(
         ),
         (
             f"{ids[3]} gold floor red on <{expect_gold_red} turns",
-            _survival_status(len(carry) >= expect_gold_red, last >= horizon),
-            f"{len(carry)} red turn(s) by the rule up to T{horizon}; the diary's own gold/turn is "
-            f"below 10 on {below} of those {len(covered)} turn(s)",
+            floor["status"],
+            floor["detail"],
         ),
     ]
+
+
+# --------------------------------------------------------------------------- A5/A6/A7
+#
+# The A2 baseline these three attempts are compared against (`docs/experiments/002-attempt-A2.md`,
+# `docs/experiments/A2-final.json`), as the numbers the comparisons need. A2's establishment never
+# completed under the corrected table, so "5+ turns earlier" is read against the turn its **siege
+# train** was complete (T55, two Catapults owned) - the milestone A2 has and A5/A6 aim to beat - its
+# first **economy** (building or district) order **after that gate** was T55, the Granary, and it
+# declared war at T60. A2's first non-unit order of any kind was a Granary at **T28**, twenty turns
+# before Engineering existed; that is not the number A5's Q3 compares against, which is why the measure
+# is taken on the same side of the gate.
+A2_SIEGE_DONE = 55
+A2_FIRST_ECONOMY_ORDER = 55
+A2_WAR_OPEN = 60
+
+#: A2's red `carrying-capacity` count, which A6's Q4 is measured against: **10**, the count to T68 in
+#: `A2-final.json` and `002-attempt-A2.md` - the whole attempt, which is the same width as A6's own count
+#: (the rule is gated `when: turn() >= 60` and A2's log reads red on T59-T68). **`RETRO-2026-09-29.md`'s
+#: rule table records 6 for the same rule, and that is not a second measure**: it is the count inside A2's
+#: second session's own T41-T65 window, which the retro now says in as many words. An earlier draft of
+#: A6's mode used the 6; A6's brief compares against the ten, so this constant does too - the two sides of
+#: a comparison have to be the same width or the verdict is about the window rather than the strategy.
+A2_CARRY_RED = 10
+
+#: A5's marks: the establishment 5+ turns ahead of A2's T55 (so by T50), and the economy's first
+#: non-unit order no more than 5 turns behind A2's T55 (so by T60).
+A5_EARLY_SIEGE = 50
+A5_ECONOMY_DEADLINE = 60
+
+#: A6's marks: the first siege unit bought by T50, and the war opened by T55 - 5+ turns ahead of A2's
+#: T60.
+A6_EARLY_SIEGE = 50
+A6_WAR_DEADLINE = 55
+
+#: A7's mark: the first city kept by T80 (`docs/experiments/README.md`'s A7 window).
+A7_LATE_KEEP = 80
+
+
+def _q1_establishment(
+    generic: dict[str, tuple[str, str, str]], rows: list[dict], expect_est: int
+) -> tuple[str, str, str]:
+    """A5/A6/A7's Q1: the corrected table's deadline, with the pin's state when it was deviated.
+
+    The three new attempts ask the same first question, and an opening that did not match the task
+    file's pin makes the number **not comparable** with the attempt it is being compared to - so the pin
+    is printed beside the verdict, not only in the doctrine block a reader of the four answers may not
+    see. A2's and A3's verdict text is untouched; for A3 the deviation shows in the doctrine block.
+    """
+    detail = generic["P2"][2] + f"; falsified when T{expect_est} passes with a role still short"
+    pin = pin_check(rows)
+    if pin["first_deviation"] is not None:
+        detail += f"; PIN DEVIATED - {pin['note']}"
+    return (
+        f"Q1 establishment complete by T{expect_est} (corrected table)",
+        generic["P2"][1],
+        detail,
+    )
+
+
+def _generic_slots(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int,
+    expect_city: int,
+    expect_gold_red: int,
+) -> dict[str, tuple[str, str, str]]:
+    """The four generic slots, keyed by id, so a question set can take the ones it shares."""
+    return {
+        slot: (name, status, detail)
+        for slot, (name, status, detail) in zip(
+            ("P1", "P2", "P3", "P4"),
+            verdict(by_turn, rows, expect_est, expect_city, expect_gold_red),
+            strict=True,
+        )
+    }
+
+
+def verdict_a5(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, str, str]]:
+    """A5's four questions: Magnus' Groundbreaker, the chops into units instead of infrastructure.
+
+    One chop-for-units variable. Q1 is the corrected table's deadline, **Q2 is the variable** - the
+    establishment 5+ turns ahead of A2's T55 - Q3 is the cost it is expected to pay (a first non-unit
+    order no more than 5 turns behind A2's T55), and Q4 is the generic gold floor.
+    """
+    generic = _generic_slots(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    last = _last_turn(by_turn)
+    est = establishment(by_turn)
+
+    # Q2 - the variable: the establishment arrives 5+ turns earlier than A2's siege train at T55.
+    if est["turn"] is not None:
+        q2_status = _status(est["turn"] <= A5_EARLY_SIEGE, True)
+        q2_detail = (
+            f"the corrected table completed T{est['turn']}, against A2's siege train at "
+            f"T{A2_SIEGE_DONE}; held when <= T{A5_EARLY_SIEGE}, falsified by a later turn"
+        )
+    elif last >= A5_ECONOMY_DEADLINE:
+        q2_status = FALSIFIED
+        q2_detail = (
+            f"no turn to compare: the corrected table never completed by T{est['last_turn']} - A2's "
+            f"mark is T{A2_SIEGE_DONE} and T{A5_EARLY_SIEGE} has passed, so nothing arrived early"
+        )
+    else:
+        q2_status = OPEN
+        q2_detail = (
+            f"no turn to compare yet: the corrected table has not completed by T{est['last_turn']} "
+            f"(A2's mark is T{A2_SIEGE_DONE}, the deadline T{A5_EARLY_SIEGE}); open until "
+            f"T{A5_ECONOMY_DEADLINE}"
+        )
+
+    # Q3 - the cost: the first economy order **after the Engineering gate**, against A2's T55.
+    # Post-gate on purpose, and the measure's own history is why it is spelled out: an earlier draft of
+    # this mode read "the first non-unit order", which scored A2's **T28 Granary** as its economy answer
+    # - an order placed twenty turns before the train's tech existed, and not the choice this question is
+    # about. T55 is A2's first building-or-district order *after* its T48 gate; the two only agree if the
+    # measure is taken on the same side of the gate.
+    gate = engineering_gate(by_turn, rows)
+    landed = gate["engineering_turn"]
+    economy = next(
+        (
+            (turn, name)
+            for turn, name, kind in orders(rows)
+            if landed is not None and turn >= landed and str(kind).upper() in ("BUILDING", "DISTRICT")
+        ),
+        None,
+    )
+    if economy is not None:
+        q3_status = _status(economy[0] <= A5_ECONOMY_DEADLINE, True)
+        q3_detail = (
+            f"first economy order after the T{landed} gate: T{economy[0]} ({economy[1]}), against A2's "
+            f"T{A2_FIRST_ECONOMY_ORDER}; held when <= T{A5_ECONOMY_DEADLINE}, falsified by a later turn"
+        )
+    elif landed is None and last >= A5_ECONOMY_DEADLINE:
+        q3_status = FALSIFIED
+        q3_detail = (
+            f"no gate to measure against: Engineering had not landed by T{last}, so there is no "
+            f"post-gate economy order to compare (A2's was T{A2_FIRST_ECONOMY_ORDER})"
+        )
+    elif last >= A5_ECONOMY_DEADLINE:
+        q3_status = FALSIFIED
+        q3_detail = (
+            f"no building or district ordered since the T{landed} gate, by T{last}: "
+            f"T{A5_ECONOMY_DEADLINE} has passed with the economy never restarted (A2's first post-gate "
+            f"economy order was T{A2_FIRST_ECONOMY_ORDER})"
+        )
+    else:
+        q3_status = OPEN
+        q3_detail = (
+            f"no economy order yet at T{last}"
+            + (f" since the T{landed} gate" if landed is not None else ", and no gate has opened")
+            + f"; the deadline is T{A5_ECONOMY_DEADLINE}, against A2's T{A2_FIRST_ECONOMY_ORDER}"
+        )
+
+    q4 = generic["P4"]
+    return [
+        _q1_establishment(generic, rows, expect_est),
+        (
+            f"Q2 establishment 5+ turns earlier than A2's T{A2_SIEGE_DONE} (by T{A5_EARLY_SIEGE})",
+            q2_status,
+            q2_detail,
+        ),
+        (
+            f"Q3 the economy behind by <5 turns (first economy order after the gate, by "
+            f"T{A5_ECONOMY_DEADLINE})",
+            q3_status,
+            q3_detail,
+        ),
+        (
+            f"Q4 gold floor red on <{expect_gold_red} turns",
+            q4[1],
+            q4[2] + f"; falsified when the rule counts {expect_gold_red} or more",
+        ),
+    ]
+
+
+def verdict_a6(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, str, str]]:
+    """A6's four questions: the siege train is bought with gold, not produced.
+
+    Q1 is the corrected table's deadline, **Q2 is the variable** - the first siege unit *bought*, not
+    queued - Q3 is the war, expected 5+ turns ahead of A2's T60, and Q4 is the accepted cost: a red
+    `carrying-capacity` window **longer** than A2's, which only counts if the war really did open early.
+    """
+    generic = _generic_slots(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    last = _last_turn(by_turn)
+
+    # Q2 - the variable: a purchase row, not a production order.
+    purchases = siege_purchases(rows)
+    first_buy = purchases[0][0] if purchases else None
+    produced = first_order_turn(rows, "siege")
+    if first_buy is not None and first_buy <= A6_EARLY_SIEGE:
+        q2_status = HELD
+        q2_detail = (
+            f"the first siege unit was bought T{first_buy} ({purchases[0][1]}), inside "
+            f"T{A6_EARLY_SIEGE}; falsified by a later purchase"
+        )
+    elif first_buy is not None:
+        q2_status = FALSIFIED
+        q2_detail = (
+            f"the first siege purchase is T{first_buy} ({purchases[0][1]}), later than "
+            f"T{A6_EARLY_SIEGE}"
+        )
+    elif produced is not None:
+        q2_status = FALSIFIED
+        q2_detail = (
+            f"a siege unit was ordered on T{produced} and no siege purchase row exists in this log - "
+            f"the train was produced, so the variable was not executed"
+        )
+    elif last >= A6_EARLY_SIEGE:
+        q2_status = FALSIFIED
+        q2_detail = (
+            f"no siege purchase and no siege order by T{last}: T{A6_EARLY_SIEGE} has passed with the "
+            f"first siege unit not existing at all"
+        )
+    else:
+        q2_status = OPEN
+        q2_detail = (
+            f"no siege purchase yet at T{last} - the deadline is T{A6_EARLY_SIEGE}, and a purchase"
+            f" later than it, or a produced train with no purchase at all, falsifies the variable"
+        )
+
+    # Q3 - the war opens 5+ turns earlier than A2's T60.
+    war = war_declared(rows)
+    if war is not None:
+        q3_status = _status(war <= A6_WAR_DEADLINE, True)
+        q3_detail = (
+            f"war declared T{war} (the game's own WAR_REQUESTED reply), against A2's T{A2_WAR_OPEN}; "
+            f"held when <= T{A6_WAR_DEADLINE}"
+        )
+    elif last >= A2_WAR_OPEN:
+        q3_status = FALSIFIED
+        q3_detail = (
+            f"no war-declaration row exists in this attempt's log by T{last}: T{A6_WAR_DEADLINE} "
+            f"passed and so did A2's own T{A2_WAR_OPEN}, so nothing opened 5 turns earlier"
+        )
+    else:
+        q3_status = OPEN
+        q3_detail = (
+            f"no war-declaration row exists in this attempt's log yet (T{last}); the deadline is "
+            f"T{A6_WAR_DEADLINE} against A2's T{A2_WAR_OPEN}, and T{A2_WAR_OPEN} is where it becomes "
+            f"falsified"
+        )
+
+    # Q4 - the accepted cost: the red window has to run **longer** than A2's, and the war has to have
+    # opened inside the deadline for the trade to be the one that was predicted.
+    floor = gold_floor(by_turn, rows, expect_est, expect_gold_red)
+    red, horizon = floor["red"], floor["horizon"]
+    if war is not None and war > A6_WAR_DEADLINE:
+        q4_status = FALSIFIED
+        q4_detail = (
+            f"the war opened T{war}, later than T{A6_WAR_DEADLINE}, so the predicted trade was never "
+            f"made; {floor['detail']}"
+        )
+    elif war is None and last >= A6_WAR_DEADLINE:
+        q4_status = FALSIFIED
+        q4_detail = (
+            f"no war declaration by T{A6_WAR_DEADLINE}, so the price the variable pays cannot be the "
+            f"predicted one; {floor['detail']}"
+        )
+    elif war is None:
+        q4_status = OPEN
+        q4_detail = (
+            f"no war declaration yet at T{last}, so whether the cost was paid cannot be judged against "
+            f"A2's {A2_CARRY_RED} red turn(s); {floor['detail']}"
+        )
+    elif red > A2_CARRY_RED:
+        q4_status = HELD
+        q4_detail = (
+            f"the war opened T{war} by T{A6_WAR_DEADLINE} and {red} red turn(s) is longer than A2's "
+            f"{A2_CARRY_RED}; {floor['detail']}"
+        )
+    elif last >= horizon:
+        q4_status = FALSIFIED
+        q4_detail = (
+            f"the war opened T{war} by T{A6_WAR_DEADLINE}, but only {red} red turn(s) up to T{horizon} "
+            f"- not longer than A2's {A2_CARRY_RED}, so the purchase turned out free; {floor['detail']}"
+        )
+    else:
+        q4_status = OPEN
+        q4_detail = (
+            f"the war opened T{war} by T{A6_WAR_DEADLINE}; the red window runs to T{horizon} and the "
+            f"attempt stands at T{last}, so {red} red turn(s) is not final; {floor['detail']}"
+        )
+
+    return [
+        _q1_establishment(generic, rows, expect_est),
+        (
+            f"Q2 the first siege unit bought by T{A6_EARLY_SIEGE} (not produced)",
+            q2_status,
+            q2_detail,
+        ),
+        (
+            f"Q3 war declared by T{A6_WAR_DEADLINE}, against A2's T{A2_WAR_OPEN}",
+            q3_status,
+            q3_detail,
+        ),
+        (
+            f"Q4 a red gold-floor window longer than A2's {A2_CARRY_RED} turns",
+            q4_status,
+            q4_detail,
+        ),
+    ]
+
+
+def verdict_a7(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, str, str]]:
+    """A7's four questions: two war cities instead of one.
+
+    Q1 is the corrected table's deadline, **Q2 is the variable** - two cities each producing an
+    army-role unit *before the first city is kept* - Q3 is the first keep by T80, and Q4 is the generic
+    gold floor. Q2's pass condition is the count of cities; the stricter share measure is printed beside
+    it and deliberately not the pass condition.
+    """
+    generic = _generic_slots(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    last = _last_turn(by_turn)
+    keep_turn = min((turn for turn, _ in captures(rows)), default=None)
+
+    # Q2 - the variable: the second city has to contribute before the first city is kept.
+    counts = army_producing_cities(rows, keep_turn)
+    firsts = {city: turns[0] for city, turns in _army_orders_by_city(rows, keep_turn).items()}
+    ordered = sorted(counts, key=lambda city: firsts[city])
+    per_city_text = (
+        ", ".join(f"city {city} {counts[city]} (first T{firsts[city]})" for city in ordered)
+        if ordered
+        else "no city has ordered an army-role unit"
+    )
+    second_text = (
+        f"the second city's first army order is T{firsts[ordered[1]]} (city {ordered[1]})"
+        if len(ordered) >= 2
+        else "there is no second city's first army order to report"
+    )
+    window = (
+        f"orders placed before the keep on T{keep_turn}"
+        if keep_turn is not None
+        else f"no city was kept by T{last}, so every order in the log counts"
+    )
+    stricter = military_city_spread(rows)["war_cities"]
+    q2_status = _status(len(counts) >= 2, keep_turn is not None or last >= A7_LATE_KEEP)
+    q2_detail = (
+        f"{per_city_text}; {second_text}; window: {window}; the stricter secondary measure (army "
+        f"orders at least half of that city's orders) names "
+        f"{', '.join(stricter) if stricter else 'none'} - not the pass condition"
+    )
+
+    # Q3 - the first city is kept by T80.
+    if keep_turn is not None:
+        q3_status = _status(keep_turn <= A7_LATE_KEEP, True)
+        q3_detail = (
+            f"the first city was kept T{keep_turn} (KEEP| in the reply); held when <= "
+            f"T{A7_LATE_KEEP}, falsified by a later keep"
+        )
+    elif last >= A7_LATE_KEEP:
+        q3_status = FALSIFIED
+        q3_detail = (
+            f"no KEEP| row in this attempt's log by T{last}: T{A7_LATE_KEEP} has passed with no city "
+            f"taken"
+        )
+    else:
+        q3_status = OPEN
+        q3_detail = f"no KEEP| row yet at T{last}; the deadline is T{A7_LATE_KEEP}"
+
+    q4 = generic["P4"]
+    return [
+        _q1_establishment(generic, rows, expect_est),
+        (
+            "Q2 two cities produce army units before the first city is kept",
+            q2_status,
+            q2_detail,
+        ),
+        (
+            f"Q3 the first city kept by T{A7_LATE_KEEP}",
+            q3_status,
+            q3_detail,
+        ),
+        (
+            f"Q4 gold floor red on <{expect_gold_red} turns",
+            q4[1],
+            q4[2] + f"; falsified when the rule counts {expect_gold_red} or more",
+        ),
+    ]
+
+
+#: `--questions` names one of the question sets, and each is a function with the same signature.
+#: There is deliberately no `a4`: A4 uses A3's question set, because its variable moves the same
+#: wall-phase question to a different city.
+QUESTION_SETS = {
+    "a2": verdict_a2,
+    "a3": verdict_a3,
+    "a5": verdict_a5,
+    "a6": verdict_a6,
+    "a7": verdict_a7,
+}
+
+
+def asked_questions(
+    questions: str,
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+    ids: tuple[str, ...] = ("P1", "P2", "P3", "P4"),
+) -> list[tuple[str, str, str]]:
+    """The question set `--questions` names, answered from the record.
+
+    `generic` is `verdict()` itself - it takes the caller's own `--ids` - and every named set answers
+    four questions of its own from the same record, under the same limits.
+    """
+    setter = QUESTION_SETS.get(questions)
+    if setter is None:
+        return verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
+    return setter(by_turn, rows, expect_est, expect_city, expect_gold_red)
 
 
 def print_doctrine(by_turn: dict[int, dict], rows: list[dict]) -> None:
     """The doctrine's mechanical claims, and whether the diary's own account matches the record."""
     print("\n-- doctrine checks (from the log; prompts/tactics/01) --")
+
+    # The pinned opening first: every attempt's numbers are only comparable with the attempt it is
+    # compared to if the first four orders are the ones the task file promised.
+    pin = pin_check(rows)
+    state = "DEVIATED" if pin["first_deviation"] else ("held" if pin["matched"] else "undecided")
+    print(f"  PIN opening: {state} - {pin['note']}")
 
     forbidden = forbidden_orders(rows)
     if forbidden:
@@ -1153,12 +1766,8 @@ def print_verdict(
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")
-    results = (
-        verdict_a2(by_turn, rows, expect_est, expect_city, expect_gold_red)
-        if questions == "a2"
-        else verdict_a3(by_turn, rows, expect_est, expect_city, expect_gold_red)
-        if questions == "a3"
-        else verdict(by_turn, rows, expect_est, expect_city, expect_gold_red, ids)
+    results = asked_questions(
+        questions, by_turn, rows, expect_est, expect_city, expect_gold_red, ids
     )
     for name, status, detail in results:
         print(f"  {status:<9s} {name}  [{detail}]")
@@ -1393,11 +2002,15 @@ def main() -> int:
     ap.add_argument("--ids", default="P1,P2,P3,P4",
                     help="the attempt's own prediction labels for the verdict, comma separated "
                          "(default P1,P2,P3,P4: A1's; A2's are Q1,Q2,Q3,Q4)")
-    ap.add_argument("--questions", choices=("generic", "a2", "a3"), default="generic",
+    ap.add_argument("--questions", choices=("generic", "a2", "a3", "a5", "a6", "a7"), default="generic",
                     help="which four questions to answer: the generic P1-P4 slots (default), A2's own "
                          "Q1-Q4 (its Q2 is the ordering after Engineering, which no generic slot "
-                         "measures), or A3's own Q1-Q4 (its Q2 is the wall phase - whether a city's "
-                         "wall pool was ever above zero and how many turns it took to breach)")
+                         "measures), A3's own Q1-Q4 (its Q2 is the wall phase - whether a city's wall "
+                         "pool was ever above zero and how many turns it took to breach), A5's "
+                         "(Groundbreaker: a 5+ turn earlier establishment against the economy), A6's "
+                         "(the train bought with gold, at the cost of a longer gold-floor window) or "
+                         "A7's (two war cities before the first keep). There is deliberately no 'a4': "
+                         "A4 uses A3's question set")
     ap.add_argument("--run", help="keep one or more sessions' rows (comma separated when an attempt "
                                   "spans a resume); attempts share a game key")
     ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
@@ -1487,16 +2100,15 @@ def main() -> int:
             "first_military_order": first_military_order(rows),
             "self_reports": self_reports(by_turn),
         },
+        # The pinned opening travels with every snapshot: an attempt whose first four orders are not
+        # the promised ones is not comparable with the attempt it is being compared to, and the fact
+        # belongs in the record rather than in the prose that asked for the pin.
+        "pin": pin_check(rows),
         "verdict": [
             {"prediction": name, "status": status, "detail": detail}
-            for name, status, detail in (
-                verdict_a2(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
-                if args.questions == "a2"
-                else verdict_a3(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
-                if args.questions == "a3"
-                else verdict(
-                    by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red, args.ids
-                )
+            for name, status, detail in asked_questions(
+                args.questions, by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red,
+                args.ids,
             )
         ],
     }
