@@ -112,13 +112,35 @@ The doctrine's testable claims, each with the file that makes it:
 | Attempt | The one variable | Hypothesis to falsify |
 |---|---|---|
 | **A1** | none - the doctrine as written | the establishment is complete by T60 and the first city falls by T80 |
-| **A2** | Encampment after the second city instead of before it | two cities' compounding beats the earlier general's aura: first city falls no later than A1 |
-| **A3** | Magnus' Groundbreaker: chops go into units instead of infrastructure | the establishment arrives 5+ turns earlier and the economy is behind by less than 5 turns at T60 |
-| **A4** | the siege train is bought with gold, not produced | the war opens 5+ turns earlier at the cost of a negative `carrying-capacity` window |
-| **A5** | two war cities instead of one | the second city's production outweighs the lost compounding |
+| **A2** | **the target's distance alone** - same save, same doctrine, but the objective is the nearest *city* (a city-state inside a dozen tiles) instead of the nearest rival capital, which this map puts 33 tiles away | the siege half becomes reachable inside a sixty-turn window once the target is inside ~12 tiles: siege 2/2 and the first city kept by T80 |
+| **A3** | Encampment after the second city instead of before it | two cities' compounding beats the earlier general's aura: first city falls no later than A2 |
+| **A4** | Magnus' Groundbreaker: chops go into units instead of infrastructure | the establishment arrives 5+ turns earlier and the economy is behind by less than 5 turns at T60 |
+| **A5** | the siege train is bought with gold, not produced | the war opens 5+ turns earlier at the cost of a negative `carrying-capacity` window |
+| **A6** | two war cities instead of one | the second city's production outweighs the lost compounding |
 
 A variable is only worth an attempt if the hypothesis can be **falsified by a number** in section 4.
 An attempt whose hypothesis cannot fail is not run.
+
+**A2 was re-scoped at T37 of A1, and that is the experiment working rather than changing its mind.**
+A1's mid-window finding is that **the map, not the plan, decides whether the capture half is answerable
+at all**: the only rival capital is 33 tiles west behind five city-states, no rival has been met by T37,
+and the siege half of the establishment cannot start before Engineering lands around T42 - so no amount
+of production discipline inside A1 could produce a city by T80 (the evidence is in
+`001-attempt-A1.md`). Running a *plan* variation next would stack a second unanswerable window on the
+first. A2 therefore changes **one thing that makes the question answerable** - the target's distance -
+and holds everything else: the same save, the same doctrine as written, the same executor. Where the
+plan variations go is after the question is answerable, not before.
+
+Two consequences to write into A2's task file rather than discover in it:
+
+- **A city-state is a legitimate target for this experiment and not for the standing directive.** The
+  preset says city-states are not conquest targets because a *victory* needs the rival capitals; a
+  production experiment needs a city it can reach. That is exactly what a task file's `overrides:` line
+  is for, so A2's file must say so explicitly, and the review must not read the deviation as drift.
+- **The nearest city has to be measured first, not assumed.** `get_map_area` and the map dump both give
+  the coordinates; the ruler for "how many turns away" is `get_staging_plan`, and the deadline is
+  written from its answer. That is `AGENTS.md`'s existing rule - *count the turns from the queue, not
+  from the calendar* - applied to the target instead of to the build.
 
 ## 4. What is measured, and when
 
