@@ -617,3 +617,73 @@ production.
 
 The records are `docs/experiments/A5-final.json` (the snapshot), `docs/experiments/005-attempt-A5.md`
 (the attempt), and section 7 of `docs/experiments/RETRO-2026-09-29.md` (the comparison with A4).
+
+## Task 038 - A7, two war cities instead of one: retired `--done --turn 60`
+
+**The attempt ended on the first half of its own finish line: 耶路撒冷 was KEPT at T60**, twenty turns
+inside Q3's T80 and earlier than A4's T65, which had been the programme's previous best. The capture
+resolved inside the AI turn, so no `KEEP|` and no `CAPTURE_MOVE ... CITY TAKEN` ever entered the log -
+**the city list is the confirmation** (`get_cities` at T60 reads `3 cities`, with `Jerusalem (pop 4)
+[id:196610]`, a Warrior garrison, loyalty 67/100 at +17.0/turn, a `HOLY_SITE` at (49,22) and a pillaged
+`MONUMENT`+`GRANARY`), and the T60 notifications read `Capital Captured` and `Defeated!`. **The
+instrument cannot see any of that**: `experiment-report.py` reads the keep from a capture reply, so
+`A7-final.json` and the `--compare` line both print `first_keep none` for A7 - and A6's identical
+`none` must be read the same way, as "no reply in the log".
+
+**The variable did what it was proposed to do.** Chengdu (131073), founded **T21** by the pinned
+Settler with `UNIT_SLINGER` ordered **the same turn**, ran an army queue from its first order and
+carried **12 of the empire's 27 army orders (41%, against Xi'an's 15)**. The train was therefore built
+in parallel for the first time in the programme: **first Catapult owned T51 (Xi'an), second owned T54
+(Chengdu)**, and the corrected table was **COMPLETE at T54** - `siege 2 melee 6 anticav 1 ranged 10
+cavalry 2 recon 2`, six turns inside Q1's T60 and **joint-earliest with A4 and A6**. The parallelism
+was worth **about three turns, not half**: built sequentially in the faster city alone the train would
+have landed `T45 + 6 + 6 = T57`, and it landed T54, because Chengdu's Catapult took 9 turns against
+Xi'an's 6 and the date is set by the slower gun - **which is what the attempt predicted before either
+order was placed.**
+
+**The verdict is `HELD / HELD / HELD / FAILED`** on Q1-Q4 (with Q4 nominally held on the rule's own
+measure and failed on the diary's): the establishment completed T54, both cities held army-role orders
+before the keep, the city was kept at T60, and the gold floor read below +10 on **all sixty turns** of
+the diary's measure (the rule's own `carrying-capacity` only begins at T60 and was red 1 of 1:
+`gold/turn +8.0 with military 272`). **The cost landed in exactly one place**: science at T40 was
+*higher* than A6's (6.3 against 5.4 - Pingala's `Researcher` promotion, taken T44, moved Engineering to
+T45, one turn before A6's T46 siege order) but **gold/turn at T40 was 6.1 against A6's 13.4, less than
+half**, and `Conscription` (-1 gold maintenance per unit, taken T50) was not enough. The lost
+compounding is real rather than asserted - Chengdu's alternative was a Monument (~20 turns at its T21
+production, ~T41) or a Granary (~22 turns, ~T43) and it had the production to finish either inside the
+window - and the empire ended with `CHECK FAILED [idle-district-slot]`, 2 districts for pop 11 against
+3 allowed.
+
+**Why the assault succeeded where A5's and A6's failed**, both of which had attacked the same city and
+both of which found `walls: none` too: **two guns on the ring rather than one** (A6's signature failure
+was `SIEGE FIRE: 1/2` on most firing turns - A7's pool fell monotonically, `200 -> 186 (T56-T58) -> 99
+(T59) -> 81 (T60) -> kept`); **a melee unit kept adjacent and attacking the city every turn**, which on
+a wall-less city reads `Est damage to attacker: ~0`; and **four Slinger -> Archer upgrades for 40 gold
+each at T51**, which is the cheapest power in the record, because a Slinger adjacent to its target is
+resolved as a **melee attack at CS 5** and dies (measured at T45, when one did exactly that).
+
+**What it does not fix, and hands on.** The supply line never passed **3/6 cut** (`CHECK FAILED
+[cut-the-supply]` fired every turn, naming (49,21), (49,22), (49,23)) - A7 simply out-damaged the ~20
+heal, which the rule itself calls the more expensive route. **`get_staging_plan` assigns ring tiles by
+distance and not by line of sight**: the d2 tile **(51,20) answered `NO_LOS`**, so one of the four
+pre-war firing positions was dead ground. Losses were one Archer (killed in the AI turn at (51,21)) and
+one Slinger. **The 18 self-report mismatches the instrument reports are a convention and not a drift** -
+the diary wrote `ranged 4/4` while the record held ten ranged units and `recon 1/1` while it held two
+Scouts, and **every mismatch runs in the conservative direction**, so no A7 claim overstates the army;
+A6 had no surplus to under-count and so recorded zero.
+
+**What the programme knows after A7.** The production half of the doctrine is answered on two axes
+rather than one: A6 showed gold can buy the first gun earlier than production can, and A7 shows a second
+war city can build the second gun in parallel - for a joint-earliest establishment (T54) and the
+programme's first city kept (T60). **The next variable is not another production arm**: A7's ledger puts
+the cost on the cash line and its siege log puts the remaining inefficiency in the supply cut and the
+ring's line of sight, so **the revision this supports is `tactics/08`'s cash rule and `tactics/04`'s LOS
+check, not `tactics/01`'s table**, which three consecutive attempts have now filled on exactly T54.
+
+The records are `docs/experiments/A7-final.json` (the snapshot), `docs/experiments/007-attempt-A7.md`
+(the attempt), and section 9 of `docs/experiments/RETRO-2026-09-29.md` (the comparison with A6).
+
+**Note on this file's coverage:** the entry above A7's is A5's (task 036); **A6 (task 037) has no
+history entry here**, so the file jumps from A5 to A7. A6's measurements are in
+`docs/experiments/006-attempt-A6.md`, `docs/experiments/A6-final.json` and section 8 of the retro, and
+this gap is recorded rather than papered over.

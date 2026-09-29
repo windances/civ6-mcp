@@ -1,4 +1,4 @@
-# Attempt A7 - two war cities instead of one
+﻿# Attempt A7 - two war cities instead of one
 
 **Status: DONE - a city was kept at T60**, twenty turns inside Q3's T80 deadline, by the session
 `divine-amber-outpost-82`, played from the experiment's shared start
