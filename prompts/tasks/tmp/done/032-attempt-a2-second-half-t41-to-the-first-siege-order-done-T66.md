@@ -99,3 +99,10 @@ it is the gate that both attempts died on.
      at: 2026-09-29T17:01:25+08:00
      chinese backup: prompts/tasks/cn/032-attempt-a2-second-half-t41-to-the-first-siege-order.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 032 --done --turn 66 --note "the first siege order was read at T48 (both Catapults, before any economy order); the assault continues under 033"
+     at: 2026-09-29T17:35:43+08:00
+     status: done at T66
+     chinese backup: prompts/tasks/cn/032-attempt-a2-second-half-t41-to-the-first-siege-order.cn.md
+-->
