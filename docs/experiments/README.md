@@ -115,9 +115,21 @@ The doctrine's testable claims, each with the file that makes it:
 | **A2** | **the target's distance alone** - same save, same doctrine, but the objective is the nearest *city* (a city-state inside a dozen tiles) instead of the nearest rival capital, which this map puts 33 tiles away | the siege half becomes reachable inside a sixty-turn window once the target is inside ~12 tiles: siege 2/2 and the first city kept by T80 |
 | **A3** | **the target's defences** - a *walled* city, everything else held (same doctrine, same save family, the corrected table) | the train's wall phase, which A2 never ran because its target read `walls: none`, changes the arithmetic in a measurable way: the first city kept **no earlier** than A2's T68 and **no later than T80**, with the wall pool's turn count on the record |
 | **A4** | Encampment after the second city instead of before it | two cities' compounding beats the earlier general's aura: first city falls no later than A3 |
-| **A5** | Magnus' Groundbreaker: chops go into units instead of infrastructure | the establishment arrives 5+ turns earlier and the economy is behind by less than 5 turns at T60 |
-| **A6** | the siege train is bought with gold, not produced | the war opens 5+ turns earlier at the cost of a negative `carrying-capacity` window |
+| **A5** | **Magnus in the war city** - his base ability Groundbreaker (+50% to feature removals) with the chops going into units instead of infrastructure | the establishment arrives 5+ turns earlier than A2's T55 completion and the economy is behind by less than 5 turns at T60 |
+| **A6** | **the first siege unit is bought with gold, not produced** - the arithmetic below allows no more than one | the first siege unit is in hand before A2's T53 completion, funded deliberately out of a treasury that reached 243 at T40 and 274 at T50 against a 320g price; the train is complete no later than A2's T55, and the purchase's cost shows as a longer negative `carrying-capacity` window |
 | **A7** | two war cities instead of one | the second city's production outweighs the lost compounding |
+
+**A6's claim was cut to its arithmetic before the attempt was published** (2026-09-29), and the cut is part
+of the finding. The design's first form - "the siege train is bought with gold" - cannot happen on this
+start: `UNIT_CATAPULT` is 120 production and **buy: 320g** (A2's own T68 production read), while A2's
+treasury reached **243.4 at T40** and **274.4 at T50** on 5-9 g/turn with no improved luxury to sell, so one
+purchase is only just reachable at T48-T50 and **two (640g) are arithmetically impossible before about
+T70**. A6 therefore buys the **first** unit and produces the second, and its claim is a five-turn gain on one
+unit rather than a five-turn-earlier war. This is A1's "P2 impossible by arithmetic" arriving one attempt
+later and one level down, and it was found by pre-flight arithmetic rather than at hour three. **A4-A7 also
+compare a war's opening turn against the previous attempt, not against A2**: A2's T60 included six turns
+lost to the city-state war-declaration bug that `0f214eb` fixed before A3 ran, so A2 is no longer a clean
+war-timing baseline - the fixed tool is part of what A3 onward plays with.
 
 **A3 was re-scoped after A2** (2026-09-29), and for the same reason A2 was re-scoped after A1: the
 question the attempt was built to ask must be *askable*. A2 held H1 and took its city, but its target had
@@ -139,7 +151,7 @@ is the expensive part of an attempt and it should be no longer than the question
 | A3 | the wall phase: the wall pool's turn count, and the keep inside T68-T80 | a walled city kept, or **T110** (the walled target may not exist before then) |
 | A4 | the capture turn, Encampment before vs after the second city | a city kept, or **T110** - its number *is* the capture turn |
 | A5 | the establishment turn against A2's T48/T53/T55, and the economy at T60 | a city kept or **T70**: both numbers exist by the establishment plus one ten-turn review |
-| A6 | the turn the war opens (the train paid for with gold) | a city kept or **T70**: the question is answered the turn the second Catapult is bought |
+| A6 | **the turn the first siege unit is bought**, and the train's completion against A2's T55 | a city kept or **T70**: the question is answered the turn the first Catapult is bought |
 | A7 | whether a second war city's production outweighs the lost compounding | a city kept or **T110**: the second city has to contribute before the number exists |
 
 A window shorter than the question is what A1's arithmetic note and A2's T40 checkpoint both caught; a
