@@ -379,16 +379,38 @@ def test_attribute_diary_names_a_turn_it_cannot_tell_apart():
             _diary_row(4, "2026-09-29T06:02:00+00:00", military=21),
         ]
     }
-    by_turn, ambiguous = report.attribute_diary(both_inside, windows)
-    assert by_turn == {} and ambiguous == [4]
+    by_turn, unattributed = report.attribute_diary(both_inside, windows)
+    assert by_turn == {} and unattributed == [4]
 
     # A turn the session's log never covered is not attributed either: no window, no answer.
-    by_turn, ambiguous = report.attribute_diary({9: [_diary_row(9, "2026-09-29T06:01:00+00:00")]}, windows)
-    assert by_turn == {} and ambiguous == [9]
+    by_turn, unattributed = report.attribute_diary({9: [_diary_row(9, "2026-09-29T06:01:00+00:00")]}, windows)
+    assert by_turn == {} and unattributed == [9]
 
     # A single row inside its window is the ordinary case.
-    by_turn, ambiguous = report.attribute_diary({4: [both_inside[4][0]]}, windows)
-    assert ambiguous == [] and by_turn[4]["military"] == 20
+    by_turn, unattributed = report.attribute_diary({4: [both_inside[4][0]]}, windows)
+    assert unattributed == [] and by_turn[4]["military"] == 20
+
+
+def test_attribute_diary_rejects_the_nearest_row_when_it_is_another_session_s():
+    """A2's first T40 snapshot: A2's own row was not written yet, so the nearest row was A1's.
+
+    The window was A2's T40 (06:45:04-06:45:06, three calls) and the rows in the file were A1's T40 at
+    05:54:36 and nothing else, so "nearest" read A1's science 7.9 / military 139 / faith 185 into A2's
+    record - where A2's own row, written 22s later, says 5.9 / 156 / 53.8. Distance is not evidence:
+    a row minutes from the window belongs to another session, whatever else the file holds.
+    """
+    windows = {40: (report._epoch("2026-09-29T06:45:04+00:00"), report._epoch("2026-09-29T06:45:06+00:00"))}
+    a1_only = {40: [_diary_row(40, "2026-09-29T05:54:36+00:00", science=7.9, military=139, faith=185.2)]}
+    by_turn, unattributed = report.attribute_diary(a1_only, windows)
+    assert by_turn == {} and unattributed == [40]  # named and left out, not filled with A1's numbers
+
+    # The session's own row, written just after its last call of that turn, is inside the slack.
+    a2_row = _diary_row(40, "2026-09-29T06:45:28+00:00", science=5.9, military=156, faith=53.8)
+    by_turn, unattributed = report.attribute_diary(
+        {40: a1_only[40] + [a2_row]}, windows
+    )
+    assert unattributed == []
+    assert (by_turn[40]["science"], by_turn[40]["military"]) == (5.9, 156)
 
 
 def test_attribute_diary_falls_back_to_the_session_span():
@@ -405,6 +427,25 @@ def test_attribute_diary_falls_back_to_the_session_span():
     # Without the span there is nothing to attribute against, so the turn is reported, not invented.
     by_turn, ambiguous = report.attribute_diary(candidates, {}, None)
     assert by_turn == {} and ambiguous == [20]
+
+
+def test_the_cavalry_role_carries_the_game_s_cavalry_tag():
+    """A2 built a Heavy Chariot the role map could not see, so its establishment cavalry slot read 0/1.
+
+    The authority is the game's own `UNITTYPE_CAVALRY` rows in `Units.xml` (its `FormationClass` column
+    is too coarse). The same table tags those units `MELEE` as well, so melee cannot be "everything
+    tagged melee" - it stays the curated upgrade chain, and a cavalry unit must count **once**.
+    """
+    counts = report.role_counts({"HEAVY_CHARIOT": 1, "WARRIOR": 2})
+    assert counts.get("cavalry") == 1
+    assert counts.get("melee") == 2  # the Chariot is not also a melee unit
+    assert sum(counts.values()) == 3  # every unit lands in exactly one role
+    # The generic cavalry line the game tags CAVALRY, as of this checkout's role map.
+    for unit in ("HORSEMAN", "COURSER", "KNIGHT", "CUIRASSIER", "CAVALRY", "TANK", "MODERN_ARMOR"):
+        assert report.role_counts({unit: 1}).get("cavalry") == 1, unit
+    # The anti-cavalry line upgrades into two more names than it had.
+    for unit in ("SPEARMAN", "PIKEMAN", "PIKE_AND_SHOT", "AT_CREW", "MODERN_AT"):
+        assert report.role_counts({unit: 1}).get("anticav") == 1, unit
 
 
 def test_compare_header_names_income_not_the_treasury(tmp_path, capsys):

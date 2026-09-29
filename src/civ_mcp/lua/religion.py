@@ -60,6 +60,15 @@ def build_choose_pantheon(belief_type: str) -> str:
     granted, and the empire was left at **-16 faith** - a pantheon nobody paid for. The threshold is
     the game's own `RELIGION_PANTHEON_MIN_FAITH`
     (`Base/Assets/Gameplay/Data/GlobalParameters.xml:475`, value 25) rather than a number written here.
+
+    **`tonumber` is load-bearing** (measured 2026-09-29, attempt A2 at T21): in this build the
+    parameter's `.Value` column comes back as a **string**, so `faith < minFaith` raised
+    `operator < is not supported for number < string` on every call and the tool could not found a
+    pantheon at all - a guard that refuses everything is not a guard. Two notes for whoever tunes it
+    next: the value is the **standard-speed** cost, while the game itself offers the pantheon earlier
+    on Quick (25 x 0.67, about 17 faith - which is when A2's prompt actually appeared), so this check
+    is conservative on faster speeds; and the real protection against a negative balance is that the
+    operation is requested only after the comparison, which the ordering is what keeps.
     """
     return f"""
 local me = Game.GetLocalPlayer()
@@ -67,7 +76,7 @@ local pReligion = Players[me]:GetReligion()
 if pReligion:GetPantheon() >= 0 then {_bail("ERR:ALREADY_HAS_PANTHEON|You already have a pantheon")} end
 local belief = GameInfo.Beliefs["{belief_type}"]
 if belief == nil then {_bail(f"ERR:BELIEF_NOT_FOUND|{belief_type}")} end
-local minFaith = GameInfo.GlobalParameters["RELIGION_PANTHEON_MIN_FAITH"].Value
+local minFaith = tonumber(GameInfo.GlobalParameters["RELIGION_PANTHEON_MIN_FAITH"].Value)
 local faith = pReligion:GetFaithBalance()
 if faith < minFaith then {_bail_lua('"ERR:NOT_ENOUGH_FAITH|faith " .. faith .. " < " .. minFaith')} end
 local params = {{}}

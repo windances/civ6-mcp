@@ -111,14 +111,67 @@ the new one.
 
 ## Mid-window review (end of T40) - written when the session stops there
 
+Written at the T40 stop from `docs/experiments/A2-T40.json` and from the session's own diary rows.
+A1's figures beside A2's come from the same instrument over `A1-T40.json`.
+
 | question | answer |
 |---|---|
-| establishment turn so far (Q1 wants <= T60) | not yet measured |
-| the army's start, the siege order, and the first economy order after Engineering (Q2) | not yet measured |
-| the economy at T20 / T40, against A1's | not yet measured |
-| `carrying-capacity` red turns so far (Q4 allows < 10) | not yet measured |
-| contact: has the target been seen, and at what distance does `get_staging_plan` put it | not yet measured |
-| verdict so far on Q1-Q4 | not yet measured |
+| establishment turn so far (Q1 wants <= T60) | **not reached at T40.** The record reads **siege 0/2**, melee 2/2 (four Warriors held), ram 0/1, ranged **4/4**, **cavalry 1/1** (first cavalry **T38**), recon 0/2. The screens were complete on **T28**, and the siege half is at zero with Engineering still ~10 turns out. **The diary's own `ESTABLISHMENT:` lines disagree with the record 11 times** (T29-T40, always `melee claimed 2 vs 3-4 held`). One column of that disagreement was the **instrument's** fault and is now fixed: the role map did not know `UNIT_HEAVY_CHARIOT`, so the Heavy Chariot was invisible to every role and the executor's own `cavalry 1` was scored against a map reading 0 - the game's own `UNITTYPE_CAVALRY` rows in `Units.xml` are the authority, the map now carries the unit, and re-measuring A2's T40 snapshot moved the cavalry slot from `0/1` to `1/1` and dropped the cavalry entries from the mismatch list. The eleven that remain are the executor's: it under-counted its own melee, and the line follows task 031's table where melee is a target of 2. The record wins; the next stretch's line must print both the table count and the held count. |
+| the army's start, the siege order, and the first economy order after Engineering (Q2) | army start **T1** (`UNIT_WARRIOR`); first siege order **never**; first building order `BUILDING_GRANARY T28` - and it was **refused** (`CANNOT_PRODUCE`, Pottery was never researched), so the log holds an order and the city holds no building. Nothing was ordered after Engineering because Engineering has not landed: **Q2 is untested at T40, not violated.** |
+| the economy at T20 / T40, against A1's | T20: science **4.0 vs A1 4.5**, gold/turn 5.0 vs 5.0. T40: science **5.9 vs 7.9**, gold/turn **8.9 vs 6.0**, culture 6.0 vs 4.3, military **156 vs 139**, pop 9 vs 8, cities 2 vs 2, **improvements 5 vs 2**, **districts 0 vs 1**. A2 is behind on science and ahead on gold, improvements and army - it bought screens and mines where A1 bought a Campus. |
+| `carrying-capacity` red turns so far (Q4 allows < 10) | the instrument counts **0 red turns** to T40 (gold/turn 5.0 from T1 to ~T25, **8.9** at T40), but both 10-TURN REVIEWS printed the floor **red** over the same turns (`+7.0` at T30 and `+6.0` at T40, "with the army counted"). The two measures disagree; the record should carry both, and Q4's answer depends on which one is asked. |
+| contact: has the target been seen, and at what distance does `get_staging_plan` put it | 耶路撒冷 **(50,22) was seen at T10** and met (Religious city-state, player 6, one envoy held); it is ~5-6 tiles from A2's forward units and 10 from 西安. At T40 `get_staging_plan(50,22)` returned **18 ring tiles, 1 placed, 3 unplaced**, the Heavy Chariot and two Slingers `TOO FAR (d9-d12)`, **`supply hexes cut 0/6`**, and **`ASSAULT OPENS ... with 0 shooter(s) in position`**. Its `arrive T+1` column is not credible (it prints T+1 for a unit 5-6 tiles out), so the deadline is written from the ring distances and not from that column. Walls, HP and garrison: **still unread by any tool** after 40 turns. |
+| verdict so far on Q1-Q4 | **OPEN / untested so far / OPEN / held-so-far.** Q1 is open on the clock and dead by arithmetic (a first Catapult ~T60 leaves no second one inside the attempt); **Q2 is untested so far**, not violated - Engineering had not landed by T40 (`techs_completed` 2 = Mining and The Wheel; the session's own T30 hypothesis put Engineering at T44-T48), and this T40 row is a **mid-window checkpoint, not the attempt's end**: task 031 runs to *a city is kept, or T80* with `expires: T90`, so Q2's answer arrives around T60-T70. Q3 is open but was never approached (no recon unit, exploration 7%, `ASSAULT OPENS ... with 0 shooter(s) in position`); Q4 is the one prediction the attempt supports so far. |
 
-Then one paragraph, and only one: what this window bought that A1's could not, and the single thing the
-next stretch changes.
+**The one paragraph.** What this window bought that A1's could not is a **testable Q2 and a completed
+screen establishment**: at T40 A2 holds four Slingers, four Warriors, a Heavy Chariot, five improvements
+and a second city on the army's axis, against A1's four Slingers, two Warriors, one Campus and two
+improvements - and, the point of the attempt, it has a named city **ten tiles away, seen and met**, where
+A1 had met nobody at all and was 33 tiles from its objective. What it did not buy is the siege half, for
+the reason A1's arithmetic predicted and this target could not change: Engineering is a 134-science gate
+with no eureka in this plan, science runs at 5-6/t, and two Catapults then cost about twenty turns of one
+city's output. **So the one thing the next stretch changes is the sequencing: the march starts at ~T45,
+before the siege exists, toward a rally point three tiles east of 耶路撒冷's ring, so the army is formed
+and the shooting opens the turn the Catapults arrive** instead of ten turns after it. The target's
+distance was never the constraint; the Engineering beeline is - and that is the answer A2 was built to
+be able to give.
+
+## One tooling finding A2 produced, with its numbers
+
+At T35 a melee attack was ordered from an adjacent tile and the reply began `enemy HP:72 -> 72/100` - the
+**pre-attack** value echoed back - while the read immediately after also showed 72 HP and still offered
+`>> CAN ATTACK`. The session concluded the attack had silently failed, could not close the turn past the
+pending-attack gate, and ended it with `skip_remaining_units(force=True)`, **discarding a legal attack**.
+The next turns' reads show the damage had landed: the barbarian Warrior went `72 -> 50 -> 20 -> dead`
+(the 20 HP is what the T37 attack killed). So this is not a lost attack but a **reply that cannot be read
+as a result**: `AGENTS.md` already says a post-combat read is an estimate, and this is the same trap one
+layer earlier, in the reply line itself. What the record owes the next session is either the post-attack
+HP or a label on the number it prints; what it owes the *review* is the count - one attack order was
+thrown away and the turn closed on a discarded legal action.
+
+## Four more findings from the same session, and what each became
+
+- **The pantheon could not be founded at all, and the fix does not reach the session that found it**
+  (T21): every `choose_pantheon` call returned `ERR:Runtime Error: ... operator < is not supported for
+  number < string`. The 2026-09-29 faith guard - added after A1's free-pantheon measurement - reads
+  `GameInfo.GlobalParameters["RELIGION_PANTHEON_MIN_FAITH"].Value`, which is a **string** in this build,
+  and compares it to faith without `tonumber()`. A guard that refuses everything is not a guard: A2 played
+  the whole window with **no pantheon**, losing the belief it had chosen (God of the Forge, +25% toward
+  Ancient and Classical military units) while faith ran on unspent to 57. Fixed in
+  `src/civ_mcp/lua/religion.py`, with the speed caveat written beside it (the standard-speed 25 is
+  conservative on Quick, where the game itself offered the pantheon at 17 faith);
+  `tests/test_pantheon_faith_guard.py` is green. **The running server held the old Lua**, so the fix
+  belongs to the next session - and the lost belief belongs in A2's verdict, because no play could avoid
+  it.
+- **A jungle hill the builder board recommends cannot be improved or cleared** (T26):
+  `get_builder_tasks` lists `(60,21): build MINE` as NORMAL, `improve` answers `tile has
+  FEATURE_JUNGLE (use remove_feature first)`, and `remove_feature` answers
+  `CANNOT_REMOVE|Cannot remove FEATURE_JUNGLE`. One turn of builder movement was spent on the
+  contradiction.
+- **`skip_remaining_units` clears standing multi-turn move orders** (T18-T20): a Settler ordered to a
+  distant tile ended its turn where it stood and did not move again until the order was re-issued on the
+  turn it was to move. Every move in this attempt after T20 is issued on its own turn.
+- **An off-ledger gain the production ledger cannot see** (T37): the barbarian field force at (54,25)
+  was destroyed and its **captured Builder was recaptured with three charges** - a unit no city ever
+  produced. It is part of why improvements reach 5 at T40, so any comparison of "production spent per
+  improvement" between attempts has to name it or it will credit A2 with production it never spent.

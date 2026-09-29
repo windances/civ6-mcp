@@ -367,46 +367,6 @@
     ],
     "self_reports": [
       {
-        "turn": 1,
-        "claimed": {
-          "siege": 0,
-          "melee": 1,
-          "ram": 0,
-          "ranged": 0,
-          "cavalry": 0
-        },
-        "actual": {
-          "siege": 0,
-          "melee": 1,
-          "anticav": 0,
-          "ram": 0,
-          "ranged": 0,
-          "cavalry": 0,
-          "recon": 0
-        },
-        "mismatch": {}
-      },
-      {
-        "turn": 2,
-        "claimed": {
-          "siege": 0,
-          "melee": 1,
-          "ram": 0,
-          "ranged": 0,
-          "cavalry": 0
-        },
-        "actual": {
-          "siege": 0,
-          "melee": 1,
-          "anticav": 0,
-          "ram": 0,
-          "ranged": 0,
-          "cavalry": 0,
-          "recon": 0
-        },
-        "mismatch": {}
-      },
-      {
         "turn": 10,
         "claimed": {
           "siege": 0,

@@ -116,10 +116,27 @@ ROLES: dict[str, tuple[str, ...]] = {
         "INFANTRY",
         "MECHANICAL_INFANTRY",
     ),
-    "anticav": ("SPEARMAN", "PIKEMAN", "AT_CREW"),
+    "anticav": ("SPEARMAN", "PIKEMAN", "PIKE_AND_SHOT", "AT_CREW", "MODERN_AT"),
     "ram": ("BATTERING_RAM", "SIEGE_TOWER"),
     "ranged": ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER"),
-    "cavalry": ("HORSEMAN", "KNIGHT", "CAVALRY", "CUIRASSIER", "TANK", "MODERN_ARMOR"),
+    # The game's own CAVALRY tag (`Units.xml`, the `UNITTYPE_*` rows; its `FormationClass` column is
+    # only AIR/CIVILIAN/LAND_COMBAT/NAVAL/SUPPORT and too coarse for this table). HEAVY_CHARIOT is the
+    # one this map was missing and the case that found it: A2 built one, so the establishment's
+    # cavalry slot read 0/1 with a Heavy Chariot standing in the army - and the executor's own
+    # "cavalry 1" was scored as a mismatch against a map that could not see the unit.
+    # The game's MELEE tag is *not* a discriminator - it also carries HORSEMAN, KNIGHT and the naval
+    # melee line - so this line stays the curated upgrade chain.
+    "cavalry": (
+        "HEAVY_CHARIOT",
+        "HORSEMAN",
+        "COURSER",
+        "KNIGHT",
+        "CUIRASSIER",
+        "CAVALRY",
+        "TANK",
+        "MODERN_ARMOR",
+        "HELICOPTER",
+    ),
     "recon": ("SCOUT", "RANGER", "SKIRMISHER"),
 }
 
@@ -208,6 +225,13 @@ def run_turn_windows(game: str, run: str) -> dict[int, tuple[float, float]]:
 #: would put one attempt's economy in the other's table, so the turn is named and left out instead.
 AMBIGUOUS_SECONDS = 120.0
 
+#: How long after its own turn's calls a session may still be writing that turn's diary row, and
+#: therefore the only rows that turn may be attributed to. Measured: A2's T40 row landed 22s after the
+#: last call of its T40 (whose window was then 2s wide), while the gap between A1's last call and A2's
+#: first was 449s - so a row minutes away is another session's, and attributing it is what read A1's
+#: T40 economy (science 7.9, military 139) into A2's snapshot when A2's own row said 5.9 and 156.
+ATTRIBUTION_SLACK_SECONDS = 120.0
+
 
 def attribute_diary(
     candidates: dict[int, list[dict]],
@@ -220,15 +244,19 @@ def attribute_diary(
     the same turns the file holds two agent rows per turn and last-write-per-turn hands the later
     attempt's numbers to the earlier one. That is not hypothetical: re-reading A1 after A2 had
     reached T10 reported A2's military 31/tourism 0/era 4 where A1's row said 34/8/2, under A1's name.
+
     Each row is assigned to the turn's own window when the log has one (a session resumed after
-    another played the same turns), to the session's overall span otherwise.
+    another played the same turns), to the session's overall span otherwise. A turn is only attributed
+    when one row is **inside** that window (within `ATTRIBUTION_SLACK_SECONDS`); a row that is merely
+    the nearest is another session's, and the turn is named instead - reading the nearest row
+    regardless of distance is how A2's first T40 snapshot came out with A1's economy in it.
     """
     by_turn: dict[int, dict] = {}
-    ambiguous: list[int] = []
+    unattributed: list[int] = []
     for turn, rows in candidates.items():
         window = windows.get(turn) or span
         if window is None:
-            ambiguous.append(turn)
+            unattributed.append(turn)
             continue
         lo, hi = window
         scored: list[tuple[float, dict]] = []
@@ -239,14 +267,17 @@ def attribute_diary(
             distance = lo - at if at < lo else (at - hi if at > hi else 0.0)
             scored.append((distance, row))
         if not scored:
-            ambiguous.append(turn)
+            unattributed.append(turn)
             continue
         scored.sort(key=lambda pair: pair[0])
+        if scored[0][0] > ATTRIBUTION_SLACK_SECONDS:
+            unattributed.append(turn)
+            continue
         if len(scored) > 1 and scored[1][0] - scored[0][0] < AMBIGUOUS_SECONDS:
-            ambiguous.append(turn)
+            unattributed.append(turn)
             continue
         by_turn[turn] = scored[0][1]
-    return by_turn, sorted(ambiguous)
+    return by_turn, sorted(unattributed)
 
 
 def diary_rows_for_run(game: str, run: str) -> tuple[dict[int, dict], list[int]]:
@@ -1078,7 +1109,7 @@ def main() -> int:
         if unattributed:
             print(
                 f"no diary row could be attributed to {args.run}: the turns in the file "
-                f"({_turn_list(unattributed)}) were written by another session at the same time",
+                f"({_turn_list(unattributed)}) were written by another session or too close to one",
                 file=sys.stderr,
             )
         else:
@@ -1086,8 +1117,9 @@ def main() -> int:
         return 2
     if unattributed:
         print(
-            f"  NOTE: {_turn_list(unattributed)} left out: more than one attempt wrote that turn and "
-            f"time cannot tell them apart, so no number is attributed to {args.run} there.",
+            f"  NOTE: {_turn_list(unattributed)} left out: this session's own row for that turn is not "
+            f"in the diary, or two attempts wrote it too close in time to tell apart - no number is "
+            f"attributed to {args.run} there.",
             file=sys.stdout,
         )
     if args.start is not None:
