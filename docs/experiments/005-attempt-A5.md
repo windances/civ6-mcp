@@ -132,6 +132,22 @@ variable is supposed to buy.
 | 1 | **T40** | 西安 (65536) | (60,20) | `FEATURE_FOREST` on a **SILK** tile, owned by China | 西安's queue held **`UNIT_WARRIOR`** - the T39 order set it at **2 turns** and the T40 order, issued after the chop, reads **1 turn** | **the gain is not separable, and the record says so rather than estimating**: exactly one turn of ordinary production elapsed between those two reads, so `2 -> 1` is what the queue would have read with no chop at all. What **is** on the record is the tile itself: at T39 it reads `PLAINS FOREST [SILK+] {F:1 P:2 C:1}` and at T42 `PLAINS [SILK+] {F:1 P:1 C:1}` - the forest is gone and the tile's own production fell by one |
 | - | T39, twice | 西安 | (60,21) | `FEATURE_JUNGLE` | - | **refused**: `Error: CANNOT_REMOVE\|Cannot remove FEATURE_JUNGLE at (60,21)`. The tile carries **no "(owned by China)"** marker in the map reads, which is the refusal the brief documents; the builder was moved to the owned SILK tile instead |
 | - | T42 | 西安 | (59,22) | `FEATURE_JUNGLE` | - | **refused the same way**, and likewise unowned |
+| 2 | **T44** | **not established - see below** | (57,24) | `FEATURE_FOREST` on grass, river | **not established**, and this is the row the record is least able to close | **the destination is genuinely ambiguous and the record says so**: the only city read on that turn (T44) shows 西安 building `UNIT_CATAPULT (5 turns)` and **Shenyang `Building: nothing`**, and (57,24) is adjacent to Shenyang at (57,25) - but the same read lists 西安 as still needing a builder on a DYES tile at y=24, so **the owning city is not settled by any read available**, and with it neither is the queue item. The one clean fact beside it: **西安's Catapult fell from `7 turns` at T43 to `5 turns` at T44**, a drop larger than 西安's own ~10/turn production, and the record does **not** attribute that to this chop, because the chop may belong to the other city |
+
+**The gate is now measured for A5, and it held for the third time in the programme.** The log's
+`Research complete: Engineering` line sits in **T42's** `end_turn`, so Engineering is owned from **T43** -
+and `T43 set_city_production(city_id=65536, UNIT_CATAPULT) -> PRODUCING|UNIT_CATAPULT|7 turns` orders the
+siege train in the war city **on that same turn**, with no `BUILDING`/`DISTRICT` order in 西安 before it
+(the only post-gate building order in the log so far is a **Water Mill in Shenyang**, the second city, at
+T44). **A3, A4 and A5 have all three ordered their first Catapult on T43**, which is why their compare lines
+line up on the `siege_order` column.
+
+**And the second chop exposes the sharper version of the measurement problem**: a chop's destination is only
+recorded if the record knows **which city owns the tile** and **what that city's queue held**, and the T44
+reads settled neither - the map reads print `(owned by China)` on some tiles and not others, and no read ties
+a tile to a city. So the record states the ambiguity rather than picking a city. The distinction matters for
+the variable: a chop in **Shenyang** is outside it entirely, because Magnus is established in **西安** and
+Groundbreaker is `in city`, so a second city's chop carries no +50% and is not the thing A5 exists to test.
 
 **And that exposes the measurement problem the brief only anticipated - now measured**: `remove_feature`
 answers `REMOVING_FEATURE\|<feature> at x,y` and names no production, so the queue's turn count is the only
