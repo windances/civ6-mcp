@@ -65,13 +65,23 @@ An attempt whose hypothesis cannot fail is not run.
 Every attempt reports the same table, extracted by the same command:
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_<seed> --step 10
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_<seed> --from 1 --to 60 --json
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --step 10
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --verdict
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --from 1 --to 60 --json
 ```
 
-* **The two decisive numbers** - the turn the establishment first matches H2 (read from the diary's
-  `unit_composition`), and the turn the first enemy city is kept (read from the tool reply, never
-  from the prose).
+* **The two decisive numbers.** The report computes them itself, from the record: **the establishment
+  turn** - checked on *every* turn, because a table that fills on T47 must not be reported as filling
+  on T50 - and **the turn the first enemy city was kept**, read from the tool reply. The session's own
+  diary line is a cross-check on those, not their source: an instrument that measures beats an agent
+  reporting on itself.
+* **The verdict** - `--verdict` answers the attempt's predictions from the record. Its limits are
+  passed in (`--expect-est`, `--expect-city`, `--expect-gold-red`), never baked in, because a later
+  attempt states its own numbers and a window *inside* an attempt is not the attempt's end. Two
+  honesties it prints for itself: `P1` measures the turn a siege unit was **owned** (the diary holds
+  units, not queues), and a shortfall that is only the **ram** is flagged, because ram and siege
+  tower both go obsolete at `CIVIC_CIVIL_ENGINEERING` and after that the table's ram line cannot be
+  filled at all.
 * **The economy at T20 / T40 / T60** - science, culture, gold/turn, pop, cities, districts,
   improvements. This is what the military build cost.
 * **The rule table** - `CHECK FAILED` counts per rule. A doctrine that keeps its own rules red is

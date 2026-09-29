@@ -75,7 +75,8 @@ ENEMY SEEN: <which rival cities are visible, and the distance in tiles to the ne
 The attempt ends the turn the first enemy city is kept, or at turn 80, whichever comes first. Retire
 this file in that turn (`scripts/temp-task.py retire 030 --done --turn N`, or `--expired`), and write
 the attempt's record as `docs/experiments/001-attempt-A1.md` from the output of
-`scripts/experiment-report.py --game china_<seed> --step 10`.
+`scripts/experiment-report.py --game china_911679432 --step 10` (add `--verdict` for P1-P4; the
+report computes the two decisive numbers itself, so quote it rather than the diary's own summary).
 
 Do not open a second war before the first city is kept. Scouting, settling and infrastructure are
 this attempt's business as much as the army is: the question is what the army cost the empire, and

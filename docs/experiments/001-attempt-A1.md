@@ -17,6 +17,7 @@ with its numbers, and - once the attempt ends - the table and the verdict.
 | Map | Pangaea, Small | the setup screen read 盘古大陆 / 小 |
 | Speed | Quick | the setup screen read 快速 |
 | Ruleset | Gathering Storm | `GameConfiguration.GetValue("RULESET")` = `RULESET_EXPANSION_2` |
+| Game key | `china_911679432` | `<civ>_<GAME_SYNC_RANDOM_SEED>` read from the live game - a different seed from the previous match, so the two diaries do not mix |
 | Turn 1 save | `evals/saves/ATTEMPT-A1-T1.Civ6Save` | saved from the live game at 4000 BC, no actions taken |
 
 **How the match was created, since it is reproducible and was not obvious.** The game was launched
@@ -49,19 +50,27 @@ has a baseline. The claims under test (H1-H6) are tabulated in `docs/experiments
 
 ## The two decisive numbers
 
-Both are reported in the diary with their turn, and both come out of
-`scripts/experiment-report.py`:
+Both are computed by the instrument from the record - the diary's `unit_composition` and the
+`KEEP|` reply - and the session's diary line is a cross-check on them rather than their source:
 
-1. **the turn the establishment first matches the table** (from `unit_composition`);
-2. **the turn the first enemy city is kept** (from the `KEEP|` reply, never from prose).
+1. **the turn the establishment first matches the table**, checked on every turn;
+2. **the turn the first enemy city is kept** (never taken from prose).
+
+The match's key is **`china_911679432`** (`<civ>_<GAME_SYNC_RANDOM_SEED>`, read from the running
+game), and it is the argument every command below needs.
 
 ## What the attempt cost (filled in when it ends)
 
 The report command, whose output goes in the table below:
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_<seed> --step 10
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --step 10
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --verdict
 ```
+
+`--verdict` answers P1-P4 from the record. One of them is weaker than the doctrine's claim and the
+tool says so: **P1 measures the turn a siege unit was owned**, because the diary records units rather
+than production queues - the turn it was *ordered* is only visible in the logs.
 
 | field | value |
 |---|---|

@@ -12,14 +12,21 @@ Nothing here is new instrumentation: the point is that the two files already hol
 attempt is judged on, and this turns them into the same table every time, so two attempts can be
 compared without re-deriving anything by hand.
 
-    .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_-1894041591
-    .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_-1894041591 --step 10 --json
+    .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432
+    .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432 --step 10 --json
+    .venv\\Scripts\\python.exe scripts/experiment-report.py --game china_911679432 --verdict
     .venv\\Scripts\\python.exe scripts/experiment-report.py --list
 
 Reported, per attempt:
 
   * the 10-turn economy table (science/culture/gold/pop/districts/wonders/improvements/...)
   * the military table - unit composition at each boundary, so the establishment's growth is visible
+  * **the establishment** - the first turn the army matches `prompts/tactics/01-unit-production.md`'s
+    table, checked on every turn rather than on the tenth, plus the first turn each role existed;
+    this is one of the two numbers the attempt is judged on, and it is measured here rather than
+    taken from the session's own account of itself
+  * **the verdict** - the A1 predictions in `docs/experiments/001-attempt-A1.md`, answered from the
+    record (`--verdict` prints only this)
   * the capture line - which turn a city was kept, from the tool reply, not from the prose
   * the rule table - `CHECK FAILED [id]` counts, i.e. which doctrine rules the attempt violated
   * the refusal table - STOPPED_MID_PATH and friends, i.e. what the orders cost
@@ -74,6 +81,30 @@ CAPTURE_RE = re.compile(r"\b(KEEP|RAZE|LIBERATE_FOUNDER|LIBERATE_PREVIOUS)\|", r
 RULE_RE = re.compile(r"CHECK FAILED \[([a-z0-9\-]+)\]")
 ACHIEVED_RE = re.compile(r"CHECK ACHIEVED[^\n]*?\[([a-z0-9\-]+)\]")
 
+# The establishment table in `prompts/tactics/01-unit-production.md`, expressed as roles rather than
+# unit names: a role is filled by whatever member of its upgrade line the era allows, so the same
+# check reads correctly in the Ancient era and in the Industrial one.  `anticav` and `recon` are not
+# in the table - they are counted because a session may screen with them, and the review has to be
+# able to say so instead of reporting a phantom shortfall.
+ESTABLISHMENT = {"siege": 2, "melee": 2, "ram": 1, "ranged": 4, "cavalry": 1}
+ROLES: dict[str, tuple[str, ...]] = {
+    "siege": ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY", "ROCKET_ARTILLERY"),
+    "melee": (
+        "WARRIOR",
+        "SWORDSMAN",
+        "MAN_AT_ARMS",
+        "MUSKETMAN",
+        "LINE_INFANTRY",
+        "INFANTRY",
+        "MECHANICAL_INFANTRY",
+    ),
+    "anticav": ("SPEARMAN", "PIKEMAN", "AT_CREW"),
+    "ram": ("BATTERING_RAM", "SIEGE_TOWER"),
+    "ranged": ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER"),
+    "cavalry": ("HORSEMAN", "KNIGHT", "CAVALRY", "CUIRASSIER", "TANK", "MODERN_ARMOR"),
+    "recon": ("SCOUT", "RANGER", "SKIRMISHER"),
+}
+
 
 # --------------------------------------------------------------------------- raw record
 
@@ -88,9 +119,15 @@ def games() -> list[str]:
 
 
 def diary_rows(game: str) -> dict[int, dict]:
-    """The agent's own rows, keyed by turn (last write per turn wins)."""
+    """The agent's own rows, keyed by turn (last write per turn wins).
+
+    A game with no diary yet - a match that has just been created and not played - is not an error:
+    it is an attempt with no rows, and the caller prints exactly that.
+    """
     path = DATA / f"diary_{game}.jsonl"
     by_turn: dict[int, dict] = {}
+    if not path.exists():
+        return by_turn
     with path.open(encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -184,6 +221,139 @@ def composition(by_turn: dict[int, dict], step: int) -> list[tuple[int, dict]]:
     return rows
 
 
+def role_counts(comp: dict | None) -> dict[str, int]:
+    """Unit types to the establishment's roles. Civilians and great people fall out on the floor."""
+    counts = {role: 0 for role in ROLES}
+    for unit, number in (comp or {}).items():
+        name = str(unit).upper()
+        for role, types in ROLES.items():
+            if name in types:
+                counts[role] += int(number or 0)
+                break
+    return counts
+
+
+def establishment(by_turn: dict[int, dict]) -> dict:
+    """The first turn the army matches the table, or how short it stood on the last turn read.
+
+    Every turn is checked, not every tenth: the number this returns is one of the two the attempt is
+    judged on, and a ten-turn table cannot see a table that filled on T47.
+    """
+    last_turn: int | None = None
+    short: dict[str, tuple[int, int]] = {}
+    for turn in sorted(by_turn):
+        counts = role_counts(by_turn[turn].get("unit_composition"))
+        short = {r: (counts[r], need) for r, need in ESTABLISHMENT.items() if counts[r] < need}
+        last_turn = turn
+        if not short:
+            return {"turn": turn, "counts": counts, "short": {}, "last_turn": turn}
+    counts = role_counts(by_turn[last_turn].get("unit_composition")) if last_turn else {}
+    return {"turn": None, "counts": counts, "short": short, "last_turn": last_turn}
+
+
+def first_role_turn(by_turn: dict[int, dict], role: str) -> int | None:
+    """The first turn the empire owned any unit of that role - the weakest form of 'it exists'."""
+    for turn in sorted(by_turn):
+        if role_counts(by_turn[turn].get("unit_composition")).get(role):
+            return turn
+    return None
+
+
+def rule_turns(rows: list[dict]) -> dict[str, list[int]]:
+    """Which turns each rule was red on, deduplicated: a turn can be evaluated more than once."""
+    out: dict[str, set[int]] = collections.defaultdict(set)
+    for row in rows:
+        for rule in RULE_RE.findall(json.dumps(row, ensure_ascii=False)):
+            out[rule].add(row.get("turn") or 0)
+    return {rule: sorted(turns) for rule, turns in sorted(out.items())}
+
+
+def verdict(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, bool, str]]:
+    """The attempt's predictions, answered from the record.
+
+    The defaults are A1's own limits (`docs/experiments/001-attempt-A1.md`): establishment by T60,
+    first city kept by T80, fewer than ten turns under the gold floor before the first city falls,
+    and a siege unit early. **They are passed in, not baked in** - a later attempt states its own
+    numbers, and a window inside an attempt that is not the attempt's end would otherwise be judged
+    against limits it was never meant to meet.
+
+    P1 is deliberately weaker than the doctrine's claim: the diary holds what the empire *owns*, not
+    what a queue is building, so this measures the first turn a siege unit existed rather than the
+    turn it was ordered.
+    """
+    est = establishment(by_turn)
+    cap = captures(rows)
+    keep_turn = min((t for t, _ in cap), default=None)
+    horizon = keep_turn if keep_turn is not None else expect_est
+    carry = [t for t in rule_turns(rows).get("carrying-capacity", []) if t <= horizon]
+    siege_turn = first_role_turn(by_turn, "siege")
+    early = max(1, expect_est * 3 // 4)
+    return [
+        (
+            f"P1 a siege unit early (owns one by T{early})",
+            bool(siege_turn and siege_turn <= early),
+            f"first siege unit {'T' + str(siege_turn) if siege_turn else 'never'}",
+        ),
+        (
+            f"P2 establishment complete by T{expect_est}",
+            bool(est["turn"] and est["turn"] <= expect_est),
+            f"establishment {'T' + str(est['turn']) if est['turn'] else 'not reached by T' + str(est['last_turn'])}",
+        ),
+        (
+            f"P3 first enemy city kept by T{expect_city}",
+            bool(keep_turn and keep_turn <= expect_city),
+            f"first keep {'T' + str(keep_turn) if keep_turn else 'none'}",
+        ),
+        (
+            f"P4 gold floor red on <{expect_gold_red} turns",
+            len(carry) < expect_gold_red,
+            f"{len(carry)} red turn(s) up to T{horizon}",
+        ),
+    ]
+
+
+def print_verdict(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> None:
+    est = establishment(by_turn)
+    print("-- establishment (prompts/tactics/01-unit-production.md) --")
+    print("  the table: " + "  ".join(f"{role} {need}" for role, need in ESTABLISHMENT.items()))
+    if est["turn"]:
+        counts = "  ".join(f"{role}={est['counts'].get(role, 0)}" for role in ESTABLISHMENT)
+        print(f"  COMPLETE at T{est['turn']}   {counts}")
+    else:
+        short = "  ".join(f"{role} {have}/{want}" for role, (have, want) in sorted(est["short"].items()))
+        print(f"  NOT complete at T{est['last_turn']}   short: {short or '(none)'}")
+        if set(est["short"]) == {"ram"}:
+            print(
+                "    (only the ram is missing - and both ram and siege tower go obsolete at "
+                "CIVIC_CIVIL_ENGINEERING, so from that civic on the table's ram line cannot be filled)"
+            )
+    print(
+        f"  screens (melee + anti-cavalry): "
+        f"{est['counts'].get('melee', 0) + est['counts'].get('anticav', 0)}"
+        f"   recon: {est['counts'].get('recon', 0)}"
+    )
+    for role in ESTABLISHMENT:
+        turn = first_role_turn(by_turn, role)
+        print(f"  first {role:<8s}: {'T' + str(turn) if turn else 'never'}")
+
+    print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
+          f"gold floor {expect_gold_red}) --")
+    for name, held, detail in verdict(by_turn, rows, expect_est, expect_city, expect_gold_red):
+        print(f"  {'HELD      ' if held else 'FALSIFIED '} {name}  [{detail}]")
+
+
 def rule_counts(rows: list[dict]) -> tuple[collections.Counter, list[tuple[int, str]]]:
     counts: collections.Counter = collections.Counter()
     achieved: list[tuple[int, str]] = []
@@ -230,7 +400,15 @@ def tool_calls(rows: list[dict]) -> collections.Counter:
 # --------------------------------------------------------------------------- printing
 
 
-def print_text(game: str, step: int, by_turn: dict[int, dict], rows: list[dict]) -> None:
+def print_text(
+    game: str,
+    step: int,
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> None:
     first, last = _first_turn(by_turn), _last_turn(by_turn)
     print(f"== attempt {game}: T{first} -> T{last} ==")
     civ = by_turn[first].get("civ")
@@ -292,6 +470,9 @@ def print_text(game: str, step: int, by_turn: dict[int, dict], rows: list[dict])
     print(f"  tool calls: {total} over {last - first + 1} turns = {total / max(1, last - first + 1):.1f}/turn")
     print("  most used: " + ", ".join(f"{t}:{n}" for t, n in calls.most_common(8)))
 
+    print()
+    print_verdict(by_turn, rows, expect_est, expect_city, expect_gold_red)
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
@@ -301,6 +482,14 @@ def main() -> int:
     ap.add_argument("--to", dest="end", type=int, help="last turn to report (inclusive)")
     ap.add_argument("--json", action="store_true", help="emit the tables as JSON")
     ap.add_argument("--list", action="store_true", help="list the game keys that have a diary")
+    ap.add_argument("--verdict", action="store_true",
+                    help="print only the establishment and the verdict")
+    ap.add_argument("--expect-est", type=int, default=60,
+                    help="the attempt's own establishment deadline, in turns (default 60: A1's)")
+    ap.add_argument("--expect-city", type=int, default=80,
+                    help="the attempt's own first-city deadline (default 80: A1's)")
+    ap.add_argument("--expect-gold-red", type=int, default=10,
+                    help="how many turns under the gold floor the attempt allows (default 10: A1's)")
     args = ap.parse_args()
 
     if args.list or not args.game:
@@ -335,15 +524,28 @@ def main() -> int:
             "delta": deltas(by_turn),
             "composition": [{"turn": t, "units": c} for t, c in composition(by_turn, args.step)],
             "rules": dict(counts),
+            "rule_turns": rule_turns(rows),
             "achieved": achieved,
             "refusals": dict(refusal_counts(rows)),
             "captures": captures(rows),
             "tool_calls": dict(tool_calls(rows)),
+            "establishment": establishment(by_turn),
+            "verdict": [
+                {"prediction": name, "held": held, "detail": detail}
+                for name, held, detail in verdict(
+                    by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red
+                )
+            ],
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
 
-    print_text(args.game, args.step, by_turn, rows)
+    if args.verdict:
+        print(f"== attempt {args.game}: T{_first_turn(by_turn)} -> T{_last_turn(by_turn)} ==")
+        print_verdict(by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
+        return 0
+
+    print_text(args.game, args.step, by_turn, rows, args.expect_est, args.expect_city, args.expect_gold_red)
     return 0
 
 
