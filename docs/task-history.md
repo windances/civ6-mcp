@@ -574,3 +574,46 @@ the diary's own number on all 68 turns).
 
 The records are `docs/experiments/A2-final.json` (the snapshot), the end table and verdict at the foot of
 `docs/experiments/002-attempt-A2.md`, and section 6 of `docs/experiments/RETRO-2026-09-29.md`.
+
+## Task 036 - A5, the chops go into units: retired `--expired --turn 70`
+
+**`036-attempt-a5-the-chops-go-into-units.md` expired at T70** and was retired to
+`prompts/tasks/tmp/done/036-attempt-a5-the-chops-go-into-units-expired-T70.md`
+(`python scripts/temp-task.py retire 036 --expired --turn 70`), which re-synced
+`prompts/tasks/tmp/current_tasks.md` and the `IN FORCE NOW` line - **none in force** after it. The
+script's own auto-commit did not run (it shells out to a Python without `pytest`; the protocol suite
+is green under the repo venv, `21 passed`), so the retirement was committed by hand with the text
+gate and `tests/test_temp_tasks.py` run explicitly.
+
+**The attempt ran T1-T70 in one session** (`unbroken-cerulean-herald-09`) from the experiment's shared
+start and **kept no city**. Its window's `done when:` - "turn 70 is reached, or a city is kept" - was
+met by the turn, not the capture. The instrument's verdict is `HELD / FALSIFIED / HELD / HELD`:
+
+- **the establishment was complete at T57** (Q1 held), two turns LATER than A2's T55 (Q2 falsified) -
+  the chops did not buy the five-turn advance the variable predicted;
+- **the economy was not deferred** (Q3 held): the first post-gate `BUILDING` order is a Water Mill in
+  the compounding city at T44, one turn after the T43 gate;
+- **the gold floor was met on the rule's measure for the first time in the programme** (Q4 held, 2 red
+  turns from T60), on Oligarchy plus `POLICY_CONSCRIPTION`.
+
+**Two things this task measured that belong in the doctrine rather than only in its record:**
+
+1. **`remove_feature` accepts FOREST and refuses JUNGLE and MARSH on this map.** Three chops were
+   attempted and refused (`(60,21)` and `(59,22)` jungle, `(61,21)` marsh - and `(60,21)` is the tile
+   `get_builder_tasks` recommends a MINE for). 西安's ring held exactly two removable forests and both
+   were chopped, so the chop-into-units treatment is worth **about two turns** of the war city's
+   production here, not the five the design assumed.
+2. **A ranged attack requires movement, and the adapter's approach path spends it**, so a siege unit
+   ordered onto a city walks into the city's reach and dies: Catapult#1 fired twice from adjacent,
+   took 25 then 55, and was destroyed for 120 production and 15 net damage while 耶路撒冷 healed back
+   to 185/200. `screen-the-siege` cannot be satisfied by any formation under that rule - and it also
+   counts a **friendly** major's unit as an enemy, which kept it red for seven turns.
+
+**And the finding that outranks the variable:** an attempt can complete the whole establishment table
+and still not take a city ten tiles away inside its window, because the march corridor costs a tile a
+turn (182 `STOPPED_MID_PATH` refusals) and **two entire movement turns were lost to AI diplomacy
+pauses** (T57 and T59, every unit at 0 moves). The binding constraint on this map is march time, not
+production.
+
+The records are `docs/experiments/A5-final.json` (the snapshot), `docs/experiments/005-attempt-A5.md`
+(the attempt), and section 7 of `docs/experiments/RETRO-2026-09-29.md` (the comparison with A4).

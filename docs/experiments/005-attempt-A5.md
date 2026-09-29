@@ -1,4 +1,4 @@
-# Attempt A5 - the chops go into units (Magnus' Groundbreaker)
+﻿# Attempt A5 - the chops go into units (Magnus' Groundbreaker)
 
 **Status: COMPLETE** - **one session** (`unbroken-cerulean-herald-09`), played from the experiment's
 shared start `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` and finished at **T70**, the window's last

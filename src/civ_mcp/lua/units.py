@@ -1931,8 +1931,19 @@ print("{SENTINEL}")
 def build_remove_feature(unit_index: int) -> str:
     """Remove (chop/harvest) a feature from the tile the builder is standing on.
 
-    Uses UNITOPERATION_REMOVE_FEATURE —works on forest, jungle, marsh.
-    The game auto-detects which feature is present; no feature param needed.
+    Uses UNITOPERATION_REMOVE_FEATURE - works on forest, jungle, marsh. The game auto-detects which
+    feature is present; no feature param needed.
+
+    **The refusal now names the missing prerequisite, because the bare one cost two attempts a wrong
+    finding.** A feature is only removable once its `RemoveTech` is researched
+    (`Base/Assets/Gameplay/Data/Features.xml`: `FEATURE_FOREST` -> `TECH_MINING`, `FEATURE_JUNGLE` ->
+    `TECH_BRONZE_WORKING`, `FEATURE_MARSH` -> `TECH_IRRIGATION`), so `UnitManager.CanStartOperation`
+    legitimately refuses the other two until then. The old message said only
+    `ERR:CANNOT_REMOVE|Cannot remove FEATURE_JUNGLE at (x,y)`, which reads as "the tool cannot chop
+    jungle"; attempt A5 recorded exactly that as a defect, and A2 had recorded the same thing at its
+    T26. Both were the tech line: A5 held Mining from T8 and chopped forest twice, and its jungle
+    attempts at T39 and T42 were both before Bronze Working (owned T45). The message now says which
+    tech is missing, and says so plainly when the tech is present and something else refused.
     """
     return f"""
 {_lua_get_unit(unit_index)}
@@ -1955,7 +1966,22 @@ params[UnitOperationTypes.PARAM_X] = unit:GetX()
 params[UnitOperationTypes.PARAM_Y] = unit:GetY()
 local canStart = UnitManager.CanStartOperation(unit, opRow.Hash, nil, params, true)
 if not canStart then
-    {_bail_lua('"ERR:CANNOT_REMOVE|Cannot remove " .. fName .. " at (" .. unit:GetX() .. "," .. unit:GetY() .. ")"')}
+    -- Say WHY. The feature's own RemoveTech is the usual reason (Features.xml), and a refusal that
+    -- does not name it is read as a tool defect - which it was, twice.
+    local reason = " - the feature names no removal technology, so the refusal is something else"
+    local reqTech = fInfo and fInfo.RemoveTech or nil
+    if reqTech and reqTech ~= "" then
+        local techRow = GameInfo.Technologies[reqTech]
+        local techName = techRow and Locale.Lookup(techRow.Name) or reqTech
+        local has = false
+        pcall(function() has = Players[me]:GetTechs():HasTech(techRow.Index) end)
+        if has then
+            reason = " - " .. techName .. " (" .. reqTech .. ") IS researched, so the refusal is something else: moves, terrain, or an enemy on the tile"
+        else
+            reason = " - removing " .. fName .. " needs " .. techName .. " (" .. reqTech .. "), which this empire has not researched"
+        end
+    end
+    {_bail_lua('"ERR:CANNOT_REMOVE|Cannot remove " .. fName .. " at (" .. unit:GetX() .. "," .. unit:GetY() .. ")" .. reason')}
 end
 UnitManager.RequestOperation(unit, opRow.Hash, params)
 print("OK:REMOVING_FEATURE|" .. fName .. " at " .. unit:GetX() .. "," .. unit:GetY())
