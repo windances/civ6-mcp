@@ -113,10 +113,19 @@ The doctrine's testable claims, each with the file that makes it:
 |---|---|---|
 | **A1** | none - the doctrine as written | the establishment is complete by T60 and the first city falls by T80 |
 | **A2** | **the target's distance alone** - same save, same doctrine, but the objective is the nearest *city* (a city-state inside a dozen tiles) instead of the nearest rival capital, which this map puts 33 tiles away | the siege half becomes reachable inside a sixty-turn window once the target is inside ~12 tiles: siege 2/2 and the first city kept by T80 |
-| **A3** | Encampment after the second city instead of before it | two cities' compounding beats the earlier general's aura: first city falls no later than A2 |
-| **A4** | Magnus' Groundbreaker: chops go into units instead of infrastructure | the establishment arrives 5+ turns earlier and the economy is behind by less than 5 turns at T60 |
-| **A5** | the siege train is bought with gold, not produced | the war opens 5+ turns earlier at the cost of a negative `carrying-capacity` window |
-| **A6** | two war cities instead of one | the second city's production outweighs the lost compounding |
+| **A3** | **the target's defences** - a *walled* city, everything else held (same doctrine, same save family, the corrected table) | the train's wall phase, which A2 never ran because its target read `walls: none`, changes the arithmetic in a measurable way: the first city kept **no earlier** than A2's T68 and **no later than T80**, with the wall pool's turn count on the record |
+| **A4** | Encampment after the second city instead of before it | two cities' compounding beats the earlier general's aura: first city falls no later than A3 |
+| **A5** | Magnus' Groundbreaker: chops go into units instead of infrastructure | the establishment arrives 5+ turns earlier and the economy is behind by less than 5 turns at T60 |
+| **A6** | the siege train is bought with gold, not produced | the war opens 5+ turns earlier at the cost of a negative `carrying-capacity` window |
+| **A7** | two war cities instead of one | the second city's production outweighs the lost compounding |
+
+**A3 was re-scoped after A2** (2026-09-29), and for the same reason A2 was re-scoped after A1: the
+question the attempt was built to ask must be *askable*. A2 held H1 and took its city, but its target had
+no walls, so the wall phase - the reason the train exists - never executed, and what defended the city
+instead (a garrison that moved in on the final turn, a six-unit field army, ~20 HP of healing a turn while
+a hex stayed open) are three things `tactics/01`'s table had no slot for. The Encampment variation moved
+down the queue behind the one the experiment has not yet measured; a variable is only worth an attempt if
+its hypothesis can be falsified by a number, and "the wall phase" is not yet a number.
 
 A variable is only worth an attempt if the hypothesis can be **falsified by a number** in section 4.
 An attempt whose hypothesis cannot fail is not run.

@@ -24,17 +24,35 @@ LIVE = ROOT / "prompts" / "checks" / "turn-checks.md"
 
 
 class TestTheCount:
-    def test_a_partial_move_is_counted(self):
-        gs = GameState(connection=None)
-        gs.note_move_stops("CAPTURE_MOVE|69,29|from:57,29|now_at:59,30|STOPPED_MID_PATH (moves exhausted)")
-        assert gs._move_stops_this_turn == 1
+    """The metric counts **jams**, not movement budgets.
 
-    def test_both_stop_markers_count(self):
-        # `STOPPED_SHORT` comes from the same Lua reply on a path the engine abandons early.
+    Measured over the two experiment attempts (2026-09-29): A1 took 76 stops and A2 11, seven in ten of
+    them `(moves exhausted)` - a mv2 unit crossing hills or forest - and not one named another unit. The
+    rule that reads this metric (`issue-the-calls-furthest-first`) fired on A1 eight times and on A2's
+    first half once, and A2's *bigger* army marching less read a lower rate, which is how a terrain meter
+    behaves rather than a jam detector.
+    """
+
+    def test_a_move_the_terrain_explains_is_not_a_jam(self):
+        gs = GameState(connection=None)
+        for result in (
+            "CAPTURE_MOVE|69,29|from:57,29|now_at:59,30|STOPPED_MID_PATH (moves exhausted)",
+            "MOVE|1,2|STOPPED_MID_PATH (impassable mountain)",
+            "MOVE|1,2|STOPPED_MID_PATH (water tile - land units need Shipbuilding tech to embark)",
+        ):
+            gs.note_move_stops(result)
+        assert gs._move_stops_this_turn == 0
+
+    def test_a_stop_with_no_reason_is_counted(self):
+        # The tool could not say why the unit is not where it was sent: that is the case the rule is for.
         gs = GameState(connection=None)
         gs.note_move_stops("MOVE|1,2|STOPPED_SHORT")
-        gs.note_move_stops("MOVE|3,4|STOPPED_MID_PATH (moves exhausted)")
-        gs.note_move_stops("MOVE|5,6|arrived")
+        assert gs._move_stops_this_turn == 1
+
+    def test_an_unexplained_or_suspicious_stop_is_counted(self):
+        gs = GameState(connection=None)
+        gs.note_move_stops("MOVE|1,2|STOPPED_MID_PATH (tile appears passable - path may be blocked by intermediate tiles)")
+        gs.note_move_stops("MOVE|3,4|STOPPED_MID_PATH (blocked by friendly UNIT_WARRIOR at (3,4))")
         assert gs._move_stops_this_turn == 2
 
     def test_a_clean_result_and_a_blocked_one_are_not_stops(self):

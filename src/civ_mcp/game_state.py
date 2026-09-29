@@ -288,14 +288,47 @@ class GameState:
     #: early. Both mean the unit is not where it was sent.
     _STOP_MARKERS = ("STOPPED_MID_PATH", "STOPPED_SHORT")
 
+    #: Reasons that explain a partial move by the unit's **own movement budget or the terrain**, and
+    #: therefore say nothing about a column queueing behind itself. Measured over the two experiment
+    #: attempts (2026-09-29): A1 took 76 stops and A2 11, and **seven in ten of them carried
+    #: `moves exhausted`** - a mv2 unit crossing hills or forest, which is what the terrain costs - while
+    #: `impassable mountain` and the Shipbuilding refusal accounted for most of the rest. **Not one stop
+    #: in either attempt named another unit.** Counting them all made `issue-the-calls-furthest-first` a
+    #: terrain meter: it fired on A1 eight times and on A2's first half once, and the rate tracked how
+    #: much the army moved rather than whether it jammed (A2's second half, with a bigger army and less
+    #: marching, read a *lower* stop rate). The fix is this filter, not a lower threshold.
+    _SELF_EXPLAINED_STOP_REASONS = (
+        "moves exhausted",
+        "impassable mountain",
+        "need shipbuilding",
+        "no moves",
+    )
+
+    @staticmethod
+    def _stop_reason(result: str) -> str | None:
+        """The parenthetical reason a stop carries, lowercased; `None` when it carries none.
+
+        A stop with **no** reason is counted: the tool could not say why the unit is not where it was
+        sent, which is exactly the case the rule exists for.
+        """
+        match = re.search(r"STOPPED_(?:MID_PATH|SHORT)\s*\(([^)]*)\)", result)
+        if not match:
+            return None
+        return match.group(1).strip().lower()
+
     def note_move_stops(self, result: str) -> None:
-        """Count one tool result's partial moves, so the turn can report the jam it caused.
+        """Count the partial moves that are a **jam**, not a movement budget spent on terrain.
 
         Called for every tool result from the dispatch wrapper rather than from `move_unit`, because
-        the marker is also produced by paths that never reach this class's own post-processing.
+        the marker is also produced by paths that never reach this class's own post-processing. The
+        reason filter and the measurement behind it are on `_SELF_EXPLAINED_STOP_REASONS`.
         """
-        if any(marker in result for marker in self._STOP_MARKERS):
-            self._move_stops_this_turn += 1
+        if not any(marker in result for marker in self._STOP_MARKERS):
+            return
+        reason = self._stop_reason(result)
+        if reason is not None and any(known in reason for known in self._SELF_EXPLAINED_STOP_REASONS):
+            return
+        self._move_stops_this_turn += 1
 
     def note_attack_result(self, result: str, est=None) -> str:
         """Count an attack that could not have landed, and say so in the reply. Returns the warning.
