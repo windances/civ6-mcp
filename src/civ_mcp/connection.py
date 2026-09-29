@@ -23,10 +23,22 @@ class LuaError(Exception):
     """Raised when Lua code execution returns an error."""
 
 
+def tuner_port_candidates(port: int) -> list[int]:
+    """The ports to try, in order: the caller's port first, then the other known ones.
+
+    FireTuner normally answers on the default port (4318), but a save loaded into a
+    running game can move it to 4319 while nothing listens on 4318 - measured twice on
+    2026-09-29, with the game in play at turn 1. That is the same tuner on the same
+    game, so the other known port is worth one attempt before giving up. An explicit
+    `port=` from a caller still comes first, whichever port it names.
+    """
+    return [port] + [p for p in tuner_client.TUNER_PORTS if p != port]
+
+
 class GameConnection:
     """Persistent FireTuner TCP connection to Civ 6."""
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 4318):
+    def __init__(self, host: str = "127.0.0.1", port: int = tuner_client.DEFAULT_PORT):
         self.host = host
         self.port = port
         self._reader: asyncio.StreamReader | None = None
@@ -41,17 +53,31 @@ class GameConnection:
         return self._writer is not None and not self._writer.is_closing()
 
     async def connect(self) -> None:
-        """Connect to Civ 6 and discover Lua state indexes."""
-        log.info("Connecting to Civ 6 at %s:%d", self.host, self.port)
-        try:
-            self._reader, self._writer = await tuner_client.connect(
-                self.host, self.port
-            )
-        except (asyncio.TimeoutError, OSError) as e:
+        """Connect to Civ 6 and discover Lua state indexes.
+
+        The configured port is tried first; the other known tuner ports follow (see
+        `tuner_port_candidates`). A port that answers is accepted as-is, so nothing
+        changes when the first one works.
+        """
+        candidates = tuner_port_candidates(self.port)
+        last_error: Exception | None = None
+        for port in candidates:
+            log.info("Connecting to Civ 6 at %s:%d", self.host, port)
+            try:
+                self._reader, self._writer = await tuner_client.connect(
+                    self.host, port
+                )
+            except (asyncio.TimeoutError, OSError) as e:
+                log.info("No tuner at %s:%d (%s)", self.host, port, e)
+                last_error = e
+                continue
+            break
+        else:
+            tried = " or ".join(f"{self.host}:{p}" for p in candidates)
             raise ConnectionError(
-                f"Cannot connect to Civ 6 at {self.host}:{self.port}. "
+                f"Cannot connect to Civ 6 at {tried}. "
                 "Is the game running with EnableTuner=1?"
-            ) from e
+            ) from last_error
         app_identity, raw_states = await tuner_client.handshake(
             self._reader, self._writer
         )

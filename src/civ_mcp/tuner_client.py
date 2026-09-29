@@ -27,6 +27,14 @@ TAG_HELP = 1
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 4318
 
+# Every port the game's FireTuner is known to listen on, the default first. The
+# default is not the only one: a fresh launch binds 4318, but loading a save into a
+# running game can leave the tuner on 4319 with nothing on 4318 - measured twice on
+# 2026-09-29, with the game in play at turn 1 and an MCP session stuck at
+# `phase: starting` because it only ever tried 4318. Both ports are the same tuner
+# on the same game, so a second candidate is a fallback, not a different game.
+TUNER_PORTS = (DEFAULT_PORT, 4319)
+
 
 @dataclass
 class Message:
