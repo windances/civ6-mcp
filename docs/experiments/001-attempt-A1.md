@@ -68,9 +68,12 @@ The report command, whose output goes in the table below:
 .venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --verdict
 ```
 
-`--verdict` answers P1-P4 from the record. One of them is weaker than the doctrine's claim and the
-tool says so: **P1 measures the turn a siege unit was owned**, because the diary records units rather
-than production queues - the turn it was *ordered* is only visible in the logs.
+`--verdict` answers P1-P4 from the record. `P1` is the one worth stating carefully: it measures the
+turn a siege unit was **ordered** (read from the log's `set_city_production` / `purchase_item` calls)
+and falls back to the turn one was **owned** only when the log holds no such order - the label says
+which answered. The diary records units, the log records choices, and the doctrine is a claim about
+the choosing; the report also prints the first order in each category, the turn the army began, and
+the turn the siege train was first asked for.
 
 | field | value |
 |---|---|

@@ -78,10 +78,14 @@ Every attempt reports the same table, extracted by the same command:
 * **The verdict** - `--verdict` answers the attempt's predictions from the record. Its limits are
   passed in (`--expect-est`, `--expect-city`, `--expect-gold-red`), never baked in, because a later
   attempt states its own numbers and a window *inside* an attempt is not the attempt's end. Two
-  honesties it prints for itself: `P1` measures the turn a siege unit was **owned** (the diary holds
-  units, not queues), and a shortfall that is only the **ram** is flagged, because ram and siege
-  tower both go obsolete at `CIVIC_CIVIL_ENGINEERING` and after that the table's ram line cannot be
-  filled at all.
+  honesties it prints for itself: `P1` measures the turn a siege unit was **ordered** - read from the
+  log's own production calls, because the doctrine is a claim about the choosing, falling back to the
+  turn one was **owned** when the log holds no such order, and the label says which answered - and a
+  shortfall that is only the **ram** is flagged, because ram and siege tower both go obsolete at
+  `CIVIC_CIVIL_ENGINEERING` and after that the table's ram line cannot be filled at all.
+* **The production orders** - the first order in each category, the turn the army began, and the turn
+  the siege train was first asked for. The diary holds what the empire *has*; the log holds what it
+  *chose*, and the doctrine is about the choosing.
 * **The economy at T20 / T40 / T60** - science, culture, gold/turn, pop, cities, districts,
   improvements. This is what the military build cost.
 * **The rule table** - `CHECK FAILED` counts per rule. A doctrine that keeps its own rules red is

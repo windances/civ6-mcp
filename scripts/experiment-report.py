@@ -27,6 +27,10 @@ Reported, per attempt:
     taken from the session's own account of itself
   * **the verdict** - the A1 predictions in `docs/experiments/001-attempt-A1.md`, answered from the
     record (`--verdict` prints only this)
+  * **the production orders** - what the empire *asked for*, from the log's `set_city_production`
+    and `purchase_item` calls: the first order in each category and the first turn a siege unit was
+    ordered. The diary holds what the empire **has** and the log holds what it **chose**, and the
+    doctrine is a claim about the choosing
   * the capture line - which turn a city was kept, from the tool reply, not from the prose
   * the rule table - `CHECK FAILED [id]` counts, i.e. which doctrine rules the attempt violated
   * the refusal table - STOPPED_MID_PATH and friends, i.e. what the orders cost
@@ -80,6 +84,7 @@ REFUSALS = (
 CAPTURE_RE = re.compile(r"\b(KEEP|RAZE|LIBERATE_FOUNDER|LIBERATE_PREVIOUS)\|", re.I)
 RULE_RE = re.compile(r"CHECK FAILED \[([a-z0-9\-]+)\]")
 ACHIEVED_RE = re.compile(r"CHECK ACHIEVED[^\n]*?\[([a-z0-9\-]+)\]")
+ORDER_RE = re.compile(r'"item_name":\s*"([A-Za-z_0-9]+)"')
 
 # The establishment table in `prompts/tactics/01-unit-production.md`, expressed as roles rather than
 # unit names: a role is filled by whatever member of its upgrade line the era allows, so the same
@@ -259,6 +264,73 @@ def first_role_turn(by_turn: dict[int, dict], role: str) -> int | None:
     return None
 
 
+# --------------------------------------------------------------------------- production orders
+#
+# The diary says what the empire *has*; the log says what it *asked for*. The doctrine is a claim
+# about the order of the asking ("anything the assault is missing, first"), so the requests are the
+# measurement and the inventory is only the cross-check.
+
+ORDER_TOOLS = ("set_city_production", "purchase_item")
+ORDER_CATEGORIES = {"UNIT": "units", "DISTRICT": "districts", "BUILDING": "buildings",
+                    "PROJECT": "projects", "WONDER": "wonders"}
+
+
+def unit_type_of(item_name: str) -> str:
+    """`UNIT_CROUCHING_TIGER` -> `CROUCHING_TIGER`; anything else passes through unchanged."""
+    name = str(item_name or "").upper()
+    return name[len("UNIT_"):] if name.startswith("UNIT_") else name
+
+
+def role_of_item(item_name: str) -> str | None:
+    unit = unit_type_of(item_name)
+    for role, types in ROLES.items():
+        if unit in types:
+            return role
+    return None
+
+
+def orders(rows: list[dict]) -> list[tuple[int, str, str]]:
+    """Every production order and purchase in the log, as (turn, item_name, item_type).
+
+    Sorted by **turn**, not by timestamp. The log holds every session of the game - including the
+    branches a rollback abandoned - so rows from different sessions interleave and a later timestamp
+    can carry an earlier turn. "The first siege unit was ordered on T38" has to mean the earliest
+    turn, which list order alone does not give.
+    """
+    out: list[tuple[int, str, str]] = []
+    for row in rows:
+        if row.get("tool") not in ORDER_TOOLS:
+            continue
+        params = row.get("params") or {}
+        name = params.get("item_name") or params.get("item") or ""
+        if not name:
+            match = ORDER_RE.search(json.dumps(params, ensure_ascii=False))
+            name = match.group(1) if match else ""
+        if name:
+            out.append((row.get("turn") or 0, str(name).upper(), str(params.get("item_type") or "")))
+    out.sort(key=lambda entry: entry[0])
+    return out
+
+
+def first_order_turn(rows: list[dict], role: str) -> int | None:
+    """The first turn a unit of that role was *ordered* - the doctrine's own quantity."""
+    for turn, name, _kind in orders(rows):
+        if role_of_item(name) == role:
+            return turn
+    return None
+
+
+def order_summary(rows: list[dict]) -> dict:
+    """The first order in each category, and how many of each the attempt made."""
+    counts: collections.Counter = collections.Counter()
+    firsts: dict[str, tuple[int, str]] = {}
+    for turn, name, kind in orders(rows):
+        category = ORDER_CATEGORIES.get(kind.upper(), kind.lower() or "other")
+        counts[category] += 1
+        firsts.setdefault(category, (turn, name))
+    return {"counts": dict(counts), "firsts": firsts, "total": sum(counts.values())}
+
+
 def rule_turns(rows: list[dict]) -> dict[str, list[int]]:
     """Which turns each rule was red on, deduplicated: a turn can be evaluated more than once."""
     out: dict[str, set[int]] = collections.defaultdict(set)
@@ -292,13 +364,18 @@ def verdict(
     keep_turn = min((t for t, _ in cap), default=None)
     horizon = keep_turn if keep_turn is not None else expect_est
     carry = [t for t in rule_turns(rows).get("carrying-capacity", []) if t <= horizon]
-    siege_turn = first_role_turn(by_turn, "siege")
+    owned = first_role_turn(by_turn, "siege")
+    ordered = first_order_turn(rows, "siege")
     early = max(1, expect_est * 3 // 4)
+    # The order is the doctrine's own quantity; ownership is the fallback for a siege unit that was
+    # bought or inherited rather than queued, and the label says which one answered.
+    siege_turn = ordered if ordered is not None else owned
+    how = "ordered" if ordered is not None else "owned"
     return [
         (
-            f"P1 a siege unit early (owns one by T{early})",
+            f"P1 a siege unit early ({how} one by T{early})",
             bool(siege_turn and siege_turn <= early),
-            f"first siege unit {'T' + str(siege_turn) if siege_turn else 'never'}",
+            f"first siege unit {how} {'T' + str(siege_turn) if siege_turn else 'never'}",
         ),
         (
             f"P2 establishment complete by T{expect_est}",
@@ -347,6 +424,21 @@ def print_verdict(
     for role in ESTABLISHMENT:
         turn = first_role_turn(by_turn, role)
         print(f"  first {role:<8s}: {'T' + str(turn) if turn else 'never'}")
+
+    summary = order_summary(rows)
+    if summary["total"]:
+        print("\n-- production orders (what the empire asked for, from the log) --")
+        for category, (turn, name) in sorted(summary["firsts"].items(), key=lambda kv: kv[1][0]):
+            print(f"  first {category:<10s}: T{turn:<4} {name}")
+        print("  counts: " + "  ".join(f"{k} {v}" for k, v in sorted(summary["counts"].items())))
+        ordered = first_order_turn(rows, "siege")
+        if ordered is not None:
+            print(f"  the siege train was first ordered on T{ordered}")
+        first_military = next(
+            ((turn, name) for turn, name, _kind in orders(rows) if role_of_item(name)), None
+        )
+        if first_military:
+            print(f"  the army began on T{first_military[0]} ({first_military[1]})")
 
     print(f"\n-- verdict (limits: establishment T{expect_est}, city T{expect_city}, "
           f"gold floor {expect_gold_red}) --")

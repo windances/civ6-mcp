@@ -122,3 +122,52 @@ def test_verdict_measures_the_attempt_against_its_own_limits():
     assert got["P4"][0] is True  # one red turn before the city fell, under the limit of ten
     assert "T60" in got["P3"][1]
     assert "T50" in got["P2"][1]
+
+
+def test_orders_read_the_log_and_the_queue_beats_the_inventory():
+    """The doctrine is about asking order, so an ordered siege unit answers P1 before an owned one."""
+    rows = [
+        {"turn": 12, "tool": "set_city_production",
+         "params": {"city_id": 1, "item_type": "BUILDING", "item_name": "BUILDING_MONUMENT"}},
+        {"turn": 30, "tool": "set_city_production",
+         "params": {"city_id": 1, "item_type": "UNIT", "item_name": "UNIT_ARCHER"}},
+        {"turn": 38, "tool": "purchase_item",
+         "params": {"city_id": 1, "item_type": "UNIT", "item_name": "UNIT_CATAPULT"}},
+        {"turn": 40, "tool": "unit_action", "params": {"action": "move"}},
+    ]
+    got = report.orders(rows)
+    assert (38, "UNIT_CATAPULT", "UNIT") in got
+    assert len(got) == 3  # the move is not an order
+    assert report.first_order_turn(rows, "siege") == 38
+    assert report.first_order_turn(rows, "ranged") == 30
+    assert report.first_order_turn(rows, "cavalry") is None
+    summary = report.order_summary(rows)
+    assert summary["total"] == 3
+    assert summary["firsts"]["units"] == (30, "UNIT_ARCHER")
+    assert summary["firsts"]["buildings"] == (12, "BUILDING_MONUMENT")
+
+    # Ordered at T38, owned at T70: P1 must answer with the order and say so.
+    by_turn = frames({70: FULL})
+    p1 = report.verdict(by_turn, rows)[0]
+    assert p1[1] is True
+    assert "ordered T38" in p1[2] and p1[0].startswith("P1 a siege unit early (ordered")
+
+    # With no order in the log, the inventory answers and the label admits it.
+    p1_owned = report.verdict(by_turn, [])[0]
+    assert "owned T70" in p1_owned[2]
+    assert p1_owned[1] is False  # T70 is past the early threshold
+
+
+def test_orders_are_ordered_by_turn_not_by_log_position():
+    """The log interleaves sessions, so a later row can carry an earlier turn."""
+    rows = [
+        {"turn": 60, "tool": "set_city_production",
+         "params": {"item_type": "UNIT", "item_name": "UNIT_LINE_INFANTRY"}},
+        {"turn": 25, "tool": "set_city_production",
+         "params": {"item_type": "UNIT", "item_name": "UNIT_CATAPULT"}},
+    ]
+    assert [(t, n) for t, n, _ in report.orders(rows)] == [(25, "UNIT_CATAPULT"), (60, "UNIT_LINE_INFANTRY")]
+    assert report.first_order_turn(rows, "siege") == 25
+    summary = report.order_summary(rows)
+    # Both are units, so the category's first is the earlier turn - not the earlier row.
+    assert summary["firsts"]["units"] == (25, "UNIT_CATAPULT")
