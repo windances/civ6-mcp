@@ -86,28 +86,81 @@ the turn the siege train was first asked for.
 | refusals (`STOPPED_MID_PATH` etc.) | not yet measured |
 | verdict on P1-P4 | not yet measured |
 
-## Mid-window review (end of T40) - written when the session stops there
+## Mid-window review (end of T40) - written when the session stopped there
 
-Task 030 orders the session to stop at the end of **turn 40** and report, and this is where that
-review goes. It is written from the instrument, not from the diary's own summary:
+The session stopped at the end of turn 40 and exited (its process is gone, the game stands at T41, the
+diary holds forty rows). Everything below comes from the instrument over its own session
+(`--run vigilant-sable-longbow-78`), whose snapshot is `docs/experiments/A1-T40.json`:
 
 ```
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --verdict
-.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --from 1 --to 40 --step 10
+.venv\Scripts\python.exe scripts/experiment-report.py --game china_911679432 --run vigilant-sable-longbow-78 --from 1 --to 40 --step 10
 ```
 
-| question | answer |
-|---|---|
-| establishment turn so far (P2 wants <= T60) | not yet measured |
-| the army's start - the first order of any role-mapped unit | not yet measured |
-| the siege train's first order (P1 wants <= T45) | not yet measured |
-| the economy at T20 / T40, against the plan | not yet measured |
-| `carrying-capacity` red turns so far (P4 allows < 10) | not yet measured |
-| the nearest rival city and its distance in tiles | not yet measured |
-| verdict so far on P1-P4 | not yet measured |
+### What the forty turns bought
 
-Then one paragraph, and only one: what the window actually bought, and **the single thing** the next
-stretch changes. A mid-window review that lists five intentions changes nothing.
+| turn | science | culture | gold | gold/t | faith | military | pop | cities | districts | improvements |
+|---|---|---|---|---|---|---|---|---|---|---|
+| T1 | 2.5 | 1.3 | 6 | 5 | 0 | 20 | 1 | 1 | 0 | 0 |
+| T10 | 3.5 | 1.9 | 51 | 5 | 0 | 34 | 3 | 1 | 0 | 0 |
+| T20 | 4.5 | 2.5 | 101 | 5 | 44 | 38 | 5 | 2 | 0 | 0 |
+| T30 | 6.5 | 3.1 | 167 | 7 | 109 | 118 | 7 | 2 | 0 | 2 |
+| T40 | 7.9 | 4.3 | 236 | 6 | 185 | 139 | 8 | 2 | 1 | 2 |
+
+| window | science | culture | gold | faith | military | pop | cities | districts | improvements | techs | civics |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| T1-T20 | +2.0 | +1.2 | +95 | +44 | +18 | +4 | **+1** | 0 | 0 | +2 | +1 |
+| T21-T40 | **+3.9** | +2.1 | +130 | +135 | **+101** | +4 | **0** | +1 | +1 | +1 | +2 |
+
+So the attempt has a clean shape and it is not the shape the doctrine asked for: **T1-T20 expanded
+(one new city, no infrastructure) and T21-T40 built an army - the cheap screens - while expanding not at
+all.** Science trebled over the run (2.5 -> 7.9) and the army went 38 -> 139, but the empire is still two
+cities, which is the opposite of the directive's "four to six cities, then stop".
+
+**Composition:** `T1 WARRIOR:1` -> `T10 +SCOUT` -> `T20 +BUILDER` -> `T30 SLINGER:4, WARRIOR:2, SCOUT:2,
+BUILDER:1` -> `T40 unchanged`. Ten turns of movement and no new unit.
+
+**The establishment at T40:** melee 2/2 and ranged 4/4 are met; **siege 0/2, ram 0/1, cavalry 0/1 are
+at zero**, and no siege unit was ever ordered (`first siege: never`). Screens 2, recon 2.
+
+**Rules and refusals:** the only rule that ever fired is `issue-the-calls-furthest-first`, **8 times**.
+Refusals: `STOPPED_MID_PATH` 106, `BLOCKED` 38, `NO_MOVES` 6, `STOPPED_SHORT` 2, `ERR:` 2 - and every
+stop whose reason the log prints says `(moves exhausted)`, none says another unit was in the way.
+
+**The attempt's own cost:** 274 tool calls over 40 turns = **6.8 a turn**, against the ~39 a turn the
+previous match measured at T272-T287. `get_game_overview` was called **5 times in 40 turns**, where the
+skill asks for it every turn - the session economised on the TURN START briefing and said so.
+
+**Contact and exploration:** the map went 2% -> 14% revealed, and **by T40 no rival had been met at
+all**. There is therefore no city to aim at, and no battle has been fought.
+
+### The verdict, and the two predictions that do not need the clock
+
+| prediction | status at T40 | why |
+|---|---|---|
+| P1 a siege unit by T45 | **OPEN** | T45 has not arrived; none ordered yet |
+| P2 establishment complete by T60 | **OPEN by the clock, already impossible by arithmetic** | Engineering ~T42 + 160 production for two Catapults puts the siege half at T62-T70, before melee/ram/cavalry (see the arithmetic note below) |
+| P3 first enemy city kept by T80 | **OPEN by the clock, already impossible by the map** | the only rival capital is 33 tiles west behind five city-states, no rival is met, and the army is 33 tiles from anything it could take (see the map section below) |
+| P4 gold floor red on <10 turns | **OPEN** | 0 red turns so far, window still running |
+
+**The executor's honesty is a positive result of this attempt**: the session wrote its
+`ESTABLISHMENT:` line at T10, T20, T23, T30 and T40, and the instrument's independent computation
+**agrees with all five**. Five boundary checks, five agreements.
+
+### The one thing the next stretch changes
+
+**The target moves inside the window; nothing else changes.** A1's capture half was decided by the map
+before the army existed - the only rival capital is 33 tiles away behind five city-states and had not
+been met by T40 - so continuing this window would spend another forty turns on a question the map has
+already answered. `docs/experiments/README.md` section 3 now re-scopes **A2** to exactly that: the same
+save, the same doctrine, the same executor, and the objective is the nearest *city* (a city-state inside
+a dozen tiles) instead of the nearest rival capital. The production question - is the establishment
+affordable, and does siege really come first when its tech exists - becomes answerable there, and the
+plan variations (Encampment timing, chops, buying, two war cities) queue behind it.
+
+Two things stay open for whoever runs A2, and both are written in section 3 rather than left to be
+rediscovered: a city-state is a legitimate target for this experiment and not for the standing directive,
+which is what the task file's `overrides:` line is for; and the distance is measured with
+`get_staging_plan` **before** the deadline is written.
 
 ## An arithmetic note before the T40 review: what P2's deadline actually asks for
 
