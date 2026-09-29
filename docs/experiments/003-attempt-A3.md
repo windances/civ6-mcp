@@ -281,6 +281,24 @@ nothing attacked had walls*. A city-state builds Ancient Walls after Masonry and
 so a later read could differ; the reads above are stamped T60-T61, and the brief requires re-reading cities
 seen earlier, which is why this table names its turns.
 
+## The assault's pool progression, read off the attack replies
+
+The pool below is the **pre-attack** value on each turn's range attack, and it falls every turn - which is
+the number that says the supply line is cut well enough that healing is not out-pacing the train (the
+`cut-the-supply` rule fired at T61, one turn after the war opened):
+
+| turn | pool before the shot |
+|---|---|
+| T61 | 200/200 |
+| T62 | 175/200 |
+| T63 | 158/200 |
+| T64 | **129/200** |
+
+Extrapolated, that is a city kept around **T69-T71** - inside Q2's own T68-T80 window and inside Q3's T80
+deadline - and it is against `walls: none`, so the fall is the train's raw damage rather than a wall phase.
+The record keeps the two facts apart: **A3 keeps a city on schedule, and it is not the city the attempt was
+designed around.**
+
 ## The end table, and the verdict - written when the attempt ends
 
 Not yet. When it does: the snapshot above, the `--compare` row against `A2-final.json`, the wall pool's
