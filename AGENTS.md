@@ -648,3 +648,9 @@ the session's task from the facts it just read.
 collisions across rolled-back branches, the `AutoSave_NNNN` offset, `orient.py`, `turn-of-save.py`,
 `auto-turns.py`, loading by name, the hang recovery and the save list. Read it before any recovery:
 it is the section that used to live here, unchanged, and it is still the authority.
+
+**A load that has already landed can keep retrying for ten minutes, and that is not a hang** (measured
+2026-09-30, the experiment's shared start): the screen read the loaded turn while `load_game_save` went
+on re-clicking CONTINUE, with 4318 refusing and 4319 answering `0 Lua states`. Do not kill the session,
+do not start a second one, and do not read failure from the silence - the call logs only when it
+returns. Verify the position from outside with `.tools/whats-on-screen.py`, which touches no tuner.

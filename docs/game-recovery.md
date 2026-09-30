@@ -142,3 +142,19 @@ calls; if you need a fact from the game, ask the session. Two corollaries worth 
 state list from a probe is evidence about *your* connection, not about the game; and after a save
 load the game may listen on **4319** alone, which `GameConnection` now walks as a fallback
 (`tuner_port_candidates`, 4318 then 4319).
+
+**A load that has already landed can still be retried for ten minutes, and that is not a hang.**
+Measured 2026-09-30 loading the experiment's shared start (attempt A8): the game reached **turn 1** and
+the fresh-start advisor - `.tools/whats-on-screen.py` read `TURN 1`, `CHOOSE RESEARCH`, `CODE OF LAWS`,
+no leader screen - while `load_game_save` went on **re-clicking CONTINUE about ninety times over nine
+minutes**, each attempt logging `Continue: the leader screen is gone (unrecognised (N text boxes)) - the
+click took` and then `Discovered 0 Lua states (GameCore=None, InGame=None)`, with **4318 refusing and
+4319 answering**. It returned by itself and the session played. **So the three things to do in that
+window are all "nothing":** do not kill the session (it is inside the call, not stuck), do not conclude
+failure from the log's silence (the call logs only when it returns), and do not start a second session -
+verify the position from outside with `whats-on-screen.py`, which touches no tuner. **The clicks are also
+harmless in the case that matters**: the position they were aimed at was already the one being loaded,
+and the proof was the session's own first read after recovering - `No technology being researched!` - a
+stray click that had chosen a research would have shown one. Two facts to carry: the `0 Lua states` line
+belongs to the *landing* window and not to the session's connection, and a load's real success signal is
+the turn the screen reads, not the call's own reply.
