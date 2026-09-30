@@ -24,7 +24,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from . import los
 from .lua import models as m
+
+# The roles that shoot from the ring, and therefore the roles a line-of-sight verdict matters for.
+# `short-ranged` (a Crouching Tiger, range 1) is not here: it fires from the adjacent tile, where
+# nothing can stand between it and the target.
+_SHOOTERS = ("siege", "ranged")
 
 # Role → the ring distance it wants. Siege and ranged shoot from 2; melee takes the adjacent
 # tile; a short-ranged unit (Crouching Tiger, range 1) stands adjacent with the melee.
@@ -57,6 +63,10 @@ class Assignment:
     turns: int
     this_turn: bool
     note: str = ""
+    # The line-of-sight verdict for a shooter's tile (`civ_mcp.los`), None for everyone else. A
+    # ring tile that cannot fire is a walk, not a firing position: the row used to claim
+    # `FIRE from here` for every distance-2 tile, which the map itself can answer.
+    los: los.Verdict | None = None
 
     @property
     def where(self) -> str:
@@ -83,7 +93,32 @@ class StagingPlanResult:
 
     @property
     def shooters_in_place(self) -> int:
-        return sum(1 for a in self.placed if a.unit.role in ("siege", "ranged") and a.tile)
+        """Shooters on a tile they can actually fire from.
+
+        A shooter whose tile the map rules out is **not** in position, whatever its distance: the
+        whole reason the verdict exists is that distance 2 is not the same as line of sight.
+        """
+        return sum(
+            1
+            for a in self.placed
+            if a.unit.role in _SHOOTERS and a.tile and not (a.los and a.los.ruled_out)
+        )
+
+
+def _los_rank(unit: m.StagingUnit, tile: m.StagingRingTile, plan: m.StagingPlan) -> int:
+    """0 for a firing tile the map does not rule out, 2 for one it says cannot fire.
+
+    Only a **ruled-out** tile is demoted, and that is deliberate. A `maybe` (two candidate lines
+    with one clear) and an unread tile both keep their distance preference, because the doctrine's
+    choice of range 2 must not be overturned by a question the map cannot answer - and a server
+    that sends no sight data has to keep the plan it produced before this verdict existed. What
+    the verdict changes is that a gun is never *sent* to a tile that provably cannot shoot: it
+    ranks below a tile that works, including the adjacent one.
+    """
+    if unit.role not in _SHOOTERS:
+        return 0
+    verdict = los.line_of_sight(tile, engine=plan.engine_fire.get(unit.unit_id))
+    return 2 if verdict.ruled_out else 0
 
 
 def _distance_rank(unit: m.StagingUnit, tile: m.StagingRingTile) -> int:
@@ -202,11 +237,15 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
             for o in _candidates(plan, unit)
             if o.turns <= turns_ahead and (o.x, o.y) in by_pos
         ]
-        # Prefer: arriving sooner, then the role's distance, then not colliding with a tile
-        # another unit has already claimed this turn.
+        # Prefer: arriving sooner, then a tile this unit can actually fire from, then the role's
+        # distance, then not colliding with a tile another unit has already claimed this turn.
+        # Line of sight comes before distance on purpose: a distance-2 tile with a wood between it
+        # and the city is worth less to a Catapult than the adjacent tile it *can* shoot from, and
+        # the measured 阿斯特拉罕 assault was lost to exactly that - one usable distance-2 tile.
         options.sort(
             key=lambda o: (
                 o.turns,
+                _los_rank(unit, by_pos[(o.x, o.y)], plan),
                 _distance_rank(unit, by_pos[(o.x, o.y)]),
                 1 if (o.x, o.y) in taken else 0,
             )
@@ -226,8 +265,19 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
             continue
         tile = by_pos[(chosen.x, chosen.y)]
         taken[(chosen.x, chosen.y)] = f"{unit.unit_type} #{unit.unit_id}"
+        verdict = (
+            los.line_of_sight(tile, engine=plan.engine_fire.get(unit.unit_id))
+            if unit.role in _SHOOTERS
+            else None
+        )
         result.placed.append(
-            Assignment(unit=unit, tile=tile, turns=chosen.turns, this_turn=chosen.this_turn)
+            Assignment(
+                unit=unit,
+                tile=tile,
+                turns=chosen.turns,
+                this_turn=chosen.this_turn,
+                los=verdict,
+            )
         )
 
     # The surplus, in the order the employment ladder in `render` gives: the supply hexes of
@@ -343,7 +393,11 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
     )
     result.supply_cut, result.supply_total = cut, total
     result.idle_tiles = [t for t in plan.ring if (t.x, t.y) not in taken and not t.blocked]
-    shooters = [a for a in result.placed if a.unit.role in ("siege", "ranged") and a.tile]
+    shooters = [
+        a
+        for a in result.placed
+        if a.unit.role in ("siege", "ranged") and a.tile and not (a.los and a.los.ruled_out)
+    ]
     result.opens_on = max((a.turns for a in shooters), default=0)
     return result
 
@@ -380,14 +434,72 @@ def _rally_option(plan: m.StagingPlan | None, unit: m.StagingUnit, rally_tiles: 
     return best
 
 
+def _fire_note(assignment: Assignment) -> str:
+    """The firing verdict, on the row that assigns the tile."""
+    verdict = assignment.los
+    if verdict is None or assignment.unit.role not in _SHOOTERS:
+        return ""
+    if verdict.state == los.FIRE:
+        return " - FIRE from here" + (
+            " (the game's own answer)" if verdict.source == "engine" else ""
+        )
+    if verdict.state == los.MAYBE:
+        blockers = "; ".join(verdict.blockers)
+        return f" - FIRE? one line is clear, another crosses {blockers}" if blockers else " - FIRE?"
+    if verdict.state == los.NO:
+        blockers = "; ".join(verdict.blockers)
+        return f" - NO LINE OF SIGHT: {blockers}" if blockers else f" - NO LINE OF SIGHT: {verdict.reason}"
+    return " - LOS unread: the map sent no sight data for this tile (server too old)"
+
+
+def _spare_firing_tiles(plan: m.StagingPlan | None, result: StagingPlanResult, unit: m.StagingUnit):
+    """(turns, tile) for the ring tiles this unit can reach and the map says it can fire from.
+
+    The answer to "so where does this gun stand instead": a tile nobody has claimed, with a clear
+    line to the target, in the order it can get there.
+    """
+    if plan is None:
+        return []
+    claimed = {
+        (a.tile.x, a.tile.y)
+        for a in result.placed + result.surplus + result.rotation
+        if a.tile is not None
+    }
+    ring_by_pos = {(t.x, t.y): t for t in plan.ring}
+    found = []
+    for option in plan.options:
+        if option.unit_id != unit.unit_id or (option.x, option.y) in claimed:
+            continue
+        tile = ring_by_pos.get((option.x, option.y))
+        if tile is None or tile.blocked:
+            continue
+        if los.line_of_sight(tile, engine=plan.engine_fire.get(unit.unit_id)).can_fire:
+            found.append((option.turns, tile))
+    found.sort(key=lambda pair: (pair[0], pair[1].distance))
+    return found
+
+
 def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
     """The plan as the table the doctrine asks for, one row per unit."""
     units = {u.unit_id: u for u in (plan.units if plan else [])}
     ring_tiles = {(t.x, t.y): t for t in (plan.ring if plan else [])}
     rally_tiles = {(t.x, t.y): t for t in (getattr(plan, "rally_ring", []) or [])}
     what = f"the camp at {result.target}" if result.camp else (result.target or "the target")
+    # How many of the ring's tiles actually have a shot at the target. `18 firing tiles` is a count
+    # of tiles; the number that matters is the one with a clear line - at 阿斯特拉罕 it was one.
+    sight_data = any(t.between for t in (plan.ring if plan else []))
+    los_tiles = (
+        sum(
+            1
+            for t in (plan.ring if plan else [])
+            if not t.blocked and los.line_of_sight(t).state == los.FIRE
+        )
+        if sight_data
+        else 0
+    )
     lines = [
         f"STAGING PLAN for {what} — {result.ring_size} firing tile(s)"
+        + (f", {los_tiles} with line of sight" if sight_data else "")
         + (f", {len(rally_tiles)} assembly tile(s) at d3" if rally_tiles else "")
         + f", {len(result.placed)} unit(s) placed, {len(result.unplaced)} unplaced"
     ]
@@ -423,7 +535,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
         lines.append(
             f"  {a.unit.unit_type:<22} #{a.unit.unit_id} ({a.unit.x},{a.unit.y}) moves {a.unit.moves}"
             f" -> {a.where} d{a.tile.distance}  arrive {when}  [{a.unit.role}]"
-            f"{' - FIRE from here' if a.unit.role in ('siege', 'ranged') and a.tile.distance == 2 else ''}"
+            f"{_fire_note(a)}"
             f"{leg}"
         )
     for unit in result.unplaced:
@@ -548,11 +660,42 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                     " ~20/turn heal"
                 )
             )
-    shooters = [a for a in result.placed if a.unit.role in ("siege", "ranged") and a.tile]
+    # A gun whose tile the map rules out is not a gun in position, and that is the difference
+    # between "the assault opens on T+2" and "the assault opens on T+2 and lands nothing".
+    stuck = [a for a in result.placed if a.los is not None and a.los.ruled_out]
+    if stuck:
+        lines.append(
+            "  NO LINE OF SIGHT — the map puts a blocker between these guns and the target, and a"
+            " firing tile that cannot fire is a wasted march (manual:999):"
+        )
+        for a in stuck:
+            blockers = "; ".join(a.los.blockers) or a.los.reason
+            spare = _spare_firing_tiles(plan, result, a.unit)
+            alt = (
+                f" - stand it on ({spare[0][1].x},{spare[0][1].y}) d{spare[0][1].distance} instead"
+                f" (T+{spare[0][0]}), which the map says it can fire from"
+                if spare
+                else " - no reachable ring tile fires from here: bring it in and read `CANFIRE` next"
+                " turn, or leave it out of the assault rather than marching it to a tile it cannot"
+                " shoot from"
+            )
+            lines.append(f"    {a.unit.unit_type} #{a.unit.unit_id} -> {a.where}: {blockers}{alt}")
+    if any(
+        a.los is not None and a.los.source == "map" and a.unit.role in _SHOOTERS
+        for a in result.placed
+    ):
+        lines.append(
+            "  LINE OF SIGHT is read off the map (manual:999: Hills, Woods, Rainforest and"
+            " Mountains between the two block a shot, and a unit on Hills sees over them unless the"
+            " blocker is Hills+Woods). `FIRE` is clear; `FIRE?` is a tile with two candidate lines"
+            " and only one of them clear. A gun already standing on a ring tile gets `CANFIRE` —"
+            " the game's own answer, which overrides the map's."
+        )
+    shooters = result.shooters_in_place
     when = "this turn" if result.opens_on == 0 else f"T+{result.opens_on}"
     if result.camp:
         lines.append(
-            f"  WALK-IN OPENS on {when} with {len(shooters)} shooter(s) in position."
+            f"  WALK-IN OPENS on {when} with {shooters} shooter(s) in position."
             + (
                 " A camp has no HP, no walls and no supply line — one military unit MOVES onto its"
                 " tile and it is gone, so the pair that matters is a shooter and an **unspent**"
@@ -566,7 +709,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
     else:
         lines.append(
             f"  ASSAULT OPENS on {when}"
-            f" with {len(shooters)} shooter(s) in position."
+            f" with {shooters} shooter(s) in position."
             + (
                 " A shooter that moves two tiles, crosses a river or climbs a hill fires NEXT turn —"
                 " if you want it firing the turn it lands, it must arrive with a movement point left."

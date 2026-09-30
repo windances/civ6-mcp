@@ -2520,13 +2520,46 @@ for dx = -2, 2 do for dy = -2, 2 do
         local d = Map.GetPlotDistance(tx, ty, px, py)
         if d >= 1 and d <= 2 then
             local passable = not p:IsImpassable()
-            ring[#ring + 1] = {x = px, y = py, d = d, idx = p:GetIndex()}
-            print("RING|" .. px .. "," .. py .. "|" .. d .. "|"
-                .. (passable and "ok" or "impassable") .. "|"
-                .. (p:IsWater() and "water" or "land"))
+            -- The map's own sight numbers, for the manual's line-of-sight rule (manual:999: "a
+            -- unit cannot see a target if a blocking object is between the two units, such as a
+            -- Mountain, Hill, or a Woods tile ... units on Hills can see over blocking terrain,
+            -- unless the blocking terrain contains both Hills and Woods"). The rule is the
+            -- manual's and the numbers are the game's: `SightThroughModifier` is 1 for Hills,
+            -- Woods and Rainforest, 2 for Mountains and the tall Natural Wonders, and a
+            -- Hills+Woods tile sums to 2 - which is exactly the manual's exception. The tool
+            -- applies the rule; this query only reports the facts, because the engine's own
+            -- answer exists for a unit standing on a tile and not for a tile it has not reached.
+            local tinfo = GameInfo.Terrains[p:GetTerrainType()]
+            local finfo = GameInfo.Features[p:GetFeatureType()]
+            local hills = (tinfo and tinfo.Hills) and 1 or 0
+            local sight = ((tinfo and tinfo.SightThroughModifier) or 0)
+                + ((finfo and finfo.SightThroughModifier) or 0)
+            ring[#ring + 1] = {x = px, y = py, d = d, idx = p:GetIndex(),
+                passable = passable, water = p:IsWater(), hills = hills, sight = sight}
         end
     end
 end end
+-- One row per ring tile, and for a distance-2 tile the tiles strictly between it and the target:
+-- the distance-1 ring tiles that are also adjacent to it, found with the game's own
+-- `Map.GetPlotDistance` rather than a hand-computed hex offset (hand-computed hex has been wrong
+-- twice in this war). `-1` marks an intervening tile no shot crosses: impassable covers Mountains,
+-- the Natural Wonders and Ice, which the manual calls impenetrable.
+for _, t in ipairs(ring) do
+    local via = ""
+    if t.d == 2 then
+        local parts = {}
+        for _, n in ipairs(ring) do
+            if n.d == 1 and Map.GetPlotDistance(t.x, t.y, n.x, n.y) == 1 then
+                parts[#parts + 1] = n.x .. "," .. n.y .. "," .. (n.passable and n.sight or -1)
+            end
+        end
+        via = "|via:" .. table.concat(parts, ";")
+    end
+    print("RING|" .. t.x .. "," .. t.y .. "|" .. t.d .. "|"
+        .. (t.passable and "ok" or "impassable") .. "|"
+        .. (t.water and "water" or "land")
+        .. "|hill:" .. t.hills .. "|sight:" .. t.sight .. via)
+end
 -- A camp is a target of this same plan: the pre-war analysis, the staging before the assault and
 -- the assault itself apply to every city AND every barbarian camp (human instruction 2026-09-26).
 -- The ring, the paths and the assignments are identical; what differs is the last step - a camp has
@@ -2641,6 +2674,24 @@ for _, u in Players[me]:GetUnits():Members() do
                 .. ux .. "," .. uy .. "|" .. moves .. "|" .. role
                 .. "|d" .. Map.GetPlotDistance(ux, uy, tx, ty) .. "|cs" .. cs
                 .. "|hp" .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage())
+            -- The engine's own answer for a gun that is **already** where it would fire from: the
+            -- same `CanStartOperation(RANGE_ATTACK)` the attack path uses, aimed at the target
+            -- tile. It is what turns the map's sight numbers above into a reading for a unit in
+            -- position, and it is the oracle the map rule can be calibrated against tile by tile.
+            -- Only for a unit with movement left: the operation is refused for a unit that has
+            -- already attacked, and that refusal is not a line-of-sight verdict.
+            if moves > 0 and (rs > 0 or bomb > 0)
+                and Map.GetPlotDistance(ux, uy, tx, ty) <= (info and info.Range or 1) then
+                local lp = {{}}
+                lp[UnitOperationTypes.PARAM_X] = tx
+                lp[UnitOperationTypes.PARAM_Y] = ty
+                local okF, canF = pcall(function()
+                    return UnitManager.CanStartOperation(u, UnitOperationTypes.RANGE_ATTACK, nil, lp)
+                end)
+                if okF then
+                    print("CANFIRE|" .. u:GetID() .. "|" .. (canF and 1 or 0))
+                end
+            end
             if ntx ~= -9999 and moves > 0 then
                 for _, t2 in ipairs(nextRing) do
                     local path2 = UnitManager.GetMoveToPath(u, t2.idx)
@@ -2795,6 +2846,22 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             plan.camp = any(token == "camp:1" for token in parts[2:])
         elif line.startswith("RING|") and len(parts) >= 5:
             x, y = (int(v) for v in parts[1].split(","))
+            # The last three tokens are the map's sight facts and are optional: a server that
+            # predates them sends five fields, and "not reported" must never read as "clear".
+            hills = False
+            sight = 0
+            between: list[tuple[int, int, int]] = []
+            for token in parts[5:]:
+                if token.startswith("hill:"):
+                    hills = token[5:] == "1"
+                elif token.startswith("sight:"):
+                    sight = int(_number(token[6:]))
+                elif token.startswith("via:"):
+                    for entry in token[4:].split(";"):
+                        if not entry:
+                            continue
+                        vx, vy, level = entry.split(",")
+                        between.append((int(vx), int(vy), int(_number(level))))
             plan.ring.append(
                 StagingRingTile(
                     x=x,
@@ -2802,8 +2869,13 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     distance=int(_number(parts[2])),
                     blocked=parts[3] != "ok",
                     water=parts[4] == "water",
+                    hills=hills,
+                    sight=sight,
+                    between=between,
                 )
             )
+        elif line.startswith("CANFIRE|") and len(parts) >= 3:
+            plan.engine_fire[int(parts[1])] = parts[2] == "1"
         elif line.startswith("UNIT|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[3].split(","))
             distance = strength = 0

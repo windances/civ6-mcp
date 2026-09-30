@@ -202,9 +202,17 @@ Live T107: the same two tiles of range that let an Archer hit Moscow refused a C
 firing positions are per tile **and per unit**, and a tile is only a firing position once a shot from
 it has been ordered and not refused.
 
+**This gate is answerable before the declaration now** (2026-09-30): `get_staging_plan(target)` runs on
+the tile before any war is declared, and its header counts the ring tiles **with line of sight** while
+each shooter's row carries `FIRE` / `FIRE?` / `NO LINE OF SIGHT: <blocker>`. The map's rule is the
+manual's (`manual:999`, on the game's own `SightThroughModifier`), and for a gun already standing on a
+ring tile the query asks the engine itself (`CANFIRE`), which overrides the map. `FIRE?` is the one
+case to settle by ordering the shot.
+
 **Deliverable: the firing list, before the declaration.** Name the tiles at distance ≤ 2 from the
-target that our siege units can shoot from — with `SIEGE POSTURE` as the arbiter, not a hand-computed
-distance — and say which of them the column can reach with a movement point to spare. Measured at
+target that our siege units can shoot from — from the plan's per-tile verdict, with `SIEGE POSTURE` as
+the in-turn arbiter, never a hand-computed distance — and say which of them the column can reach with a
+movement point to spare. Measured at
 阿斯特拉罕 (54,40) on T140–T143: **one** Catapult tile worked ((54,38)); (55,38) is distance 2 with no
 LOS and (56,38) is distance 3, so three Catapults fired twice a turn and a 200-point pool stood for
 three turns. The arithmetic in gate 1 assumes every shooter fires — this list is what makes that

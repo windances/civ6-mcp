@@ -832,6 +832,14 @@ async def get_staging_plan(
     Read it **before** the first move of an assembly. It answers the three questions the plan
     exists for: who goes where, who cannot fit (supply hexes, forward staging, or depth), and
     which turn the assault actually opens.
+
+    Each shooter's row also carries **whether that tile can actually shoot** the target, because
+    distance is not line of sight: `FIRE from here (the game's own answer)` is the engine's own
+    `CanStartOperation(RANGE_ATTACK)` for a gun already standing there, `FIRE from here` is the
+    manual's rule (`manual:999`) read from the map's own `SightThroughModifier`, `FIRE?` is a tile
+    with two candidate lines and only one clear, and `NO LINE OF SIGHT: <blocker>` names what is in
+    the way and which tile would work instead. A ruled-out tile is never handed to a shooter while a
+    tile that works is free, and `n shooter(s) in position` counts the ones that can fire.
     """
     gs = _get_game(ctx)
 

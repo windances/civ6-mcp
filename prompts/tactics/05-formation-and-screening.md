@@ -38,7 +38,9 @@ unit is**:
 ## Order of advance
 
 1. **Screen first**: the melee moves to the tile adjacent to the city (or to the enemy stack).
-2. **Then the ranged and siege** move to their range-2 tiles behind it.
+2. **Then the ranged and siege** move to their range-2 tiles behind it — the tiles `get_staging_plan`
+   marks `FIRE`, not the ones it marks `NO LINE OF SIGHT` (range 2 without a line is not a firing
+   position, and the plan names a tile that works instead).
 3. **No support unit at all**: neither a ram nor a tower is built or fielded (human instruction
    2026-09-30: 不生产也不使用撞锤/攻城塔), including any ram the empire already owns - it stays a garrison
    unit. A support only works from the tile adjacent to the city and only for melee, so the tile it

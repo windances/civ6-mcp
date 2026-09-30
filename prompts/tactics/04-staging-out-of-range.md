@@ -352,10 +352,18 @@ before the declaration and again the turn the stack forms:
    `BLOCKED (impassable mountain)`, and at 阿斯特拉罕 the whole east side was mountains, so for most
    of that siege only three shooters could fire at once while six stood idle. Moscow's ring had six
    usable tiles and the siege went twice as fast.
-2. **Test line of sight per tile, per unit.** LOS is not distance: (53,35)→(52,37) was refused
-   `NO_LOS` while (52,36)→(53,37) at the same range went through, and a Catapult refused (54,40)
-   from (55,38) yet fired from (52,38) (T107). A tile is only a firing position once a shot from it
-   has been *ordered* and not refused.
+2. **Read the line of sight off the plan, per tile and per unit — it is not distance.** (53,35)→(52,37)
+   was refused `NO_LOS` while (52,36)→(53,37) at the same range went through, and a Catapult refused
+   (54,40) from (55,38) yet fired from (52,38) (T107). `get_staging_plan` now answers it on each
+   shooter's row, and the wording says which answer it is: **`FIRE from here (the game's own answer)`**
+   is the engine's — it was asked `CanStartOperation(RANGE_ATTACK)` for a gun already standing on
+   that tile, and that is final; **`FIRE from here`** is the map's rule (Hills, Woods, Rainforest and
+   Mountains between the two block the shot, and a unit on Hills sees over them unless the blocker is
+   Hills+Woods — `manual:999`), read from the game's own `SightThroughModifier`; **`FIRE?`** is a tile
+   with two candidate lines and only one of them clear, which is the single case the map cannot settle
+   — order the shot and read the reply; and **`NO LINE OF SIGHT: <blocker>`** names the tile in the way
+   and the tile that would work instead. A gun sent to a ruled-out tile is a wasted march, and the
+   plan's `FIRE`/`NO LOS` verdicts, not the distance, are what `n shooter(s) in position` counts.
 3. **Assign tiles by role, and keep the two sets apart: melee goes ADJACENT (distance 1) to the city,
    shooters go on the ring (distance 2), and at least one adjacent tile stays free for the capture
    move.** Our own stack is the most common obstacle to our own ring: at 阿斯特拉罕 the shooters
@@ -392,7 +400,8 @@ before the declaration and again the turn the stack forms:
 
 Advance when all of these are true in the same turn:
 
-- the shooters are on ring tiles **with movement left**, or one point from them;
+- the shooters are on ring tiles **with movement left**, or one point from them, and their rows say
+  `FIRE` — a `NO LINE OF SIGHT` row is a gun that is not in position however close it stands;
 - a capture-capable unit is adjacent (or one point from adjacent) and unspent;
 - the walls answer is in position, if the target has walls;
 - the field army in contact is dealt with (step 5, and files 2 and 3).

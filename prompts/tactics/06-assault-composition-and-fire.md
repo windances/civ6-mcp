@@ -62,13 +62,18 @@ a re-siege. Both failures above cost a full turn each.
 
 ## Order of work, every turn
 
-0. **Read the ring before moving anything: which of our tiles can actually shoot?** `SIEGE POSTURE` is
-   the arbiter — the `CAN ATTACK:` hint lists targets a Catapult then answers `NO_LOS` to, and hex
-   distance cannot be worked out by hand. Measured at 阿斯特拉罕 (54,40): **(54,38) fires, (55,38) is
-   distance 2 with no LOS, (56,38) is distance 3**, so a three-Catapult train fired **twice** a turn
-   and the 200-point pool took three turns instead of the one the arithmetic promised. Sort the ring
-   into "fires" and "dead" *before* the column advances, and stage each siege unit on a tile that has
-   been tested. **A siege unit attacks cities and districts only**: ordering one at a unit is refused
+0. **Read the ring before moving anything: which of our tiles can actually shoot?** `get_staging_plan`
+   answers it per shooter tile and the wording says which answer it is — `FIRE from here (the game's
+   own answer)` is the engine's own `CanStartOperation`, `FIRE from here` is the manual's line-of-sight
+   rule read from the map (`manual:999`), `FIRE?` is a tile the map cannot settle (order the shot and
+   read the reply), and `NO LINE OF SIGHT: <blocker>` names the tile in the way and one that works
+   instead. `SIEGE POSTURE` is the in-turn arbiter — the `CAN ATTACK:` hint lists targets a Catapult
+   then answers `NO_LOS` to, and hex distance cannot be worked out by hand. Measured at 阿斯特拉罕
+   (54,40): **(54,38) fires, (55,38) is distance 2 with no LOS, (56,38) is distance 3**, so a
+   three-Catapult train fired **twice** a turn and the 200-point pool took three turns instead of the
+   one the arithmetic promised. Sort the ring into "fires" and "dead" *before* the column advances,
+   and stage each siege unit on a tile that has been tested. **A siege unit attacks cities and
+   districts only**: ordering one at a unit is refused
    (`ERR:SIEGE_CANNOT_ATTACK_UNITS`) — the old path walked the Catapult at the target and lost the
    whole turn (T140); use a ranged unit (Crossbowman, RS 40) against units.
 1. **Siege knocks the walls to 0** (and then the city's HP pool).

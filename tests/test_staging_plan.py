@@ -455,7 +455,9 @@ class TestTheAssemblyLeg:
             unit(2, "UNIT_MAN_AT_ARMS", "melee", x=60, y=37, moves=2),
         ]
         ring = [
-            m.StagingRingTile(x=55, y=41, distance=2),
+            # A d2 tile with a flat tile between it and the target: the map's sight data the
+            # plan reads line of sight from (`civ_mcp.los`), so this row prints `FIRE from here`.
+            m.StagingRingTile(x=55, y=41, distance=2, between=[(56, 41, 0)]),
             m.StagingRingTile(x=56, y=42, distance=1),
         ]
         options = [

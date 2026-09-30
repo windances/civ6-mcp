@@ -78,10 +78,10 @@ but the doctrine text stays behind. Three concrete reasons:
 | `01-unit-production.md` | PARTLY | `01:17` Siege **2** vs live `siege-train` **>= 3** (`turn-checks.md:224`) and the directive's 3; Pike and Shot falls out of `counter-the-cavalry`'s unit list; no Corps/Army verb |
 | `02-contact-on-discovery.md` | PARTLY | its peacetime-barbarian trigger has no class or unit-relative distance (both live only in `BATTLE ASSESSMENT`, which is war/damage-gated); no read-only estimate verb |
 | `03-under-attack.md` | MOSTLY | no rule forbids the withdrawal it recommends (`answer-the-attack` and `mass-on-contact` both accept a stated one) - but it points step 1 at `BATTLE ASSESSMENT`, which lists **enemies only**; our damage is in the `== Events ==` line, "an enemy attacked a city" has no event or metric at all, and the file never mentions that an unused legal attack **bounces `end_turn`** until `skip_remaining_units(force=True)` |
-| `04-staging-out-of-range.md` | ~HALF | the RALLY leg it leans on is **dead code**; `SIEGE FIRE` is suppressed in exactly its trigger state; no movement-point metric; no LOS or ZOC input; a pillage rung with no verb |
+| `04-staging-out-of-range.md` | ~HALF (rising) | the RALLY leg it leans on is now **live** (the query emits a d3 assembly ring, 2026-09-30); **step 6.2 now has an oracle** - the plan answers `FIRE` / `FIRE?` / `NO LINE OF SIGHT` per shooter tile, from the map and from the engine; what remains is the movement-point path cost, any ZOC input, and a pillage rung with no verb |
 | `05-formation-and-screening.md` | MOSTLY | `WOUNDED IN REACH` (`05:83-88`) is printed **only by `scripts/play-turn.py`**, never by the MCP loop; "never adjacent to a *city*" is unenforced; the screen's identity is not reported |
-| `06-assault-composition-and-fire.md` | PARTLY | the composition table is **fixed** (siege is a band, the ram/tower row is gone, anti-cavalry added, capture classes corrected) - what remains is the pre-move ring-LOS step (`06:64-71`), which has no oracle |
-| `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0 still calls **`get_deal_options`, which is not an MCP tool**; Gate 2 (ring LOS) is impossible pre-declaration; the Siege Tower advice and the C3 claim are **fixed** (2026-09-30) |
+| `06-assault-composition-and-fire.md` | PARTLY (rising) | the composition table is **fixed** (siege is a band, the ram/tower row is gone, anti-cavalry added, capture classes corrected) and row 0's pre-move ring-LOS question now has an oracle - the staging plan's per-tile `FIRE` / `NO LINE OF SIGHT` verdict (2026-09-30); what remains is the command-level "which of these guns has already fired" |
+| `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0 still calls **`get_deal_options`, which is not an MCP tool**; **Gate 2 (ring LOS) is now answerable before the declaration** from the staging plan's map rule plus the engine's `CANFIRE` (2026-09-30); the Siege Tower advice and the C3 claim are **fixed** (2026-09-30) |
 | `08-war-and-the-home-front.md` | MOSTLY | every block and rule it cites is live (`10-TURN REVIEW`, `WAR ECONOMY`, `builder-backlog`, `carrying-capacity`); the new power section is code-complete but its rule is **staged** and a server started before commit `8353672` prints no power at all, leaving a human-only fallback; a stale military figure (`08:34`, 306 vs its own table's 282) and a retired task path (`08:70-71`) |
 
 ## Resolved by human instruction, 2026-09-30
@@ -112,9 +112,10 @@ printed cap). The Chinese backups mirror each one.
    plus a melee walk-in, the convertible reported before the raid and not instead of it.
 
 What the rulings did **not** touch, and what therefore remains open from this audit: the tooling gaps
-(`pillage` has no verb; the rally leg is dead code; no LOS oracle; `SIEGE FIRE` suppressed at staging
-distance; `WOUNDED IN REACH` CLI-only; `get_deal_options` in `07`'s Step 0; the camp-prohibition was
-the only one of the four that was pure prose), and the delivery finding.
+(`pillage` has no verb; `WOUNDED IN REACH` CLI-only; `get_deal_options` in `07`'s Step 0; no
+movement-point path cost or ZOC input; the camp-prohibition was the only one of the four that was pure
+prose), and the delivery finding. Three of those gaps have since been closed by code - the rally leg,
+the line-of-sight oracle and `SIEGE POSTURE`'s availability (all 2026-09-30, see the ranked fixes).
 
 ## The four failure classes, with the evidence
 
@@ -145,9 +146,9 @@ the only one of the four that was pure prose), and the delivery finding.
 
 | finding | evidence |
 |---|---|
-| **No line-of-sight oracle, and four files need one.** `04:352-355` (test LOS per tile), `05:36`, `06:64-71` (row 0: "which ring tiles can shoot, before the first move") and `07:191-214` (Gate 2, "the firing list, before the declaration"). The staging plan marks "`- FIRE from here`" on `distance == 2` alone (`staging.py:418`); `CAN ATTACK:` is a `get_units` line that never lists cities and skips siege units (`lua/units.py:86-87,95`); `SIEGE POSTURE` names no tiles. | the pre-assault question the doctrine is built around cannot be answered |
-| **The RALLY leg is dead code.** `_rally_option` keeps only ring tiles with `distance >= 3` (`staging.py:369`), but the production ring is `d >= 1 and d <= 2` (`lua/units.py:2521`) and options exist only for ring tiles - so `ASSEMBLY FIRST` / `RALLY` (`staging.py:386-392,409-414`) can never print. The test that pins it builds a synthetic `distance=3` ring tile (`tests/test_staging_plan.py:457,466-471`), so **a green test covers an unreachable feature**, while `04:53-54` forbids the hand computation that is the only alternative. | `04` step 1 cannot be executed as written |
-| **`SIEGE FIRE` / `SIEGE POSTURE` are suppressed in exactly the state `04` is triggered for**: the block returns `None` when nothing is exposed and the closest city is `> 3` tiles away (`end_turn.py:1275`), and `SIEGE FIRE: n/m` prints only with **two or more** siege units (`end_turn.py:1291`) - one gun gets no line, which is the classic failure. `04:363-373` tells the agent to read it at the rally. | the reading does not exist where it is needed |
+| **No line-of-sight oracle, and four files need one.** `04:352-355` (test LOS per tile), `05:36`, `06:64-71` (row 0: "which ring tiles can shoot, before the first move") and `07:191-214` (Gate 2, "the firing list, before the declaration"). The staging plan marks "`- FIRE from here`" on `distance == 2` alone (`staging.py:418`); `CAN ATTACK:` is a `get_units` line that never lists cities and skips siege units (`lua/units.py:86-87,95`); `SIEGE POSTURE` names no tiles. | the pre-assault question the doctrine is built around cannot be answered. **Resolved 2026-09-30**: the ring row now carries the game's own `SightThroughModifier` per tile plus the tiles between a distance-2 pair, `civ_mcp/los.py` applies the manual's rule (`manual:999`), and every shooter's row prints `FIRE` / `FIRE?` / `NO LINE OF SIGHT: <blocker>`; for a gun already on a ring tile the query asks the engine directly (`CANFIRE`, the same `CanStartOperation(RANGE_ATTACK)` the attack path uses) and that reading overrides the map's |
+| **The RALLY leg is dead code.** `_rally_option` keeps only ring tiles with `distance >= 3` (`staging.py:369`), but the production ring is `d >= 1 and d <= 2` (`lua/units.py:2521`) and options exist only for ring tiles - so `ASSEMBLY FIRST` / `RALLY` (`staging.py:386-392,409-414`) can never print. The test that pins it builds a synthetic `distance=3` ring tile (`tests/test_staging_plan.py:457,466-471`), so **a green test covers an unreachable feature**, while `04:53-54` forbids the hand computation that is the only alternative. | `04` step 1 cannot be executed as written. **Resolved 2026-09-30**: the query emits a real `RALLYRING` at d3 (six tiles nearest the army centroid) with its own `RALLYOPTION` paths, and the tests assert the query text rather than a synthetic ring |
+| **`SIEGE FIRE` / `SIEGE POSTURE` are suppressed in exactly the state `04` is triggered for**: the block returns `None` when nothing is exposed and the closest city is `> 3` tiles away (`end_turn.py:1275`), and `SIEGE FIRE: n/m` prints only with **two or more** siege units (`end_turn.py:1291`) - one gun gets no line, which is the classic failure. `04:363-373` tells the agent to read it at the rally. | the reading does not exist where it is needed. **Resolved 2026-09-30**: it prints from five tiles in with an `assembling` header, and prints the gun count for a single gun (`1/1` is the sanctioned single-gun assault) |
 | **No movement-point path cost.** `04:46-54,446` computes "turns to assemble" from movement points; `PathingEstimate` returns turns/total_tiles/reachable_this_turn only (`lua/models.py:607-614`), and `turns` is a tiles-per-turn extrapolation from turn 1 (`lua/units.py:2466-2473`). The plan also caps placement at `turns_ahead=2` (`server.py:842`), so the slow unit - "usually the longer pole" - is reported unplaced. | the assembly timetable is an estimate of an estimate |
 | **ZOC is invisible** (`04:172-175`, `02:17`): neither `get_pathing_estimate` nor `get_staging_plan` models it; the adapter only refuses at attack time (`lua/units.py:539-542`). | a whole-turn stop never appears in a plan |
 | Peacetime contact is unreadable (`02`'s trigger): `get_units`/`THREAT:` print a distance measured to our **cities or units** (`lua/units.py:1034-1038`), and `promotion_class` plus the unit-only distance appear only in `BATTLE ASSESSMENT`, which is suppressed outside war/damage (`end_turn.py:2164-2168`). | `02` can be triggered without the data it is written on |
@@ -220,11 +221,15 @@ one of those was verified present and live. The gaps are specific, not general.
     `UNITOPERATION_PILLAGE`), or delete the directive's line and the ladder rung. The directive orders
     it today and nothing can do it.
 11. **A rally ring**: extend the staging Lua with a `d >= 3` ring (or a rally query) so
-    `_rally_option` can fire, and let the tool answer `04`'s step 1.
+    `_rally_option` can fire, and let the tool answer `04`'s step 1. **Applied 2026-09-30**
+    (`RALLYRING`/`RALLYOPTION`, commit `99765a9`).
 12. **A line-of-sight/fire flag per ring tile**: the single highest-value addition - it unblocks
-    `04` step 6.2, `05`, `06` row 0 and `07` Gate 2 at once.
+    `04` step 6.2, `05`, `06` row 0 and `07` Gate 2 at once. **Applied 2026-09-30**: `civ_mcp/los.py`
+    (the manual's rule on the game's `SightThroughModifier`), the sight facts on every ring row, and
+    the engine's own `CANFIRE` answer for a gun already in position, which overrides the map.
 13. **`SIEGE POSTURE` availability**: do not return `None` at staging distance, and print the gun
-    count even for one siege unit, so `04`'s reading exists in `04`'s state.
+    count even for one siege unit, so `04`'s reading exists in `04`'s state. **Applied 2026-09-30**
+    (commit `99765a9`).
 14. **A read-only combat estimate tool** (expose `build_combat_estimate_query`), so `02:80-84` can be
     obeyed without committing the attack.
 15. **Corps/Army**, or drop the paragraph.

@@ -168,7 +168,9 @@ Each turn in order:
    one row per unit - where it is now, its movement allowance, the one tile it goes to, the
    `get_pathing_estimate` cost, the turn it arrives, its role, and whether it can fire from there.
    **`get_staging_plan(city_x, city_y)` builds that table for you** from the game's own pathfinding:
-   distinct tiles, the conflicts named, and the turn the assault opens. The three staging rules - never two
+   distinct tiles, the conflicts named, the turn the assault opens, and - on each shooter's row -
+   whether that tile can actually shoot (`FIRE`, `FIRE?`, or `NO LINE OF SIGHT` naming the blocker),
+   because distance 2 is not line of sight. The three staging rules - never two
    units on one tile, name the corridor, and fill the **last** firing tile first - are
    `prompts/tactics/04-staging-out-of-range.md` step 3b. **The same three phases - analysis
    (`tactics/07`), staging (`tactics/04` + this tool), execution (`tactics/05`/`06`) - run on every

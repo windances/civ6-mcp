@@ -616,13 +616,25 @@ class PathingEstimate:
 
 @dataclass
 class StagingRingTile:
-    """One tile of the target city's ring, at distance 1 (melee/adjacent) or 2 (shooting)."""
+    """One tile of the target city's ring, at distance 1 (melee/adjacent) or 2 (shooting).
+
+    ``hills`` / ``sight`` / ``between`` are the map facts the manual's line-of-sight rule is
+    applied to (see `civ_mcp.los`): ``sight`` is the game's own ``SightThroughModifier`` for the
+    tile (Hills 1, Woods/Rainforest 1, Mountains and the tall Natural Wonders 2, Hills+Woods 2),
+    ``hills`` is whether a unit standing here is on a hill, and ``between`` lists the tiles strictly
+    between this tile and the target as ``(x, y, level)`` with ``level = -1`` for an impassable one
+    (Mountains, Natural Wonders, Ice - the manual calls those impenetrable). All three are absent
+    from a server that predates them, which reads as "not reported" and never as "no blocker".
+    """
 
     x: int
     y: int
     distance: int
     blocked: bool = False
     water: bool = False
+    hills: bool = False
+    sight: int = 0
+    between: list[tuple[int, int, int]] = field(default_factory=list)
 
 
 @dataclass
@@ -689,6 +701,11 @@ class StagingPlan:
     ring: list[StagingRingTile] = field(default_factory=list)
     units: list[StagingUnit] = field(default_factory=list)
     options: list[StagingOption] = field(default_factory=list)
+    # The engine's own answer to "can this gun fire at the target from where it stands", keyed by
+    # unit id (`CANFIRE`): the authoritative half of the line-of-sight question, available only for
+    # a unit already on the tile it would fire from. `plan.engine_fire` is complete for the guns
+    # in range; a unit absent from it is one the engine was not asked about.
+    engine_fire: dict[int, bool] = field(default_factory=dict)
     # The **assembly** ring: tiles at distance 3, outside the city's two-tile strike, where a unit
     # forms up before stepping onto the firing ring. Nothing is ever assigned to them (they are not
     # firing tiles); they exist so the plan can print `RALLY x,y d3 T+n`, which is the leg the
