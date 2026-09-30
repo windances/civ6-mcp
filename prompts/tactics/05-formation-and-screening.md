@@ -82,12 +82,17 @@ None of it was a rules problem - it was geometry, and it is measurable.
   both adjacent tiles, which are the only ones the melee could have used, and the assault had no unit
   able to reach the city until they moved. Leave at least one adjacent tile free.
 
-## The end-of-turn warning that enforces the first of those
+## The end-of-turn check that enforces the first of those
 
-`scripts/play-turn.py end` prints a **WOUNDED IN REACH** block before it discards any unit's turn,
-naming every unit at 60 HP or less that is within two tiles of an enemy. It is the same test
-`posture` already computed (`formation_violations`), moved to the moment the decision is made,
+A **WOUNDED IN REACH** block names every unit at 60 HP or less within two tiles of an enemy — the same
+test `posture` already computes (`formation_violations`), moved to the moment the decision is made,
 because the rule above was in the doctrine throughout the war and was still broken three times.
+
+**It is printed by the CLI script (`scripts/play-turn.py end`), not by the MCP loop** (measured: the
+block exists only there). In the MCP loop the check is yours: read `get_units` and compare **our**
+units' HP with the threat list on that unit's line — 60 HP or less with an enemy within two tiles is
+the unit to withdraw or to screen, and waiting for a line that never prints is how a 35 HP unit was
+left in the line and lost.
 
 ## What to report
 

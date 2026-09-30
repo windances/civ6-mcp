@@ -83,8 +83,8 @@ other half (contact and no concentration).
 <!-- check
 id: counter-the-cavalry
 when: turn() >= 60 and metric(enemies_cavalry_within_2) >= 1
-require: units(SPEARMAN, PIKEMAN, AT_CREW) >= 1 or metric(attacks_this_turn) >= 1
-message: Enemy cavalry is within 2 tiles and the army has no anti-cavalry unit. Cavalry ignores the front line and reaches the siege train and the ranged units behind it, so either add a Spearman/Pikeman (Bronze Working unlocks the Spearman) or engage it this turn with concentrated fire instead of letting it pick its target.
+require: units(SPEARMAN, PIKEMAN, PIKE_AND_SHOT, AT_CREW, MODERN_AT) >= 1 or metric(attacks_this_turn) >= 1
+message: Enemy cavalry is within 2 tiles and the army has no anti-cavalry unit. Cavalry ignores the front line and reaches the siege train and the ranged units behind it, so either add a Spearman/Pikeman (Bronze Working unlocks the Spearman; the chain runs on to Pike and Shot and AT Crew) or engage it this turn with concentrated fire instead of letting it pick its target.
 -->
 
 <!-- check
@@ -263,7 +263,7 @@ message: Enemy melee within three tiles of the army is CS 35 or better while our
 id: upgrade-the-siege
 when: metric(at_war) >= 1 and metric(siege_upgrades_available) >= 1 and metric(gold) >= metric(min_siege_upgrade_cost)
 require: metric(siege_upgrades_available) <= 0
-message: A siege unit can be upgraded with the gold in hand and the war is on. A Catapult does 45 against a city where a Trebuchet does 55, and the window in which a Catapult is the best you have is exactly the window an assault is being decided: live T105-T121 the army fired Catapults from T106 and Trebuchets only from T120 - eleven turns of the campaign at the lower number, and the same three cities took 64 attacks. Call upgrade_unit on it before the next attack, or say in the diary why the gold is being kept.
+message: A siege unit can be upgraded with the gold in hand and the war is on. A Catapult bombards at 35 where a Trebuchet bombards at 45 (`Units.xml`; a shot against a 200-HP city lands about 45-52 in the field), and the window in which a Catapult is the best you have is exactly the window an assault is being decided: live T105-T121 the army fired Catapults from T106 and Trebuchets only from T120 - eleven turns of the campaign at the lower number, and the same three cities took 64 attacks. Call upgrade_unit on it before the next attack, or say in the diary why the gold is being kept.
 -->
 
 <!-- check

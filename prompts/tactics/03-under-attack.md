@@ -6,14 +6,22 @@ enemy attacked a city or a civilian.
 ## The answer is never a trade
 
 A unit that is hit and ignored is hit again next turn, and the attacker chooses the moment. The
-response is a three-step procedure, and the turn result already carries the first step's data in
-its `BATTLE ASSESSMENT` block.
+response is a three-step procedure, and the turn result already carries the first step's data: the
+`== Events ==` line for what happened to **us**, and the `BATTLE ASSESSMENT` block for what is
+standing in front of us.
 
 ## 1. Assess
 
-- Which of our units were hit, for how much, and where they now stand.
-- Who did it: type, class, combat strength, HP, distance (`BATTLE ASSESSMENT` lists every enemy
-  within three tiles with all of that).
+- **Which of our units were hit, for how much, and where they now stand** - from the `== Events ==`
+  line, `Your X (TYPE) took N damage! HP: h/max at (x,y)`, plus the corresponding kill line. That is
+  the only place our own damage appears: `BATTLE ASSESSMENT` lists **enemies**, never us.
+- **Who did it, by inference** - the block names every enemy within three tiles with type, class,
+  combat strength, HP and distance (`BATTLE ASSESSMENT` prints all of that). The event line does not
+  name the attacker, so read it off that list: an adjacent enemy of the class that counters the unit
+  that was hit is the one to answer.
+- **An enemy that attacked a city is invisible to both.** There is no event and no metric for it
+  (`damaged_this_turn` counts units), so the only reading is a wall or garrison-HP diff between two
+  `get_cities` calls. Treat a drop as a hit on the city and run this file for it.
 - What is **killable this turn** - the block names the ones at low HP with our units in range.
 - What the hit unit's escape routes are: terrain defence, a city, a river line, or nothing.
 - Whether the attack is part of a bigger move (several enemies converging, a stack forming, a
@@ -55,6 +63,14 @@ objective - a beaten field force is the only thing that makes the next city chea
   the hit unit to a city, hills or forest, keep the stack together, and counterattack when the
   numbers exist. Record that withdrawal as the decision - the rule fires on the fact that a unit
   was hit, and a stated withdrawal is the accepted answer.
+  - **The withdrawal still owes the turn its attacks.** A unit left with a legal attack makes
+    `end_turn` bounce: `UNUSED ATTACK at end_turn: ... - these units still have a legal attack, so
+    the turn was not swept. Order the attack(s), or call skip_remaining_units(force=True) to discard
+    them deliberately.` And `skip_remaining_units` itself **refuses** without `force=True` while any
+    attack is legal. So a withdrawal is two calls, not one: move the units that leave, then either
+    attack with everything still in reach or discard the rest on purpose - saying so in the diary's
+    tactical line, because four attacks died to the sweep over the T139-T152 war without anyone
+    seeing them go.
   - **Withdraw the shooters, not the screen.** A disengagement that pulls the *whole* line back
     empties the front, and the enemy walks into it: live T114, the stack was pulled north out of a
     Battlecry Swordsman's reach, the melee came with it, and a Russian Horseman was standing on

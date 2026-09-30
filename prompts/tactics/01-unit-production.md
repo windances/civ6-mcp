@@ -28,7 +28,9 @@ Catapults by the situation, not hard-coded, and **one is enough when the ground 
 already do the work**. The arithmetic that decides it:
 
 - what the wall pool is (read it before the declaration: `walls none` is a number, not a missing one);
-- what each gun does per turn against that pool (Catapult 45, Trebuchet 45, Bombard 55), times the
+- what each gun does per turn against that pool (Bombard strength: Catapult 35, Trebuchet 45,
+  Bombard 55, Artillery 80 - and a shot against a 200-HP city with a CS 35-40 defence lands about
+  45-52), times the
   number of guns that actually have a firing tile;
 - against the city's ~20 HP/turn heal **and** what the ranged line adds.
 
@@ -87,7 +89,7 @@ the front (`one-garrison-per-city`).
 
 ## Numbers that decide the choice
 
-- Catapult 120 / CS 25 / **45 vs cities** (Engineering, no resource).
+- Catapult 120 / CS 25 / **Bombard 35** (Engineering, no resource).
 - Trebuchet 200 / CS 35 / 45 (Military Engineering, no resource).
 - Bombard 280 / CS 45 / 55 (needs Niter - mine it at home; an import ends when you declare war).
 - Battering Ram 65 and Siege Tower 100 are support units: they help **melee only**, must stand

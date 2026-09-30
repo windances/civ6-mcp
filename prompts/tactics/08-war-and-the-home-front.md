@@ -31,7 +31,7 @@ Both halves of that table are the point, and they are **not** in tension:
   twenty-seven turns. Development did not have to stop, and it did not.
 - **The cash line went to the floor** — gold/turn +34.8 → +0.4, a 99% fall, and the rule
   `carrying-capacity` (gold/turn ≥ +10 with the army counted) failed from T111 for the remaining
-  nineteen turns of the war. The army went 262 → 306 military and took ~34 gold/turn of income with
+  nineteen turns of the war. The army went 262 → 282 military and took ~34 gold/turn of income with
   it; the last ~18 of that was handed over in the seven turns between Moscow and St Petersburg.
 
 So the wartime home front is not a trade-off between "build" and "fight". **The production
@@ -67,8 +67,8 @@ through zero to **−710 gold** across T264–T273 (`carrying-capacity` red on f
 **two units were disbanded** to stop the bleed — while the army those units came from was besieging a
 city. One offensive and one screen is the affordable shape; a second offensive is a decision to pay
 for the first one with units that already exist, and the diary has to say which of the two it chose
-when they collide (`prompts/tasks/tmp/023-dutch-siege-corps.md` carries the instruction this was
-learned under).
+when they collide (`prompts/tasks/tmp/done/023-dutch-siege-corps-done-T259.md` carries the
+instruction this was learned under, retired at T259).
 
 **The war city builds the war, and the other cities build everything else.** Measured T142: four of
 five cities were producing Builders (~320 hammers of civilian production) with a war running, a

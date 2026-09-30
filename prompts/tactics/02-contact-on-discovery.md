@@ -41,7 +41,11 @@ Two reading rules for the snapshot itself, both learned from live snapshots:
    two or three attackers on one target kills it this turn, one attacker trades while the target
    heals about twenty points a turn. Pull the nearby units into contact
    (`mass-on-contact` fails while an enemy is in contact with only one of ours in range), then
-   hit the same target together.
+   hit the same target together. **Which contacts the rule reaches** (human instruction
+   2026-09-30, 突袭也算战争): a war, **and a barbarian camp within three tiles** - a raid is a fight,
+   so it gets the same concentration. A wandering barbarian with no camp near, or a
+   peacetime foreign unit standing in the lane, sets nothing: the rule is silent there, and the
+   decision is this file's, not the rule's.
 3. **No superiority available and the enemy is dangerous → do not trade.** Withdraw to rough
    terrain, a city, or out of its reach, keep the stack together, and come back with numbers.
 4. **Harmless and immobile → ignore it deliberately** (a unit inside a city, a barbarian camp we

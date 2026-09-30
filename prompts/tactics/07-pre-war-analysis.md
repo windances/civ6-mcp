@@ -36,7 +36,7 @@ procedure in seven steps**, and every step names the query that answers it:
 
 | Step | Question | For a city (the war branch) | For a camp (the raid branch) |
 |---|---|---|---|
-| 0 | Is there a target to analyse at all? | `get_deal_options`, `get_strategic_map`, the map around our cities | the map around our cities: a tile whose improvement is `IMPROVEMENT_BARBARIAN_CAMP` |
+| 0 | Is there a target to analyse at all? | `get_trade_options`, `get_strategic_map`, the map around our cities | the map around our cities: a tile whose improvement is `IMPROVEMENT_BARBARIAN_CAMP` |
 | 1 | What is the target, in numbers? | the city probe (hp / walls / **garrison** / ring) | the camp tile's terrain, and **the guard within two tiles** (camp gate C1) |
 | 2 | Do the gates pass? | the **five gates** below | the **six camp gates** below (C1–C6) |
 | 3 | How long, and what will it cost? | the formula below, plus the loss asymmetry | the walk-in's movement, plus the units pulled off the plan |
@@ -66,14 +66,16 @@ only a city-state. Every gate below was unevaluable, and the reports that could 
 were about our own army and the barbarian navy two tiles off the coast. An army that is ready and a
 target that is not in sight is a war that has not started.
 
-**The cheapest reconnaissance is the trade screen.** `get_deal_options(other_player_id)` hands over a
-met civilization's city list with populations, which of those cities is its original capital, its
-strategic and luxury stockpiles, and its gold and gold-per-turn — with no open borders, no scout
-reaching anything, and no war. Live T99: the scout was stopped dead at the Russian border
-(`BLOCKED (foreign territory (俄罗斯) - need Open Borders via propose_trade)`) and the same turn
-`get_deal_options(1)` answered that Russia holds three cities — St Petersburg (population 8, its
-capital), Moscow (3) and Astrakhan (1) — that they have 37 iron against our none, and that their
-economy runs at minus three gold a turn. That satisfied Step 0 and answered a logistics question the
+**The cheapest reconnaissance is the trade screen.** `get_trade_options(other_player_id)` hands over a
+met civilization's city list with populations, which of those cities is its original capital, the
+**types** of strategic and luxury resource it will trade, and its gold and gold-per-turn — with no open
+borders, no scout reaching anything, and no war. Live T99: the scout was stopped dead at the Russian
+border (`BLOCKED (foreign territory (俄罗斯) - need Open Borders via propose_trade)`) and the same turn
+`get_trade_options(1)` answered that Russia holds three cities — St Petersburg (population 8, its
+capital), Moscow (3) and Astrakhan (1) — that iron is among the strategic resources it will trade and
+none among ours, and that their economy runs at minus three gold a turn. (It prints resource **types**,
+not amounts, so "how much iron do they have" still needs a spy or a trade test.) That satisfied Step 0
+and answered a logistics question the
 army would otherwise have hit after declaring war: the Swordsman and Knight upgrades need iron we do
 not have.
 
@@ -284,8 +286,11 @@ the bigger of the two is the answer
   attacks fights the city at full strength no matter its own HP.
 - **The real losses come from the field, and from our own carelessness with wounded units.** All
   three units lost in the T103–T130 war were at 9, 23 and 35 HP inside an enemy's reach. Rotate them
-  home (20 HP/turn in a city, 15 in friendly territory) instead of leaving them in the line; the end
-  of every turn prints `WOUNDED IN REACH` for exactly this.
+  home (20 HP/turn in a city, 15 in friendly territory) instead of leaving them in the line. In the
+  MCP loop the test is yours to make from `get_units` — **our unit's HP against the threat list for
+  that unit** — and a unit at 60 HP or less within two tiles of an enemy is the one to pull back;
+  the `WOUNDED IN REACH` block that does this automatically exists only in the CLI script
+  (`scripts/play-turn.py`), so do not wait for it here.
 
 ## Step 4 — pre-war power: policy and gold, not production
 

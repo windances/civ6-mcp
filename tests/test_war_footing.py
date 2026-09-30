@@ -531,6 +531,40 @@ class TestTheRules:
         run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), self.context(**metrics))
         return run.failing_ids
 
+    def test_the_anti_cavalry_chain_counts_all_the_way_up(self):
+        """`01:19`'s chain is Spearman -> Pikeman -> Pike and Shot; the rule has to know all of it.
+
+        An army whose anti-cavalry unit is a Pike and Shot (or an AT Crew) has one, and a rule that
+        stops at `PIKEMAN` reads it as having none - a false `counter-the-cavalry` failure every turn
+        an enemy horse is within two tiles. The list is the same one `scripts/experiment-report.py`
+        reads out of the game's own `UNITTYPE_ANTI_CAVALRY` rows.
+        """
+
+        class AnyUnit:
+            def __init__(self, unit_type):
+                self.unit_type = unit_type
+
+        for unit_type in (
+            "UNIT_SPEARMAN",
+            "UNIT_PIKEMAN",
+            "UNIT_PIKE_AND_SHOT",
+            "UNIT_AT_CREW",
+            "UNIT_MODERN_AT",
+        ):
+            ctx = self.context(enemies_cavalry_within_2=1, attacks_this_turn=0)
+            ctx.units = {1: AnyUnit(unit_type)}
+            run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), ctx)
+            assert "counter-the-cavalry" not in run.failing_ids, unit_type
+
+    def test_a_warrior_is_not_an_answer_to_cavalry(self):
+        class AnyUnit:
+            unit_type = "UNIT_WARRIOR"
+
+        ctx = self.context(enemies_cavalry_within_2=1, attacks_this_turn=0)
+        ctx.units = {1: AnyUnit()}
+        run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), ctx)
+        assert "counter-the-cavalry" in run.failing_ids
+
     def test_two_units_in_one_city_while_at_war_fails(self):
         assert "one-garrison-per-city" in self.failing(cities_over_garrison=1)
 

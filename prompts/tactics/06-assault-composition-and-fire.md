@@ -6,7 +6,7 @@ Read once the stack is in contact with the target city and the assault is runnin
 
 | Role | Count | Job in the assault |
 |---|---|---|
-| Siege | **1-3, by the arithmetic** | Break the walls. Dedicated city damage (Catapult/Trebuchet **45**, Bombard 55) that does not take the ranged-versus-walls penalty. One gun is enough when the ground and the ranged line already cover the wall pool; two or three when they do not (human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以). |
+| Siege | **1-3, by the arithmetic** | Break the walls. Dedicated city damage - the game's `Bombard` strengths, Catapult **35**, Trebuchet **45**, Bombard **55**, Artillery 80 (`Units.xml`) - that does not take the ranged-versus-walls penalty. One gun is enough when the ground and the ranged line already cover the wall pool; two or three when they do not (human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以). |
 | Melee | 2 | **Melee, anti-cavalry and cavalry can take the city** - and a melee unit walking in is what finishes it. One holds the front tile, one is kept for the capture move. |
 | Anti-cavalry | 1 | Answer the enemy's cavalry when it comes for the guns (`counter-the-cavalry`). |
 | Ram / tower | **0, always** | Neither is built and neither is fielded (human instruction 2026-09-30: 不生产也不使用撞锤/攻城塔). They help **melee only**, must stand adjacent to the city, and both die at `CIVIC_CIVIL_ENGINEERING`; the Catapult is the wall-breaker. |
@@ -30,7 +30,7 @@ a turn to free melee alone; 阿斯特拉罕 (pop 3, garrisoned Swordsman) took s
 
 Three consequences, in the order they matter:
 
-1. **Read the garrison before anything else** (`garrison:` on the city line, and what the unit is -
+1. **Read the garrison before anything else** (`Gar:` on the city line, and what the unit is -
    a Great Writer is not a defender). A city with no garrison and no walls is not a siege, it is an
    attack; a city with a CS 35 garrison is a job for Catapults.
 2. **Archer fire is negative against a garrisoned city**: two Archers at 9–11 are 18–22 gross
@@ -118,7 +118,7 @@ a re-siege. Both failures above cost a full turn each.
    and is back to 120/200 six turns later, and a broken city with nobody to walk into it is
    four turns of fire thrown away. **The turn a city falls, put a governor or a garrison on its
    tile** (`hold-what-you-take`) and set its queue — 阿斯特拉罕 came to us at **loyalty 50** with
-   `producing: NONE`, which is both a flip risk and an `end_turn` blocker.
+   `Building: nothing`, which is both a flip risk and an `end_turn` blocker.
    **Reads of a city just after a hit are estimates, not facts**: T140–T142 the same city read
    `200/200` after two connections that had landed, then `85`, then `55`. Judge progress by the
    `SIEGE PROGRESS` delta and by a *later* reading — never conclude from one stale number that the
@@ -187,11 +187,16 @@ down (`supply line 4/6 cut - the city is still healing`).
   ranged-strength line (Volley, Arrow Storm), siege want anything that speeds a city's walls down.
   A promotion taken instead of an attack is a turn of damage thrown away, and a promotion taken on
   the wrong unit is a permanent one.
-- **Keep the Great General with the stack.** A Great General gives **+1 movement and +5 combat
-  strength to land units within 2 tiles** (`GREAT GENERALS`, p.87), it may stack with a combat unit
-  for protection, and it is **destroyed if an enemy unit enters its tile**. +5 strength on every
+- **Keep the Great General with the stack.** The manual gives the aura twice and at two ranges: the
+  summary says "combat bonuses ... to any friendly units within one tile of their location"
+  (`manual.clean.txt:1095`) and the detailed paragraph says "a +1 Movement bonus, and a +5 Combat
+  Strength bonus to all friendly land combat units within 2 tiles of the General"
+  (`manual.clean.txt:1097`). The game's own ability text is what `get_great_people` prints as the
+  `Passive aura (granted while this unit lives)` line - so read the range there rather than from
+  this file, and keep the attackers inside it. A general may stack with a combat unit for
+  protection, and it is **destroyed if an enemy unit enters its tile**: +5 strength on every
   attacker in the assault is larger than most promotions, it is free, and it is lost the moment
-  the general is left behind or caught: walk it with the siege train, and treat it as cargo that
+  the general is left behind or caught. Walk it with the siege train, and treat it as cargo that
   must never be exposed.
 - **A second enemy stack arriving is a decision, not a distraction**: either it is killed first
   (files 2 and 3) or the assault breaks off. The siege train is never left between the two.
@@ -233,7 +238,8 @@ the checks keep talking about the assault:
   cannot attack a unit at all, so in a defence it is a liability with no job. Pull it back out of
   the enemy's reach - do not keep chasing the check by screening it on the ring.
 - **A newly captured city has no walls, so it has no ranged strike.** `city_action(attack)` answers
-  `NO_WALLS|City has no walls - build Ancient Walls first`, while the city *does* retaliate when it
+  `ERR:NO_WALLS|City has no walls — build Ancient Walls first` (an em dash, not a hyphen), while the
+  city *does* retaliate when it
   is attacked (Moscow took 37 HP off a Russian Horseman that came for it). Ancient Walls are
   therefore the first build the city is given (80 production; 320 gold to buy), and until they exist
   the defence is the garrison, the melee in the ring, and the ranged units within range of the ring.

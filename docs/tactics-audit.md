@@ -75,14 +75,14 @@ but the doctrine text stays behind. Three concrete reasons:
 
 | file | verdict | the claim that decides it |
 |---|---|---|
-| `01-unit-production.md` | PARTLY | `01:17` Siege **2** vs live `siege-train` **>= 3** (`turn-checks.md:224`) and the directive's 3; Pike and Shot falls out of `counter-the-cavalry`'s unit list; no Corps/Army verb |
-| `02-contact-on-discovery.md` | PARTLY | its peacetime-barbarian trigger has no class or unit-relative distance (both live only in `BATTLE ASSESSMENT`, which is war/damage-gated); no read-only estimate verb |
-| `03-under-attack.md` | MOSTLY | no rule forbids the withdrawal it recommends (`answer-the-attack` and `mass-on-contact` both accept a stated one) - but it points step 1 at `BATTLE ASSESSMENT`, which lists **enemies only**; our damage is in the `== Events ==` line, "an enemy attacked a city" has no event or metric at all, and the file never mentions that an unused legal attack **bounces `end_turn`** until `skip_remaining_units(force=True)` |
+| `01-unit-production.md` | PARTLY (rising) | the siege row is the band (1-3), not the old 2; **the anti-cavalry chain now matches the rule** (2026-09-30: `PIKE_AND_SHOT`, `MODERN_AT` added to `counter-the-cavalry` and to `end_turn._MELEE_TYPES`); the Catapult's city figure is the game's Bombard 35, not 45; no Corps/Army verb |
+| `02-contact-on-discovery.md` | PARTLY (rising) | its peacetime-barbarian trigger has no class or unit-relative distance (both live only in `BATTLE ASSESSMENT`, which is war/damage-gated); no read-only estimate verb; **which contacts `mass-on-contact` reaches is now stated in the file** (2026-09-30) |
+| `03-under-attack.md` | MOSTLY (rising) | no rule forbids the withdrawal it recommends (`answer-the-attack` and `mass-on-contact` both accept a stated one); **step 1 now points at the `== Events ==` line for our own damage** (2026-09-30) and says the attacker is an inference from `BATTLE ASSESSMENT`, and the withdrawal case carries the `UNUSED ATTACK` bounce with `skip_remaining_units(force=True)`; what remains is that "an enemy attacked a city" has no event and no metric, so it is a `get_cities` diff |
 | `04-staging-out-of-range.md` | ~HALF (rising) | the RALLY leg it leans on is now **live** (the query emits a d3 assembly ring, 2026-09-30); **step 6.2 now has an oracle** - the plan answers `FIRE` / `FIRE?` / `NO LINE OF SIGHT` per shooter tile, from the map and from the engine; what remains is the movement-point path cost, any ZOC input, and a pillage rung with no verb |
-| `05-formation-and-screening.md` | MOSTLY | `WOUNDED IN REACH` (`05:83-88`) is printed **only by `scripts/play-turn.py`**, never by the MCP loop; "never adjacent to a *city*" is unenforced; the screen's identity is not reported |
-| `06-assault-composition-and-fire.md` | PARTLY (rising) | the composition table is **fixed** (siege is a band, the ram/tower row is gone, anti-cavalry added, capture classes corrected) and row 0's pre-move ring-LOS question now has an oracle - the staging plan's per-tile `FIRE` / `NO LINE OF SIGHT` verdict (2026-09-30); what remains is the command-level "which of these guns has already fired" |
-| `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0 still calls **`get_deal_options`, which is not an MCP tool**; **Gate 2 (ring LOS) is now answerable before the declaration** from the staging plan's map rule plus the engine's `CANFIRE` (2026-09-30); the Siege Tower advice and the C3 claim are **fixed** (2026-09-30) |
-| `08-war-and-the-home-front.md` | MOSTLY | every block and rule it cites is live (`10-TURN REVIEW`, `WAR ECONOMY`, `builder-backlog`, `carrying-capacity`); the new power section is code-complete but its rule is **staged** and a server started before commit `8353672` prints no power at all, leaving a human-only fallback; a stale military figure (`08:34`, 306 vs its own table's 282) and a retired task path (`08:70-71`) |
+| `05-formation-and-screening.md` | MOSTLY (rising) | **`WOUNDED IN REACH` is now named as the CLI script's block, with the MCP-loop test given** (2026-09-30); "never adjacent to a *city*" is unenforced; the screen's identity is not reported |
+| `06-assault-composition-and-fire.md` | PARTLY (rising) | the composition table is **fixed** (siege is a band, the ram/tower row is gone, anti-cavalry added, capture classes corrected, and the city figures are the game's `Bombard` strengths) and row 0's pre-move ring-LOS question now has an oracle - the staging plan's per-tile `FIRE` / `NO LINE OF SIGHT` verdict (2026-09-30); what remains is the command-level "which of these guns has already fired" |
+| `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0's dead tool name is **fixed** (2026-09-30: `get_trade_options`); **Gate 2 (ring LOS) is now answerable before the declaration** from the staging plan's map rule plus the engine's `CANFIRE` (2026-09-30); the Siege Tower advice and the C3 claim are **fixed** (2026-09-30); `WOUNDED IN REACH` is no longer promised from the MCP loop |
+| `08-war-and-the-home-front.md` | MOSTLY | every block and rule it cites is live (`10-TURN REVIEW`, `WAR ECONOMY`, `builder-backlog`, `carrying-capacity`); the new power section is code-complete but its rule is **staged** and a server started before commit `8353672` prints no power at all, leaving a human-only fallback; the stale military figure (306 -> 282) and the retired task path are **fixed** (2026-09-30) |
 
 ## Resolved by human instruction, 2026-09-30
 
@@ -112,10 +112,11 @@ printed cap). The Chinese backups mirror each one.
    plus a melee walk-in, the convertible reported before the raid and not instead of it.
 
 What the rulings did **not** touch, and what therefore remains open from this audit: the tooling gaps
-(`pillage` has no verb; `WOUNDED IN REACH` CLI-only; `get_deal_options` in `07`'s Step 0; no
+(`pillage` has no verb; `WOUNDED IN REACH` CLI-only; no
 movement-point path cost or ZOC input; the camp-prohibition was the only one of the four that was pure
-prose), and the delivery finding. Three of those gaps have since been closed by code - the rally leg,
-the line-of-sight oracle and `SIEGE POSTURE`'s availability (all 2026-09-30, see the ranked fixes).
+prose), and the delivery finding. Four of those gaps have since been closed - the rally leg, the
+line-of-sight oracle, `SIEGE POSTURE`'s availability (all 2026-09-30, see the ranked fixes) and `07`'s
+dead Step-0 tool name.
 
 ## The four failure classes, with the evidence
 
@@ -136,7 +137,7 @@ the line-of-sight oracle and `SIEGE POSTURE`'s availability (all 2026-09-30, see
 | finding | evidence |
 |---|---|
 | **`pillage` has no verb.** The directive orders it (`directive.md:545`, "pillaging that Holy Site ... is worth more than any number of individual kills") and the staging ladder offers it as a rung ("pillage (cavalry ignores ZOC)"), but `unit_action`'s action list has no `pillage` (`server.py:1662`) and no pillage code exists in `src/` (only repair and read paths). The game exposes the action (pillage modifiers, `Expansion1_Buildings.xml:185-189`). | the one standing order the tool cannot carry out |
-| `07:39,69,74` Step 0 calls **`get_deal_options(player_id)`** - not an MCP tool. The tool is `get_trade_options(other_player_id)` (`server.py:1333`); `get_deal_options` is the internal method name (`game_state.py:1230`). The orchestrator's Phase-3 validation rejects unknown tools, so a proposal citing it is discarded. | measured; and the reconnaissance door is dead |
+| `07:39,69,74` Step 0 calls **`get_deal_options(player_id)`** - not an MCP tool. The tool is `get_trade_options(other_player_id)` (`server.py:1333`); `get_deal_options` is the internal method name (`game_state.py:1230`). The orchestrator's Phase-3 validation rejects unknown tools, so a proposal citing it is discarded. | measured; and the reconnaissance door is dead. **Resolved 2026-09-30**: all three call sites say `get_trade_options`, and the "37 iron" claim is gone - the tool prints resource **types**, not amounts (`narrate.py:1099-1114`) |
 | `07:97` answers camp gate C2 with `scripts/probe-tile.py`, and `04:213,235` with `scripts/staging-plan.py`: both open **their own FireTuner connection** (`probe-tile.py:38-40`, `staging-plan.py:6-8`) and cannot run while the MCP session holds the single one. The MCP-side path is `get_map_area` and the `kill_x/kill_y` / `next_city_x/next_city_y` parameters. | "one session at a time" |
 | `05:83-88` and `07:276` tell the agent to read a **`WOUNDED IN REACH`** block, which exists only in `scripts/play-turn.py:679-684` (and its test) - never in `src/civ_mcp`. In the MCP loop the line is never printed. | the agent waits for a line that cannot appear |
 | `01:92-99` explains when to form a Corps or Army; there is no verb for it (`unit_action` list; nothing in `src/` for `FORM_CORPS`/`FORM_ARMY`). Only `run_lua(context="ingame")` or the human UI. | the file admits it and gives a fallback |
@@ -158,16 +159,31 @@ the line-of-sight oracle and `SIEGE POSTURE`'s availability (all 2026-09-30, see
 | **The file omits the gate that actually stops the turn.** An unused legal attack makes `end_turn` bounce with `UNUSED ATTACK at end_turn ... call skip_remaining_units(force=True)` (`end_turn.py:759-765`) and `skip_remaining_units` refuses without `force` (`server.py:1763`). `03:54-57` recommends withdrawing a hurt unit without mentioning that the withdrawal is blocked until that call. | the recommended move cannot be taken as described |
 | **The power read is deployment-gated.** Everything the section needs landed in commit `8353672`, so on a server started earlier the Lua emits the old field count, `power_reported` is false and `get_cities` prints **no** power text; the section's fallback ("the reading is the city banner") is the human's UI - no tool returns it. The rule is also still **staged**, so nothing fails on power until it is promoted. | executable on a fresh server, not on the one now playing |
 
-### D. Minor and cosmetic (worth batching, not blocking)
+### D. Minor and cosmetic (fixed 2026-09-30, with two notes)
 
-`06:32` `garrison:` is really `Gar:` / `def N`; `06:114` `producing: NONE` is `Building: nothing`;
-`06:230` quotes `NO_WALLS` with a hyphen where the code has an em dash; `01:75` and `directive.md:160`
-put the Trebuchet's city damage at 45 while the rule text and `end_turn.py:1670` say 55; `06:185`
-attributes the general's +1 movement aura to a manual page that says "one tile" (`manual.clean.txt:1095`)
-while the code uses two; `enemy_cities_seen` is computed and consumed by nothing (`end_turn.py:47,1340`);
-`08:34` quotes "military 262 -> 306" against its own table's 262 -> 282 (306 is a row from another
-game's diary); `08:70-71` cites `prompts/tasks/tmp/023-dutch-siege-corps.md`, retired to
-`done/023-dutch-siege-corps-done-T259.md` on 2026-09-28.
+The batch, and what the fix was: `06:32`'s `garrison:` label is `Gar:` (and the pool is
+`Garrison h/max`) - `narrate.py:370-376`; `06:114`'s `producing: NONE` is `Building: nothing`
+(`narrate.py:349-354`); `06:232`'s `NO_WALLS` quote now carries the code's em dash
+(`lua/cities.py:490`); `06:190`'s general aura cites **both** manual statements - the summary puts it
+at "within one tile of their location" (`manual.clean.txt:1095`) and the detailed paragraph at
+"within 2 tiles of the General" (`:1097`) - and points at the game's own ability text, which is the
+`Passive aura (granted while this unit lives)` line `get_great_people` prints; `08:34`'s
+"military 262 -> 306" is 262 -> 282, its own table's figure; `08:70-71` cites the retired
+`prompts/tasks/tmp/done/023-dutch-siege-corps-done-T259.md`.
+
+**The siege-damage figure was wrong in the opposite direction from this audit's own claim.** The
+audit said `01:75` and `directive.md:160` put the *Trebuchet* at 45 where the rule says 55. The
+game's data says `UNIT_CATAPULT` Bombard **35**, `UNIT_TREBUCHET` **45**, `UNIT_BOMBARD` **55**,
+`UNIT_ARTILLERY` **80** (`Base/Assets/Gameplay/Data/Units.xml`) - so the Trebuchet's 45 was right and
+the **Catapult's** 45 (`directive.md:165`, `01:31,90`, `06:9`) was the error, as was the pair in
+`turn-checks.md` and `end_turn.py` ("a Catapult does 45 against a city where a Trebuchet does 55").
+All of them now carry the game's `Bombard` strengths and say separately that a *shot* lands about
+45-52 against a 200-HP city with a CS 35-40 defence, which is where the two numbers were being
+confused.
+
+Still open, and deliberately: `enemy_cities_seen` is computed and consumed by nothing
+(`end_turn.py:47,1340`) - harmless as a metric a future rule can use, and deleting it would churn
+the metric tuple for no gain.
 
 **Two corrections found by the same audit, one of them mine.** The audit's own cross-check caught a
 factual error I had written into `tactics/08` and the pending power rule: the Merchant governor's
@@ -197,21 +213,30 @@ one of those was verified present and live. The gaps are specific, not general.
 **One-liners in the documents (no code):**
 
 1. `01:17` and `06:9`: Siege **2 -> 3**, and `04:448`'s `siege n/2 -> n/3`, matching
-   `directive.md:223`, `turn-checks.md:224` and `staging.py:45`.
+   `directive.md:223`, `turn-checks.md:224` and `staging.py:45`. **Superseded 2026-09-30** by the
+   human's ruling: siege is a band (1-3 by the arithmetic), not a quota - the files now say so.
 2. `07:39,69,74`: `get_deal_options` -> **`get_trade_options`**, and drop the "37 iron" claim
-   (`narrate.py:1099-1114` prints types, not amounts).
+   (`narrate.py:1099-1114` prints types, not amounts). **Applied 2026-09-30**.
 3. `07:234,288,345` and `06:11`: delete the Siege Tower as gate 4's answer; state the ram rule once -
    an owned ram stacks with the melee unit, nothing is bought.
 4. `05:83-88` and `07:276`: stop promising `WOUNDED IN REACH` from the MCP loop (or print it).
+   **Applied 2026-09-30**: both files now say the block is the CLI script's, and give the MCP-loop
+   test (`get_units`: our HP against that unit's threat list, 60 HP or less within two tiles).
 5. `07:114` and `02:43`: `mass-on-contact` does not reach a raid or peacetime contact - either say so
-   or scope the rule.
+   or scope the rule. **Applied 2026-09-30**: the rule fires on `at_war` **or** `camps_within_3`, and
+   `02` says which contacts it reaches and which are this file's own decision.
 6. `06:10` "melee, anti-cavalry and cavalry"; add the anti-cavalry row to `06`'s table; `01:19`'s
    Pike and Shot either joins `counter-the-cavalry`'s list or the chain ends at Pikeman.
+   **Applied 2026-09-30**: the row is in `06`'s table, and the rule's list is now the game's whole
+   anti-cavalry chain (`SPEARMAN, PIKEMAN, PIKE_AND_SHOT, AT_CREW, MODERN_AT`, the same set
+   `scripts/experiment-report.py:145` reads) - a Pike and Shot used to read as *no* anti-cavalry
+   unit and fail the rule every turn. `end_turn._MELEE_TYPES` carries the same two additions.
 7. `military-map.md:104-108`: replace "do not clear barbarian camps" with the camp doctrine that
    `07`, the directive and `answer-the-camp` already carry.
 8. `03:9-10` point step 1 at the `== Events ==` damage line; `03:54-57` add the `UNUSED ATTACK`
    bounce and `skip_remaining_units(force=True)`; `08:34` 306 -> 282; `08:70-71` repoint to
-   `done/023-dutch-siege-corps-done-T259.md`; the minor batch from class D.
+   `done/023-dutch-siege-corps-done-T259.md`; the minor batch from class D. **Applied 2026-09-30**,
+   with one correction to this audit's own claim about the siege numbers (see class D).
 9. **Already applied in this pass**: the `RENEWABLE_ENERGY` cost correction in `tactics/08` and in
    `prompts/checks/pending/power-the-cities.md` (see class D below).
 

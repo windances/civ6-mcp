@@ -137,10 +137,12 @@ description: Safely play Civilization VI through civ6-mcp using one sole-writer 
 - 要在战争*之前*组建攻城车队，而不是在战争期间。这局游戏里一场 170 回合的战役造出了**零个**
   攻城单位：St. Petersburg 的 100 点城墙大约每次弩手攻击掉十点，这座城市花了十回合。远程火力
   不能替代攻城器。
-- 这条升级线连同数字：Catapult 120 / CS 25 / **对城市 45**（Engineering，不需要资源），然后
-  Trebuchet 200 / CS 35 / **45**（Military Engineering，不需要资源），然后 Bombard 280 / CS 45 /
-  **55**（需要 Niter）。那个对城市伤害的数值是专门的轰击值，所以它不承受远程对城墙的惩罚——
-  Trebuchet 破墙比任何 Crossbowman 都快得多。
+- 这条升级线连同数字：Catapult 120 / CS 25 / **Bombard 35**（Engineering，不需要资源），然后
+  Trebuchet 200 / CS 35 / **Bombard 45**（Military Engineering，不需要资源），然后 Bombard 280 /
+  CS 45 / **Bombard 55**（需要 Niter）。这些是游戏自己的 `Bombard` 强度值（`Units.xml`），
+  而那个对城市伤害的数值是专门的轰击值，所以它不承受远程对城墙的惩罚——
+  Trebuchet 破墙比任何 Crossbowman 都快得多。一发实际打出多少由强度比算出，实测对一座
+  防御 CS 35-40 的 200 血城市是 45-52。
 - Battering Ram（65）和 Siege Tower（100）属于 `FORMATION_CLASS_SUPPORT`：它们与近战叠加，
   并且只在紧邻城市的那一格上生效。Ram 让进攻的近战单位对城墙造成全额伤害；Tower 让它们无视城墙、
   直接打城市。这两个能力都**只对近战**有效——在它们旁边攻击的远程或攻城单位什么都得不到，

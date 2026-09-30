@@ -179,12 +179,14 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   this game built **zero** siege units: St. Petersburg's 100-point walls came
   down roughly ten points per crossbow attack and the city took ten turns.
   Ranged fire is not a substitute for siege.
-- The line, with the numbers: Catapult 120 / CS 25 / **45 vs cities** (Engineering,
-  no resource) then Trebuchet 200 / CS 35 / **45** (Military Engineering, no
-  resource) then Bombard 280 / CS 45 / **55** (needs Niter). That city-damage
-  figure is a dedicated bombard value, so it does not take the
+- The line, with the numbers: Catapult 120 / CS 25 / **Bombard 35** (Engineering,
+  no resource) then Trebuchet 200 / CS 35 / **Bombard 45** (Military Engineering, no
+  resource) then Bombard 280 / CS 45 / **Bombard 55** (needs Niter). Those are the
+  game's own `Bombard` strengths (`Units.xml`), and the figure is a dedicated bombard
+  value, so it does not take the
   ranged-versus-walls penalty - a Trebuchet breaks walls far faster than any
-  Crossbowman.
+  Crossbowman. What a shot *lands* is computed from the strength ratio, and measured
+  45-52 against a 200-HP city with a CS 35-40 defence.
 - Battering Ram (65) and Siege Tower (100) are `FORMATION_CLASS_SUPPORT`: they
   stack with melee and only work from the tile adjacent to the city. The Ram
   makes attacking melee do full damage to Walls; the Tower makes them ignore

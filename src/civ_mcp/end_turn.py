@@ -1484,7 +1484,11 @@ def _capture_event(readiness: list, turn: int) -> str | None:
 
 
 # The front-line roles, by unit type: melee and anti-cavalry, the units that hold a tile, screen
-# a siege train and can take a city. The same set the assault train's "melee" means.
+# a siege train and can take a city. The same set the assault train's "melee" means. The anti-cavalry
+# chain is the whole one - Spearman, Pikeman, Pike and Shot, AT Crew, Modern AT (`scripts/
+# experiment-report.py:145`, taken from the game's `UNITTYPE_ANTI_CAVALRY` rows): a chain that stops
+# at `PIKEMAN` reads a player who upgraded to Pike and Shot as having **no** front line at all, which
+# is a false `counter-the-cavalry` failure every turn an enemy horse is within two tiles.
 _MELEE_TYPES = (
     "WARRIOR",
     "SWORDSMAN",
@@ -1492,8 +1496,10 @@ _MELEE_TYPES = (
     "MUSKETMAN",
     "INFANTRY",
     "PIKEMAN",
+    "PIKE_AND_SHOT",
     "SPEARMAN",
     "AT_CREW",
+    "MODERN_AT",
 )
 # What the matchup rule wants in hand when the enemy fields one of these.
 _UPGRADED_MELEE = ("SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY")
@@ -1693,7 +1699,8 @@ def _upgrade_event(units: dict | None, gold: float, turn: int, policies=None) ->
     lines += ready
     if ready:
         lines.append(
-            "  A Catapult does 45 against a city where a Trebuchet does 55, and a Warrior (CS 20)"
+            "  A Catapult bombards at 35 where a Trebuchet bombards at 45 (`Units.xml`; a shot"
+            " against a 200-HP city lands about 45-52 in the field), and a Warrior (CS 20)"
             " loses every trade with a Man-at-Arms (CS 45): paying for the upgrade before the"
             " next assault is cheaper than replacing the unit during it."
         )
