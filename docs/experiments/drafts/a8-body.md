@@ -76,6 +76,28 @@ market queue instead of an army queue. Nothing else changes.
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
    unavailable rather than as A8's own history.
 
+## If the same turn hangs twice, change what the turn does
+
+`end_turn` answers `HANG:<turn>:0_MCP_NNNN` when the turn was requested and did not advance. **That is
+not always the same fault, and the screen says which.** `hang_diagnosis.jsonl` records the screen at each
+hang: **A3's T70 and T72 entries carry `PLEASE WAIT`** - a genuine AI-phase stall, which was recovered by
+restarting the game and reloading - while **A8's T6 entry carries the normal HUD with `NEXT TURN` and no
+`PLEASE WAIT`**, which means the game was sitting at the player's turn and the request had simply not taken.
+Read that file first when a turn hangs; it is cheap and it is the difference between two remedies.
+
+**The remedy that does not depend on resolving it**: **if the same turn hangs twice, change one thing the
+turn does before trying a third time.** Do not replay the same attack or the same move - a turn that hangs
+on a set of orders tends to hang on them again, and A8's own log shows the loop (attack the barbarian
+Scout, `end_turn` hangs, recover, move, attack again). Change the thing the turn is *doing*: skip the
+attack, fortify instead, move a different unit, or end the turn with that unit deliberately unused. Then
+say in the diary which turn hung, what the screen said, what you changed, and whether the third attempt
+advanced.
+
+If the third attempt hangs on different orders too, **load the autosave of the previous turn** - the
+`0_MCP_NNNN` an earlier hang named - and take a different action in it, recording the rollback and the
+turn it went back to. A rollback is a recovery, not a second variable, and it belongs in the diary in
+those words.
+
 ## The opening is pinned, and the pin's fifth slot is the variable
 
 The first four orders are **unchanged from A3-A7**, so the opening stays comparable:
