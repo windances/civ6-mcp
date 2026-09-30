@@ -150,6 +150,30 @@ than bought, if `gpt` at the gold-floor turn is not above A7's there, or if any 
 figures is at or below A7's. **Nothing here depends on the site being near** - a far colony moves the
 deadlines out with it and the T110 comparison carries the claim.
 
+## Divergences that are not the variable, kept as a running list
+
+A divergence is not a defect; it is a difference a reader would otherwise discover at review time and
+attribute to the variable. Each is recorded the turn it happens.
+
+1. **City #2 went east, to (63,25) at T20**, where A3-A7 all founded west. Recorded above with its
+   consequences.
+2. **The pantheon is `Fertility Rites` (T29), not `God of the Forge`** - which is what A5 (T28), A6 (T25)
+   and A7 (T23) founded after the guard was fixed. **The doctrine does not name a pantheon** (a grep of
+   `directive.md` for one returns nothing), so this is a free choice and not a deviation from the
+   standing directive. **What it costs is measurable**: from the install's own text,
+   `BELIEF_GOD_OF_THE_FORGE` is *"+25% Production toward Ancient and Classical military units"*
+   (`Beliefs.xml`, `GOD_OF_THE_FORGE_UNIT_ANCIENT_CLASSICAL_PRODUCTION`) while `BELIEF_FERTILITY_RITES`
+   is *"City growth rate is 10% higher."* **So A8 builds Ancient and Classical military units - Catapults
+   included - twenty-five per cent slower than A5-A7 did**, on top of founding it six turns later. Any
+   establishment-turn comparison against those three carries this, and the record says so wherever it
+   appears.
+3. **Xi'an ordered its Campus at T31** (`PRODUCING|DISTRICT_CAMPUS|5 turns`, after one refusal at (59,22)
+   and an accepted order at (58,21)); A7 ordered its Campus around **T64**. So development is pulled
+   earlier in the capital than in the baseline - which is a queue decision inside the doctrine, not a
+   shape change, but it competes with the army for the same city's turns.
+4. **`military` at T10 is 28 against A7's 34** - six down, within what the T5-T6 barbarian fight
+   explains, and noted here so the gap is not credited to the third city later.
+
 ## The wonder obligation is deferred, deliberately
 
 `dynasty-cycle-wonder` is live from T25 and fires every turn until a wonder exists: the empire holds zero,
