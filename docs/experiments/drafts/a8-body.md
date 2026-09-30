@@ -32,6 +32,23 @@ market queue instead of an army queue. Nothing else changes.
    **Then verify the load before playing anything**: `get_game_overview` must read **turn 1**. If it reads
    any other turn, **stop and say so** - a whole attempt played on the wrong position is worse than no
    attempt, and it is not recoverable by arithmetic afterwards.
+
+   **A8 may be resumed, and a resume is not a restart.** This attempt needs roughly sixty turns before its
+   number exists and a hundred and ten to reach the horizon, which is longer than one session's budget has
+   managed so far in this programme. If you are handed a game that is **already on this key at a turn past
+   1**, the work below decides what to do - and **reloading the shared start in that state would discard a
+   run in progress, which is the one mistake here that cannot be repaired**:
+
+   1. **read `get_diary` first, then `get_cities`**, and say in the diary what you see;
+   2. if the position is **A7's continuation** - it stands at T69 or later with **three cities, one of them
+      耶路撒冷 kept at T60**, and the recent diary rows describe holding a baseline to T110 rather than
+      settling a third city and building a market - then **the handoff has not happened yet: stop and report
+      it.** Do not play A8 on that position, and do not load over it either; the orchestrator has to retire
+      task 039 and free the tuner first;
+   3. if the position is **A8's own run in progress** - the diary's recent rows are yours, the pin is
+      visible in the early turns, and the third city or its market is under way - then **continue it from
+      where it stands**. Say which turn you picked it up on and what had already been spent;
+   4. only if the game is **not on this attempt's position at all** does step 0's load apply.
 1. Then `get_diary` and one `scripts\orient.py` read. On a fresh T1 position the diary's early rows belong
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
    unavailable rather than as A8's own history.
