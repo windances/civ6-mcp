@@ -47,6 +47,29 @@ into the diary; a Settler that walks eleven turns is eleven turns of the variabl
 (the programme's `cavalry` row was filled by Heavy Chariots, which need none), and a second luxury cluster
 (`FURS`, `DYES`) against an empire at `Amenities 5/2/2`.
 
+### Confirm the site with your own read, because that read was taken on an explored map
+
+**(40,26) is a target, not a guarantee, and the difference is fog.** The read it comes from was taken at
+**T69**, when the west was already revealed by the scouts; A8 orders its second Settler around **T21**, when
+much of that corridor may still be dark. Three things can therefore differ, and each has a stated answer:
+
+- **run `get_global_settle_advisor` yourself on the turn you are about to order the Settler** - it is the
+  same tool, and it is cheap. If (40,26) is not in your list, or is not revealed, **take the best legal
+  site it does name**, settle that instead, and **record the substitution in the diary with both sites and
+  the reason**. The variable is *the number of settled cities and the third one's economy queue*, not the
+  tile - a substitution does not weaken the attempt, but an unrecorded one would;
+- **send the recon unit down the corridor before the Settler commits.** Gate 0 of `tactics/07` applies to a
+  settle site as much as to a city: you cannot settle what you have not seen, and a Settler that walks
+  eleven turns into fog and finds the tile taken has spent the variable's whole budget. Say in the diary
+  which unit revealed which tiles and on what turn;
+- **watch for foreign borders, a camp, and the `PrereqPopulation="2"` gate on the Settler itself** - a
+  Settler costs `PopulationCost="1"`, so the city that builds it must be at pop 2 or more and loses one;
+  `UNIT_SETTLER` is also `COST_PROGRESSION_PREVIOUS_COPIES`, so the second one is more expensive than the
+  first (110 base against 80). Say what it actually cost.
+
+**If the site turns out to be unusable**, the honest outcome is a third city somewhere legal plus the
+record of why the intended one failed - not a second city and a quiet redefinition of the attempt.
+
 **The third city's first four orders** (name them in the diary and hold to them): `BUILDING_MONUMENT` ->
 `DISTRICT_COMMERCIAL_HUB` (check `get_district_advisor` for the river tile) -> `BUILDING_MARKET` ->
 `UNIT_BUILDER`, with the Builder going to the Horses first.
