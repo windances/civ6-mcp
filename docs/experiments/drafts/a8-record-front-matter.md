@@ -200,6 +200,29 @@ four questions the claim is made of; `--save docs/experiments/A8-final.json` wri
 compare block reads. The diary's **per-10-turn economy rows** are what the comparison uses, and their
 presence is verified per turn rather than assumed.
 
+**Verified mid-run at T27, on this attempt's own log rather than on A7's** - the point being to find a
+pipeline fault while there are eighty turns left to fix it, not at the verdict:
+
+```
+--run volcanic-ochre-catapult-47,tempered-jet-temple-30 --questions a8
+  OPEN  Q1 establishment complete by T60   [establishment not reached by T27; ...]
+  OPEN  Q2 three cities settled            [foundings beyond the capital: 1 of 2 (T20 at 63,25); ...]
+  OPEN  Q3 the second siege unit in hand by T58, bought not built   [deadline T58; bought: no siege unit was bought; ...]
+  OPEN  Q4 the gold clause                 [the floor turn T50 has no readable row yet; ...]
+  (OPEN means the deadline has not arrived: the attempt stands at T27, so those predictions are undecided, not failed)
+```
+
+**Three things that check out**: the two-session `--run` resolves A8 as one attempt; **the founding is
+read from the log correctly** (`1 of 2, T20 at 63,25`); and the instrument says `OPEN` with the reason
+rather than `FALSIFIED` - which is the distinction `_status` exists for. The per-10-turn rows attributed
+to A8 are **T10** (`sci 3.5, military 28, pop 3, cities 1`) and **T20** (`sci 4.5, pop 5, cities 2`),
+both matching the agent's own diary rows, so the shared-diary attribution is separating A8 from the
+attempts that wrote the same turn numbers.
+
+**One early reading worth carrying**: A7's T10 was `military 34` and **A8's T10 is `military 28`** - six
+down, which is within the range the barbarian fight at T5-T6 explains, and it is exactly the kind of
+divergence that is not the variable and belongs in the record when the run ends.
+
 ## The record
 
 *(to be written from the instrument's reads when the attempt reaches T110: the T10-T110 economy rows,
