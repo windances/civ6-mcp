@@ -584,6 +584,46 @@ carries, reported from the other side.
    routes**; and the **Builders** on unimproved tiles. **No wonder was built** - the file's override,
    accepted out loud in the diary the first turn it fired (T25).
 
+## T90: the gold lead has reversed, and the T110 trio is stated before it lands
+
+**The three-session `--run` is verified working** (`volcanic-ochre-catapult-47,
+tempered-jet-temple-30,silver-vermil-pennant-47`), A8 resolves to **T1 -> T90 over ten rows**, and every
+ten-turn row the claim needs is present. The arrays again, now with the two rows that decide the shape:
+
+| turn | A8 science | A7 science | A8 `gpt` | A7 `gpt` | A8 pop | A7 pop | A8 districts | A7 districts |
+|---|---|---|---|---|---|---|---|---|
+| T70 | **21.1** | 19.4 | **13.0** | 2.1 | **17** | 14 | **4** | 2 |
+| T80 | **31.3** | 29.4 | 8.8 | **24.4** | **20** | 18 | **6** | 5 |
+| T90 | **45.2** | 37.1 | 21.9 | **49.0** | **22** | 20 | **7** | 6 |
+
+**Two of the three measures still favour A8 and one has gone decisively the other way.**
+
+- **`science` is winning and the lead is widening again**: A8's own line is **21.1 -> 31.3 -> 45.2**, a
+  doubling in twenty turns, and it went from **+1.7 ahead at T70 to +8.1 ahead at T90**. Whatever the
+  pillaged Library cost, the settled third city and its buildings have more than made it back on this
+  measure.
+- **`pop` is winning and holding**: **22 against 20**, with A8 ahead at every row since T40.
+- **`gold_per_turn` has reversed, and it reversed hard.** A8 read **13.0 against 2.1 at T70** - the
+  widest lead of the run - and then **8.8 against 24.4 at T80** and **21.9 against 49.0 at T90**. A7's
+  gold roughly **doubles every ten turns** from T70 with **no market and no wonder** (2.1 -> 24.4 ->
+  49.0), and A8's own market economy does not keep up.
+
+**So the arithmetic the T110 verdict turns on, written down before the row exists**: A8 needs to beat
+**`gpt` 60.0** at T110 and stands at **21.9 at T90** - it would have to nearly triple in ten turns,
+while A7's own path is 49.0 -> 60.0. On the two rows measured, **A8's T110 `gpt` is very unlikely to
+clear A7's**, and since the claim requires **all three** measures to exceed A7's, the shape of the
+likely verdict is **`science` and `pop` won, `gold_per_turn` lost, `Q4` FALSIFIED** - a settled third
+city that compounds in science and people and a captured one that compounds in gold. **If that is how
+it lands, it is a result and not a failure**: it is the first measurement in the programme of what a
+settled third city actually does to the three curves, and it says the design note's premise - a settled
+city pays where a captured one does not - is **half right**, and the half it gets wrong is the one the
+claim was named for.
+
+**And the establishment finished the journey it missed the deadline on**: at **T90 the corrected table
+is short only `cavalry 0/1`** - `siege 2/2`, `melee 3/2`, `ranged 5/4`, `anticav 1/1` (the T65
+Spearman), `recon 1/1`. So `Q1`'s falsification is a **timing** verdict and not a capacity one: this
+opening does build the whole table, thirty turns after the turn the attempt was judged on.
+
 ## The record
 
 *(to be written from the instrument's reads when the attempt reaches T110: the T10-T110 economy rows,
