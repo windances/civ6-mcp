@@ -1348,10 +1348,11 @@ A8_SETTLE_DEADLINE = 60
 #: beat - and A7's own curve (2.1 -> 24.4 -> 49.0 across T70/T80/T90) is exactly why a *late* reading
 #: proves nothing.
 A7_GPT_BY_TURN: dict[int, float] = {50: 8.1, 60: 4.1, 70: 2.1, 80: 24.4, 90: 49.0}
-#: A7's whole T110 row, filled in when the A7 continuation reaches it. Until then the horizon comparison
-#: is `OPEN` rather than silently met or missed - the instrument must not answer a question whose baseline
-#: has not been measured yet.
-A7_T110: dict[str, float | None] = {"science": None, "pop": None, "gold_per_turn": None}
+#: A7's whole T110 row, read from the merged A7 continuation report once the run reached it
+#: (2026-09-30: `science 57.6, pop 25, gold_per_turn 60.0`, with `cities 3`, `districts 9`,
+#: `improvements 14` and `wonders 0` - the empire A8 has to beat). Before it was measured this was
+#: `None` on purpose: an instrument must not report a comparison whose baseline does not exist.
+A7_T110: dict[str, float | None] = {"science": 57.6, "pop": 25.0, "gold_per_turn": 60.0}
 #: The directive's own gold floor, printed for context rather than used as the test. Only A4 ever stood
 #: above it in the whole programme, and A4's was bought with Pingala's science.
 A8_DIRECTIVE_FLOOR = 10.0
