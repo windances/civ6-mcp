@@ -15,14 +15,17 @@ from civ_mcp import staging as st  # noqa: E402
 from civ_mcp.lua import models as m  # noqa: E402
 
 
-def plan(units, options, ring=None):
+def plan(units, options, ring=None, rally_ring=None, rally_options=None):
     ring = ring or [
         m.StagingRingTile(x=55, y=41, distance=2),
         m.StagingRingTile(x=56, y=41, distance=2),
         m.StagingRingTile(x=56, y=42, distance=1),
         m.StagingRingTile(x=55, y=42, distance=2),
     ]
-    return m.StagingPlan(target="圣彼得堡", ring=ring, units=units, options=options)
+    return m.StagingPlan(
+        target="圣彼得堡", ring=ring, units=units, options=options,
+        rally_ring=rally_ring or [], rally_options=rally_options or [],
+    )
 
 
 def unit(uid, kind, role, x=50, y=50, moves=2):
@@ -454,14 +457,18 @@ class TestTheAssemblyLeg:
         ring = [
             m.StagingRingTile(x=55, y=41, distance=2),
             m.StagingRingTile(x=56, y=42, distance=1),
-            m.StagingRingTile(x=53, y=40, distance=3),
         ]
         options = [
             m.StagingOption(unit_id=1, x=55, y=41, turns=1, this_turn=False, path_len=5),
-            m.StagingOption(unit_id=1, x=53, y=40, turns=2, this_turn=False, path_len=9),
             m.StagingOption(unit_id=2, x=56, y=42, turns=0, this_turn=True, path_len=3),
         ]
-        return plan(units, options, ring)
+        # The assembly ring is its own set of tiles at d3, never part of the firing ring: nothing
+        # is assigned to them, they are where a unit forms up first (the Lua's RALLYRING lines).
+        rally_ring = [m.StagingRingTile(x=53, y=40, distance=3)]
+        rally_options = [
+            m.StagingOption(unit_id=1, x=53, y=40, turns=2, this_turn=False, path_len=9),
+        ]
+        return plan(units, options, ring, rally_ring, rally_options)
 
     def test_a_unit_gets_a_rally_tile_outside_the_citys_reach(self):
         built = self._plan()
@@ -494,25 +501,29 @@ class TestTheAssemblyLeg:
                 assert line.index("->") < line.index("RALLY")
 
     def test_a_rally_tile_is_not_also_offered_as_spare(self):
-        # Two distance-3 tiles: one is the assembly tile, the other really is spare. Listing
-        # both as "spare" would contradict the row that just claimed one of them.
+        # Two assembly tiles at d3: one is the unit's rally, the other is not. The spare list is
+        # about **firing** tiles, so neither appears in it.
         units = [unit(1, "UNIT_BOMBARD", "siege", x=60, y=36, moves=2)]
         ring = [
             m.StagingRingTile(x=55, y=41, distance=2),
-            m.StagingRingTile(x=53, y=40, distance=3),
-            m.StagingRingTile(x=52, y=39, distance=3),
         ]
         options = [
             m.StagingOption(unit_id=1, x=55, y=41, turns=1, this_turn=False, path_len=5),
+        ]
+        rally_ring = [
+            m.StagingRingTile(x=53, y=40, distance=3),
+            m.StagingRingTile(x=52, y=39, distance=3),
+        ]
+        rally_options = [
             m.StagingOption(unit_id=1, x=53, y=40, turns=2, this_turn=False, path_len=9),
         ]
-        built = plan(units, options, ring)
+        built = plan(units, options, ring, rally_ring, rally_options)
         text = st.render(st.assign(built), built)
         assert "RALLY (53,40) d3" in text
         spare = [line for line in text.splitlines() if "SPARE RING TILES" in line]
-        assert spare, "the untouched distance-3 tile is still spare"
-        assert "(53,40)" not in spare[0]
-        assert "(52,39)" in spare[0]
+        if spare:  # there are no spare firing tiles here, so this is only a guard if one appears
+            assert "(53,40)" not in spare[0]
+            assert "(52,39)" not in spare[0], "an assembly tile is never a spare firing tile"
 
 
 class TestTheIssueOrder:
@@ -556,4 +567,66 @@ class TestTheIssueOrder:
         built = plan(units, options, ring)
         text = st.render(st.assign(built), built)
         assert "ISSUE THE MOVE CALLS" not in text, "one call has only one order"
+
+
+class TestTheAssemblyRingInTheQuery:
+    """The rally leg has to come from the game, and it has to be its own ring.
+
+    The old shape asked `_rally_option` for a distance-3 tile inside the firing ring, which the Lua
+    never emits (`d >= 1 and d <= 2`), so the whole assembly leg was dead code behind a green test.
+    The query now prints a separate `RALLYRING` at d3 with its own `RALLYOPTION` paths, and the
+    firing ring is untouched.
+    """
+
+    def test_the_query_emits_the_assembly_ring(self):
+        from civ_mcp import lua as lq
+
+        q = lq.build_staging_plan_query(60, 29)
+        assert 'print("RALLYRING|"' in q
+        assert 'print("RALLYOPTION|"' in q
+        # Assembly tiles are distance 3 and only distance 3; the firing ring stays 1-2.
+        assert "Map.GetPlotDistance(tx, ty, px, py) == 3" in q
+        assert "d >= 1 and d <= 2" in q
+
+    def test_the_query_caps_the_assembly_ring_and_orders_it_by_the_army(self):
+        from civ_mcp import lua as lq
+
+        q = lq.build_staging_plan_query(60, 29)
+        assert "math.min(#candidates, 6)" in q, "the path scan stays bounded"
+        assert "a.away < b.away" in q, "assembly tiles nearest our own army come first"
+
+    def test_the_parser_reads_the_assembly_ring(self):
+        from civ_mcp import lua as lq
+
+        plan = lq.parse_staging_plan_response(
+            [
+                "STAGEPLAN|60,29|ring:4|camp:0",
+                "RING|59,28|1|ok|land",
+                "RALLYRING|57,26|3|ok|land",
+                "RALLYRING|63,32|3|ok|water",
+                "UNIT|UNIT_BOMBARD|7|60,36|2|siege|d7|cs45|hp100/100",
+                "RALLYOPTION|7|57,26|2|0|9",
+            ]
+        )
+        assert [(t.x, t.y, t.distance) for t in plan.rally_ring] == [(57, 26, 3), (63, 32, 3)]
+        assert plan.rally_ring[1].water is True
+        assert len(plan.rally_options) == 1
+        assert plan.rally_options[0].unit_id == 7 and plan.rally_options[0].turns == 2
+        assert plan.rally_options[0].path_len == 9
+        # The firing ring is unaffected by the assembly ring's presence.
+        assert [t.distance for t in plan.ring] == [1]
+
+    def test_a_server_without_the_assembly_ring_prints_no_rally_leg(self):
+        """Back-compat: an older server sends no RALLY* lines, and the plan reads as it did."""
+        from civ_mcp import lua as lq
+
+        units = [unit(1, "UNIT_BOMBARD", "siege", x=60, y=36, moves=2)]
+        ring = [m.StagingRingTile(x=55, y=41, distance=2)]
+        options = [m.StagingOption(unit_id=1, x=55, y=41, turns=1, this_turn=False, path_len=5)]
+        built = plan(units, options, ring)
+        parsed = lq.parse_staging_plan_response(["STAGEPLAN|60,29|ring:1|camp:0"])
+        assert parsed.rally_ring == [] and parsed.rally_options == []
+        text = st.render(st.assign(built), built)
+        assert "RALLY" not in text
+        assert "assembly tile(s)" not in text
 

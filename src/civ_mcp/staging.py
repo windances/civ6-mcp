@@ -348,28 +348,31 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
     return result
 
 
-def _rally_option(plan: m.StagingPlan | None, unit: m.StagingUnit, ring_tiles: dict):
-    """The unit's best ring tile **outside** the city's reach, if the plan found one.
+def _rally_option(plan: m.StagingPlan | None, unit: m.StagingUnit, rally_tiles: dict):
+    """The unit's best **assembly** tile outside the city's reach, if the plan found one.
 
     The doctrine stages outside the enemy's reach and then advances as one body - ``tactics/04``
     step 1 puts the rally *three tiles or more* from the target, because a city's strike and a
-    Catapult both reach two. The ring assignment below is the tile a unit **fires from**; this is
-    the tile it should form up on first, and it comes from the same game pathing as everything
-    else here.
+    Catapult both reach two. The ring assignment is the tile a unit **fires from**; this is the tile
+    it should form up on first, and it comes from the same game pathing as everything else here.
 
     It exists because the plan was followed literally and the cost is measured: at 底比斯 the
     assault opened with 2 of 3 shooters in position and at 亚历山大 with **2 of 5**, the rest still
-    walking. Returns ``None`` when no tile at distance >= 3 is in reach, which is itself worth
-    printing - a unit already standing on the ring has no assembly step left.
+    walking. Returns ``None`` when no assembly tile is in reach, which is itself worth printing - a
+    unit already standing on the ring has no assembly step left.
+
+    The tiles come from ``plan.rally_ring`` / ``plan.rally_options`` (the Lua's distance-3 ring),
+    **not** from the firing ring: nothing is ever assigned to an assembly tile, and a server that
+    predates the rally ring sends neither and gets exactly the old behaviour.
     """
     if plan is None:
         return None
     best = None
-    for option in plan.options:
+    for option in getattr(plan, "rally_options", []) or []:
         if option.unit_id != unit.unit_id:
             continue
-        tile = ring_tiles.get((option.x, option.y))
-        if tile is None or tile.distance < 3:
+        tile = rally_tiles.get((option.x, option.y))
+        if tile is None or tile.blocked:
             continue
         key = (option.turns, option.path_len, tile.distance)
         if best is None or key < best[0]:
@@ -381,12 +384,14 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
     """The plan as the table the doctrine asks for, one row per unit."""
     units = {u.unit_id: u for u in (plan.units if plan else [])}
     ring_tiles = {(t.x, t.y): t for t in (plan.ring if plan else [])}
+    rally_tiles = {(t.x, t.y): t for t in (getattr(plan, "rally_ring", []) or [])}
     what = f"the camp at {result.target}" if result.camp else (result.target or "the target")
     lines = [
-        f"STAGING PLAN for {what} — {result.ring_size} ring tile(s),"
-        f" {len(result.placed)} unit(s) placed, {len(result.unplaced)} unplaced"
+        f"STAGING PLAN for {what} — {result.ring_size} firing tile(s)"
+        + (f", {len(rally_tiles)} assembly tile(s) at d3" if rally_tiles else "")
+        + f", {len(result.placed)} unit(s) placed, {len(result.unplaced)} unplaced"
     ]
-    if any(_rally_option(plan, a.unit, ring_tiles) for a in result.placed):
+    if any(_rally_option(plan, a.unit, rally_tiles) for a in result.placed):
         lines.append(
             "  ASSEMBLY FIRST: `RALLY x,y dN` is a tile outside the city's two-tile strike to form"
             " up on, before the ring tile it fires from. Walking straight onto the ring is how an"
@@ -409,7 +414,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
         )
     for a in result.placed:
         when = "this turn" if a.this_turn else f"T+{a.turns}"
-        rally = _rally_option(plan, a.unit, ring_tiles)
+        rally = _rally_option(plan, a.unit, rally_tiles)
         leg = (
             f"  RALLY ({rally[1].x},{rally[1].y}) d{rally[2].distance} T+{rally[1].turns}"
             if rally

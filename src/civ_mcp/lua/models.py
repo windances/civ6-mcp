@@ -689,6 +689,13 @@ class StagingPlan:
     ring: list[StagingRingTile] = field(default_factory=list)
     units: list[StagingUnit] = field(default_factory=list)
     options: list[StagingOption] = field(default_factory=list)
+    # The **assembly** ring: tiles at distance 3, outside the city's two-tile strike, where a unit
+    # forms up before stepping onto the firing ring. Nothing is ever assigned to them (they are not
+    # firing tiles); they exist so the plan can print `RALLY x,y d3 T+n`, which is the leg the
+    # doctrine asks for and the one the measured failures were about - 底比斯 opened with 2 of 3
+    # shooters in place, 亚历山大 with 2 of 5. Empty when the server predates the rally ring.
+    rally_ring: list[StagingRingTile] = field(default_factory=list)
+    rally_options: list[StagingOption] = field(default_factory=list)
     next_ring: list[StagingRingTile] = field(default_factory=list)
     next_options: list[StagingOption] = field(default_factory=list)
     camp: bool = False

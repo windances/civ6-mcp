@@ -389,11 +389,17 @@ class TestSiegePosture:
         a metric the running server does not know reports itself `un-evaluable` on every turn and
         nobody can satisfy it - a rule that looks alive and is not. Promoting it is the two-file move
         `pending/README.md` describes: the block moves into `turn-checks.md` and the staged file goes.
+
+        Its condition was re-scoped the same day, when the human settled the siege establishment as a
+        band (攻城使用2或3辆投石车 ... 一辆也可以): a **single** gun is a legitimate plan, so the
+        failure is no longer "one gun firing" but "two or more deployed and fewer than two in range".
         """
         root = pathlib.Path(__file__).resolve().parents[1]
         live = (root / "prompts/checks/turn-checks.md").read_text(encoding="utf-8-sig")
         assert "id: concentrate-the-siege" in live
-        assert "metric(siege_firing_alone) >= 1" in live
+        assert "metric(siege_units) >= 2 and metric(siege_in_city_range) <= 1" in live, (
+            "a lone gun must not fail the rule (human instruction 2026-09-30)"
+        )
         assert not (root / "prompts/checks/pending/concentrate-the-siege.md").exists(), (
             "the staged file is deleted by the same move that cuts the rule in"
         )
@@ -405,8 +411,23 @@ class TestSiegePosture:
         }
         rule = parsed.get("concentrate-the-siege")
         assert rule is not None, "the live block must parse"
-        assert rule.require == "metric(siege_firing_alone) == 0"
+        assert rule.require == "metric(siege_in_city_range) >= 2"
+        assert "one gun is a legitimate plan" in rule.message.lower()
         assert rule.message.strip(), "a block without a message is skipped by parse_checks"
+
+    def test_a_lone_gun_does_not_fail_the_rule_and_two_out_of_range_does(self):
+        # One gun in range: the sanctioned single-gun assault.
+        assert "concentrate-the-siege" not in TestTheRules().failing(
+            siege_units=1, siege_in_city_range=1
+        )
+        # Two deployed, one in range: the failure the rule is for.
+        assert "concentrate-the-siege" in TestTheRules().failing(
+            siege_units=2, siege_in_city_range=1
+        )
+        # Two deployed, both in range: fine.
+        assert "concentrate-the-siege" not in TestTheRules().failing(
+            siege_units=2, siege_in_city_range=2
+        )
 
     def test_the_event_names_the_exposed_unit_only_when_it_matters(self):
         text = et._siege_posture_event([self.posture()], et._siege_metrics([self.posture()]), 116)
@@ -421,6 +442,36 @@ class TestSiegePosture:
     def test_staging_far_from_everything_is_silent(self):
         entry = self.posture(enemy_distance=999, screen_enemy_distance=999, city_distance=9)
         assert et._siege_posture_event([entry], et._siege_metrics([entry]), 116) is None
+
+    def test_a_gun_in_the_rally_shell_is_assembling_not_marching(self):
+        """The block used to vanish in exactly the state `tactics/04` is triggered for.
+
+        The rally ring sits at three and four tiles; a gun there with nothing exposed is the
+        assembly, and step 6.5 of `tactics/04` is "read `SIEGE FIRE` before opening". Suppressing
+        it there hid the state the file exists for, so the suppression now starts past d4.
+        """
+        entry = self.posture(enemy_distance=999, screen_enemy_distance=999, city_distance=4)
+        text = et._siege_posture_event([entry], et._siege_metrics([entry]), 116)
+        assert "assembling" in text
+        assert "tactics/04" in text
+
+    def test_beyond_the_rally_shell_the_block_stays_silent(self):
+        entry = self.posture(enemy_distance=999, screen_enemy_distance=999, city_distance=5)
+        assert et._siege_posture_event([entry], et._siege_metrics([entry]), 116) is None
+
+    def test_one_gun_in_the_ring_is_a_full_train_of_one(self):
+        """A single gun is a sanctioned plan (human instruction 2026-09-30), so 1/1 is success."""
+        entry = self.posture(city_distance=2, enemy_distance=1, screen_enemy_distance=2)
+        text = et._siege_posture_event([entry], et._siege_metrics([entry]), 116)
+        assert "SIEGE FIRE: 1/1 siege unit(s) inside range 2" in text
+        assert "full train, fire it" in text
+
+    def test_one_gun_out_of_the_ring_is_told_it_contributes_nothing(self):
+        entry = self.posture(enemy_distance=999, screen_enemy_distance=999, city_distance=4)
+        text = et._siege_posture_event([entry], et._siege_metrics([entry]), 116)
+        assert "SIEGE FIRE: 0/1 siege unit(s) inside range 2" in text
+        assert "OUT OF RANGE" in text
+        assert "at distance 4" in text
 
     def test_the_train_says_how_many_of_it_can_actually_fire(self):
         """Three siege units is a count of units; the shots are what the city feels.

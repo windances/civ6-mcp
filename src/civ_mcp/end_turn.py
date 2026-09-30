@@ -1285,9 +1285,20 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
         return None
     exposed = int(metrics.get("siege_exposed", 0) or 0)
     closest_city = int(metrics.get("siege_city_distance_min", 999) or 999)
-    if not exposed and closest_city > 3:
-        return None  # staging far from any target: nothing to report yet
-    lines = [f"SIEGE POSTURE (T{turn}) - front line in front, siege behind, at range 2:"]
+    # The block used to vanish exactly in the state `tactics/04` is triggered for: nothing exposed
+    # and the nearest city more than three tiles away is the **assembly**, and reading `SIEGE FIRE`
+    # there is step 6.5 of the file. It now prints from five tiles in (the rally shell is d3-d4),
+    # and only beyond that - a gun still marching across the map - is suppressed as noise.
+    assembling = not exposed and closest_city > 3
+    if not exposed and closest_city > 4:
+        return None
+    if assembling:
+        lines = [
+            f"SIEGE POSTURE (T{turn}) - assembling: no siege unit is inside a city's two-tile strike"
+            f" yet, and this is the state `tactics/04` plans the rally for:"
+        ]
+    else:
+        lines = [f"SIEGE POSTURE (T{turn}) - front line in front, siege behind, at range 2:"]
     for entry in posture:
         where = f"{getattr(entry, 'unit_type', '?')}@({getattr(entry, 'x', '?')},{getattr(entry, 'y', '?')})"
         enemy = int(getattr(entry, "enemy_distance", 999) or 999)
@@ -1301,13 +1312,15 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
             f" screen {screen if screen != 999 else 'none'} (its enemy {screen_enemy if screen_enemy != 999 else '-'}),"
             f" city {city if city != 999 else '-'} ({city_name}) - {state}"
         )
-    if len(posture) > 1 and closest_city != 999:
+    if closest_city != 999:
         # The measured failure this line exists for: a train of three siege units that fires with
         # one of them. At 阿斯特拉罕 only one distance-2 tile had line of sight, at 圣彼得堡 only
         # one siege unit was inside range 2 while two stood at distance 4 and 6 for three turns
         # (T151-T152), and at 喀山 all three were at distance 3, 4 and 4 on T159 - so the "3
-        # Catapults" the directive counts is a *count of units*, not of shots, and nothing said so.
+        # Catapults" the directive counted is a *count of units*, not of shots, and nothing said so.
         # Staging is the answer (tactics/04): arrive together, inside the ring, before opening.
+        # It prints for **one** gun too (human instruction 2026-09-30: one is a legitimate plan), so
+        # `SIEGE FIRE: 1/1` is the sanctioned single-gun assault and `0/1` is a gun out of position.
         cannot_fire = [
             (getattr(e, "unit_type", "?"), int(getattr(e, "city_distance", 999) or 999))
             for e in posture

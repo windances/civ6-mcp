@@ -2576,6 +2576,45 @@ if ktx ~= -9999 then
         end
     end end
 end
+-- The assembly ring: the tiles at distance 3, outside the city's two-tile strike. Human
+-- instruction 2026-09-26 (plan the assembly before the first move) and the measured cost of
+-- skipping it - 底比斯 opened with 2 of 3 shooters in position, 亚历山大 with 2 of 5, the rest
+-- still walking. These are NOT firing tiles: nothing is assigned to them, they are where a unit
+-- forms up before stepping onto the ring. Capped at the six nearest the army's centre of mass, so
+-- the per-unit path scan stays the same order of magnitude as the ring's own.
+local rallyRing = {}
+do
+    local sx, sy, n = 0, 0, 0
+    for _, u in Players[me]:GetUnits():Members() do
+        local ux, uy = u:GetX(), u:GetY()
+        if ux ~= -9999 then
+            local info = GameInfo.Units[u:GetType()]
+            local cs = info and info.Combat or 0
+            local rs = info and info.RangedCombat or 0
+            local bomb = info and info.Bombard or 0
+            if (cs + rs + bomb) > 0 then sx, sy, n = sx + ux, sy + uy, n + 1 end
+        end
+    end
+    local cx, cy = tx, ty
+    if n > 0 then cx, cy = math.floor(sx / n), math.floor(sy / n) end
+    local candidates = {}
+    for dx = -3, 3 do for dy = -3, 3 do
+        local px, py = tx + dx, ty + dy
+        local p = Map.GetPlot(px, py)
+        if p and Map.GetPlotDistance(tx, ty, px, py) == 3 and not p:IsImpassable() then
+            candidates[#candidates + 1] = {x = px, y = py, d = 3, idx = p:GetIndex(),
+                away = Map.GetPlotDistance(cx, cy, px, py)}
+        end
+    end end
+    table.sort(candidates, function(a, b) return a.away < b.away end)
+    for i = 1, math.min(#candidates, 6) do
+        local t = candidates[i]
+        rallyRing[#rallyRing + 1] = t
+        local p = Map.GetPlot(t.x, t.y)
+        print("RALLYRING|" .. t.x .. "," .. t.y .. "|3|ok|"
+            .. (p:IsWater() and "water" or "land"))
+    end
+end
 for _, u in Players[me]:GetUnits():Members() do
     local ux, uy = u:GetX(), u:GetY()
     if ux ~= -9999 then
@@ -2639,6 +2678,27 @@ for _, u in Players[me]:GetUnits():Members() do
                             if turns3 <= 3 then
                                 print("KILLOPTION|" .. u:GetID() .. "|" .. t3.x .. "," .. t3.y
                                     .. "|" .. turns3 .. "|" .. (reachSet[t3.idx] and 1 or 0))
+                            end
+                        end
+                    end
+                end
+            end
+            if moves > 0 then
+                for _, t in ipairs(rallyRing) do
+                    local path = UnitManager.GetMoveToPath(u, t.idx)
+                    if path and #path > 0 then
+                        local last = Map.GetPlotByIndex(path[#path])
+                        if last:GetX() == t.x and last:GetY() == t.y then
+                            local rc = 0
+                            for _, pIdx in ipairs(path) do
+                                if reachSet[pIdx] then rc = rc + 1 end
+                            end
+                            local turns
+                            if rc >= #path then turns = 0
+                            else turns = math.ceil((#path - rc) / math.max(rc, 1)) end
+                            if turns <= 3 then
+                                print("RALLYOPTION|" .. u:GetID() .. "|" .. t.x .. "," .. t.y .. "|"
+                                    .. turns .. "|" .. (reachSet[t.idx] and 1 or 0) .. "|" .. #path)
                             end
                         end
                     end
@@ -2769,6 +2829,29 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     strength=strength,
                     hp=hp,
                     max_hp=max_hp,
+                )
+            )
+        elif line.startswith("RALLYRING|") and len(parts) >= 5:
+            x, y = (int(v) for v in parts[1].split(","))
+            plan.rally_ring.append(
+                StagingRingTile(
+                    x=x,
+                    y=y,
+                    distance=int(_number(parts[2])),
+                    blocked=parts[3] != "ok",
+                    water=parts[4] == "water",
+                )
+            )
+        elif line.startswith("RALLYOPTION|") and len(parts) >= 6:
+            x, y = (int(v) for v in parts[2].split(","))
+            plan.rally_options.append(
+                StagingOption(
+                    unit_id=int(parts[1]),
+                    x=x,
+                    y=y,
+                    turns=int(_number(parts[3])),
+                    this_turn=parts[4] == "1",
+                    path_len=int(_number(parts[5])),
                 )
             )
         elif line.startswith("KILLRING|") and len(parts) >= 2:

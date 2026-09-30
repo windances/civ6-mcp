@@ -157,9 +157,9 @@ message: A siege unit is within two tiles of an enemy with nothing in front of i
 
 <!-- check
 id: concentrate-the-siege
-when: metric(siege_firing_alone) >= 1
-require: metric(siege_firing_alone) == 0
-message: The train is deployed and only one of its guns is inside range 2 of the target. The directive counts units; what takes a city is shots. A Catapult does 45-52 against a city where an Archer does 9-11 into a CS 35 garrison, and a city heals about twenty a turn while any adjacent hex is outside our zone of control - so two guns out-damage the heal and one does not, which is not a slow siege but a siege that lands nothing. Measured in A6: a complete establishment and a Catapult bought with gold left the target at 200/200 with SIEGE FIRE: 1/2 for its whole window. Walk the other guns into the ring before firing again, and remember that a unit which spends its move arriving cannot fire the same turn (a two-tile move, a river or a hill costs both points) - stage a turn early rather than shoot with one.
+when: metric(siege_units) >= 2 and metric(siege_in_city_range) <= 1
+require: metric(siege_in_city_range) >= 2
+message: Two or more siege units are deployed and fewer than two of them are inside range 2 of the target. **One gun is a legitimate plan** (human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以 - the number is the arithmetic's, and one is enough when the ground and the ranged line cover the wall pool), so this is not about a single gun: **what is never right is having a second gun and not firing it.** What takes a city is shots. A Catapult does 45-52 against a city where an Archer does 9-11 into a CS 35 garrison, and a city heals about twenty a turn while any adjacent hex is outside our zone of control - so a second gun that is standing at distance 3-4 is the cheapest damage in the empire being left unspent. Measured in A6: a complete establishment and a Catapult bought with gold left the target at 200/200 with SIEGE FIRE: 1/2 for its whole window; at 阿斯特拉罕 only one distance-2 tile had line of sight and at 圣彼得堡 one gun was inside range 2 while two stood at distance 4 and 6 for three turns. Walk the other guns into the ring before firing again, and remember that a unit which spends its move arriving cannot fire the same turn (a two-tile move, a river or a hill costs both points) - stage a turn early rather than shoot with one.
 -->
 
 ## Staging the assault: outside their range, screen in front, siege behind
@@ -178,12 +178,13 @@ the front-line unit nearest the siege unit, and the distance to the nearest visi
 nothing closer to that enemy than themselves; `siege_in_city_range` counts those already within
 two tiles of a city, and `siege_city_distance_min` is the closest approach to any target.
 
-**`siege_firing_alone` is the count that decides whether the siege works at all**: it is 1 when a
-train is deployed and only one of its guns is inside range 2, and 0 while the train is still
-marching in, when two or more can fire, and when no siege unit is ours. It exists because the
-directive counts **units** and the city is taken by **shots** - `siege-train` asks whether three
-Catapults exist, and this asks how many of them the target is actually inside range of. `SIEGE
-FIRE: n/m` in the `SIEGE POSTURE` block prints the same pair.
+**`siege_firing_alone` is the signature of the failure, not the rule itself**: it is 1 when a train
+of two or more is deployed and only one of its guns is inside range 2, and 0 while the train is still
+marching in, when two or more can fire, and when no siege unit is ours. It exists because the siege
+establishment is a **band, not a quota** (human instruction 2026-09-30): one gun is a complete plan
+when the ground and the ranged line cover the wall pool, so a lone gun is not a fault - a *second* gun
+standing out of range is. `SIEGE FIRE: n/m` in the `SIEGE POSTURE` block prints the same pair, and it
+now prints for a single gun too.
 
 ## Finishing a city once its HP pool is empty
 
