@@ -1,7 +1,7 @@
 ﻿# TEMP TASK 039 - attempt A7 continued to T110 as the matched-horizon baseline
 
 added:     2026-09-30 (human instruction: A7继续到可以和A8, A9有效对比的回合。你自己决定什么时候结束。A8/A9 共享T1起点。)
-expires:   turn 112 - 43 turn(s) from T69, the turn the match stands on (read from the save); a hard stop,
+expires:   turn 112 - 43 turn(s) from T85, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
 done when: turn 110 is reached (get_game_overview reports turn 110) - the horizon A8 and A9 are measured at;
            that turn's report carries the T110 economy row beside the T60 one, and the task is
@@ -27,13 +27,20 @@ its own.
 0. `get_game_status`. **This task continues the match where it stands** - it stood on **T69** when this
    file was written, on A7's own branch. **Do not load `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` and do
    not restart**: that save is the starting point for **A8 and A9**, and loading it here would destroy the
-   comparison this task exists to create. If the game stands anywhere in T69-T72 of this branch, continue
-   it. If it stands somewhere else, **say where in the diary and stop** - do not guess which position the
-   task meant.
+   comparison this task exists to create.
+   - **If the game stands anywhere on this branch from T69 up to the horizon (T110), continue it.** That
+     window is deliberately wide because this task may be **resumed**: a session that runs out of its own
+     budget hands the match over mid-window, and a resume has to be able to carry on from wherever it
+     stopped rather than refuse the position it was handed. Say in the diary which turn you picked it up
+     on, and read `get_diary` first - a resumed turn inherits the previous session's plan and its
+     half-finished orders.
+   - **If it stands before T69, or past T110, or somewhere that is not this branch** - a different save, a
+     different match - **say where in the diary and stop**. Do not guess which position the task meant.
 1. The position inherited from A7, to be confirmed and not assumed: **three cities** - 西安, the second
    city founded at T21 (the tile is in A7's record and in the diary), and **耶路撒冷, kept at T60**. Read
    `get_cities` and say in the diary whether the reading matches that description, city by city, with the
-   population.
+   population. **On a resume the city count may legitimately have grown or shrunk** - say what it is and
+   when it changed rather than treating a difference from three as an error.
 2. Then `get_diary` and one `scripts\orient.py` read.
 
 ## The first thing to do after orienting: the read A8 is blocked on
@@ -113,6 +120,6 @@ the shared T1 start, and the pre-flight read is what publishes it.**
 
 <!-- published by scripts/temp-task.py
      command: python scripts/temp-task.py add --replace --turns 43 --title "attempt A7 continued to T110 as the matched-horizon baseline" --instruction "A7继续到可以和A8, A9有效对比的回合。你自己决定什么时候结束。A8/A9 共享T1起点。" --done-when "turn 110 is reached (get_game_overview reports turn 110) - the horizon A8 and A9 are measured at; that turn's report carries the T110 economy row beside the T60 one, and the task is retired on it" --overrides "dynasty-cycle-wonder (prompts/checks/turn-checks.md): the wonder obligation is deferred for this continuation and recorded as accepted in the diary, because a wonder here would be a second variable against A8, whose arm is the third city's market. Nothing else in the directive is overridden - A7's configuration is held exactly as it finished." --scope "this match only, continuing the live position on A7's branch (T69, three cities, the target kept at T60): the same doctrine and the same configuration A7 finished with, held to T110 as the baseline A8 and A9 are compared against. It does NOT use the shared start - evals/saves/ATTEMPT-A1-T1-settled.Civ6Save is A8's and A9's starting point." --why "continue A7 to the horizon A8 is measured at, and take the settle-advisor read A8's publication waits on" --expires-turn 112 --body-file C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a7-continued-body.md --cn @C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a7-continued-cn.md
-     at: 2026-09-30T13:37:41+08:00
+     at: 2026-09-30T14:11:21+08:00
      chinese backup: prompts/tasks/cn/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline.cn.md
 -->
