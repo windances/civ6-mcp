@@ -215,16 +215,19 @@ class TestTheMetricAndTheStagedRule:
         assert "unpowered_cities" in _CONTACT_METRIC_KEYS
         assert "unpowered_power_gap" in _CONTACT_METRIC_KEYS
 
-    def test_the_rule_waits_for_a_server_whose_tuple_has_the_metric(self):
+    def test_the_rule_is_live_and_no_longer_staged(self):
+        """Promoted 2026-09-30, the two-file move `pending/README.md` describes.
+
+        It was staged while a server that predated the `_CONTACT_METRIC_KEYS` change could still
+        answer a row-based pass with `un-evaluable`; there is no such server now, and a rule left in
+        `pending/` is an instruction nothing reads.
+        """
         staged = ROOT / "prompts/checks/pending/power-the-cities.md"
         live = ROOT / "prompts/checks/turn-checks.md"
-        assert staged.exists(), "the rule is staged until a server computes the metric"
-        assert "id: power-the-cities" in staged.read_text(encoding="utf-8")
-        assert "metric(unpowered_cities) >= 1" in staged.read_text(encoding="utf-8")
-        assert "id: power-the-cities" not in live.read_text(encoding="utf-8"), (
-            "promoting it is the two-file move pending/README.md describes, and only once a "
-            "server started after the _CONTACT_METRIC_KEYS change is running"
-        )
+        assert not staged.exists(), "the rule has been cut in; the staged copy goes with it"
+        text = live.read_text(encoding="utf-8-sig")
+        assert "id: power-the-cities" in text
+        assert "metric(unpowered_cities) >= 1" in text
 
 class TestTheAdviceFieldIsText:
     """`GetPowerAdvice()` returns the localisation token [NEWLINE], not real line breaks.

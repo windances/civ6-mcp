@@ -37,8 +37,8 @@ def staged_files() -> list[pathlib.Path]:
     return sorted(p for p in PENDING.glob("*.md") if p.name != "README.md")
 
 
-def fields_of(path: pathlib.Path) -> dict[str, str]:
-    match = FENCED_YAML.search(path.read_text(encoding="utf-8-sig"))
+def fields_of_text(text: str) -> dict[str, str]:
+    match = FENCED_YAML.search(text)
     if not match:
         return {}
     found: dict[str, str] = {}
@@ -53,8 +53,19 @@ def fields_of(path: pathlib.Path) -> dict[str, str]:
     return found
 
 
-def test_there_is_a_rule_to_check():
-    assert staged_files(), "the directory is empty, so this file would prove nothing"
+def fields_of(path: pathlib.Path) -> dict[str, str]:
+    return fields_of_text(path.read_text(encoding="utf-8-sig"))
+
+
+def test_the_guard_is_not_vacuous_when_nothing_is_staged():
+    """`pending/` is **empty in the normal state** (`README.md`), so the shape guard must be
+    provable without a file to look at - otherwise it silently stops checking anything the day the
+    last staged rule is promoted, which is exactly when the next one gets written."""
+    good = "```yaml\nid: sample\nwhen: metric(x) >= 1\nrequire: metric(x) == 0\nmessage: text\n```\n"
+    bad = "```yaml\nid: sample\nwhen: metric(x) >= 1\nrequire: metric(x) == 0\n```\n"
+    assert fields_of_text(good).get("message")
+    assert not fields_of_text(bad).get("message")
+    assert fields_of_text("no fence here") == {}
 
 
 def test_every_staged_rule_carries_what_the_parser_requires():

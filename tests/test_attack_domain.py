@@ -155,28 +155,30 @@ class TestTheCounterAndTheRule:
         assert '"attacks_landed_nothing"' in end_turn
         assert "gs._attacks_landed_nothing = 0" in end_turn, "the counter must reset with the turn"
 
-    def test_the_rule_waits_for_a_server_whose_tuple_has_the_metric(self):
-        """Staged, and the reason is precise: the row-context tuple is read at import time.
+    def test_the_rule_is_live_and_can_be_evaluated_from_a_stored_row(self):
+        """Promoted 2026-09-30 - the two halves the staging held it back for both hold.
 
-        The rule works in the live path - the metric is exposed by `end_turn` and the Lua refuses the
-        order - but a stored-row pass (history recomputation, the TURN START briefing) answers a metric
-        missing from `_CONTACT_METRIC_KEYS` with `un-evaluable`, which reads as a permanent streak. So it
-        is promoted only in a session whose server started after that tuple gained the key; this test
-        pins both halves of the invariant so a future promotion cannot skip either.
+        The rule works in the live path (the metric is exposed by `end_turn` and the Lua refuses the
+        order), and a stored-row pass (history recomputation, the TURN START briefing) can answer a
+        metric that is in `_CONTACT_METRIC_KEYS` instead of reporting `un-evaluable` forever. There is
+        no server running that predates that tuple change, so the rule is in force - and it is a
+        regression lock: it fires the first turn the refusal is removed or bypassed.
         """
         from civ_mcp import end_turn as et
         from civ_mcp import turn_checks
 
         staged = ROOT / "prompts" / "checks" / "pending" / "attacks-that-land-nothing.md"
-        assert staged.is_file(), "the rule belongs in pending/ until a restarted server can zero it"
-        text = staged.read_text(encoding="utf-8-sig")
-        assert "metric(attacks_landed_nothing) == 0" in text
-        assert "manual:723" in text
+        assert not staged.is_file(), "the rule has been cut in; the staged copy goes with it"
         # Half one: the live metric exists. Half two: a stored row can answer it.
         assert '"attacks_landed_nothing"' in (ROOT / "src" / "civ_mcp" / "end_turn.py").read_text(
             encoding="utf-8"
         )
         assert "attacks_landed_nothing" in et._CONTACT_METRIC_KEYS
-        # And it is not live yet.
         live_text, _ = turn_checks.load_checks()
-        assert "attacks-that-land-nothing" not in live_text
+        assert "attacks-that-land-nothing" in live_text
+        # And the live block is one the parser actually keeps: a rule with no `message:` reads as
+        # in force and never fires, which is the failure `pending/README.md` exists to prevent.
+        checks = turn_checks.parse_checks(live_text)
+        block = next(c for c in checks if c.check_id == "attacks-that-land-nothing")
+        assert "attacks_landed_nothing" in block.require
+        assert "manual:723" in block.message

@@ -82,7 +82,7 @@ but the doctrine text stays behind. Three concrete reasons:
 | `05-formation-and-screening.md` | MOSTLY (rising) | **`WOUNDED IN REACH` is now named as the CLI script's block, with the MCP-loop test given** (2026-09-30); "never adjacent to a *city*" is unenforced; the screen's identity is not reported |
 | `06-assault-composition-and-fire.md` | PARTLY (rising) | the composition table is **fixed** (siege is a band, the ram/tower row is gone, anti-cavalry added, capture classes corrected, and the city figures are the game's `Bombard` strengths) and row 0's pre-move ring-LOS question now has an oracle - the staging plan's per-tile `FIRE` / `NO LINE OF SIGHT` verdict (2026-09-30); what remains is the command-level "which of these guns has already fired" |
 | `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0's dead tool name is **fixed** (2026-09-30: `get_trade_options`); **Gate 2 (ring LOS) is now answerable before the declaration** from the staging plan's map rule plus the engine's `CANFIRE` (2026-09-30); the Siege Tower advice and the C3 claim are **fixed** (2026-09-30); `WOUNDED IN REACH` is no longer promised from the MCP loop |
-| `08-war-and-the-home-front.md` | MOSTLY | every block and rule it cites is live (`10-TURN REVIEW`, `WAR ECONOMY`, `builder-backlog`, `carrying-capacity`); the new power section is code-complete but its rule is **staged** and a server started before commit `8353672` prints no power at all, leaving a human-only fallback; the stale military figure (306 -> 282) and the retired task path are **fixed** (2026-09-30) |
+| `08-war-and-the-home-front.md` | MOSTLY (rising) | every block and rule it cites is live (`10-TURN REVIEW`, `WAR ECONOMY`, `builder-backlog`, `carrying-capacity`), and its power section's rule is **live too as of 2026-09-30** (`power-the-cities` was cut in once no server predating the metric could be running), so the human-only banner fallback is now only for a stale server; the stale military figure (306 -> 282) and the retired task path are **fixed** (2026-09-30) |
 
 ## Resolved by human instruction, 2026-09-30
 
@@ -157,7 +157,7 @@ dead Step-0 tool name.
 | Camp gates C1/C2/C5 are partly unanswerable: `get_map_area` gives a barbarian's type label but no CS/HP (`lua/map.py:211-219`); "what the camp has been spawning" and its gold/era reward have no query; the `BOOSTED` flag never appears as the literal `boosted=True` that `07:130` quotes. | three of the six camp gates are inference |
 | **`03` points step 1 at the wrong block, and its third trigger has no data at all.** `03:9-10` sends the agent to `BATTLE ASSESSMENT` for "who did it", but that block lists **enemies only** (`end_turn.py:2179-2254`); our own damage is in the `== Events ==` line "`>> Your X (TYPE) took N damage! HP: h/max at (x,y)`" (`game_state.py:1886-1893`, rendered `end_turn.py:3754`). And "an enemy attacked a city" (`03:3-4`) has **no event and no metric** - `damaged_this_turn` counts units (`end_turn.py:2016`) - so it is only visible by diffing `get_cities` wall/garrison HP. | one of the file's three triggers is not observable |
 | **The file omits the gate that actually stops the turn.** An unused legal attack makes `end_turn` bounce with `UNUSED ATTACK at end_turn ... call skip_remaining_units(force=True)` (`end_turn.py:759-765`) and `skip_remaining_units` refuses without `force` (`server.py:1763`). `03:54-57` recommends withdrawing a hurt unit without mentioning that the withdrawal is blocked until that call. | the recommended move cannot be taken as described |
-| **The power read is deployment-gated.** Everything the section needs landed in commit `8353672`, so on a server started earlier the Lua emits the old field count, `power_reported` is false and `get_cities` prints **no** power text; the section's fallback ("the reading is the city banner") is the human's UI - no tool returns it. The rule is also still **staged**, so nothing fails on power until it is promoted. | executable on a fresh server, not on the one now playing |
+| **The power read is deployment-gated.** Everything the section needs landed in commit `8353672`, so on a server started earlier the Lua emits the old field count, `power_reported` is false and `get_cities` prints **no** power text; the section's fallback ("the reading is the city banner") is the human's UI - no tool returns it. The rule is also still **staged**, so nothing fails on power until it is promoted. | executable on a fresh server, not on the one now playing. **Resolved 2026-09-30**: `power-the-cities` is cut into `turn-checks.md` (and `attacks-that-land-nothing` with it) now that no server predating the metric can be running, so `unpowered_cities` is a failing check with a `CHECK FAILED` line rather than a staged intention |
 
 ### D. Minor and cosmetic (fixed 2026-09-30, with two notes)
 
@@ -238,7 +238,9 @@ one of those was verified present and live. The gaps are specific, not general.
    `done/023-dutch-siege-corps-done-T259.md`; the minor batch from class D. **Applied 2026-09-30**,
    with one correction to this audit's own claim about the siege numbers (see class D).
 9. **Already applied in this pass**: the `RENEWABLE_ENERGY` cost correction in `tactics/08` and in
-   `prompts/checks/pending/power-the-cities.md` (see class D below).
+   the then-staged `power-the-cities` rule (see class D below); the rule itself was **cut in** on
+   2026-09-30, together with `attacks-that-land-nothing`, so `prompts/checks/pending/` holds only its
+   README again.
 
 **Code (each one new behaviour, so each needs tests):**
 

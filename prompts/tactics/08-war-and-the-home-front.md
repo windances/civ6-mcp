@@ -137,9 +137,9 @@ Four rules that decide it:
 **Read it, do not assume it.** `get_cities` prints `Power available/required` on each city line and a
 `!! UNPOWERED` line naming the requirement, the available power and the game's own advice, and the
 per-turn city record carries `power_required`, `power_available` and `powered`. The `power-the-cities`
-rule (staged in `prompts/checks/pending/`) makes `unpowered_cities` a failing metric once a server
-computes it. On an older server none of that exists — then the reading is the city banner, and the
-diary says which city was checked by eye.
+rule is **live** (cut in 2026-09-30), so `unpowered_cities` above zero is a failing check with its own
+`CHECK FAILED` line. On a server started before those fields existed none of it is reported - then the
+reading is the city banner, and the diary says which city was checked by eye.
 
 ## Step 3 — the units the war does not need still have jobs
 

@@ -371,3 +371,17 @@ require: metric(enemy_supply_uncut_with_idle) == 0
 message: An enemy city has open adjacent hexes - its supply line - while our fighting units within three tiles still have movement. A city heals about twenty points a turn while any adjacent hex is outside our zone of control (manual:1066-1085, HEALING DAMAGE TO CITIES), so a hex that can be cut cheaply is worth cutting. Measured over the T139-T159 Russian war: 沃罗涅什 read `supply line 3/6 cut` and 喀山 read `1/6` for their whole sieges, while spare units "fortified in place because the corridor is jammed" (T155, verbatim) - both pools came back to full and both cities rebuilt their walls; 圣彼得堡 took six turns of fire for the same reason, because the heal was out-damaged rather than cut, and one firing tile could not out-damage it. Order the surplus units - the ones with movement and nothing to shoot at - onto or beside the open hexes, taking the far side of the ring rather than queueing in the corridor; a unit that walks there is out of the firing line that turn, and declining that trade belongs in the diary. **But read the pool before spending a shooter on it**: a partial cut under continuous fire has not let a city out-heal us - 哈勒姆 held a 3/6 cut and its pool went 200 -> 189 -> 86 -> 60 -> 20 over T266-T270, and the next Dutch city went 200 -> 65 with 3-4/6 - so when the pool is falling, keep firing and record the accepted partial cut rather than walking a shooter off the line to close the last hex.
 -->
 
+
+<!-- check
+id: attacks-that-land-nothing
+when: metric(attacks_landed_nothing) >= 1
+require: metric(attacks_landed_nothing) == 0
+message: A melee land unit attacked an enemy at sea, which the rules refuse - a melee unit cannot attack a unit at sea (manual:723, MELEE UNITS - "They cannot attack enemies at sea"). The engine does not refuse the order: it acknowledges it as OK:MELEE_ATTACK and the target's HP never moves, while the attack spent the move that would have carried the unit out of the water. Measured on this branch, T222-T237: seven melee attacks on Dutch Caravels with the target's HP identical every time, and two of our units sunk. Attack a hull only with a ranged or a naval unit; move a melee unit out of the water rather than swinging from it.
+-->
+
+<!-- check
+id: power-the-cities
+when: metric(unpowered_cities) >= 1
+require: metric(unpowered_cities) == 0
+message: A city is not fully powered, so every building that needs power runs at reduced strength - Research Lab, Stock Exchange, Broadcast Center and Film Studio need 3 power each, Factory and Stadium 2, Food Market and Shopping Mall 1. Power comes from a Coal or Oil Power Plant (1 resource into 4 Power) or a Nuclear Power Plant (1 Uranium into 16), and each plant serves every city within 6 tiles that needs power, so this is a coverage question and not a per-city one. The free sources are the Hydroelectric Dam (+6), the Geothermal Plant (+4) and the Solar, Wind and Offshore Wind Farms (+2 each). Build or buy a plant that covers the city, or trade for the resource it burns. The Merchant governor's RENEWABLE_ENERGY promotion (+2 to each renewable in its city) sits behind Tax Collector, which sits behind Harbourmaster or Foreign Exchange - a plan, not a switch.
+-->
