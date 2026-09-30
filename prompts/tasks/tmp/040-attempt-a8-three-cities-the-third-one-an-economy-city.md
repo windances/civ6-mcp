@@ -1,7 +1,7 @@
 ﻿# TEMP TASK 040 - attempt A8 - three cities, the third one an economy city
 
 added:     2026-09-30 (human instruction: 再加一个A8, 选市场。先跑A8。A8/A9 共享T1起点。)
-expires:   turn 115 - 114 turn(s) from T111, the turn the match stands on (read from the save); a hard stop,
+expires:   turn 115 - 114 turn(s) from T6, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
 done when: turn 110 is reached - the claim's last number (A8's science, pop and gold_per_turn against A7's at
            the same turn) cannot be read before then; the retiring turn reports the purchase against
@@ -84,8 +84,18 @@ market queue instead of an army queue. Nothing else changes.
       `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`** and say in the diary what you replaced and why. A
       load can land and still leave a position altered by whatever tried to confirm it, so turn 1 alone is
       not sufficient evidence that the position is the one this file measures from;
-   5. **anything else** - a different match key, a leader screen, a main menu - is the one case to **stop
-      and report**: do not guess which position the task meant.
+   5. **is there no game loaded at all** - a main menu, a leader screen, `not_running` - **while A8 is
+      already in progress?** Its own diary rows exist, its task is in force, and a `HANG:` line named the
+      autosave the stall wrote. Then **the attempt crashed or was restarted mid-run, and the recovery is
+      to load that autosave**: `load_game_save` by the `0_MCP_NNNN` name the hang printed, say in the
+      diary which save you loaded and which turn it holds, and **continue from there** - a resumed turn
+      inherits the previous session's plan. **Verify before playing**: the loaded position must be A8's
+      (its cities, its pin, its diary rows). If it is A7's, or any other attempt's, **stop and report**
+      rather than play on it;
+   6. **nothing of A8's exists and no position can be identified** - a different match key, a menu with no
+      attempt behind it - is the one case to **stop and report**: do not guess which position the task
+      meant. **This is the narrow case, not the default**: a menu is not by itself a reason to stop when
+      there is an attempt to resume.
 1. Then `get_diary` and one `scripts\orient.py` read. On a fresh T1 position the diary's early rows belong
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
    unavailable rather than as A8's own history.
@@ -266,6 +276,6 @@ purchase** - and hand back to the orchestrator.
 
 <!-- published by scripts/temp-task.py
      command: python scripts/temp-task.py add --replace --turns 114 --title "attempt A8 - three cities, the third one an economy city" --instruction "再加一个A8, 选市场。先跑A8。A8/A9 共享T1起点。" --done-when "turn 110 is reached - the claim's last number (A8's science, pop and gold_per_turn against A7's at the same turn) cannot be read before then; the retiring turn reports the purchase against its deadline, the gold-floor reading beside A7's at that turn, and the T110 rows field by field" --overrides "(1) the pinned opening: its fifth slot is a second UNIT_SETTLER, which is this attempt's variable - the first four orders are unchanged from A3-A7. This makes the opening 'settle first' rather than tactics/01's 'siege first', which is the point of the attempt and not drift. (2) dynasty-cycle-wonder (prompts/checks/turn-checks.md): the wonder obligation is deferred for this attempt and recorded as accepted in the diary the first turn it fires, because the third city is both this attempt's market city and the natural home for a wonder, and building one here would make the attempt two variables. The wonder is owed its own attempt; it is not being answered by silence. Nothing else in the directive is overridden - tactics/08's one war city is held exactly." --scope "this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save: attempt A8 - the same settings, the same corrected tactics/01 and tactics/08, with the number of settled cities (three, against the two every previous attempt held) as the one variable, and the third city's queue economy rather than army. It does not touch the A7 continuation's position." --why "settle a third city with a market queue and buy the second siege unit with gold" --expires-turn 115 --body-file C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-body.md --cn @C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-cn.md
-     at: 2026-09-30T15:17:42+08:00
+     at: 2026-09-30T15:38:54+08:00
      chinese backup: prompts/tasks/cn/040-attempt-a8-three-cities-the-third-one-an-economy-city.cn.md
 -->
