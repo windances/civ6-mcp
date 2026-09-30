@@ -60,19 +60,24 @@ market queue instead of an army queue. Nothing else changes.
    **A8 may be resumed, and a resume is not a restart.** This attempt needs roughly sixty turns before its
    number exists and a hundred and ten to reach the horizon, which is longer than one session's budget has
    managed so far in this programme. If you are handed a game that is **already on this key at a turn past
-   1**, the work below decides what to do - and **reloading the shared start in that state would discard a
-   run in progress, which is the one mistake here that cannot be repaired**:
+   1**, the work below decides what to do - and **reloading the shared start over a run of A8's own, in
+   progress, would discard it, which is the one mistake here that cannot be repaired**:
 
    1. **read `get_diary` first, then `get_cities`**, and say in the diary what you see;
-   2. if the position is **A7's continuation** - it stands at T69 or later with **three cities, one of them
-      耶路撒冷 kept at T60**, and the recent diary rows describe holding a baseline to T110 rather than
-      settling a third city and building a market - then **the handoff has not happened yet: stop and report
-      it.** Do not play A8 on that position, and do not load over it either; the orchestrator has to retire
-      task 039 and free the tuner first;
-   3. if the position is **A8's own run in progress** - the diary's recent rows are yours, the pin is
-      visible in the early turns, and the third city or its market is under way - then **continue it from
-      where it stands**. Say which turn you picked it up on and what had already been spent;
-   4. only if the game is **not on this attempt's position at all** does step 0's load apply.
+   2. **is the position A8's own run in progress?** The diary's recent rows are this attempt's - the pin
+      visible in the early turns, the second Settler ordered, the third city or its market under way.
+      Then **continue from where it stands**, say which turn you picked it up on and what had already been
+      spent, and do not load anything;
+   3. **is the position A7's continuation?** It stands at T69 or later with **three cities, one of them
+      耶路撒冷 kept at T60**, and the recent diary rows describe holding a baseline to T110. **That is the
+      position this attempt must replace, and replacing it is expected**: A7's record is closed - its
+      window ended at T110, task 039 is retired to `done/`, and its snapshot is
+      `docs/experiments/A7-T110.json` - so **load the shared start and play A8 from T1**, saying in the
+      diary which position you loaded over. **Do not play A8 on A7's position, and do not treat it as a
+      blocker**: it is the state the handoff deliberately leaves behind, because the tuner has to be free
+      before the shared start can be loaded;
+   4. **anything else** - a different match key, a leader screen, a main menu - is the one case to **stop
+      and report**: do not guess which position the task meant.
 1. Then `get_diary` and one `scripts\orient.py` read. On a fresh T1 position the diary's early rows belong
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
    unavailable rather than as A8's own history.
@@ -252,7 +257,7 @@ Then retire this task with `--done` or `--expired` - **`--expired` if the window
 purchase** - and hand back to the orchestrator.
 
 <!-- published by scripts/temp-task.py
-     command: python scripts/temp-task.py add --turns 114 --title "attempt A8 - three cities, the third one an economy city" --instruction "再加一个A8, 选市场。先跑A8。A8/A9 共享T1起点。" --done-when "turn 110 is reached - the claim's last number (A8's science, pop and gold_per_turn against A7's at the same turn) cannot be read before then; the retiring turn reports the purchase against its deadline, the gold-floor reading beside A7's at that turn, and the T110 rows field by field" --overrides "(1) the pinned opening: its fifth slot is a second UNIT_SETTLER, which is this attempt's variable - the first four orders are unchanged from A3-A7. This makes the opening 'settle first' rather than tactics/01's 'siege first', which is the point of the attempt and not drift. (2) dynasty-cycle-wonder (prompts/checks/turn-checks.md): the wonder obligation is deferred for this attempt and recorded as accepted in the diary the first turn it fires, because the third city is both this attempt's market city and the natural home for a wonder, and building one here would make the attempt two variables. The wonder is owed its own attempt; it is not being answered by silence. Nothing else in the directive is overridden - tactics/08's one war city is held exactly." --scope "this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save: attempt A8 - the same settings, the same corrected tactics/01 and tactics/08, with the number of settled cities (three, against the two every previous attempt held) as the one variable, and the third city's queue economy rather than army. It does not touch the A7 continuation's position." --why "settle a third city with a market queue and buy the second siege unit with gold" --expires-turn 115 --body-file C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-body.md --cn @C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-cn.md
-     at: 2026-09-30T15:02:48+08:00
+     command: python scripts/temp-task.py add --replace --turns 114 --title "attempt A8 - three cities, the third one an economy city" --instruction "再加一个A8, 选市场。先跑A8。A8/A9 共享T1起点。" --done-when "turn 110 is reached - the claim's last number (A8's science, pop and gold_per_turn against A7's at the same turn) cannot be read before then; the retiring turn reports the purchase against its deadline, the gold-floor reading beside A7's at that turn, and the T110 rows field by field" --overrides "(1) the pinned opening: its fifth slot is a second UNIT_SETTLER, which is this attempt's variable - the first four orders are unchanged from A3-A7. This makes the opening 'settle first' rather than tactics/01's 'siege first', which is the point of the attempt and not drift. (2) dynasty-cycle-wonder (prompts/checks/turn-checks.md): the wonder obligation is deferred for this attempt and recorded as accepted in the diary the first turn it fires, because the third city is both this attempt's market city and the natural home for a wonder, and building one here would make the attempt two variables. The wonder is owed its own attempt; it is not being answered by silence. Nothing else in the directive is overridden - tactics/08's one war city is held exactly." --scope "this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save: attempt A8 - the same settings, the same corrected tactics/01 and tactics/08, with the number of settled cities (three, against the two every previous attempt held) as the one variable, and the third city's queue economy rather than army. It does not touch the A7 continuation's position." --why "settle a third city with a market queue and buy the second siege unit with gold" --expires-turn 115 --body-file C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-body.md --cn @C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-cn.md
+     at: 2026-09-30T15:07:28+08:00
      chinese backup: prompts/tasks/cn/040-attempt-a8-three-cities-the-third-one-an-economy-city.cn.md
 -->
