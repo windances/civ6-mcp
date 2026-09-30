@@ -90,6 +90,24 @@ Top 10 settle locations:
   #1 (55,23): Score 215 - F:69 P:29 - fresh water, defense:2
 ```
 
+**And it founded exactly that site: `T35 FOUNDED|55,23`.** So `F = 35`, the city is a **satellite about
+five tiles from 西安** (it is the tile A3 founded its second city on), and its first order - per the file -
+is `BUILDING_MONUMENT` (T35, 12 turns).
+
+**`F = 35` fixes both of the claim's turns, and they land on the same one**:
+
+| clause | derivation | the turn |
+|---|---|---|
+| the purchase deadline | `max(T58, F+25) = max(58, 60)` | **T60** |
+| the gold-floor turn | first ten-turn row at or after `F+22 = 57` | **T60** |
+
+**So the attempt is judged at T60 on both of its timed clauses**, and the bar the floor is read against is
+**A7's T60 = 4.1** - a dip in A7's own curve (8.1 / 4.1 / 2.1 / 24.4 / 49.0 across T50-T90), not its T50
+value of 8.1. **The later founding made the floor easier rather than harder**, which is the property
+flagged above showing up concretely: **the floor clause alone is weak here**, and the T110 trio is what
+carries the claim. The record will read the floor beside it rather than as the headline, exactly as the
+claim's own fourth bullet says.
+
 **(55,23) is in the near-west cluster, about five tiles from 西安** - and it is the same tile A3 founded
 its second city on. So the cluster A3-A7 consumed is genuinely open for A8, exactly as the T69 read's
 blind spot predicted, and **A8's third city is a satellite rather than the twenty-tile colony the
