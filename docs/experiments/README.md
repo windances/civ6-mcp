@@ -285,6 +285,7 @@ the war ended.
 |---|---|
 | `NNN-<slug>.md` | one attempt: settings + seed, the one variable, the hypothesis **with numbers**, the report table, the verdict (hypothesis held / falsified), and what the next attempt changes |
 | `RETRO-<date>.md` | the comparison across attempts: which claim survived, which was corrected, and **which artifact each correction became** |
+| `CHINA-KIT-AUDIT.md` | a cross-attempt **audit**: one question asked of the whole programme (`did the civilisation's own kit get played?`), answered from the session logs and the install's own data files rather than from a new attempt. It is not an attempt, so it carries no number and no variable |
 | `prompts/tasks/tmp/NNN-*.md` | the instruction the session played under, retired to `done/` when the attempt ends |
 
 The rules that keep this honest:
@@ -304,3 +305,14 @@ The rules that keep this honest:
 5. **The diary keeps the last write per turn.** After a rollback, the early turns belong to the
    abandoned branch while the logs still hold both. An attempt that was rolled back says so at the
    top of its record, or its numbers will be read as one continuous game.
+6. **A rule that is not in the shipped file is not in force, and a `once: true` goal leaves it silently.**
+   `prompts/checks/turn-checks.md` is shared by every match, but **which goals have been retired is not
+   per match in the file**: a goal achieved in one match is pruned from the file with a trace that names
+   no match, while the persisted state (`.civ6-mcp-data/turn-checks-state.json`) *is* keyed per match. **Measured 2026-09-30**: A3-A7
+   replayed a T1 branch of a save whose other branch had retired `dynasty-cycle-wonder` at T99, so
+   China's wonder obligation was absent for eight sessions and ~340 turns - **zero wonders**, with the
+   10-turn review printing the forfeit 29 times and the test suite green throughout, because
+   `tests/conftest.py` restores retired goals into its fixtures. **So an attempt's first step is to say
+   which of the directive's standing goals are live in the shipped file**, and a goal restored by hand
+   is restored before the attempt's first decision, not after. `docs/experiments/CHINA-KIT-AUDIT.md`
+   is the case; the class-level fix is staged in the retro's section 5.

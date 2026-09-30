@@ -261,7 +261,32 @@ message: A city is below 50 loyalty with no governor in it and no military unit 
 
 ## Development rules that are checkable
 
-<!-- achieved T99: dynasty-cycle-wonder (original in archive/turn-checks-20260926-012524.md) -->
+<!--
+RE-ARMED 2026-09-30, and the reason is the bug this goal walked into. It retired as
+`achieved T99` for the match key `china_-1894041591`. A retirement trace carries no match key,
+but the persisted state in `.civ6-mcp-data/turn-checks-state.json` is keyed per match - so one
+match's achievement deletes the rule from the shared file for every other match, and nothing on
+the file can tell that the retirement does not apply. The A3-A7 military-production experiment
+(`china_911679432`, eight sessions replayed from one T1 save) therefore ran its whole ~340 turns
+with China's wonder obligation absent from the loop: `dynasty-cycle-wonder` appears in **zero**
+of the eight session logs, all eight ordered **zero** wonders, and Dynastic Cycle's second clause
+- completing a wonder grants a Eureka AND an Inspiration of that era - paid nothing, while the
+10-turn review printed `wonders built 0 ... zero forfeits the ability` at every window. The test
+suite stayed green throughout because `tests/conftest.py` restores retired goals into its fixture,
+so `test_turn_check_hook.py` asserted this rule fires against a file the live game never had.
+The gate is moved 60 -> 25 because the decision has to be visible while it can still be acted on:
+in a 60-75 turn window a gate at 60 leaves no turns in which to produce a wonder, which is exactly
+how the programme read this obligation - as a status line rather than as work. The boost figure is
+corrected 60% -> 50% to match `Expansion2_Civilizations.xml:73` and the directive's own correction;
+the archived copy still says 60%.
+-->
+<!-- check
+id: dynasty-cycle-wonder
+when: turn() >= 25
+once: true
+require: metric(wonders) >= 1
+message: No wonder built. For China a wonder is a research building (Dynastic Cycle grants a Eureka AND an Inspiration from that era, and Chinese boosts are worth 50%). Zero wonders forfeits half the civilisation ability for the whole game - and it is the half that costs no extra unit production, because a second city builds it while the war city builds the army (tactics/08).
+-->
 
 <!-- check
 id: idle-district-slot

@@ -171,6 +171,47 @@ class TestTheRealFile:
         assert len(checks) >= 5
         assert len({c.check_id for c in checks}) == len(checks), "duplicate ids"
 
+    def test_every_retirement_trace_still_resolves_to_its_archived_block(self):
+        # A `once: true` goal leaves the file as `<!-- achieved T<turn>: <id> (original in
+        # archive/<file>) -->`. That trace is the *only* way back, so an orphaned one is a rule
+        # that can never return - and silence is exactly how it would fail.
+        text = CHECKS.read_text(encoding="utf-8-sig")
+        traces = [ln.strip() for ln in text.splitlines() if turn_checks._ACHIEVED_TRACE.match(ln.strip())]
+        assert traces, "no retirement traces: this test would then prove nothing"
+        for trace in traces:
+            match = turn_checks._ACHIEVED_TRACE.match(trace)
+            archive = pathlib.Path("prompts/checks/archive") / pathlib.Path(match.group(3)).name
+            assert archive.exists(), f"{trace} names a missing archive copy"
+            assert turn_checks.archived_goal_block(archive, match.group(2)) is not None, trace
+
+    def test_the_china_wonder_obligation_is_live_or_recoverable(self):
+        # Measured 2026-09-30: this goal had retired as `achieved T99` for a *different* match key
+        # (`china_-1894041591`) while the A3-A7 experiment replayed a T1 branch of the same save
+        # (`china_911679432`); a retirement trace carries no match key, so the rule was absent from
+        # the live loop for the experiment's whole ~340 turns and all eight sessions built zero
+        # wonders. Dynastic Cycle's wonder clause is half of the civilisations ability the directive
+        # opens with, so the goal must be either live in the shipped file or recoverable - never
+        # silently gone.
+        text = CHECKS.read_text(encoding="utf-8-sig")
+        live = {c.check_id for c in turn_checks.parse_checks(text)}
+        trace = next(
+            (
+                ln.strip()
+                for ln in text.splitlines()
+                if turn_checks._ACHIEVED_TRACE.match(ln.strip())
+                and turn_checks._ACHIEVED_TRACE.match(ln.strip()).group(2) == "dynasty-cycle-wonder"
+            ),
+            None,
+        )
+        assert "dynasty-cycle-wonder" in live or trace, (
+            "dynasty-cycle-wonder is neither live nor recoverable from an achieved trace"
+        )
+        if "dynasty-cycle-wonder" in live:
+            rule = next(c for c in turn_checks.parse_checks(text) if c.check_id == "dynasty-cycle-wonder")
+            # The gate has to leave turns in which a wonder can actually be produced.
+            assert rule.when and ">= 25" in rule.when, rule.when
+            assert "50%" in rule.message, "the boost figure must be the Gathering Storm one"
+
     def test_the_ram_tower_deadline_fires_on_the_live_position(self):
         # T121 of the live game: no ram or tower, civil engineering not yet adopted.
         # The baseline, not the live file: the goal leaves the shipped file once it is met.
