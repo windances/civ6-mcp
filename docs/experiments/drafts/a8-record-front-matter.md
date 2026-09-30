@@ -38,6 +38,31 @@ the variable** - a second `UNIT_SETTLER`, ordered the turn the Builder completes
 Research and civics so far: `TECH_MINING` T1, `TECH_POTTERY` T8 (Mining completed T7), `TECH_WRITING`
 T13; `CIVIC_CODE_OF_LAWS` T1, `CIVIC_CRAFTSMANSHIP` T11.
 
+**City #2 was founded at T20 - and it went EAST, at (63,25), where every previous attempt went west.**
+
+| attempt | city #2 | founded |
+|---|---|---|
+| A3 | (55,23) | T19 |
+| A4 | (55,21) | T22 |
+| A5 | (57,25) | T21 |
+| A6 | (54,22) | T27 |
+| A7 | (53,21) | T21 |
+| **A8** | **(63,25)** | **T20** |
+
+Its own settle read at T17 was the **per-settler** one, whose `#1 (62,25), score 195, no water` it did
+not take - (62,25) is inside 西安's three-tile exclusion and would have been refused - so the founded tile
+is the legal neighbour of the advisor's first choice. **This is a real divergence and it is not the
+variable**: the pin fixes the *order*, not the tile, and no earlier attempt recorded which of the two
+lists it read from.
+
+**What it changes is the third city's geography, and that is the point.** The near-west cluster (x 53-57,
+y 20-24) that A3-A7's second city consumed is **still open**, because A8's second city is east - and the
+T69 pre-flight read, taken with three cities standing, could not see it. So A8's third city may be a
+**satellite after all** rather than the twenty-tile colony the pre-flight arithmetic assumed. **Both
+cases are already handled by the claim**, which derives its two turns from the founding turn `F`: a
+satellite founded about T30 has a Market by T50 and the floor is read there; a colony founded about T48
+does not, and the floor moves to `F+22` with the T110 comparison carrying the claim.
+
 ## The third city: chosen on the turn the Settler is ordered
 
 **The site is a rule, not a tile**: on the turn the second Settler is ordered, run
