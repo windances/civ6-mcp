@@ -656,12 +656,24 @@ def pin_check(rows: list[dict]) -> dict:
     }
 
 
+#: The game's own acknowledgement of a purchase (`civ_mcp/lua/cities.py:929`, the MCP strips `OK:`).
+#: The reply a refused `purchase_item` gives carries the item's name but never this word, which is why
+#: the reader keys on it rather than on the call's parameters.
+PURCHASED_RE = re.compile(r"PURCHASED\|")
+
+
 def siege_purchases(rows: list[dict]) -> list[tuple[int, str]]:
     """Every **bought** siege unit in the log, as (turn, item_name), earliest first.
 
     A6's variable is that the train is paid for with gold instead of produced, so only `purchase_item`
     rows count: a `set_city_production` of the same unit is exactly the thing the variable replaces, and
     counting it would report the train as bought whether or not a coin was spent.
+
+    **And only a purchase the game acknowledged counts** (`PURCHASED|`, `civ_mcp/lua/cities.py`). A
+    refused call carries the same `item_name` in its params as the one that works, so keying on the
+    params alone reads a failure as a purchase: measured in A8 at T59, where `purchase_item` answered
+    `STACKING_CONFLICT` because the Catapult the city had just built was standing on the city tile, and
+    the retry one call later bought it for 320g - the report read that as **two** Catapults bought.
     """
     out: list[tuple[int, str]] = []
     for row in rows:
@@ -669,8 +681,12 @@ def siege_purchases(rows: list[dict]) -> list[tuple[int, str]]:
             continue
         params = row.get("params") or {}
         name = str(params.get("item_name") or "").upper()
-        if role_of_item(name) == "siege":
-            out.append((row.get("turn") or 0, name))
+        if role_of_item(name) != "siege":
+            continue
+        said = f"{row.get('result') or ''}\n{row.get('result_summary') or ''}"
+        if not PURCHASED_RE.search(said):
+            continue
+        out.append((row.get("turn") or 0, name))
     out.sort(key=lambda entry: entry[0])
     return out
 

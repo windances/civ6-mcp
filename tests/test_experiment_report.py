@@ -985,10 +985,31 @@ def _city_order_row(turn: int, city_id: int, name: str, kind: str = "UNIT") -> d
 
 
 def _purchase_row(turn: int, name: str, city_id: int = 11) -> dict:
-    """A logged purchase - the row A6's variable is read from."""
+    """A logged purchase - the row A6's variable is read from.
+
+    It carries the game's own acknowledgement because that is what the reader keys on; a row without
+    one is a call that was refused (see `_refused_purchase_row`).
+    """
     return {"turn": turn, "tool": "purchase_item",
             "params": {"city_id": city_id, "item_type": "UNIT", "item_name": name,
-                       "yield_type": "YIELD_GOLD"}}
+                       "yield_type": "YIELD_GOLD"},
+            "result": f"PURCHASED|{name}|cost=320g (had 446g)",
+            "result_summary": f"PURCHASED|{name}|cost=320g (had 446g)"}
+
+
+def _refused_purchase_row(turn: int, name: str, city_id: int = 11) -> dict:
+    """A `purchase_item` call the game refused - A8's T59, verbatim apart from the id.
+
+    The important part is that it names the same unit in its params as the call that succeeds, so a
+    reader keyed on the params alone reads the refusal as a purchase.
+    """
+    return {"turn": turn, "tool": "purchase_item",
+            "params": {"city_id": city_id, "item_type": "UNIT", "item_name": name,
+                       "yield_type": "YIELD_GOLD"},
+            "success": False,
+            "result": "Error: STACKING_CONFLICT|Cannot purchase UNIT_CATAPULT - UNIT_CATAPULT "
+                      "(unit_id=851976) is on the city tile.",
+            "result_summary": "Error: STACKING_CONFLICT|Cannot purchase UNIT_CATAPULT"}
 
 
 def _war_row(turn: int) -> dict:
@@ -1067,6 +1088,25 @@ def test_siege_purchases_ignores_a_produced_siege_order():
     assert report.siege_purchases([_city_order_row(40, 11, "UNIT_CATAPULT")]) == []
     # The produced order is still an order - the two measures answer different questions.
     assert report.first_order_turn(rows, "siege") == 40
+
+
+def test_siege_purchases_counts_only_what_the_game_acknowledged():
+    """A refused `purchase_item` names the unit too, so the params alone read a failure as a purchase.
+
+    A8's T59, measured: the capital had just built a Catapult and it was standing on the city tile, so
+    the purchase answered `STACKING_CONFLICT`, the unit was moved, and the retry one call later bought
+    it for 320g out of 446g. The report printed `bought: T59 UNIT_CATAPULT, T59 UNIT_CATAPULT` - two
+    Catapults bought on a turn that bought one - which is the reading `Q3`'s verdict is made of.
+    """
+    rows = [
+        _refused_purchase_row(59, "UNIT_CATAPULT"),
+        _purchase_row(59, "UNIT_CATAPULT"),
+    ]
+    assert report.siege_purchases(rows) == [(59, "UNIT_CATAPULT")]
+    # And the refusal on its own is not a purchase at all.
+    assert report.siege_purchases([_refused_purchase_row(59, "UNIT_CATAPULT")]) == []
+    # A purchased unit that is not siege is still not one, whichever way it is acknowledged.
+    assert report.siege_purchases([_purchase_row(44, "UNIT_ARCHER")]) == []
 
 
 def test_war_declared_reads_the_games_own_reply():

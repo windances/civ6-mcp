@@ -415,6 +415,77 @@ attempts that wrote the same turn numbers.
 down, which is within the range the barbarian fight at T5-T6 explains, and it is exactly the kind of
 divergence that is not the variable and belongs in the record when the run ends.
 
+## T60: the deadline turns, and three of the four questions are decided
+
+Read at T60, on the same command as before:
+
+```
+  FALSIFIED Q1 establishment complete by T60 (corrected table)
+            [establishment not reached by T60; falsified when T60 passes with a role still short]
+  HELD      Q2 three cities settled            [foundings beyond the capital: 2 of 2 (T20 at 63,25, T35 at 55,23); ...]
+  HELD      Q3 the second siege unit in hand by T60, bought not built
+            [deadline T60 (max(T58, F+25) with F=T35); bought: T59 UNIT_CATAPULT; built in a city: T53;
+             the siege row reached 2 on T59; ...]
+  OPEN      Q4 the gold clause - the floor at its own turn, and the T110 trio against A7's
+            [gpt at T60 +12.0 against A7's 4.1; T110 not readable yet; ...]
+```
+
+**`Q1` is falsified and the table says exactly how far off it was.** At T60 the empire holds
+`WARRIOR:3, SLINGER:2, CATAPULT:2, TRADER:1, SCOUT:1, BUILDER:1`, which fills `siege 2/2`,
+`melee 3/2` and `recon 1/1` and leaves **`anticav 0/1`, `cavalry 0/1`, `ranged 2/4`** short. The reason
+is the one this record named at T48 and revised at T55, and it is **not** the variable: the
+establishment's producing city spent T31-T53 on a Campus, a Granary, a Trader and a Library while the
+other two cities built a Hub each and a Market, and the siege gate itself opened when Engineering was
+ordered at T45 against the baseline's T22. **The pin held** (`UNIT_SCOUT, UNIT_SLINGER, UNIT_SETTLER,
+UNIT_BUILDER`) and **`Q2` held**, so the third city is not implicated in the falsification. `Q1`
+measures A8's economy-first opening.
+
+**`Q3` held, one turn inside its own deadline, and the shape of A8's plan is visible in the error it
+produced.** `PURCHASED|UNIT_CATAPULT|cost=320g (had 446g)` at **T59** against a deadline of
+**`max(T58, F+25) = T60`** with `F = T35` - and the first attempt at the purchase was **refused**:
+
+```
+  Error: STACKING_CONFLICT|Cannot purchase UNIT_CATAPULT - UNIT_CATAPULT (unit_id=851976)
+  is on the city tile. Move it with unit_action(...) first, then retry.
+```
+
+The gun that blocked it was the one Xi'an had **built at T58**. So the plan "the war city produces the
+first and buys the second" carries a cost no earlier attempt met: the bought unit cannot be placed
+while the built one stands on the city centre, and the purchase is not a single call. The record keeps
+the refusal, the move and the retry, because the claim's number is "the second siege unit is in hand
+by the deadline" and *in hand* took three calls on the deadline minus one.
+
+**And the instrument read that refusal as a second purchase** - it counted `purchase_item` rows by the
+unit name in their parameters, and a refused call carries the same name as the one that works, so the
+T59 line printed `bought: T59 UNIT_CATAPULT, T59 UNIT_CATAPULT`. `siege_purchases` now keys on the
+game's own acknowledgement (`PURCHASED|`, the same style as `FOUNDED|`), with
+`test_siege_purchases_counts_only_what_the_game_acknowledged` pinning the T59 pair, and the read above
+is from after the fix. It is the second reader in this programme to mistake a refusal for the act.
+
+**`Q4`'s floor clause is answered and its mechanism is not, and the difference is the whole point of
+the clause.** The floor turn is T60 (`F = T35 > 28`), and `gpt` there is **+12.0 against A7's 4.1** -
+above A7, and above the directive's own **+10**, which across the programme only A4 had ever exceeded
+(and A4's came from Pingala's science, not a market). **But one turn is not a mechanism, and the record
+will not credit the Market with it**: Beijing's Market finished at **T59** - the turn before the
+reading - while Beijing's Commercial Hub landed T49, Xi'an's Trade Route opened from the T45 Trader,
+and Xi'an's Library landed T49. A single turn cannot separate four things that landed inside it, and
+A7's own curve reaches 24.4 by T80 **with no market at all**, which is the confound the task file
+names in its own text. The floor clause is therefore **satisfied and unproven**, and `Q4` as a whole
+stays OPEN on the T110 trio - the pair of numbers the two runs exist for.
+
+**One more thing the log shows that the plan paid for**: Xi'an's Library was **pillaged at T54**, five
+turns after it was built, and the `BUILDING_LIBRARY ... 1 turns` order at T59 is the **repair** that
+finished the same turn it was placed. The log carries both lines and they read like a city building
+the same unique building twice; they are the build and the repair, and the pillage is the price of
+running four districts and five buildings' worth of queue on a five-unit army. Farms were pillaged at
+T36/T37 and again at T60.
+
+**Contact arrived late and the shape of the world is in the T60 snapshot**: the first rival met was
+**Māori at T57**, 20% of the map is revealed, and the demography reads China **3 cities, Sci 22,
+Mil 149, Gold +12** against Māori **4 cities, Sci 13, Mil 102, Gold +15**. So at T60 the empire is
+ahead on science and soldiers, behind on cities and income, and **there is still no enemy city the
+record can name as a target** - which is the other half of what `Q1` measures.
+
 ## The record
 
 *(to be written from the instrument's reads when the attempt reaches T110: the T10-T110 economy rows,
