@@ -54,17 +54,26 @@ into the diary; a Settler that walks eleven turns is eleven turns of the variabl
 ## The claim, and it is about gold
 
 **Hypothesis (falsifiable by numbers): the third city contributes gold before it contributes production,
-and the gold buys the second siege unit.**
+and the gold buys the second gun.**
 
-- the number: a **second** siege unit is purchased with gold **before T58** - A6 bought its first at
-  **T46** for 320g out of 396g (`PURCHASED|UNIT_CATAPULT|cost=320g`), and the programme's own arithmetic
-  said two were impossible before about T70 on the path it was computed from;
+**Say which unit is bought and which is built, on every purchase, because A6 and A8 buy different ones.**
+A6 bought the **first** siege unit (T46, 320g); **A8 produces the first in the war city and buys the
+second**, so the two attempts' purchase columns are not the same act - the compare block's own
+`siege_order` caveat says exactly this about A6, and A8 has to state its side of it.
+
+- the number: the **second** siege unit is **in hand by T58** (bought, not built) - A6's first cost
+  **320g** out of a 396g treasury (`PURCHASED|UNIT_CATAPULT|cost=320g`), and the programme's arithmetic
+  said **two** were impossible before about T70 on the path it was computed from, which is the claim the
+  third city's gold is supposed to break;
 - and the floor: **`gpt_T40` above +10**, which A7 missed on **all 60** of its turns (`gpt_T40 6.1`) and
   A6 missed as well (`5.4`), A4's 13.9 being the only attempt above it - bought with Pingala's science
   rather than with markets;
-- **falsified** if no second siege unit is purchased by T58, or if `gpt_T50` is no higher than A7's.
+- **falsified** if the second siege unit is not in hand by T58, if it was built rather than bought, or if
+  `gpt_T50` is no higher than A7's.
 
-The first siege unit is still produced (not bought) unless the treasury allows both; say which, and when.
+If the treasury cannot fund a second purchase, **that is the answer**: say so, name the turn the gold
+actually reached 320, and do not sell the plan by building it quietly instead - the attempt exists to
+measure the funding arm, and an unaffordable purchase is a measurement, not a failure.
 
 ## Held exactly: everything else
 
