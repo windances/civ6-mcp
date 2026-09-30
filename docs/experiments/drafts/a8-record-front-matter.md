@@ -202,15 +202,25 @@ attribute to the variable. Each is recorded the turn it happens.
 4. **`military` at T10 is 28 against A7's 34** - six down, within what the T5-T6 barbarian fight
    explains, and noted here so the gap is not credited to the third city later.
 5. **The research path is economy-first, and it moved the siege gate itself.** A8 went `MINING` T1 ->
-   `POTTERY` T8 -> `WRITING` T13 -> `CURRENCY` T21 -> `ANIMAL_HUSBANDRY` T39 -> **`THE_WHEEL` T41**,
-   where A1-A7 all took `THE_WHEEL` at **T8** and reached `ENGINEERING` around **T22**. Every attempt's
+   `POTTERY` T8 -> `WRITING` T13 -> `CURRENCY` T21 -> `ANIMAL_HUSBANDRY` T39 -> **`THE_WHEEL` T41**
+   (complete T44), where A1-A7 all took `THE_WHEEL` at **T8** and reached `ENGINEERING` around **T22**.
+   Every attempt's
    file pins the *production* opening and none has ever pinned research, so this is a free choice - a grep
    of `directive.md` and `tactics/01` for a prescribed research order finds none, only the Catapult's own
    requirements. **Its consequence is what matters to the verdict**: the assault establishment is built
-   behind Engineering, and at T43 A8 had not ordered it, so **Q1's T60 deadline and Q3's T60 purchase
-   deadline are both exposed to a gate that opens late** - a reason that is **not the variable** and must
-   be read beside them. The protocol consequence is written into `README.md` section 3: a later task file
-   should pin the first research choices the way A3-A8 pin the first four builds.
+   behind Engineering, and A8 did not order it until **T45**, so **Q1's T60 deadline and Q3's T60 purchase
+   deadline were both exposed to a gate that opened 23 turns late** - a reason that is **not the variable**
+   and must be read beside them. The protocol consequence is written into `README.md` section 3: a later
+   task file should pin the first research choices the way A3-A8 pin the first four builds.
+6. **The empire's first Market is in city #2, not the third city.** `131073` ordered
+   `BUILDING_MARKET` at **T50** (11 turns) on the Commercial Hub it took at T42, while the third city was
+   still building its own Hub (T48, 14 turns). So the plan's economy is one city ahead of the chain
+   `drafts/A8-A9-city-count.md` set out for the *third* city - `BUILDING_MONUMENT` -> Hub -> Market ->
+   `UNIT_BUILDER` - and **city #2 is a second economy city the design note does not describe**. It is not
+   forbidden (the file prices the third city's queue and says nothing against city #2's) and it is not the
+   variable; it is recorded because it is the reason the empire's gold line moves when it does, and the
+   claim's floor clause is judged on that line. **The third city's own Market is unaffected by it**: the Hub
+   in front of that Market is still the T48 order.
 
 ## The wonder obligation is deferred, deliberately
 
@@ -272,12 +282,16 @@ Every order the attempt has placed, with the city that placed it (`65536` is the
 | T43 | 65536 | `UNIT_TRADER` | 3 turns, built T45 |
 | T46 | 65536 | `BUILDING_LIBRARY` | 5 turns |
 | T48 | 196610 | `DISTRICT_COMMERCIAL_HUB` at `55,24` | 14 turns |
+| T50 | 65536 | `UNIT_SLINGER` | 1 turn (after two `SILENT_FAILURE` retries) |
+| T50 | 131073 | `BUILDING_MARKET` | 11 turns - **the empire's first Market, and it is in city #2** |
+| T51 | 65536 | `UNIT_WARRIOR` | 2 turns |
+| T53 | 65536 | `UNIT_CATAPULT` | 6 turns - **the first siege unit, built, due about T59** |
 
 Research, from the same log: `MINING` T1, `POTTERY` T8, `WRITING` T13, `CURRENCY` T21 (the T38 read
-is `3 techs, 3 civics` completed, still on Currency), `ANIMAL_HUSBANDRY` T39, **`THE_WHEEL` T41**,
-**`ENGINEERING` T45**.
+is `3 techs, 3 civics` completed, still on Currency), `ANIMAL_HUSBANDRY` T39, **`THE_WHEEL` T41**
+(complete T44), **`ENGINEERING` T45**, **`BRONZE_WORKING` T53**, **`ARCHERY` T54**.
 
-**Three readings come out of that table, and two of them are the attempt's own claim.**
+**Four readings come out of that table, and they are not all on the same side.**
 
 1. **The third city is on the chain the claim needs, and its clock is longer than the claim's.**
    `196610` took its Monument at T35 (12 turns, so it lands around T47) and its Commercial Hub at T48
@@ -294,20 +308,29 @@ is `3 techs, 3 civics` completed, still on Currency), `ANIMAL_HUSBANDRY` T39, **
 3. **The establishment has not moved at all.** At T48 the corrected table reads
    `siege 0/2  melee 2/2  anticav 0/1  ranged 1/4  cavalry 0/1  recon 1/1`, and the army those rows
    count is five units (`WARRIOR:2, SLINGER:1, TRADER:1, SCOUT:1, BUILDER:1`).
+4. **Then, inside seven turns, the attempt answers three of the four gaps by itself** - and the
+   record has to carry the correction rather than the T48 reading. `BRONZE_WORKING` is ordered T53
+   (the anti-cavalry row's tech), `ARCHERY` T54 (the ranged row's), and the **first Catapult is
+   ordered T53 in the capital, 6 turns**, with the capital's own read at T55 showing `Sci 15` and
+   `UNIT_CATAPULT (4 turns)`. So the tech half of the objection above is being closed by the
+   attempt, not by a change of plan - and what is left is production and the clock.
 
-**The consequence, written now because most of it is a tech list and not a matter of how the next
-twelve turns are played: `Q1`'s T60 deadline is out of reach without changing the plan.** Seven units
-of the corrected table are short at T48 - `siege 0/2`, `anticav 0/1`, `ranged 1/4`, `cavalry 0/1` -
-and **three of those four rows stand behind techs this attempt has never opened**: the techs it has
-completed by T48 are `MINING, POTTERY, WRITING, CURRENCY, ANIMAL_HUSBANDRY, THE_WHEEL` with
-`ENGINEERING` in progress from T45, and there is **no `ARCHERY`, no `BRONZE_WORKING` and no
-`HORSEBACK_RIDING`** anywhere in the log. So the anti-cavalry row needs a tech plus a unit, the
-cavalry row needs another tech plus a unit, and the siege row needs the tech that was ordered 23
-turns later than the baseline's T22. Only the ranged row is production alone (Slingers carry it, as
-the instrument's own `first ranged: T10` shows) - and that row is short three, with no city running a
-military queue. **The cause is the attempt's own plan, not its variable**: the production that would
-have filled those rows went into four districts and five buildings, and the opening's tech list is
-the one every attempt is free to choose and none has pinned. The
+**And the money has arrived, which changes which question is the live one.** The T50 overview reads
+**`Gold: 298 (+14/turn)`**, and a Catapult purchase cost A6 320g at T46. So the treasury is one turn's
+income short of the price eight turns before the deadline, **`Q3` - the second siege unit bought and
+not built by T60 - is fundable and is now the question with something to lose**, where at T48 the
+picture was an army that could not reach T60 at all. Two things are true beside it and belong in the
+same paragraph: the Market at T50 went into **city #2**, not the third city, so the empire is buying
+its economy one city ahead of the design's chain and the third city's own Market is still behind a
+14-turn Hub; and **no rival had been met by T48** (`no rival met by T48: there is no city to aim at
+yet`), so whatever establishment exists by T60 has no target the record can name.
+
+**The consequence for `Q1`, stated at T48 and corrected at T55**: seven units of the corrected table
+are short at T48 and at T55 the army is still `WARRIOR:2, SLINGER:1` plus the Catapult building, with
+the other two cities' queues committed to a Market (11 turns) and a Hub (14 turns). **The cause is the
+attempt's own plan, not its variable**: the production that would have filled those rows went into
+four districts and five buildings, and the opening's tech list is the one every attempt is free to
+choose and none has pinned. The
 third city itself is **not** implicated - `Q2` is HELD and the pin held - so the honest reading at the
 end of this attempt is that `Q1` measures **A8's economy-first opening**, and the third-city variable
 is carried by `Q3` (the bought gun) and by `Q4`'s T110 trio. **That distinction is the one thing the
