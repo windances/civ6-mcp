@@ -694,11 +694,20 @@ this gap is recorded rather than papered over.
 `prompts/tasks/tmp/done/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline-done-T110.md`
 on the turn its `done when:` asked for** (`python scripts/temp-task.py retire 039 --done --turn 110`),
 which re-synced `prompts/tasks/tmp/current_tasks.md` and the `IN FORCE NOW` line - **none in force**
-after it. As with 036, the script's own auto-commit did not run because it shells out to a Python
-without `pytest`, and the session's own hand-run commit did not land either: it exited before one
-existed, leaving the retirement staged in the working tree. **The orchestrator committed it**, with this
-entry, after re-running the text gate and `tests/test_temp_tasks.py` (`21 passed`) and confirming the
-three sources agree (`in force: 0`, `retired: 39`).
+after it. As with 036, the script's own auto-commit could not run, because it shells out to a Python
+without `pytest`; the retirement was committed by the session's own hand-run commit, **`34e6590` at
+14:56:15**, and `temp-task.py status` confirms the three sources agree (`in force: 0`, `retired: 39`).
+
+**The commit's timing produced a second correction to this very paragraph, and that is the part worth
+keeping.** From outside, the session's processes were gone by 14:51 - no MCP, no agent - so the
+orchestrator recorded here that the retirement was "staged in the working tree" and set about committing
+it. It was not: the session was still finishing its commit, which landed at 14:56:15 and **swept the
+orchestrator's in-flight edit to this paragraph into itself**, because `git add -A` in one process cannot
+see another's uncommitted edit. So the sentence briefly named the wrong committer, and it is corrected
+here a second time. **Two rules follow, and this project has now measured both**: a process that looks
+gone may still be committing, so a concurrent writer's files are not yours to tidy until its job reports
+terminated; and a document that names who did a thing is wrong the moment two writers share a tree -
+state the command, the hash and the time, and let those speak.
 
 **The task held A7's position, not the shared start, for forty-one turns** (T69-T110, one session)
 and existed for one reason: A8 and A9 are measured at T110, and a baseline that stopped at A7's T60

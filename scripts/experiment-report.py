@@ -2111,19 +2111,20 @@ def captures(rows: list[dict]) -> list[tuple[int, str]]:
                     continue
                 seen.add(key)
                 out.append((row.get("turn") or 0, snippet))
-    # Pass 3: a city we attacked that a later city list shows as ours.
+    # Pass 3: a city we attacked that a later city list shows as ours. **Reported once, at the first
+    # turn it is seen ours** - a city we hold stays in every later `get_cities` row, so without this the
+    # same keep is reported on every turn after it (measured on A7's T110 snapshot: Jerusalem appeared
+    # eight times, T60 through T94, which would make a count of captures read 8 for one city).
+    reported: set[str] = set()
     for row in rows:
         if row.get("tool") != "get_cities":
             continue
         turn = row.get("turn") or 0
         blob = json.dumps(row, ensure_ascii=False)
         for name, attack_turn in attacked.items():
-            if turn < attack_turn or f"{name} (pop " not in blob:
+            if name in reported or turn < attack_turn or f"{name} (pop " not in blob:
                 continue
-            key = (turn, f"city list: {name}"[:28])
-            if key in seen:
-                continue
-            seen.add(key)
+            reported.add(name)
             out.append(
                 (turn, f"kept {name} (listed in this turn's get_cities as ours, after being attacked)")
             )

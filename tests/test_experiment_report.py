@@ -774,6 +774,32 @@ def test_verdict_a7_holds_on_a_capture_the_game_resolved_itself():
     assert "T65" in questions[2][2]
 
 
+def test_a_kept_city_is_reported_once_and_not_on_every_later_turn():
+    """Measured on A7's T110 snapshot: one keep read as eight, T60 through T94.
+
+    The third shape looks for an attacked city's name in our own city list, and a city we hold stays in
+    every later `get_cities` row - so without a once-only rule the same keep is reported again on every
+    turn after it, and a count of captures reads 8 for one city. `first_keep` was never wrong (it takes
+    the earliest), which is exactly why this could sit unnoticed: the minimum hides a duplicated list.
+    """
+    attacked = {
+        "turn": 54,
+        "tool": "unit_action",
+        "result": "** Target tile is a city (Jerusalem) (CITY_CENTER is a non-combatant ...)",
+    }
+    ours = [
+        {
+            "turn": turn,
+            "tool": "get_cities",
+            "result": f"3 cities: Jerusalem (pop 4) at (50,22) ... [id:196610]",
+        }
+        for turn in (60, 61, 69, 71, 73, 79, 93, 94)
+    ]
+    got = report.captures([attacked, *ours])
+    assert [t for t, _ in got] == [60], got
+    assert len(got) == 1
+
+
 def test_a_capture_the_game_reported_nowhere_is_read_from_the_city_list():
     """Measured on A7 at T60: a melee attack took the city with **no capture reply at all**.
 
