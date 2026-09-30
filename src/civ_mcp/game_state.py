@@ -238,6 +238,25 @@ class GameState:
         )
         return lq.parse_staging_plan_response(lines)
 
+    async def target_report(self, target_x: int, target_y: int, radius: int = 3) -> lq.TargetReport:
+        """One target, read the way `tactics/07` asks about it: two queries, one answer.
+
+        The probe is anchored on the **target** rather than on our army, so it works before a
+        declaration and while the target is still in fog; the plan is the same `staging_plan` the
+        assault will be run on, so the ring, the line-of-sight verdicts and our arrival turns are
+        the numbers the fighting will actually use.
+        """
+        lines = await self.conn.execute_write(
+            lq.build_target_probe_query(target_x, target_y, radius)
+        )
+        tile, city, enemies = lq.parse_target_probe_response(lines)
+        if tile is None:
+            # The tile itself failed to read (`ERR:INVALID_TARGET`): report it as fog rather than
+            # inventing a target, and let the narration say the target is not on the map.
+            tile = lq.TargetTile(x=target_x, y=target_y, visibility="fog")
+        plan = await self.staging_plan(target_x, target_y)
+        return lq.TargetReport(tile=tile, city=city, enemies=enemies, plan=plan)
+
     async def get_victory_progress(self) -> lq.VictoryProgress:
         lines = await self.conn.execute_write(lq.build_victory_progress_query())
         return lq.parse_victory_progress_response(lines)

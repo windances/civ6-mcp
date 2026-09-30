@@ -1,4 +1,4 @@
-﻿"""Lua code builders and response parsers for Civ 6 game state.
+"""Lua code builders and response parsers for Civ 6 game state.
 
 Each domain has:
 - build_*_query() -> str: returns Lua code to execute via FireTuner
@@ -126,6 +126,7 @@ from civ_mcp.lua.map import (  # noqa: F401
     build_static_map_dump,
     build_stockpile_query,
     build_strategic_map_query,
+    build_target_probe_query,
     build_verify_city_at,
     build_wonder_advisor_query,
     parse_district_advisor_response,
@@ -138,6 +139,7 @@ from civ_mcp.lua.map import (  # noqa: F401
     parse_static_map_dump,
     parse_stockpile_response,
     parse_strategic_map_response,
+    parse_target_probe_response,
     parse_verify_city_at,
     parse_wonder_advisor_response,
 )
@@ -195,6 +197,10 @@ from civ_mcp.lua.models import (  # noqa: F401
     StagingPlan,
     StagingRingTile,
     StagingUnit,
+    TargetCity,
+    TargetEnemy,
+    TargetReport,
+    TargetTile,
     PendingDeal,
     PlayerRow,
     PolicyInfo,

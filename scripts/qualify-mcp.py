@@ -1,4 +1,4 @@
-﻿"""Keyless MCP launch and tool-discovery qualification.
+"""Keyless MCP launch and tool-discovery qualification.
 
 This test does not require a running Civ VI game because the adapter connects to
 FireTuner lazily when a gameplay tool is called.
@@ -15,10 +15,10 @@ import threading
 import time
 
 
-# The server offers 78 tools; CIV_MCP_DISABLE_LUA=1 hides run_lua, leaving 77.
+# The server offers 79 tools; CIV_MCP_DISABLE_LUA=1 hides run_lua, leaving 78.
 # Keep this in step with baseline/manifest.json's expectedMcpTools, which counts the
 # full set - the two numbers differ by exactly that one hidden tool.
-EXPECTED_TOOLS_AFTER_LUA_DISABLE = 78
+EXPECTED_TOOLS_AFTER_LUA_DISABLE = 79
 REQUIRED_TOOLS = {
     "get_game_overview",
     "get_units",

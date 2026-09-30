@@ -7,6 +7,18 @@ from __future__ import annotations
 
 from civ_mcp import lua as lq
 
+# The `Bombard` strength of every siege unit in the game's own data
+# (`Base/Assets/Gameplay/Data/Units.xml`): Catapult 35, Trebuchet 45, Bombard 55, Artillery 80.
+# It is what the wall arithmetic in `narrate_target_report` divides by, and it is read from the unit
+# type rather than assumed, because "two siege units" is a count of units and this is a count of
+# damage. Unknown types fall back to the Catapult's 35 - the conservative end.
+_SIEGE_BOMBARD = {
+    "CATAPULT": 35,
+    "TREBUCHET": 45,
+    "BOMBARD": 55,
+    "ARTILLERY": 80,
+}
+
 
 def narrate_overview(ov: lq.GameOverview) -> str:
     diff_str = f" | {ov.difficulty}" if ov.difficulty else ""
@@ -492,6 +504,154 @@ def narrate_pathing_estimate(est: lq.PathingEstimate) -> str:
         f"~{est.turns} turns ({est.total_tiles} tiles total, "
         f"{est.reachable_this_turn} reachable this turn){wp_str}"
     )
+
+
+def narrate_target_report(report: lq.TargetReport) -> str:
+    """One target, in the order `tactics/07` asks about it: what, how much, who, and our force.
+
+    The pre-war gates are five questions asked in sequence, and this block answers the first three
+    from the game and hands the rest to the staging plan (gates 1-3) - the tool exists because the
+    same five reads were being assembled by hand, and because three of them (walls, city pool,
+    garrison) are invisible to every metric the turn loop has.
+    """
+    from civ_mcp import staging as st
+
+    tile = report.tile
+    city = report.city
+    where = f"({tile.x},{tile.y})"
+    if report.camp:
+        head = f"TARGET REPORT for the barbarian camp at {where}"
+    elif city is not None:
+        head = (
+            f"TARGET REPORT for {city.name} at {where} — {city.owner_name}"
+            + (", OURS" if city.ours else (", AT WAR" if city.at_war else ", at peace"))
+        )
+    else:
+        head = f"TARGET REPORT for {where} — no city and no camp on the tile"
+    lines = [head]
+
+    terrain = tile.terrain.replace("TERRAIN_", "").lower()
+    bits = [terrain]
+    if tile.hills:
+        bits.append("hills")
+    if tile.feature not in ("", "none"):
+        bits.append(tile.feature.replace("FEATURE_", "").replace("_", " ").lower())
+    if tile.river:
+        bits.append("river")
+    if tile.district not in ("", "none"):
+        bits.append(tile.district.replace("DISTRICT_", "").replace("_", " ").lower())
+    if tile.improvement not in ("", "none"):
+        bits.append(
+            "improvement " + tile.improvement.replace("IMPROVEMENT_", "").lower()
+            + (" (PILLAGED)" if tile.pillaged else "")
+        )
+    if tile.owner_name not in ("", "none"):
+        bits.append(f"owned by {tile.owner_name}")
+    lines.append(f"  tile: {tile.visibility} — " + ", ".join(bits))
+
+    if tile.visibility != "visible":
+        lines.append(
+            "  **the tile is not visible now**: terrain and ownership are known, but walls, damage,"
+            " garrisons and units are not - a `revealed` tile is not a read. This is `tactics/07`"
+            " Gate 0: send the scout or the fastest cavalry before running the other gates."
+        )
+
+    if city is not None:
+        walls = "no walls" if not city.walled else f"walls {city.wall_hp}/{city.wall_max}"
+        pool = f"city HP {city.hp}/{city.hp_max}" if city.hp_max else "city HP unknown"
+        garrison = (
+            f"garrison {city.garrison} ({city.garrison_hp}/{city.garrison_max} hp, CS"
+            f" {city.garrison_cs})"
+            if city.garrisoned
+            else "**no garrison unit**"
+        )
+        lines.append(
+            f"  city: pop {city.pop}, {walls}, {pool}, defence {city.defense}, {garrison}"
+            + (", original capital" if city.capital else "")
+        )
+        if not city.garrisoned:
+            lines.append(
+                "    no garrison means the shooters do roughly **three times** the damage they do"
+                " against a garrisoned city (tactics/06: Archer 35 vs 9-11 against a CS 35"
+                " garrison), and the city does not retaliate against melee at all."
+            )
+    elif not report.camp:
+        lines.append(
+            "  city: none on this tile — if you expected one, it is a different tile or still in"
+            " fog (`get_trade_options` lists a met civ's cities by name, which is the cheapest way"
+            " to find the tile before a scout reaches it)"
+        )
+
+    if report.enemies:
+        lines.append(f"  enemies within reach of the target (visible now): {len(report.enemies)}")
+        for e in sorted(report.enemies, key=lambda x: (x.distance, -x.combat_strength)):
+            stat = f"CS {e.combat_strength}" + (f"/RS {e.ranged_strength}" if e.ranged_strength else "")
+            fort = f", fortified {e.fortified_turns}t" if e.fortified_turns else ""
+            war = "" if e.at_war else " (NOT at war)"
+            lines.append(
+                f"    {e.owner_name} {e.unit_type.replace('UNIT_', '')} {stat}"
+                f" HP {e.hp}/{e.max_hp} at ({e.x},{e.y}) d{e.distance}"
+                f" [{e.class_name.lower()}]{fort}{war}"
+            )
+    else:
+        lines.append(
+            "  enemies within reach of the target: none visible — which is not 'none exist'"
+            " (`tactics/07` step 6: an unmet field army is the usual rescue)"
+        )
+
+    if report.plan is not None:
+        result = st.assign(report.plan)
+        shooters = [
+            a
+            for a in result.placed
+            if a.unit.role in ("siege", "ranged")
+            and a.tile is not None
+            and not (a.los and a.los.ruled_out)
+        ]
+        melee_near = [
+            a
+            for a in result.placed
+            if a.unit.role in ("melee", "short-ranged") and a.tile is not None
+        ]
+        lines.append(
+            f"  our force: {len(result.placed)} placed, {len(result.unplaced)} with no tile,"
+            f" {len(shooters)} shooter(s) able to fire, {len(melee_near)} front-line unit(s)"
+            f" on the ring; the assault opens"
+            f" {'this turn' if result.opens_on == 0 else f'T+{result.opens_on}'}"
+        )
+        guns = [a for a in shooters if a.unit.role == "siege"]
+        if city is not None and city.walled and guns:
+            # The gate-1 arithmetic, from the game's own `Bombard` strengths (Units.xml): the
+            # shooters *not* being siege units do not count against walls, which is the whole
+            # reason the doctrine wants guns. Field shots land higher than the strength figure
+            # (measured 45-52 against a 200-HP city), so this is an upper bound on the turns.
+            per_turn = sum(_SIEGE_BOMBARD.get(a.unit.unit_type.replace("UNIT_", ""), 35) for a in guns)
+            walls_left = city.wall_hp if city.wall_max else 0
+            turns = -(-walls_left // per_turn) if per_turn else 0
+            lines.append(
+                f"    arithmetic (gate 1, the game's Bombard strengths): {walls_left} wall HP at"
+                f" {' + '.join(str(_SIEGE_BOMBARD.get(a.unit.unit_type.replace('UNIT_', ''), 35)) for a in guns)}"
+                f" = **~{turns} turn(s)** to the walls, then the same fire into the"
+                f" {city.hp_max or 200}-point pool, which heals ~20/turn while any adjacent hex is"
+                f" outside our zone of control. Shots land higher than the strength in the field, so"
+                f" read this as an upper bound."
+            )
+        elif city is not None and city.walled and not guns:
+            lines.append(
+                "    arithmetic (gate 1): **no siege unit can fire at this target**, and ranged"
+                " fire into walls is a fraction of siege damage - the wall pool is not the plan"
+                " until a gun is in position (tactics/01)."
+            )
+        lines.append("  STAGING PLAN (gates 2 and 3 - the ring, the line of sight, the arrivals):")
+        lines.extend("    " + row for row in st.render(result, report.plan).splitlines())
+
+    lines.append(
+        "  not answered here, and deliberately: what can be bought or upgraded for it"
+        " (`get_city_production`, `get_tech_civics`, `upgrade_unit`), whether we can hold it"
+        " (`get_cities` loyalty + `get_governors`), and who is coming (`get_diplomacy`) -"
+        " `tactics/07` gates 4, 5 and 7."
+    )
+    return "\n".join(lines)
 
 
 def narrate_combat_estimate(est: lq.CombatEstimate) -> str:

@@ -265,6 +265,21 @@ one of those was verified present and live. The gaps are specific, not general.
     drift that produced the siege-2 finding and the Pike-and-Shot mismatch, and nothing catches it
     today.
 
+**From the pre-war workflow review (2026-09-30), not from this audit's four classes:**
+
+18. **One pre-war reconnaissance call (C3).** The eight-point review of what `07` actually does found
+    that its first three gates were assembled from three or four separate reads per target, and that
+    three of the numbers it needs (walls, the city centre pool, the garrison unit) appear in no
+    metric at all. **Applied 2026-09-30**: `get_target_report(target_x, target_y)` returns the tile,
+    the city on it, the visible enemies within three tiles of the **target**, and the staging plan -
+    in two queries, before a declaration, and saying which of `visible` / `revealed` / `fog` the tile
+    is. `07` Step 1 and Gate 1 point at it, `AGENTS.md` names it, and `tests/test_target_report.py`
+    pins the parser, the narration, the query's read-only-ness and the composition.
+19. **A reinforcement schedule (C4).** "Which turn does the missing role reach the rally" is still
+    two separate numbers - `get_city_production`'s turns-to-build and `get_pathing_estimate`'s
+    turns-to-march - and nothing joins them. Still open; the staging plan covers the units that
+    exist, not the one being built.
+
 ## Method note and limits
 
 The per-file audits were run by four subagents against the code, not against the prose; every claim

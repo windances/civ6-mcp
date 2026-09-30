@@ -4,8 +4,8 @@
   "civ6Mcp": {
     "repository": "https://github.com/lmwilki/civ6-mcp.git",
     "revision": "dd2019056371b92ea4854e879ddf05a8cad95e8a",
-    "expectedMcpTools": 79,
-    "expectedMcpToolsNote": "upstream is 76; +1 for get_game_status, which reports where the game is (not running / starting / main menu / leader screen / loading / in game) so an agent does not have to infer it from the wording of a failure; +1 for search_knowledge, which queries the local manual/prompt index (SQLite FTS5) so an in-game session can look a mechanic up mid-turn; +1 for get_staging_plan, which assigns the army to distinct ring tiles from the game's own pathfinding before an assembly moves (human instruction 2026-09-26)",
+    "expectedMcpTools": 80,
+    "expectedMcpToolsNote": "upstream is 76; +1 for get_game_status, which reports where the game is (not running / starting / main menu / leader screen / loading / in game) so an agent does not have to infer it from the wording of a failure; +1 for search_knowledge, which queries the local manual/prompt index (SQLite FTS5) so an in-game session can look a mechanic up mid-turn; +1 for get_staging_plan, which assigns the army to distinct ring tiles from the game's own pathfinding before an assembly moves (human instruction 2026-09-26); +1 for get_target_report, which answers the pre-war analysis's first three gates about one target - its walls, city pool, garrison and nearby enemies plus the staging plan with its per-tile line-of-sight verdicts - in one call, before a declaration and in fog (2026-09-30)",
     "python": ">=3.12"
   },
   "deepseekHarness": {

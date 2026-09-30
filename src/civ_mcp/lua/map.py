@@ -17,6 +17,9 @@ from civ_mcp.lua.models import (
     OwnershipDelta,
     StaticMapDump,
     StaticMapTile,
+    TargetCity,
+    TargetEnemy,
+    TargetTile,
     WonderPlacement,
     NearbyResource,
     OwnedResource,
@@ -264,6 +267,246 @@ for dy = -r, r do
 end
 print("{SENTINEL}")
 """
+
+
+def build_target_probe_query(target_x: int, target_y: int, radius: int = 3) -> str:
+    """InGame: one target tile, the city on it, and the visible enemies near it.
+
+    `tactics/07` asks the same five questions about every target - what is it, how much wall and
+    city pool is there, what is garrisoning it, what can shoot at it, and what will come to its
+    rescue - and the answers live in three different places: the tile and city are InGame APIs, the
+    enemies are a visibility-filtered unit scan, and the firing ring is the staging plan. This is
+    the first two in one read, anchored on the target rather than on our own army: the whole point
+    of a *pre-war* analysis is that the target may be nowhere near our units.
+
+    Read-only, and it works **before a declaration** - which is the difference between this and
+    `build_capture_check_query` (that one only looks at cities we are already at war with). A tile
+    in fog reports its terrain only: damage, garrisons and units are what `IsVisible` gates, and
+    the report says which of the three states the tile is in so nothing is read as an absence.
+    """
+    return f"""
+local me = Game.GetLocalPlayer()
+local tx, ty, r = {target_x}, {target_y}, {radius}
+local pVis = PlayersVisibility[me]
+local pDiplo = Players[me]:GetDiplomacy()
+local plot = Map.GetPlot(tx, ty)
+if not plot then
+    print("ERR:INVALID_TARGET|{target_x},{target_y}")
+    print("{SENTINEL}")
+    return
+end
+local function nameOf(pid)
+    if pid == 63 then return "Barbarian" end
+    local cfg = PlayerConfigurations[pid]
+    if cfg then return Locale.Lookup(cfg:GetCivilizationShortDescription()):gsub("|", "/") end
+    return "?"
+end
+local idx = plot:GetIndex()
+local visible = pVis:IsVisible(idx) and true or false
+local revealed = pVis:IsRevealed(idx) and true or false
+local visTag = "fog"
+if visible then visTag = "visible" elseif revealed then visTag = "revealed" end
+local terrain = GameInfo.Terrains[plot:GetTerrainType()].TerrainType
+local featureIdx = plot:GetFeatureType()
+local feature = "none"
+if featureIdx >= 0 then feature = GameInfo.Features[featureIdx].FeatureType end
+local impIdx = plot:GetImprovementType()
+local imp, pillaged = "none", 0
+if impIdx >= 0 then
+    imp = GameInfo.Improvements[impIdx].ImprovementType
+    if plot:IsImprovementPillaged() then pillaged = 1 end
+end
+local distIdx = plot:GetDistrictType()
+local dist = "none"
+if distIdx >= 0 then
+    local dInfo = GameInfo.Districts[distIdx]
+    if dInfo then dist = dInfo.DistrictType end
+end
+local owner = plot:GetOwner()
+local ownerName = "none"
+if owner >= 0 then ownerName = nameOf(owner) end
+print("TTILE|" .. tx .. "," .. ty .. "|" .. visTag .. "|" .. terrain .. "|" .. feature
+    .. "|" .. (plot:IsHills() and 1 or 0) .. "|" .. (plot:IsRiver() and 1 or 0)
+    .. "|" .. imp .. "|" .. pillaged .. "|" .. dist .. "|" .. owner .. "|" .. ownerName)
+-- A barbarian camp is a target of the same analysis with its own gates (tactics/07, the camp
+-- branch), and it is the tile improvement - the same detector the turn rules use.
+if imp == "IMPROVEMENT_BARBARIAN_CAMP" then print("TCAMP|1") end
+local city = Cities.GetCityInPlot(tx, ty)
+if city then
+    local pid = city:GetOwner()
+    local atWar = (pid == 63)
+    if pid ~= me and pid ~= 63 then pcall(function() atWar = pDiplo:IsAtWarWith(pid) end) end
+    if pid == me then atWar = false end
+    local cHP, cMax, wHP, wMax, defStr = 0, 0, 0, 0, 0
+    pcall(function()
+        local ccIdx = GameInfo.Districts["DISTRICT_CITY_CENTER"].Index
+        for _, d in city:GetDistricts():Members() do
+            if d:GetType() == ccIdx then
+                -- The city centre district carries both pools: OUTER is the walls, GARRISON is
+                -- the city's own HP. Walls are damaged first and do not heal; the city pool heals
+                -- about twenty a turn while any adjacent hex is outside our zone of control.
+                defStr = d:GetDefenseStrength() or 0
+                cMax = d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0
+                cHP = cMax - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0)
+                wMax = d:GetMaxDamage(DefenseTypes.DISTRICT_OUTER) or 0
+                wHP = wMax - (d:GetDamage(DefenseTypes.DISTRICT_OUTER) or 0)
+                break
+            end
+        end
+    end)
+    -- The garrison *unit* is the defender that matters (a garrisoned city takes about a third of
+    -- the ranged damage an ungarrisoned one takes), and it is a different number from the pool.
+    local garrison, gHP, gMax, gCS = "", 0, 0, 0
+    local at = Map.GetUnitsAt(tx, ty)
+    if at then
+        for gu in at:Units() do
+            if gu:GetOwner() == pid then
+                local gi = GameInfo.Units[gu:GetType()]
+                if gi and ((gi.Combat or 0) > 0 or (gi.RangedCombat or 0) > 0) then
+                    garrison = gi.UnitType
+                    gHP = gu:GetMaxDamage() - gu:GetDamage()
+                    gMax = gu:GetMaxDamage()
+                    gCS = gi.Combat or 0
+                end
+            end
+        end
+    end
+    local cap = 0
+    pcall(function() if city:IsOriginalCapital() then cap = 1 end end)
+    local cName = "unknown"
+    pcall(function() cName = Locale.Lookup(city:GetName()):gsub("|", "/") end)
+    print("TCITY|" .. cName .. "|" .. pid .. "|" .. nameOf(pid) .. "|pop:" .. city:GetPopulation()
+        .. "|walls:" .. wHP .. "/" .. wMax .. "|cityhp:" .. cHP .. "/" .. cMax
+        .. "|def:" .. defStr .. "|garrison:" .. (garrison == "" and "none" or garrison)
+        .. "|garrisonhp:" .. gHP .. "/" .. gMax .. "|garrisoncs:" .. gCS
+        .. "|capital:" .. cap .. "|atwar:" .. (atWar and 1 or 0) .. "|ours:" .. (pid == me and 1 or 0))
+end
+-- Visible enemy units within `r` of the *target*, which is the list that decides the rescue
+-- question (tactics/07 step 6): a city is patient, but what walks back to it is not.
+for pid = 0, 63 do
+    if pid ~= me and Players[pid] and Players[pid]:IsAlive() then
+        local atWar = (pid == 63)
+        if pid ~= 63 then pcall(function() atWar = pDiplo:IsAtWarWith(pid) end) end
+        -- A major civilization's units are reported whether or not we are at war (they are the
+        -- garrison or the field army that will meet us); a city-state's only when we are.
+        if Players[pid]:IsMajor() or pid == 63 or atWar then
+            for _, u in Players[pid]:GetUnits():Members() do
+                local ux, uy = u:GetX(), u:GetY()
+                if ux ~= -9999 and pVis:IsVisible(ux, uy) then
+                    local d = Map.GetPlotDistance(tx, ty, ux, uy)
+                    if d <= r then
+                        local e = GameInfo.Units[u:GetType()]
+                        local cs = e and e.Combat or 0
+                        local rs = e and e.RangedCombat or 0
+                        if cs > 0 or rs > 0 then
+                            local pc = ""
+                            pcall(function() pc = e and e.PromotionClass or "" end)
+                            local ft = 0
+                            pcall(function() ft = u:GetFortifyTurns() or 0 end)
+                            print("TENEMY|" .. pid .. "|" .. nameOf(pid) .. "|"
+                                .. (e and e.UnitType or "?") .. "|" .. ux .. "," .. uy .. "|"
+                                .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage()
+                                .. "|CS:" .. cs .. "|RS:" .. rs .. "|pc:" .. pc .. "|d:" .. d
+                                .. "|atwar:" .. (atWar and 1 or 0) .. "|fort:" .. ft)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def _target_number(text: str, default: float = 0) -> float:
+    try:
+        value = float(text)
+    except (TypeError, ValueError):
+        return default
+    return int(value) if float(value).is_integer() else value
+
+
+def parse_target_probe_response(
+    lines: list[str],
+) -> tuple[TargetTile | None, TargetCity | None, list[TargetEnemy]]:
+    """Parse `TTILE|`, `TCITY|`, `TCAMP|` and `TENEMY|` into the target's three parts."""
+    tile: TargetTile | None = None
+    city: TargetCity | None = None
+    enemies: list[TargetEnemy] = []
+    for line in lines:
+        parts = line.split("|")
+        if line.startswith("TTILE|") and len(parts) >= 10:
+            x, y = (int(v) for v in parts[1].split(","))
+            tile = TargetTile(
+                x=x,
+                y=y,
+                visibility=parts[2],
+                terrain=parts[3],
+                feature=parts[4],
+                hills=parts[5] == "1",
+                river=parts[6] == "1",
+                improvement=parts[7],
+                pillaged=parts[8] == "1",
+                district=parts[9],
+                owner=int(_target_number(parts[10])) if len(parts) > 10 else -1,
+                owner_name=parts[11] if len(parts) > 11 else "none",
+            )
+        elif line.startswith("TCAMP|"):
+            if tile is not None:
+                tile.camp = True
+        elif line.startswith("TCITY|") and len(parts) >= 5:
+            fields: dict[str, str] = {}
+            # From `pop:` on: the four fields before it are positional (name, owner id, owner name).
+            for token in parts[4:]:
+                key, _, value = token.partition(":")
+                fields[key] = value
+            wall_hp, _, wall_max = fields.get("walls", "0/0").partition("/")
+            hp, _, hp_max = fields.get("cityhp", "0/0").partition("/")
+            g_hp, _, g_max = fields.get("garrisonhp", "0/0").partition("/")
+            city = TargetCity(
+                name=parts[1],
+                owner=int(_target_number(parts[2], -1)),
+                owner_name=parts[3],
+                pop=int(_target_number(fields.get("pop", "0"))),
+                wall_hp=int(_target_number(wall_hp)),
+                wall_max=int(_target_number(wall_max)),
+                hp=int(_target_number(hp)),
+                hp_max=int(_target_number(hp_max)),
+                defense=int(_target_number(fields.get("def", "0"))),
+                garrison=fields.get("garrison", "none"),
+                garrison_hp=int(_target_number(g_hp)),
+                garrison_max=int(_target_number(g_max)),
+                garrison_cs=int(_target_number(fields.get("garrisoncs", "0"))),
+                capital=fields.get("capital") == "1",
+                at_war=fields.get("atwar") == "1",
+                ours=fields.get("ours") == "1",
+            )
+        elif line.startswith("TENEMY|") and len(parts) >= 6:
+            x, y = (int(v) for v in parts[4].split(","))
+            hp, _, max_hp = parts[5].partition("/")
+            fields = {}
+            for token in parts[6:]:
+                key, _, value = token.partition(":")
+                fields[key] = value
+            enemies.append(
+                TargetEnemy(
+                    player_id=int(_target_number(parts[1], -1)),
+                    owner_name=parts[2],
+                    unit_type=parts[3],
+                    x=x,
+                    y=y,
+                    hp=int(_target_number(hp)),
+                    max_hp=int(_target_number(max_hp, 100)),
+                    combat_strength=int(_target_number(fields.get("CS", "0"))),
+                    ranged_strength=int(_target_number(fields.get("RS", "0"))),
+                    promotion_class=fields.get("pc", ""),
+                    distance=int(_target_number(fields.get("d", "0"))),
+                    at_war=fields.get("atwar") == "1",
+                    fortified_turns=int(_target_number(fields.get("fort", "0"))),
+                )
+            )
+    return tile, city, enemies
 
 
 def build_strategic_map_query() -> str:

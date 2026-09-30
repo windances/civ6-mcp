@@ -145,14 +145,25 @@ name which city loses its garrison while the raid runs.
 
 ## Step 1 — read the target: four numbers, in this order
 
+**`get_target_report(target_x, target_y)` answers this step and the next one in a single call**, and
+it is the intended read: it returns the tile's terrain and ownership, the city on it (walls, the city
+centre pool, the garrison **unit** with its HP and combat strength, the defence strength, whether it
+is the original capital and whether we are at war), the visible enemy units within three tiles of the
+**target**, and the staging plan - so the ring, the per-tile `FIRE` / `NO LINE OF SIGHT` verdicts and
+our own arrival turns arrive together. It works **before a declaration** and it says which of
+`visible` / `revealed` / `fog` the tile is in, because a revealed tile reports terrain and nothing
+else and a damage pool that was not read must not look like a full one. The table below is the same
+step by hand, for when the tool is unavailable or its numbers need a second source.
+
 | # | Number | Where | Why it is this order |
 |---|---|---|---|
-| 1 | **Garrison** — the unit on the city tile, and what it is | `get_map_area` on the city tile lists the units standing there; the city's own strength is the `def N` on `get_diplomacy`'s city line | It decides the fire arithmetic more than walls do (Step 2, gate 1) |
-| 2 | **Walls** — `walls none`, or the wall pool's maximum | the same city line: `walls none` / `walls 100` | Decides whether a siege unit is mandatory (gate 4) |
-| 3 | **HP pool** | not reported at peace | Always 200 for a city; it is the denominator, not the question |
-| 4 | **The ring** — every tile at distance ≤ 2, and which are passable | `get_map_area` radius 2 around the city | It is the ceiling on how many shots a turn you can fire (gate 2) |
+| 1 | **Garrison** — the unit on the city tile, and what it is | `get_target_report` names it (`garrison:` plus its HP and CS); `get_map_area` on the city tile lists the units standing there, and the city's own strength is the `def N` on `get_diplomacy`'s city line | It decides the fire arithmetic more than walls do (Step 2, gate 1) |
+| 2 | **Walls** — `walls none`, or the wall pool's maximum | `get_target_report` (`walls:hp/max`); the same figure on the `get_diplomacy` city line as `walls none` / `walls 100` | Decides whether a siege unit is mandatory (gate 4) |
+| 3 | **HP pool** | `get_target_report` reads the city centre pool (`cityhp:hp/max`) when the tile is **visible**; a pool that was not read prints nothing, and 200 is the maximum for a city | Always 200 at full health; it is the denominator, not the question |
+| 4 | **The ring** — every tile at distance ≤ 2, and which are passable **and which have line of sight** | the staging plan inside `get_target_report` (or `get_staging_plan`); `get_map_area` radius 2 is the raw terrain | It is the ceiling on how many shots a turn you can fire (gate 2) |
 
-**All four are readable at peace**, from `get_diplomacy`'s city line plus one `get_map_area` — and
+**All four are readable at peace** - from `get_target_report` in one call, or from `get_diplomacy`'s
+city line plus one `get_map_area` - and
 **`walls none` is a number, not a missing one**: the line prints the wall pool, so silence would mean
 the read failed while `walls none` means the city has no outer defences. Reading the absence of a wall
 flag as "the tools cannot tell me" is what kept `task 006`'s declaration gate shut from T94 to T115.
@@ -182,6 +193,12 @@ net     = gross - healing        must be > 0, and comfortably so
 Measured over T103–T130. The consequence is not academic: two Archers at 9–11 are 18–22 gross
 against a 20 heal, i.e. **exactly zero progress**, which is what Moscow's first two turns of fire
 produced (T107: 9 a shot; T108: 11 a shot). Two Catapults clear the heal on their own.
+
+**`get_target_report` prints this arithmetic for you** when the city is walled and at least one siege
+unit can fire from the ring: the wall pool divided by the `Bombard` strengths of the guns actually in
+position (`Units.xml`: Catapult 35, Trebuchet 45, Bombard 55, Artillery 80), named as an upper bound
+because shots land higher than the strength figure in the field. What it cannot know is the healing
+side - that is the supply hexes, and `SIEGE PROGRESS` counts them (`supply line n/6 cut`).
 
 Two ways to fix a failed gate 1, in order of cost:
 - **Catapults** — barely affected by a garrison, and cheaper than waiting.

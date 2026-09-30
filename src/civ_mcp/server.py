@@ -855,6 +855,43 @@ async def get_staging_plan(
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
+async def get_target_report(ctx: Context, target_x: int, target_y: int) -> str:
+    """One target, read the way the pre-war analysis asks about it - before any declaration.
+
+    `prompts/tactics/07-pre-war-analysis.md` is a procedure in seven steps, and the first three are
+    questions about *the target*: what is on the tile, how much wall and city pool is there, what is
+    garrisoning it, what can shoot at it, and what is standing near it. This one call answers them -
+    the tile and the city on it (walls, city centre pool, garrison unit, defence strength), the
+    visible enemy units within three tiles of it, and the same staging plan `get_staging_plan`
+    returns, so the firing ring, the per-tile `FIRE` / `FIRE?` / `NO LINE OF SIGHT` verdicts and our
+    own arrival turns come with it. A barbarian camp's tile works the same way (it is the tile
+    improvement `IMPROVEMENT_BARBARIAN_CAMP`, and the reply says `the barbarian camp at x,y`).
+
+    **It works in fog and at peace.** Nothing here needs a war: a `revealed` tile reports its
+    terrain and ownership, and the report says so rather than letting an unread damage pool look
+    like a full one - Gate 0 is "a candidate city is actually visible", and a tile that is not
+    visible yet is answered as such.
+
+    What it deliberately does not answer is gates 4, 5 and 7: what can be bought or upgraded
+    (`get_city_production`, `get_tech_civics`, `upgrade_unit`), whether we can hold the ground
+    (loyalty and governance), and who comes to the rescue (`get_diplomacy`).
+
+    Args:
+        target_x: The target tile's X coordinate (a city, or a barbarian camp)
+        target_y: The target tile's Y coordinate
+    """
+    gs = _get_game(ctx)
+
+    async def _run():
+        report = await gs.target_report(target_x, target_y)
+        return nr.narrate_target_report(report)
+
+    return await _logged(
+        ctx, "get_target_report", {"target_x": target_x, "target_y": target_y}, _run
+    )
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
 async def get_pathing_estimate(
     ctx: Context, unit_id: int, target_x: int, target_y: int
 ) -> str:

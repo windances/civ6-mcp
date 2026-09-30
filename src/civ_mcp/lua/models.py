@@ -770,6 +770,110 @@ class StrategicMapData:
 
 
 @dataclass
+class TargetTile:
+    """The tile a pre-war analysis is about, as the game sees it right now."""
+
+    x: int
+    y: int
+    visibility: str = "fog"  # visible / revealed / fog
+    terrain: str = ""
+    feature: str = "none"
+    hills: bool = False
+    river: bool = False
+    improvement: str = "none"
+    pillaged: bool = False
+    district: str = "none"
+    owner: int = -1
+    owner_name: str = "none"
+    camp: bool = False
+
+    @property
+    def seen(self) -> bool:
+        """`revealed` is not `visible`: terrain is known, units and damage are not."""
+        return self.visibility == "visible"
+
+
+@dataclass
+class TargetCity:
+    """The city on the target tile, with the pools a siege has to break.
+
+    ``hp`` is the city centre's own pool (`DISTRICT_GARRISON`) and ``wall_hp`` the walls
+    (`DISTRICT_OUTER`); the garrison *unit* standing on the tile is separate again, and a city with
+    a garrison takes roughly a third of the damage from ranged fire that an ungarrisoned one takes
+    (`tactics/06`). All of it is read from the InGame API, so a city in fog reports nothing.
+    """
+
+    name: str
+    owner: int
+    owner_name: str
+    pop: int = 0
+    wall_hp: int = 0
+    wall_max: int = 0
+    hp: int = 0
+    hp_max: int = 0
+    defense: int = 0
+    garrison: str = "none"
+    garrison_hp: int = 0
+    garrison_max: int = 0
+    garrison_cs: int = 0
+    capital: bool = False
+    at_war: bool = False
+    ours: bool = False
+
+    @property
+    def garrisoned(self) -> bool:
+        return self.garrison not in ("", "none")
+
+    @property
+    def walled(self) -> bool:
+        return self.wall_max > 0
+
+
+@dataclass
+class TargetEnemy:
+    """A visible enemy unit within the report's radius of the target."""
+
+    player_id: int
+    owner_name: str
+    unit_type: str
+    x: int
+    y: int
+    hp: int = 0
+    max_hp: int = 100
+    combat_strength: int = 0
+    ranged_strength: int = 0
+    promotion_class: str = ""
+    distance: int = 0
+    at_war: bool = False
+    fortified_turns: int = 0
+
+    @property
+    def class_name(self) -> str:
+        return (self.promotion_class or "").replace("PROMOTION_CLASS_", "") or "?"
+
+
+@dataclass
+class TargetReport:
+    """Everything `tactics/07` asks about one target before the declaration.
+
+    The probe half is the tile and the city on it (walls, city pool, garrison, defence) plus the
+    visible enemy units near it; the plan half is the same `StagingPlan` `get_staging_plan`
+    returns, so the ring, the line-of-sight verdicts, our force and its arrival turns are the same
+    numbers the assault will be run on. One call, because the pre-war gates are asked in that order
+    and the answer to gate 2 is *inside* the plan (`civ_mcp.los`).
+    """
+
+    tile: TargetTile
+    city: TargetCity | None = None
+    enemies: list[TargetEnemy] = field(default_factory=list)
+    plan: StagingPlan | None = None
+
+    @property
+    def camp(self) -> bool:
+        return bool(self.tile.camp)
+
+
+@dataclass
 class ResourceStockpile:
     """Strategic resource stockpile info."""
 
