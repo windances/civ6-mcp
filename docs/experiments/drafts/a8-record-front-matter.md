@@ -80,6 +80,32 @@ Settler over that ground walks fifteen to twenty turns, which puts the third cit
 **Market at about T70** - after the window a fixed claim would have judged it in. **A satellite founded
 about T30 has a Market by T50; a colony founded about T48 does not.**
 
+**The variable is ordered, and the site the run read is a satellite - which is the decision paying off.**
+At **T22** - the turn the Builder completed - the capital ordered the second `UNIT_SETTLER`
+(`PRODUCING|UNIT_SETTLER|9 turns`), and the same turn the session ran
+**`get_global_settle_advisor`** (the global one, as the file names) and read:
+
+```
+Top 10 settle locations:
+  #1 (55,23): Score 215 - F:69 P:29 - fresh water, defense:2
+```
+
+**(55,23) is in the near-west cluster, about five tiles from 西安** - and it is the same tile A3 founded
+its second city on. So the cluster A3-A7 consumed is genuinely open for A8, exactly as the T69 read's
+blind spot predicted, and **A8's third city is a satellite rather than the twenty-tile colony the
+pre-flight arithmetic assumed**. **A hard-coded `(40,26)` would have marched the Settler twenty tiles west
+past an open 215-score site five tiles away**, which is the concrete form of why the site was made a rule.
+
+**And it exposes a property of the derived floor worth stating before the verdict rather than after.**
+With `F` around **T31** (ordered T22, nine turns, plus a short walk), `F > 28`, so the gold floor is read
+at the ten-turn row at or after `F+22 = T53` - that is **T60**, against **A7's 4.1 at T60**. A7's own
+T60 happens to be a low point in its curve (its series reads 8.1 / 4.1 / 2.1 / 24.4 / 49.0 across
+T50-T90), so **the floor's discriminating power depends on where `F` falls**: a founding at or before T28
+is judged against 8.1, a slightly later one against 4.1. That is not a defect in the rule - the rule says
+"against A7 at the same turn", and T60 is the first turn the market can be judged - but it means **the
+floor alone cannot carry the claim**, and the record will read it beside the T110 trio rather than as the
+headline.
+
 **And the city brings something the core lacks**: HORSES - a strategic resource no A3-A7 city held (the
 programme's `cavalry` row was filled by Heavy Chariots, which need none) - plus a second luxury cluster
 (`FURS`, `DYES`).
