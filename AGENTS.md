@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** none.
+**IN FORCE NOW:** `039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline.md` (continue A7 to the horizon A8 is measured at, and take the settle-advisor read A8's publication waits on).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
