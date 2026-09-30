@@ -100,6 +100,28 @@ market queue instead of an army queue. Nothing else changes.
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
    unavailable rather than as A8's own history.
 
+## If the same turn hangs twice, change what the turn does
+
+`end_turn` answers `HANG:<turn>:0_MCP_NNNN` when the turn was requested and did not advance. **That is
+not always the same fault, and the screen says which.** `hang_diagnosis.jsonl` records the screen at each
+hang: **A3's T70 and T72 entries carry `PLEASE WAIT`** - a genuine AI-phase stall, which was recovered by
+restarting the game and reloading - while **A8's T6 entry carries the normal HUD with `NEXT TURN` and no
+`PLEASE WAIT`**, which means the game was sitting at the player's turn and the request had simply not taken.
+Read that file first when a turn hangs; it is cheap and it is the difference between two remedies.
+
+**The remedy that does not depend on resolving it**: **if the same turn hangs twice, change one thing the
+turn does before trying a third time.** Do not replay the same attack or the same move - a turn that hangs
+on a set of orders tends to hang on them again, and A8's own log shows the loop (attack the barbarian
+Scout, `end_turn` hangs, recover, move, attack again). Change the thing the turn is *doing*: skip the
+attack, fortify instead, move a different unit, or end the turn with that unit deliberately unused. Then
+say in the diary which turn hung, what the screen said, what you changed, and whether the third attempt
+advanced.
+
+If the third attempt hangs on different orders too, **load the autosave of the previous turn** - the
+`0_MCP_NNNN` an earlier hang named - and take a different action in it, recording the rollback and the
+turn it went back to. A rollback is a recovery, not a second variable, and it belongs in the diary in
+those words.
+
 ## The opening is pinned, and the pin's fifth slot is the variable
 
 The first four orders are **unchanged from A3-A7**, so the opening stays comparable:
@@ -276,6 +298,6 @@ purchase** - and hand back to the orchestrator.
 
 <!-- published by scripts/temp-task.py
      command: python scripts/temp-task.py add --replace --turns 114 --title "attempt A8 - three cities, the third one an economy city" --instruction "再加一个A8, 选市场。先跑A8。A8/A9 共享T1起点。" --done-when "turn 110 is reached - the claim's last number (A8's science, pop and gold_per_turn against A7's at the same turn) cannot be read before then; the retiring turn reports the purchase against its deadline, the gold-floor reading beside A7's at that turn, and the T110 rows field by field" --overrides "(1) the pinned opening: its fifth slot is a second UNIT_SETTLER, which is this attempt's variable - the first four orders are unchanged from A3-A7. This makes the opening 'settle first' rather than tactics/01's 'siege first', which is the point of the attempt and not drift. (2) dynasty-cycle-wonder (prompts/checks/turn-checks.md): the wonder obligation is deferred for this attempt and recorded as accepted in the diary the first turn it fires, because the third city is both this attempt's market city and the natural home for a wonder, and building one here would make the attempt two variables. The wonder is owed its own attempt; it is not being answered by silence. Nothing else in the directive is overridden - tactics/08's one war city is held exactly." --scope "this match only, from the experiment's shared start evals/saves/ATTEMPT-A1-T1-settled.Civ6Save: attempt A8 - the same settings, the same corrected tactics/01 and tactics/08, with the number of settled cities (three, against the two every previous attempt held) as the one variable, and the third city's queue economy rather than army. It does not touch the A7 continuation's position." --why "settle a third city with a market queue and buy the second siege unit with gold" --expires-turn 115 --body-file C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-body.md --cn @C:\mine\mine\ws_dsh\civ6\docs\experiments\drafts\a8-cn.md
-     at: 2026-09-30T15:38:54+08:00
+     at: 2026-09-30T15:53:53+08:00
      chinese backup: prompts/tasks/cn/040-attempt-a8-three-cities-the-third-one-an-economy-city.cn.md
 -->
