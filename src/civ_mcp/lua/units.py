@@ -16,6 +16,7 @@ from civ_mcp.lua.models import (
     CaptureReadiness,
     CombatEstimate,
     PathingEstimate,
+    Reinforcement,
     StagingOption,
     StagingPlan,
     StagingRingTile,
@@ -2971,7 +2972,116 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
     return plan
 
 
-# —光偓—光偓 Post-move visibility —光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓—光偓
+# ---------------------------------------- Post-move visibility ----------------------------------------
+
+
+def build_reinforcement_query(target_x: int, target_y: int) -> str:
+    """InGame: military units under construction, and how far each is from the target.
+
+    `tactics/07` step 3's question - "how long, and what will it cost" - has a leg nothing joined:
+    the queue says when a unit appears (`bq:GetTurnsLeft()`, the same count `get_cities` prints) and
+    the map says how far away it is, and the two live in different tools. This reads both in one
+    pass, per city, for **military** units only (`Combat`/`RangedCombat`/`Bombard` > 0) - a Granary
+    is not a reinforcement.
+
+    The march leg is a hex distance at the unit's own `BaseMoves`, and it is deliberately an
+    estimate: the game's pathfinding (`UnitManager.GetMoveToPath`) takes a unit, and the unit being
+    built does not exist yet. The turn it appears, `get_staging_plan` answers the same question
+    exactly, with terrain costs and the reachable set.
+    """
+    return f"""
+local me = Game.GetLocalPlayer()
+local tx, ty = {target_x}, {target_y}
+local hashName = {{}}
+for u in GameInfo.Units() do hashName[u.Hash] = u.UnitType end
+for b in GameInfo.Buildings() do hashName[b.Hash] = b.BuildingType end
+for d in GameInfo.Districts() do hashName[d.Hash] = d.DistrictType end
+for p in GameInfo.Projects() do hashName[p.Hash] = p.ProjectType end
+-- The assembly ring: the passable distance-3 tiles, which is where the doctrine forms up (outside
+-- a city's two-tile strike). The nearest one to the building city is the rally this unit walks to.
+local ring = {{}}
+for dx = -3, 3 do for dy = -3, 3 do
+    local px, py = tx + dx, ty + dy
+    local p = Map.GetPlot(px, py)
+    if p and Map.GetPlotDistance(tx, ty, px, py) == 3 and not p:IsImpassable() then
+        ring[#ring + 1] = {{x = px, y = py}}
+    end
+end end
+for _, c in Players[me]:GetCities():Members() do
+    local bq = c:GetBuildQueue()
+    if bq and bq:GetSize() > 0 then
+        local h = bq:GetCurrentProductionTypeHash()
+        local name = hashName[h] or ""
+        if string.find(name, "^UNIT_") then
+            local info = GameInfo.Units[name]
+            local cs = info and info.Combat or 0
+            local rs = info and info.RangedCombat or 0
+            local bomb = info and info.Bombard or 0
+            if (cs + rs + bomb) > 0 then
+                -- The same role rule the staging plan uses, so "one siege in place, one siege
+                -- building" is a comparison of like with like.
+                local role = "melee"
+                if string.find(name, "SCOUT") or string.find(name, "EXPLORER") then role = "recon"
+                elseif bomb > 0 then role = "siege"
+                elseif rs > 0 and (info.Range or 1) >= 2 then role = "ranged"
+                elseif rs > 0 then role = "short-ranged" end
+                local cx, cy = c:GetX(), c:GetY()
+                local best, bestD = nil, 999
+                for _, t in ipairs(ring) do
+                    local d = Map.GetPlotDistance(cx, cy, t.x, t.y)
+                    if d < bestD then best, bestD = t, d end
+                end
+                local cName = "unknown"
+                pcall(function() cName = Locale.Lookup(c:GetName()):gsub("|", "/") end)
+                print("REINF|" .. name .. "|" .. role
+                    .. "|moves:" .. (info and info.BaseMoves or 2)
+                    .. "|ready:" .. bq:GetTurnsLeft()
+                    .. "|dist:" .. Map.GetPlotDistance(cx, cy, tx, ty)
+                    .. "|rally:" .. (best and (best.x .. "," .. best.y) or "-")
+                    .. "|rallydist:" .. (best and bestD or -1)
+                    .. "|city:" .. cName .. "|cityxy:" .. cx .. "," .. cy)
+            end
+        end
+    end
+end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def parse_reinforcement_response(lines: list[str]) -> list[Reinforcement]:
+    """Parse `REINF|` rows into `Reinforcement` records."""
+    out: list[Reinforcement] = []
+    for line in lines:
+        parts = line.split("|")
+        if not line.startswith("REINF|") or len(parts) < 3:
+            continue
+        fields: dict[str, str] = {}
+        for token in parts[3:]:
+            key, _, value = token.partition(":")
+            fields[key] = value
+        rally: tuple[int, int] | None = None
+        if fields.get("rally", "-") not in ("", "-"):
+            rx, ry = fields["rally"].split(",")
+            rally = (int(rx), int(ry))
+        city_x = city_y = 0
+        if fields.get("cityxy", ""):
+            cx, cy = fields["cityxy"].split(",")
+            city_x, city_y = int(cx), int(cy)
+        out.append(
+            Reinforcement(
+                unit_type=parts[1],
+                role=parts[2],
+                moves=int(_number(fields.get("moves", "2"))),
+                ready_turns=int(_number(fields.get("ready", "0"))),
+                distance=int(_number(fields.get("dist", "0"))),
+                rally=rally,
+                rally_distance=int(_number(fields.get("rallydist", "0"))),
+                city=fields.get("city", ""),
+                city_x=city_x,
+                city_y=city_y,
+            )
+        )
+    return out
 
 
 def build_post_move_visibility_query(now_x: int, now_y: int, radius: int = 4) -> str:

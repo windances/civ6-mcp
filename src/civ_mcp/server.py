@@ -892,6 +892,40 @@ async def get_target_report(ctx: Context, target_x: int, target_y: int) -> str:
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
+async def get_reinforcements(ctx: Context, target_x: int, target_y: int) -> str:
+    """What the army has for a target, and which turn each unit under construction reaches it.
+
+    `prompts/tactics/07-pre-war-analysis.md` step 3 asks "how long, and what will it cost", and the
+    half that decides a deadline was two numbers in two places: a city's queue countdown
+    (`get_cities` prints it) and a map distance. This joins them, against the same staging plan
+    `get_staging_plan` returns.
+
+    Each row is a **military** unit in one of our queues: type, role, the city building it, the
+    queue's own turns-to-ready, the assembly tile (distance 3 from the target) nearest that city,
+    the march to it, and the turn it is therefore standing in the rally. It ends with the roles that
+    are covered by nothing - neither in the plan nor in a queue - which is the gap to close before
+    the assault, and with the plan's own opening turn so "is it in time?" is answerable.
+
+    **The march figure is an estimate and says so**: the game's pathfinding needs a unit and the
+    unit being built does not exist yet, so the leg is hex distance at the unit's own movement. The
+    turn it appears, `get_staging_plan` answers the same question exactly.
+
+    Args:
+        target_x: The target tile's X coordinate (a city, or a barbarian camp)
+        target_y: The target tile's Y coordinate
+    """
+    gs = _get_game(ctx)
+
+    async def _run():
+        report = await gs.reinforcements(target_x, target_y)
+        return nr.narrate_reinforcements(report)
+
+    return await _logged(
+        ctx, "get_reinforcements", {"target_x": target_x, "target_y": target_y}, _run
+    )
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
 async def get_pathing_estimate(
     ctx: Context, unit_id: int, target_x: int, target_y: int
 ) -> str:

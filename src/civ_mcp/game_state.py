@@ -257,6 +257,23 @@ class GameState:
         plan = await self.staging_plan(target_x, target_y)
         return lq.TargetReport(tile=tile, city=city, enemies=enemies, plan=plan)
 
+    async def reinforcements(self, target_x: int, target_y: int) -> lq.ReinforcementReport:
+        """What is in the plan, and what the production queues are adding to it.
+
+        `tactics/07` step 3 asks how long the target takes and what it costs; the answer has a leg
+        nothing joined - a unit being built is `get_cities`' countdown in one place and a map
+        distance in another. This is the staging plan (what we have) plus one query over our
+        queues, with the march figure labelled as the estimate it is (pathfinding needs a unit, and
+        this one does not exist yet).
+        """
+        plan = await self.staging_plan(target_x, target_y)
+        lines = await self.conn.execute_write(lq.build_reinforcement_query(target_x, target_y))
+        return lq.ReinforcementReport(
+            target=f"{target_x},{target_y}",
+            plan=plan,
+            building=lq.parse_reinforcement_response(lines),
+        )
+
     async def get_victory_progress(self) -> lq.VictoryProgress:
         lines = await self.conn.execute_write(lq.build_victory_progress_query())
         return lq.parse_victory_progress_response(lines)

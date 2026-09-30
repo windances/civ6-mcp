@@ -275,10 +275,17 @@ one of those was verified present and live. The gaps are specific, not general.
     in two queries, before a declaration, and saying which of `visible` / `revealed` / `fog` the tile
     is. `07` Step 1 and Gate 1 point at it, `AGENTS.md` names it, and `tests/test_target_report.py`
     pins the parser, the narration, the query's read-only-ness and the composition.
-19. **A reinforcement schedule (C4).** "Which turn does the missing role reach the rally" is still
-    two separate numbers - `get_city_production`'s turns-to-build and `get_pathing_estimate`'s
-    turns-to-march - and nothing joins them. Still open; the staging plan covers the units that
-    exist, not the one being built.
+19. **A reinforcement schedule (C4).** "Which turn does the missing role reach the rally" was two
+    separate numbers - `get_city_production`'s turns-to-build and `get_pathing_estimate`'s
+    turns-to-march - and nothing joined them. **Applied 2026-09-30**:
+    `get_reinforcements(target_x, target_y)` reads our queues (military units only, via
+    `bq:GetCurrentProductionTypeHash()` and `GetTurnsLeft()`), picks the assembly tile nearest each
+    building city, and prints `ready T+n`, the march, the arrival turn, and any role covered by
+    neither the plan nor a queue. The march leg is a **hex-distance estimate** and says so: the
+    game's pathfinding needs a unit and the unit being built does not exist yet - the turn it
+    appears, `get_staging_plan` answers that leg exactly. `07` Step 3 points at it and
+    `tests/test_reinforcements.py` pins the parser, the arithmetic, the narration, the query and the
+    composition.
 
 ## Method note and limits
 

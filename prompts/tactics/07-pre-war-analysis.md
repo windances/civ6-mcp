@@ -292,6 +292,15 @@ turns to assemble = max( slowest damage unit in position, capture unit ADJACENT 
 the bigger of the two is the answer
 ```
 
+**The second line has a leg that is easy to forget: a unit still in a city's queue is not in the
+plan.** `get_reinforcements(target_x, target_y)` joins the two numbers - each city's queue countdown
+for a military unit, and the distance from that city to the assembly ring nearest it - and prints the
+turn each one is standing in the rally, next to the plan's own opening turn, plus any role that
+nothing covers (not in the plan, not building). Re-run it whenever a queue changes: an assault that
+opens on a gun still three turns from the rally is a `SIEGE STALLED` scheduled in advance. Its march
+figure is a hex-distance estimate (the game cannot path a unit that does not exist); the turn the
+unit appears, `get_staging_plan` answers that leg exactly.
+
 - Measured anchor, T120–T122 (abandoned line): 200 HP, no walls, supply 4/6 — two Trebuchets and
   three to four Archers did 60–110 a turn, 40–90 net, and the city fell in **three turns**.
 - Measured anchor, T103–T130 (this war): Moscow (garrisoned) took seven turns of fire; 圣彼得堡 (no

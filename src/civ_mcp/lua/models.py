@@ -874,6 +874,50 @@ class TargetReport:
 
 
 @dataclass
+class Reinforcement:
+    """One military unit in a city's production queue, and when it can reach the rally.
+
+    The two legs are different kinds of number and the report says so: ``ready_turns`` is the
+    queue's own countdown (`bq:GetTurnsLeft()` - the same figure `get_cities` prints), and the march
+    is a **hex-distance estimate** (`distance` / ``moves``) because the game's pathfinding takes a
+    unit and this one does not exist yet. The turn it appears, `get_staging_plan` answers the march
+    exactly.
+    """
+
+    unit_type: str
+    role: str = "melee"  # siege / ranged / short-ranged / melee / recon
+    moves: int = 2
+    ready_turns: int = 0
+    distance: int = 0  # tiles from the building city to the *target*
+    rally: tuple[int, int] | None = None
+    rally_distance: int = 0  # tiles from the city to the assembly tile it will form up on
+    city: str = ""
+    city_x: int = 0
+    city_y: int = 0
+
+    @property
+    def march_turns(self) -> int:
+        """Tiles to the rally at the unit's own movement, as an estimate - not the game's path."""
+        if self.rally_distance <= 0:
+            return 0
+        return -(-self.rally_distance // max(int(self.moves or 1), 1))
+
+    @property
+    def arrives_in(self) -> int:
+        """Turns from now until it stands on the rally: the queue, then the march."""
+        return max(int(self.ready_turns or 0), 0) + self.march_turns
+
+
+@dataclass
+class ReinforcementReport:
+    """What the plan has, and what the queues are adding to it."""
+
+    target: str = ""
+    plan: StagingPlan | None = None
+    building: list[Reinforcement] = field(default_factory=list)
+
+
+@dataclass
 class ResourceStockpile:
     """Strategic resource stockpile info."""
 

@@ -654,6 +654,88 @@ def narrate_target_report(report: lq.TargetReport) -> str:
     return "\n".join(lines)
 
 
+def narrate_reinforcements(report: lq.ReinforcementReport) -> str:
+    """What is in the plan now, and which turn each unit under construction reaches the rally.
+
+    `tactics/07` step 3 asks "how long, and what will it cost", and the half that was missing is the
+    one that decides deadlines: a gun that is four turns from being built and three tiles from the
+    rally does not open the assault this week. Two legs, and the report says which is which - the
+    queue's own countdown, and a march figure that is a hex-distance estimate because the unit does
+    not exist yet for the game to path.
+    """
+    from civ_mcp import staging as st
+
+    lines = [f"REINFORCEMENTS to {report.target}:"]
+    plan = report.plan
+    if plan is not None:
+        result = st.assign(plan)
+        counts: dict[str, int] = {}
+        for a in result.placed:
+            counts[a.unit.role] = counts.get(a.unit.role, 0) + 1
+        in_place = ", ".join(f"{role} {n}" for role, n in sorted(counts.items())) or "nothing"
+        lines.append(
+            f"  in the plan now: {in_place} ({len(result.placed)} placed, {len(result.unplaced)}"
+            f" with no tile); the assault opens"
+            f" {'this turn' if result.opens_on == 0 else f'T+{result.opens_on}'}"
+        )
+    building = list(report.building)
+    if not building:
+        lines.append(
+            "  building: **no military unit is in any queue** — nothing is coming, so the army has"
+            " to be what it is (`tactics/01` is where the establishment is decided, and"
+            " `get_city_production` prices a purchase if the gold is there)"
+        )
+        return "\n".join(lines)
+    building.sort(key=lambda r: (r.arrives_in, r.unit_type))
+    lines.append(
+        "  building (queue turn from the city's own countdown; the march is hex distance at the"
+        " unit's moves, an estimate - pathfinding needs a unit and this one does not exist yet):"
+    )
+    for r in building:
+        rally = f"rally {r.rally[0]},{r.rally[1]} ({r.rally_distance} tiles away)" if r.rally else "no rally tile"
+        lines.append(
+            f"    {r.unit_type.replace('UNIT_', '')} [{r.role}, {r.moves} moves] from {r.city}"
+            f" ({r.city_x},{r.city_y}): ready T+{max(r.ready_turns, 0)}, {rally}, then ~{r.march_turns}"
+            f" turn(s) of march -> **at the rally ~T+{r.arrives_in}** ({r.distance} tiles from the"
+            f" target)"
+        )
+    soonest = building[0]
+    lines.append(
+        f"    soonest: {soonest.unit_type.replace('UNIT_', '')} ~T+{soonest.arrives_in}"
+        + (
+            f" — that is after the assault's own opening turn, so either wait, or buy it"
+            f" (`purchase_item`) if `get_city_production` prices it inside the treasury"
+            if plan is not None and soonest.arrives_in > st.assign(plan).opens_on
+            else " — inside the plan's own window"
+        )
+    )
+    building_roles = {r.role for r in building}
+    if plan is not None:
+        result = st.assign(plan)
+        in_place_roles = {a.unit.role for a in result.placed}
+        # The plan's own vocabulary: cavalry and anti-cavalry are inside the `melee` bucket, the
+        # same way `staging.assign` counts them, so the gap list speaks one language.
+        for role in ("siege", "ranged", "melee"):
+            if role in in_place_roles or role in building_roles:
+                continue
+            lines.append(
+                f"    **no {role} unit in place or building** — `tactics/01`'s establishment table"
+                f" is the number for one assault; a role nothing is covering is the gap to close"
+                f" this turn, by production or by purchase"
+            )
+    for r in building:
+        if r.rally is None:
+            lines.append(
+                f"    note: no passable distance-3 tile around {report.target} was found for"
+                f" {r.unit_type.replace('UNIT_', '')} - check the ring with `get_staging_plan`"
+            )
+    lines.append(
+        "  the exact march number is `get_staging_plan`'s the turn the unit appears (terrain cost,"
+        " rivers, the reachable set); this table is for the deadline arithmetic"
+    )
+    return "\n".join(lines)
+
+
 def narrate_combat_estimate(est: lq.CombatEstimate) -> str:
     atk_type = "Ranged" if est.is_ranged else "Melee"
     mods_str = ", ".join(est.modifiers) if est.modifiers else "none"

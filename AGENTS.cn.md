@@ -270,7 +270,9 @@ search_knowledge("<a Chinese phrase>", doc="manual")   # a CJK query falls back 
 **`get_target_report(target_x, target_y)` 一次调用就跑完前三道闸门**——那个地块和它上面的城池（城墙、
 城池中心血池、驻军单位、防御强度）、目标三格内可见的敌方单位，以及带逐格 `FIRE` / `NO LINE OF SIGHT`
 判定的集结方案——而且它在宣战之前、在迷雾里都能用，并会说明该地块处于 `visible` / `revealed` /
-`fog` 中的哪一种。**文件 7 有两类
+`fog` 中的哪一种。**`get_reinforcements(target_x, target_y)` 回答的是期限那一半**：还在我们某个
+城市队列里的每个军事单位，哪一回合能抵达集结点，以及哪些角色什么都没有覆盖（行军那一段是用
+六角格距离估的——游戏没法为一个还不存在的单位寻路）。**文件 7 有两类
 目标**：敌方城池（一场战争）和蛮族营地（一次突袭——营地是同一套分析的目标，只是用六道营地闸门代替城池
 的五道）。
 

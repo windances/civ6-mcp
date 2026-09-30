@@ -15,10 +15,10 @@ import threading
 import time
 
 
-# The server offers 79 tools; CIV_MCP_DISABLE_LUA=1 hides run_lua, leaving 78.
+# The server offers 80 tools; CIV_MCP_DISABLE_LUA=1 hides run_lua, leaving 79.
 # Keep this in step with baseline/manifest.json's expectedMcpTools, which counts the
 # full set - the two numbers differ by exactly that one hidden tool.
-EXPECTED_TOOLS_AFTER_LUA_DISABLE = 79
+EXPECTED_TOOLS_AFTER_LUA_DISABLE = 80
 REQUIRED_TOOLS = {
     "get_game_overview",
     "get_units",

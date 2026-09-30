@@ -310,7 +310,10 @@ has no pre-war analysis to make; send the scout and the fastest cavalry, then ru
 city on it (walls, city centre pool, the garrison unit, defence strength), the visible enemy units
 within three tiles of the target, and the staging plan with its per-tile `FIRE` / `NO LINE OF SIGHT`
 verdicts - and it works before a declaration and in fog, saying which of `visible` / `revealed` /
-`fog` the tile is. **File
+`fog` the tile is. **`get_reinforcements(target_x, target_y)` answers the deadline half**: which
+turn each military unit still in one of our queues reaches the rally, and which roles nothing covers
+(the march leg is a hex-distance estimate - the game cannot path a unit that does not exist yet).
+**File
 7 has two target classes**: an enemy city (a war) and a barbarian camp (a raid - the camp is a
 target of that same analysis, with six camp gates instead of the city's five).
 

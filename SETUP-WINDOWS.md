@@ -18,7 +18,7 @@ two actions that still need a human.
 | DSH | `@deepseek-ai/dsh@0.1.2-rc.1` in `node_modules/` —`dsh --version` replies `0.1.2-rc.1` |
 | `uv` | 0.12.17 —project-local at `.tools/bin/uv.exe` (plus extensionless `.tools/bin/uv`), **and installed globally on PATH** (see 搂7) |
 | Python env | `.venv` on Python 3.12.10, `civ-mcp` entry point present |
-| Static gate | `npm run qualify` —**PASS** (80 tools inventoried) |
+| Static gate | `npm run qualify` —**PASS** (81 tools inventoried) |
 | Orchestrator tests | **19/19 PASS** |
 | MCP stdio handshake | **PASS** —75 tools, `run_lua` correctly absent |
 | DSH overlay resolve | **PASS** (`--dump-config`) |
@@ -27,7 +27,7 @@ two actions that still need a human.
 | **CivBench scenario saves** | **INSTALLED** —`0A_GROUND_CONTROL`, `0B_SNOWFLAKE`, `0C_CRY_HAVOC` copied into the game's `Saves\Single` (22 saves listed in total) |
 | **`DEEPSEEK_API_KEY`** | **NOT SET —action required (last blocker)** |
 
-Qualification totals: **80 tools** available to a plain MCP client; **79** once the DSH
+Qualification totals: **81 tools** available to a plain MCP client; **80** once the DSH
 overlay sets `CIV_MCP_DISABLE_LUA=1`, which is the intended safety control. The two counts that
 matter live in `baseline/manifest.json` (`expectedMcpTools`) and
 `scripts/qualify-mcp.py` (`EXPECTED_TOOLS_AFTER_LUA_DISABLE`); a new tool has to move both. (The
