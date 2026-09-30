@@ -654,3 +654,9 @@ it is the section that used to live here, unchanged, and it is still the authori
 on re-clicking CONTINUE, with 4318 refusing and 4319 answering `0 Lua states`. Do not kill the session,
 do not start a second one, and do not read failure from the silence - the call logs only when it
 returns. Verify the position from outside with `.tools/whats-on-screen.py`, which touches no tuner.
+
+**And after a real `HANG` the same window looks like a failed recovery**: `load_game_save` answers
+`FAILED: Could not find 'Load Game' button`, `dismiss_popup` answers `No popups to dismiss`, and the game
+is parked on the loaded game's **leader intro**, which Lua cannot see - it resolved by itself in about
+five minutes (measured 2026-09-30). `.tools/click-continue.py` without `--click` is the safe check, and
+`--click` only when it finds the button.

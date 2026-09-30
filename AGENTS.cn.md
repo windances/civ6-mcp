@@ -581,3 +581,9 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 已经读到了加载后的回合，而 `load_game_save` 还在反复点击 CONTINUE，4318 拒绝连接、4319 回
 `0 Lua states`。不要杀会话、不要另起一个会话，也不要从日志的沉默里读出失败——这个调用只在返回时才写
 日志。用 `.tools/whats-on-screen.py` 从外部核对局面，它不碰 tuner。
+
+**而在一次真正的 `HANG` 之后，同一个窗口看起来像是恢复失败**：`load_game_save` 回
+`FAILED: Could not find 'Load Game' button`，`dismiss_popup` 回 `No popups to dismiss`，而游戏其实停在
+所加载对局的**领袖开场界面**上——那是 Lua 看不见的东西。它自己在大约五分钟内就恢复了（2026-09-30
+实测）。`.tools/click-continue.py` 不带 `--click` 是安全的核对方式；只有在它确实找到按钮时才加
+`--click`。

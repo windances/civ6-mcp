@@ -158,3 +158,24 @@ and the proof was the session's own first read after recovering - `No technology
 stray click that had chosen a research would have shown one. Two facts to carry: the `0 Lua states` line
 belongs to the *landing* window and not to the session's connection, and a load's real success signal is
 the turn the screen reads, not the call's own reply.
+
+**And after a real `HANG`, a whole run of failures is one screen: the leader intro.** Measured
+2026-09-30 on the same attempt, at T6, in this order:
+
+- `end_turn` answered **`HANG:6:0_MCP_0006`** - the AI-turn stall, not a popup;
+- `get_game_overview` answered **`GameCore_Tuner/InGame states not found`**;
+- `load_game_save` answered **`FAILED: Could not find 'Load Game' button`**, twice;
+- `dismiss_popup` answered **`No popups to dismiss`**;
+- and the game was, through all of it, sitting on the **loaded game's leader intro** (`CHINESE EMPIRE`,
+  `QIN (UNIFIER)`, a CONTINUE button) - a screen **Lua cannot see**, so every tool above was answering
+  about a state the game had already left.
+
+**With nothing done it resolved**: the next `get_game_overview` read `Turn 6 | China (Qin (Unifier))`
+and play resumed. So **that quartet of messages is not evidence that a recovery failed** - it is the
+leader-intro window, and it is the one state where reading the screen is not a fallback but the only
+instrument. `.tools/click-continue.py` **without `--click`** is the safe check: it grabs pixels with
+`PIL.ImageGrab` (sending the game nothing), never calls `SetForegroundWindow`, reports whether the game
+is parked on CONTINUE, and changes nothing. Pass `--click` only when it finds the button and the game is
+the foreground window. **And prefer waiting first**: this window closed by itself in about five minutes,
+so a session that is alive and mid-recovery should be left to it - the helper is for the case where it
+has stopped, not for the case where it is slow.
