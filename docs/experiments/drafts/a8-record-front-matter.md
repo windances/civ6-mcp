@@ -341,13 +341,13 @@ finding as the research-pin note in `README.md` section 3, one step further alon
 
 ## The measurement
 
-**A8 spans three sessions, and the final snapshot's `--run` must name all three** - this is the trap
-that cut A7's own snapshot short, where a `--run` naming one session made the report start at that
-session's first turn and call everything before it unattributed:
+**A8 spans four sessions, and the final snapshot's `--run` must name all four** - this is the trap that
+cut A7's own snapshot short, where a `--run` naming one session made the report start at that session's
+first turn and call everything before it unattributed:
 
 ```
 python scripts/experiment-report.py --game china_911679432 ^
-  --run volcanic-ochre-catapult-47,tempered-jet-temple-30,silver-vermil-pennant-47 ^
+  --run volcanic-ochre-catapult-47,tempered-jet-temple-30,silver-vermil-pennant-47,zealous-sepia-catapult-56 ^
   --questions a8 --save docs/experiments/A8-final.json
 ```
 
@@ -355,7 +355,8 @@ python scripts/experiment-report.py --game china_911679432 ^
 |---|---|---|
 | `volcanic-ochre-catapult-47` | T1-T6 | stopped on the double T6 hang; recovered by a relaunch |
 | `tempered-jet-temple-30` | T6-T77 | **its own context budget**, at T77, with the position clean |
-| `silver-vermil-pennant-47` | T77- | the continuation, running under the same task file |
+| `silver-vermil-pennant-47` | T77-T107 | the game stalled on the World Congress result at T106 and then crashed to the main menu; recovered from `AutoSave_0107` |
+| `zealous-sepia-catapult-56` | T107- | the continuation that carries the attempt to T110 |
 
 `--questions a8` answers the four questions the claim is made of and `--save` writes the snapshot the
 compare block reads. The diary's **per-10-turn economy rows** are what the comparison uses, and their
@@ -623,6 +624,85 @@ claim was named for.
 is short only `cavalry 0/1`** - `siege 2/2`, `melee 3/2`, `ranged 5/4`, `anticav 1/1` (the T65
 Spearman), `recon 1/1`. So `Q1`'s falsification is a **timing** verdict and not a capacity one: this
 opening does build the whole table, thirty turns after the turn the attempt was judged on.
+
+## T107: the game crashed to the main menu, and the Lua path recovered it
+
+**The continuation played T77 -> T106 and then the game stopped taking turns.** The session's own
+report is precise about where: the turn would not advance at **T106**, on
+**`LOC_NOTIFICATION_WORLD_CONGRESS_RESULTS_MESSAGE`** after the World Congress had resolved, and every
+documented remedy came back empty - `get_world_congress` twice, `dismiss_popup` ("No popups to
+dismiss"), `get_pending_diplomacy`, `get_pending_trades`, `skip_remaining_units`, `get_notifications`,
+repeated `end_turn`. That is the **third** distinct stall this programme has met and the second that no
+Lua query can see, after A3's T70/T72 `PLEASE WAIT` stalls.
+
+**The recovery did not go as documented.** `restart_and_load` relaunched the game (pid 5652 -> **24724**)
+but left it at the **main menu with nothing loaded**, and both `load_game_save("AutoSave_0107")` and
+`load_save_from_menu("AutoSave_0107")` answered `FAILED: Could not find 'Load Game' button`. The MCP's
+own log shows why the menu route cannot work here:
+
+```
+  OCR: found 'Single Player' at (1759,1008) [99x17] - clicking (1759,1008)
+  Click: screen=(1759,1008) abs=(15010,30583) vscreen=(0,0)+7680x2160
+```
+
+**`abs=(15010,30583)` is not a position on a 3840x2160 window** - the menu clicker's coordinate
+translation is wrong at this resolution and DPI, so every menu click lands nowhere and the "Load Game"
+button is never reached. The session also reported `.tools/whats-on-screen.py` and
+`.tools/click-continue.py` as unusable for it (`ModuleNotFoundError: No module named 'win32gui'`),
+which is true for its interpreter and **not** true for the orchestrator's - the same helper ran fine
+from this side, which is how the screen was read at all.
+
+**What recovered it was the Lua path with no menu clicks**, which is what `.tmp/lua-load.py` exists for
+(its docstring: "the menu-driven recovery drives the game's UI with synthetic clicks. In this
+environment those clicks never arrive"). Run as the orchestrator:
+
+```
+.venv\Scripts\python.exe .tmp\lua-load.py AutoSave_0107      # silent, ~5 min, then the leader intro
+.venv\Scripts\python.exe .tools\click-continue.py            # report only: the CONTINUE box is below the OCR region
+.venv\Scripts\python.exe .tools\click-text.py "CONTINUE" --at 1677,1406 --wait 10
+```
+
+The first call returned nothing for five minutes - **which is the documented signature of a load in
+flight, not a failure** - and the third command's screen-after read is the proof it landed:
+`NATURAL DISASTER OCCURRING`, `MAJOR FLOOD`, and the T107 HUD. **The position was never lost**: the
+game's own autosave had it, and the crash cost wall-clock only.
+
+**And the collision trap fired while identifying the save.** `AutoSave_0108` and `AutoSave_0109` exist
+and are **older** than `0107` - `14:42` and `14:45` against A8's `18:26` - because **A7's continuation
+played to T110 this afternoon and wrote autosaves at the same turn numbers**. A resume that picked "the
+newest" by name instead of by time would load A7's branch. The saves that matter, with what they are:
+
+| save | written | it is |
+|---|---|---|
+| `0_MCP_0105` | 18:22:58 | A8, T105, the newest MCP autosave |
+| `AutoSave_0106` | 18:22:54 | A8, T106 |
+| **`AutoSave_0107`** | **18:26:00** | **A8, T107 - the position recovered** |
+| `AutoSave_0108` | **14:42:59** | **A7's continuation**, same turn number, three and a half hours older |
+| `AutoSave_0109` | **14:45:10** | **A7's continuation** |
+
+**What the crashed session had already measured at T106, and it changes the T110 forecast.** Its last
+verified read, three turns short of the horizon:
+
+| figure | A8 at T106 | A7's T110 bar | |
+|---|---|---|---|
+| `science` | **69.1** | 57.6 | above by 11.5 |
+| `pop` | **27** | 25 | above by 2 |
+| `gold_per_turn` | **+62.0** (income 88, maintenance -26) | 60.0 | above by 2.0 |
+
+**All three of the claim's measures were already above A7's T110 figures at T106** - which is the
+opposite of what the T90 row projected, and the record has to say why it moved. **The gold did not come
+from the third city's Market.** The session named the lever itself: **two policy cards, Town Charters
+and Merchant Confederation, worth about +24 gold/turn.** That is precisely the confound the task file
+warned about in its own text - "A7 crosses the directive's +10 on its own, with no market at all ...
+**if A8 is only ahead later, say the market did not do it**" - and here it is in the executor's own
+words: the market did not do it. **Taiyuan's Market had arrived at T76 and the gold crossed the bar on
+policy cards after that.** So the honest form of the likely `Q4` verdict is that the settled third city
+**cleared the bar**, and that the mechanism the claim named is **not** what cleared it.
+
+**One more reading the crash makes worth stating**: the three T110 figures at T106 are a read three
+turns short of the turn the claim names. They are recorded here as the session's last verified numbers
+and **not** as the T110 row - the row still has to be read at T110, which is what the continuation is
+for.
 
 ## The record
 
