@@ -77,6 +77,7 @@ scripts\use-strategy.ps1 domination   # the agent sees this on the next end_turn
 |---|---|---|
 | `balanced` | none — upstream default | No bias. The pristine four prompts. |
 | `china-conquest` | Domination | Qin (Unifier): Dynastic Cycle eurekas and wonders, Crouching Tiger paired with melee, Three-Six Stratagems for the human, one siege at a time, no peace ever. **The preset the current match plays.** |
+| `china-two-city-military-opening` | Domination | The same civilisation with the opening the experiment measured: **settle two cities and take the third**, a research line pinned to `ENGINEERING` by about T22, the capital kept on the army, and two guns in range 2 before the declaration. Distilled from A1–A8; see its `directive.md` for the attempts behind each number. |
 | `expansion` | none yet — wide opening | Four to six cities and universal growth before committing to a victory type; **trade routes may never sit idle**; every form of idle capacity surfaced each turn |
 | `science` | Science | Campus adjacency, tall 4–6 cities, Research Alliances, watch rival Spaceports |
 | `domination` | Domination | One front at a time, siege against walls, strategic resources, war weariness |
