@@ -264,6 +264,31 @@ pipeline fault while there are eighty turns left to fix it, not at the verdict:
   (OPEN means the deadline has not arrived: the attempt stands at T27, so those predictions are undecided, not failed)
 ```
 
+**Re-read at T40, after the third city was founded, and this is the attempt's first decided question:**
+
+```
+  OPEN      Q1 establishment complete by T60   [establishment not reached by T40; ...]
+  HELD      Q2 three cities settled            [foundings beyond the capital: 2 of 2 (T20 at 63,25, T35 at 55,23);
+                                                the third city is the one founded T35; ...]
+  OPEN      Q3 the second siege unit in hand by T60, bought not built
+            [deadline T60 (max(T58, F+25) with F=T35); bought: no siege unit was bought; ...]
+  OPEN      Q4 the gold clause                 [the floor turn T60 has no readable row yet; ... the draft's own
+                                                prediction is gpt at T40 at or below A7's 6.1 and it read +5.3 ...]
+```
+
+**So the variable is delivered and the instrument certifies it**: `Q2 three cities settled` is **HELD**,
+read from `found_city`'s own acknowledgements rather than from a `cities` count - which is the
+discrimination the settlement reader was written for, since A3, A4 and A7 all also ended with three
+cities, by conquest.
+
+**And the derived deadlines are verified on live data, not only in fixtures**: Q3 now reads `deadline T60
+(max(T58, F+25) with F=T35)` - the code path that the whole recut rests on, printing its own derivation
+from the founding turn it read out of the log.
+
+**One prediction has held so far**: `gpt_T40` read **+5.3** against A7's 6.1, i.e. **at or below it**,
+which is what the draft predicted and why - a third city founded at T35 has no market by T40 and is meant
+to cost gold before it pays.
+
 **Three things that check out**: the two-session `--run` resolves A8 as one attempt; **the founding is
 read from the log correctly** (`1 of 2, T20 at 63,25`); and the instrument says `OPEN` with the reason
 rather than `FALSIFIED` - which is the distinction `_status` exists for. The per-10-turn rows attributed
