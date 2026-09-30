@@ -42,7 +42,10 @@ instead of arguing from feeling:
   (`engage-the-screen` was retired after the T101-T116 siege replay: "did you attack anything"
   passed while a 7 HP enemy stood one tile away. `use-your-attacks` replaced it;
   `ram-tower-before-civil-engineering` was retired at T99 and the ram is no longer part of the
-  establishment at all — human instruction 2026-09-26, 不用锤，用投石车.)
+  establishment at all — human instruction 2026-09-26, 不用锤，用投石车; and since 2026-09-30 neither a
+  ram nor a tower is **built or fielded**, including one the empire already owns: 不生产也不使用撞锤/攻城塔.
+  The siege row is a band, not a count — 1-3 Catapults by the arithmetic of the walls, the ring and the
+  ranged line, one being enough when they already cover it (human instruction 2026-09-30).)
 - **Blocks in the turn result**: `BATTLE ASSESSMENT` (enemy in contact, what is killable, how
   many of our units are in range) and `SIEGE POSTURE` (the formation geometry).
 

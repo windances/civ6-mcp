@@ -12,6 +12,12 @@ Two rules the human asked for after the Russian war:
 
 Both are gated on war, so neither fires in peacetime (`at_war` comes from the diary row's
 `diplo_states`, where 6 is WAR - the one piece of war state a stored row still carries).
+
+**A raid counts as a war** (human instruction 2026-09-30: 突袭也算战争): the two answer rules fire on
+`at_war` **or** `camps_within_3`, so clearing a camp gets the same concentration the front gets. The
+occupancy rule (`one-garrison-per-city`) stays wartime-only, because a raid is a fight and not an
+occupation, and `camps_within_3` is the proxy - a wandering barbarian with no camp within three tiles
+sets neither rule.
 """
 
 from __future__ import annotations
@@ -462,6 +468,10 @@ class TestTheRules:
             "damaged_this_turn": 0, "cities_over_garrison": 0, "cities_guarded": 2,
             "at_war": 1, "local_superiority": 0, "enemies_massed_on": 0,
             "siege_units": 0, "siege_exposed": 0,
+            # The two answer rules fire on `at_war` **or** a camp raid (human instruction
+            # 2026-09-30: 突袭也算战争), so the raid proxy has to exist in the fixture for the
+            # expression to evaluate - a missing metric makes a rule report `un-evaluable`.
+            "camps_within_3": 0, "enemies_within_2": 0,
         }
         base.update(metrics)
         return turn_checks.CheckContext(turn=115, units={}, metrics=base, researched=frozenset())
@@ -516,8 +526,29 @@ class TestTheRules:
         assert "screen-the-siege" not in self.failing(siege_units=0, siege_exposed=0)
 
     def test_peacetime_damage_is_not_this_rules_business(self):
-        # Barbarians hit units in peacetime too; the rule is about the war footing.
+        # A hit with no war and no camp within three tiles is not the war footing's business.
         assert "answer-the-attack" not in self.failing(damaged_this_turn=2, at_war=0)
+
+    def test_a_raid_counts_as_a_war_for_answer_the_attack(self):
+        # Human instruction 2026-09-30: 突袭也算战争 - a camp raid sets the answer rules.
+        assert "answer-the-attack" in self.failing(damaged_this_turn=1, at_war=0, camps_within_3=1)
+
+    def test_a_raid_counts_as_a_war_for_the_mass_rule(self):
+        assert "mass-on-contact" in self.failing(
+            at_war=0, camps_within_3=1, enemies_within_2=1, local_superiority=1
+        )
+
+    def test_the_occupancy_rule_stays_wartime_only(self):
+        # A raid is a fight, not an occupation: the garrison rule still needs a real war.
+        assert "one-garrison-per-city" not in self.failing(
+            cities_over_garrison=1, at_war=0, camps_within_3=1
+        )
+
+    def test_a_barbarian_with_no_camp_is_not_a_raid(self):
+        # `camps_within_3` is the proxy; a wandering barbarian alone does not set the rules.
+        assert "mass-on-contact" not in self.failing(
+            at_war=0, camps_within_3=0, enemies_within_2=1, local_superiority=1
+        )
 
     def test_a_stored_row_keeps_the_war_gate(self):
         row = {

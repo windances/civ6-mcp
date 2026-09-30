@@ -60,6 +60,12 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   `CIVIC_MILITARY_TRADITION` inspiration against the units pulled off the plan (C5), and say which city
   gives up its garrison (C6). Against barbarian **Spearmen** (anti-cavalry) that means ranged fire plus
   a melee walk-in - never cavalry into spears, never a Scout/Builder/Trader at a camp.
+- **A raid counts as a war** (human instruction 2026-09-30: a raid counts as a war). The rules that answer a fight
+  fire on a raid as they do on a front - `mass-on-contact` will not let one unit trade with a camp
+  guard, and `answer-the-attack` will not let a barbarian's hit go unanswered - and the same
+  concentration applies to the camp gates' two-attacker rule. The occupancy rules stay wartime-only
+  (a raid is a fight, not an occupation), and `camps_within_3` is the proxy: a wandering barbarian with
+  no camp within three tiles still sets neither rule.
 - Barbarian units upgrade with the era, so an uncleared camp keeps producing era-appropriate units next
   to our cities. That spawning is the reason to clear it, and it is measured: the camp at (60,30)
   produced the Spearman at (60,29) that forced a 160-gold Warrior purchase at T65. Do not walk past a
@@ -185,23 +191,21 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   Walls and hit the city directly. Both abilities help **melee only** - a ranged
   or siege unit attacking beside them gets nothing, so a tower sitting next to
   your Crossbowmen is doing no work at all. **Both go obsolete at
-  `CIVIC_CIVIL_ENGINEERING`**, and **we build neither** (human instruction
-  2026-09-26: no ram, use the Catapult) - but **the ram we already own comes along**: it is a
-  support unit, so it travels with the melee and stands on the tile adjacent to
-  the target city, where it makes their attacks do full damage against walls
-  (human instruction 2026-09-26: if a ram is already ours, it joins the fight). An owned asset is used, a second
-  one is not bought and no tower is built. It is worth carrying only where there
-  are walls to break: read the target's `walls` first (the city line prints
-  `walls none` or the pool), because on the abandoned branch every Russian city
-  read `walls 0/0` and seventeen turns of dragging the ram did nothing.
+  `CIVIC_CIVIL_ENGINEERING`**, and **we neither build nor field them** (human
+  instruction 2026-09-26: no ram, use the Catapult - and 2026-09-30, which closed the
+  remaining door: neither a ram nor a tower is produced or used). **A ram the empire already owns is not an
+  exception**: it is not fielded either, and it stays a garrison unit like any other. The
+  reason is measured: the ability only works from the tile adjacent to a walled
+  target, and on the abandoned branch every Russian city read `walls 0/0`, so
+  seventeen turns of dragging the ram did nothing - and the tile it stands on is a
+  firing tile the siege wants.
 - If the war has already started and you have no siege train: do not grind a
-  walled city down with ranged attacks, and do not treat the ram as a substitute
+  walled city down with ranged attacks, and do not treat a ram as a substitute
   for one. Order the siege unit and accept the wait - check the production
   estimate first, and do not order a 10-turn Trebuchet for a city you will take in
-  two. The ram we own helps **melee against walls and nothing else**, so waiting
-  for the Catapult is still the route.
+  two. Waiting for the Catapult is the route.
 - Order of work each turn: siege knocks the walls to 0, melee (following the
-  Catapult fire, with the ram beside it when the city has walls) takes the city,
+  Catapult fire) takes the city,
   **ranged shoots the city's HP**. Do not spend
   ranged attacks on walls you have siege for. **Ranged attacks can never capture a
   city** - once the walls are at 0 the city only falls to a melee unit walking in,
@@ -237,18 +241,24 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
 - An enemy city with **no garrison unit** in it is still a legal target: attack
   the tile as normal (the adapter resolves the city itself). An empty city is not
   a city that cannot be hit - it is a city that can be entered.
-- What one city needs: **3 Catapults (three Catapults per city, human instruction 2026-09-26)**, 2 melee,
+- What one city needs: **1-3 Catapults, decided by the arithmetic rather than a quota** (human
+  instruction 2026-09-30: two or three Catapults by the situation rather than a fixed number, and one
+  is enough when the ground and the ranged line already
+  cover the wall pool), 2 melee,
   4 ranged
   (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry for
-  survivors. **No Battering Ram and no Siege Tower** (same instruction: no ram, use the Catapult) -
+  survivors. **No Battering Ram and no Siege Tower, built or fielded** (2026-09-26: no ram, use the
+  Catapult; 2026-09-30: neither a ram nor a tower is produced or used) -
   the Catapult is the wall-breaker: it does 45-52 against a city,
   garrisoned or not, where an Archer does 9-11 into a CS 35 garrison, and the melee
   walks in after the walls are down. Three of them fired together measured **~260 a
-  turn** against a city (Moscow T123: two Catapults did 174 in one turn), which is what
-  keeps a siege bounded against a city that heals about twenty a turn. The ram we
-  already own **joins the assault** (human instruction 2026-09-26: if a ram is already ours, it joins the fight)
-  as a support unit for the melee when the target has walls; it is not a
-  requirement, a second one is never built, and no tower is built. Every Crouching
+  turn** against a city (Moscow T123: two Catapults did 174 in one turn) - the ceiling of the band,
+  and what to reach for when the walls are thick; one gun covers a wall-less or thin-walled target
+  whose heal the ranged line already out-paces. What keeps a siege bounded is that arithmetic against
+  a city that heals about twenty a turn, not a head-count. **A ram the empire already owns does not
+  join the assault** - it is not fielded at all (human instruction 2026-09-30: neither a ram nor a
+  tower is produced or used),
+  so the tile it would occupy is a firing tile instead. Every Crouching
   Tiger needs a melee unit holding the tile in front of it.
 - Judge an assault by the city's own numbers: `city hp: N/200` and
   `walls: N/100` (or `none`) on the result line, never by the damage estimate -
@@ -391,8 +401,11 @@ rather than a turn number:
 
 1. A named target whose walls and garrison can be broken in a bounded number of
    turns.
-2. The siege train already staged adjacent to it - **3 Catapults per city**, 2 melee, 4 ranged,
-   1 cavalry, **no ram or tower** (human instruction 2026-09-26: no ram, use the Catapult, three Catapults per city)
+2. The siege train already staged adjacent to it - **1-3 Catapults by the arithmetic** (one when the
+   ground and the ranged line cover the wall pool, two or three when they do not - human instruction
+   2026-09-30), 2 melee, 4 ranged,
+   1 cavalry, **no ram or tower, built or fielded** (2026-09-26: no ram, use the Catapult; 2026-09-30:
+   neither a ram nor a tower is produced or used)
  - **before** the declaration, not queued after it.
 3. Amenities positive. War weariness decays 50 per turn at war against 200 at
    peace, and 400 points cost an amenity, so a long war suppresses the very
@@ -408,7 +421,8 @@ cost Builder charges rather than city production, which weakens the "I need a bi
 army to feel safe" argument; and units and districts leave the same queue, so every
 unit is a district not built. `CIVIC_CIVIL_ENGINEERING` obsoleting the ram and the
 tower is a **deadline for a toolkit we do not carry** - the siege train is the answer
-at every era, and no ram or tower is built (human instruction 2026-09-26: no ram, use the Catapult).
+at every era, and neither a ram nor a tower is built **or fielded** (human instruction 2026-09-26:
+no ram, use the Catapult; 2026-09-30: neither a ram nor a tower is produced or used).
 
 What development bought on that same empire: improvements 2 -> 25 and science 7.8
 -> 28.1 between T59 and T120, with gold per turn never below +17. Protect that

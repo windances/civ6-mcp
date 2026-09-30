@@ -717,16 +717,21 @@ async def _check_empire_warnings(
     return events, game_score
 
 
-# What the conquest directive says one city assault needs, and the unit types that count
-# as each. The directive's own words: "about 3 siege, 2 melee, 4 ranged (2 Crossbowman at
-# range 2 and 2 Crouching Tiger at range 1) and 1 cavalry" - with no ram or tower, because
-# a battering ram is not part of this army (human instruction 2026-09-26: 不用锤，用投石车),
-# and three Catapults per city rather than two (same day: 一城3投石车).
-_WAR_TRAIN: tuple[tuple[str, int, tuple[str, ...]], ...] = (
-    ("siege", 3, ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY")),
-    ("melee", 2, ("WARRIOR", "SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY", "PIKEMAN", "SPEARMAN")),
-    ("ranged", 4, ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER")),
-    ("cavalry", 1, ("HORSEMAN", "KNIGHT", "COURSER", "CUIRASSIER", "CAVALRY", "TANK")),
+# What a city assault needs, and the unit types that count for each role. The directive's list:
+# "2 melee, 4 ranged (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry"
+# - with no ram or tower, because a ram is not part of this army at all (human instruction
+# 2026-09-26: 不用锤，用投石车; 2026-09-30: 不生产也不使用撞锤/攻城塔).
+#
+# Siege is the one row with a **floor and a target**: human instruction 2026-09-30 settled it -
+# 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以 (two or three
+# Catapults by the situation, not hard-coded, and one is enough when the ground and the ranged
+# line already cover it). So the floor - what a shortfall is measured against - is 1, the target
+# is 3, and the number in between is a judgement the diary has to carry.
+_WAR_TRAIN: tuple[tuple[str, int, int, tuple[str, ...]], ...] = (
+    ("siege", 1, 3, ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY")),
+    ("melee", 2, 2, ("WARRIOR", "SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY", "PIKEMAN", "SPEARMAN")),
+    ("ranged", 4, 4, ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER")),
+    ("cavalry", 1, 1, ("HORSEMAN", "KNIGHT", "COURSER", "CUIRASSIER", "CAVALRY", "TANK")),
 )
 
 # Diary fields worth a 10-turn delta, and how to print them.
@@ -772,15 +777,23 @@ async def _sweep_unmoved_units(gs) -> tuple[bool, str]:
 
 
 def _war_train_status(units: dict | None) -> tuple[str, list[str]]:
-    """Our units counted by the roles an assault needs, and the shortfall named."""
+    """Our units counted by the roles an assault needs, and the shortfall named.
+
+    A role with a band - siege, 1 to 3 by the arithmetic - prints the count with the band and only
+    counts as short below its floor, so one gun is never reported as a deficiency (human
+    instruction 2026-09-30).
+    """
     types = [(u.unit_type or "").upper() for u in (units or {}).values()]
     parts: list[str] = []
     missing: list[str] = []
-    for role, wanted, unit_types in _WAR_TRAIN:
+    for role, floor, target, unit_types in _WAR_TRAIN:
         have = sum(1 for t in types if any(t.endswith(name) or name in t for name in unit_types))
-        parts.append(f"{role} {have}/{wanted}")
-        if have < wanted:
-            missing.append(f"{wanted - have} {role}")
+        if floor == target:
+            parts.append(f"{role} {have}/{floor}")
+        else:
+            parts.append(f"{role} {have} (want {floor}-{target} by the arithmetic)")
+        if have < floor:
+            missing.append(f"{floor - have} {role}")
     return ", ".join(parts), missing
 
 

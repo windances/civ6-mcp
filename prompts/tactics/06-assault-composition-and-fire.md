@@ -6,9 +6,10 @@ Read once the stack is in contact with the target city and the assault is runnin
 
 | Role | Count | Job in the assault |
 |---|---|---|
-| Siege | 2 | Break the walls. Dedicated city damage (Catapult/Trebuchet **45**, Bombard 55) that does not take the ranged-versus-walls penalty. |
-| Melee | 2 | The only units that can **take** the city: a melee unit walking in finishes it. One holds the front tile, one is kept for the capture move. |
-| Ram / tower | 1 | Support, adjacent to the city, helping **melee only**: the ram makes melee do full damage to walls, the tower lets melee ignore them. Both die at `CIVIC_CIVIL_ENGINEERING`. |
+| Siege | **1-3, by the arithmetic** | Break the walls. Dedicated city damage (Catapult/Trebuchet **45**, Bombard 55) that does not take the ranged-versus-walls penalty. One gun is enough when the ground and the ranged line already cover the wall pool; two or three when they do not (human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以). |
+| Melee | 2 | **Melee, anti-cavalry and cavalry can take the city** - and a melee unit walking in is what finishes it. One holds the front tile, one is kept for the capture move. |
+| Anti-cavalry | 1 | Answer the enemy's cavalry when it comes for the guns (`counter-the-cavalry`). |
+| Ram / tower | **0, always** | Neither is built and neither is fielded (human instruction 2026-09-30: 不生产也不使用撞锤/攻城塔). They help **melee only**, must stand adjacent to the city, and both die at `CIVIC_CIVIL_ENGINEERING`; the Catapult is the wall-breaker. |
 | Ranged | 4 | Take the **city's HP** down (and kill anything that comes out to relieve it). Range 2, no retaliation. Never aim at a garrison that is inside - it takes no damage there. |
 | Cavalry | 1 | Hunt survivors and reach the enemy's ranged and siege units. Never the unit holding the front tile. |
 
@@ -71,7 +72,7 @@ a re-siege. Both failures above cost a full turn each.
    (`ERR:SIEGE_CANNOT_ATTACK_UNITS`) — the old path walked the Catapult at the target and lost the
    whole turn (T140); use a ranged unit (Crossbowman, RS 40) against units.
 1. **Siege knocks the walls to 0** (and then the city's HP pool).
-2. **Melee (following the Catapult fire, with the ram adjacent when the city has walls) takes the
+2. **Melee (following the Catapult fire) takes the
    city** - and until then it is **also a
    damage dealer, not a place-holder**. A melee unit attacks the city's HP pool from the tile
    adjacent to it: it takes retaliation, and it is the only class that does, which is exactly why
@@ -194,8 +195,7 @@ down (`supply line 4/6 cut - the city is still healing`).
 
 If the walls have not moved in about three turns - the turn result says `SIEGE STALLED` - or the
 garrison is being replaced faster than it is killed, stop and say why: no siege in position, siege
-unscreened and dying, too few attackers to out-damage the healing, the siege train dead, or the ram
-lost beside a walled target. A stalled
+unscreened and dying, too few attackers to out-damage the healing, or the siege train dead. A stalled
 assault is pure cost - war weariness suppresses production while the enemy keeps every city. Fix
 the front (bring siege, heal, upgrade, reinforce) or change the target; never negotiate it away
 (the directive forbids peace).

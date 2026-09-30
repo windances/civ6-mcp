@@ -80,9 +80,41 @@ but the doctrine text stays behind. Three concrete reasons:
 | `03-under-attack.md` | MOSTLY | no rule forbids the withdrawal it recommends (`answer-the-attack` and `mass-on-contact` both accept a stated one) - but it points step 1 at `BATTLE ASSESSMENT`, which lists **enemies only**; our damage is in the `== Events ==` line, "an enemy attacked a city" has no event or metric at all, and the file never mentions that an unused legal attack **bounces `end_turn`** until `skip_remaining_units(force=True)` |
 | `04-staging-out-of-range.md` | ~HALF | the RALLY leg it leans on is **dead code**; `SIEGE FIRE` is suppressed in exactly its trigger state; no movement-point metric; no LOS or ZOC input; a pillage rung with no verb |
 | `05-formation-and-screening.md` | MOSTLY | `WOUNDED IN REACH` (`05:83-88`) is printed **only by `scripts/play-turn.py`**, never by the MCP loop; "never adjacent to a *city*" is unenforced; the screen's identity is not reported |
-| `06-assault-composition-and-fire.md` | PARTLY | composition table stale (`06:9` Siege 2; a ram/tower row the directive forbids; no anti-cavalry row; "only melee can take the city"); the pre-move ring-LOS step has no oracle |
-| `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0 calls **`get_deal_options`, which is not an MCP tool**; Gate 2 (ring LOS) is impossible pre-declaration; Siege Tower advice against the directive; C3 promises an enforcement that does not exist |
+| `06-assault-composition-and-fire.md` | PARTLY | the composition table is **fixed** (siege is a band, the ram/tower row is gone, anti-cavalry added, capture classes corrected) - what remains is the pre-move ring-LOS step (`06:64-71`), which has no oracle |
+| `07-pre-war-analysis.md` | PARTLY (camp branch weaker) | Step 0 still calls **`get_deal_options`, which is not an MCP tool**; Gate 2 (ring LOS) is impossible pre-declaration; the Siege Tower advice and the C3 claim are **fixed** (2026-09-30) |
 | `08-war-and-the-home-front.md` | MOSTLY | every block and rule it cites is live (`10-TURN REVIEW`, `WAR ECONOMY`, `builder-backlog`, `carrying-capacity`); the new power section is code-complete but its rule is **staged** and a server started before commit `8353672` prints no power at all, leaving a human-only fallback; a stale military figure (`08:34`, 306 vs its own table's 282) and a retired task path (`08:70-71`) |
+
+## Resolved by human instruction, 2026-09-30
+
+Four rulings answered the contradictions this audit found, and all four are now in the files the
+agent actually reads (the directive preset **and** the live `SKILL.md` DIRECTIVE block, the live rule
+file, the tactics files, the worker prompt, `end_turn`'s establishment table and the staging plan's
+printed cap). The Chinese backups mirror each one.
+
+1. **The siege count is a band, not a quota**: 1-3 Catapults by the arithmetic - two or three by the
+   situation, never hard-coded, and **one is enough** when the ground and the ranged line already
+   cover the wall pool. Written into `tactics/01` (the row and the arithmetic), `tactics/06`'s
+   composition table, `tactics/04`'s assault list and report template, `directive.md` (twice),
+   `turn-checks.md`'s assault-train preamble, and `end_turn._WAR_TRAIN`, which now carries a **floor
+   of one** and a target of three so that one gun is never reported as a deficiency.
+2. **No ram and no tower, built or fielded** - including one the empire already owns, which the
+   directive previously kept as an exception. Removed from `directive.md`, `tactics/01` (the row now
+   reads "never"), `tactics/04` (three places), `tactics/05` (the advance order), `tactics/06`
+   (the row and the order of work), `tactics/07` (gate 4 and the prohibitions), `tactics/README.md`
+   and the worker prompt.
+3. **A raid counts as a war.** `mass-on-contact` and `answer-the-attack` now fire on
+   `at_war` **or** `camps_within_3` - no new metric, so the change is live the turn the file is read -
+   and the directive's camp paragraph, `tactics/07`'s C3 claim and the worker prompt all say the same.
+   The occupancy rules (`one-garrison-per-city`, the upgrade rules) stay wartime-only, because a raid
+   is a fight and not an occupation; a barbarian with no camp within three tiles still sets neither.
+4. **Barbarian camps are cleared.** The worker prompt's "Do not clear barbarian camps" bullet - the
+   last place still carrying the retired rule - now carries the camp doctrine: the six gates, ranged
+   plus a melee walk-in, the convertible reported before the raid and not instead of it.
+
+What the rulings did **not** touch, and what therefore remains open from this audit: the tooling gaps
+(`pillage` has no verb; the rally leg is dead code; no LOS oracle; `SIEGE FIRE` suppressed at staging
+distance; `WOUNDED IN REACH` CLI-only; `get_deal_options` in `07`'s Step 0; the camp-prohibition was
+the only one of the four that was pure prose), and the delivery finding.
 
 ## The four failure classes, with the evidence
 
@@ -90,12 +122,12 @@ but the doctrine text stays behind. Three concrete reasons:
 
 | finding | evidence |
 |---|---|
-| Siege establishment is **2** in `01:17` and `06:9`, while the human instruction and the directive say **3 Catapults per city** (`directive.md:223`) and the live rule requires `units(CATAPULT,TREBUCHET,BOMBARD,ARTILLERY) >= 3` (`turn-checks.md:224`). `06:66` even describes "a three-Catapult train". The staging tool itself is right: `staging.py:45` `_ESTABLISHMENT = {"siege": 3, ...}` and it prints "the assault establishment is **3 siege** ..." (`staging.py:445`). | an obedient session keeps `siege-train` red forever |
-| `07:234,288,345` answer gate 4 with "Battering Ram -> Siege Tower", and `06:11` keeps a ram/tower row. The directive forbids both ("we build neither ... no tower is built", `directive.md:171-176`), and `turn-checks.md:217-219` agrees; gate 4's answer is the Catapult. | a 07-based proposal orders a forbidden unit |
-| `07:114` says `mass-on-contact` enforces camp concentration "exactly as a war"; the rule is gated `metric(at_war) >= 1` (`turn-checks.md:142`) and a raid sets no war, so **nothing** enforces the two-attacker rule for camps. `02:43` makes the same claim for peacetime barbarian contact. | measured rule text |
+| Siege establishment was **2** in `01:17` and `06:9` while the directive said 3 and the live rule required `>= 3` (`turn-checks.md:224`). **Resolved 2026-09-30**: the row is now a band of 1-3 by the arithmetic, the rule's floor is 1, and `end_turn._WAR_TRAIN` carries floor 1 / target 3. | kept an obedient session's `siege-train` red; now it cannot |
+| `07:234,288,345` answered gate 4 with "Battering Ram -> Siege Tower", and `06:11` kept a ram/tower row, against the directive's "we build neither". **Resolved 2026-09-30**: no ram and no tower, built or fielded, in every file that mentioned them. | a 07-based proposal used to order a forbidden unit |
+| `07:114` said `mass-on-contact` enforces camp concentration "exactly as a war"; the rule was gated `metric(at_war) >= 1` (`turn-checks.md:142`) and a raid sets no war, so **nothing** enforced the two-attacker rule for camps. **Resolved 2026-09-30**: the rule now fires on `at_war` **or** `camps_within_3`. | measured rule text |
 | `06:10` "melee are the only units that can take the city" - contradicted by `06:104-107` and by `take-the-city` ("melee, anti-cavalry and **cavalry**", `turn-checks.md:190`). | the file contradicts itself |
 | `01:19` ends the anti-cavalry chain at Pike and Shot, but `counter-the-cavalry` counts only `SPEARMAN, PIKEMAN, AT_CREW` (`turn-checks.md:86`) - `UNIT_PIKE_AND_SHOT` is a suffix mismatch and counts 0. | the rule cannot be satisfied by the unit the file recommends |
-| `military-map.md:104-108` still orders "**Do not clear barbarian camps near our territory**", while the directive (human instruction 2026-09-26) makes a camp a target, `tactics/07` carries six camp gates, and `answer-the-camp` is live (`turn-checks.md:353`). The advisor's role file contradicts the very tactic file it is briefed with. | the worker is told the opposite of the file |
+| `military-map.md:104-108` ordered "**Do not clear barbarian camps near our territory**", while the directive made a camp a target and `answer-the-camp` was live (`turn-checks.md:353`). **Resolved 2026-09-30**: the bullet is now the camp doctrine, with the raid-as-war line. | the advisor's role file contradicted the file it was briefed with |
 | `03:36-37` "an enemy inside a city must not be left alive" - the directive's garrison rule says the opposite: a garrisoned unit **takes no damage** while the city is attacked and is removed only by taking the city (`directive.md:193-201`, `manual.clean.txt:1065`). | the file orders fire at a target that cannot be hurt |
 
 ### B. A tool that does not exist, or cannot run

@@ -231,8 +231,12 @@ fought again from nothing.
 
 ### Gate 4 — walls have an answer
 
-Without a siege unit or a Siege Tower (melee ignores walls), ranged fire pays the wall penalty and
-the assault stalls. Never start against a walled city without one.
+Without a siege unit, ranged fire pays the wall penalty and the assault stalls. Never start against a
+walled city without one, and let the wall pool decide **how many**: one gun is enough where the ground
+and the ranged line already cover it, two or three when they do not (human instruction 2026-09-30:
+攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以). **No
+Siege Tower and no Battering Ram is the answer here** (不生产也不使用撞锤/攻城塔): the Catapult is, and a
+melee unit beside a tower we do not field is a melee unit trading blows for nothing.
 
 **Read the walls before assuming.** Every Russian city was wall-less for the entire T103–T130 war
 (`walls 0/0` in every probe), which made the Battering Ram a 65-production unit that did nothing for
@@ -285,7 +289,6 @@ policy card is worth more than a thousand gold. Priority order:
 |---|---|---|
 | Professional Army policy card | 0 | halves every upgrade below |
 | 4x Archer -> Crossbowman | 250 each (125) | +15 ranged strength each, and ranged is the only zero-retaliation damage |
-| Battering Ram -> Siege Tower | 80 (40) | melee ignores walls — the answer to gate 4 |
 | 3x Heavy Chariot -> Knight | 320 each (160) | +20 combat strength each, which is what `match-their-melee` complains about |
 | Military-leaning government | free on change | more military policy slots |
 
@@ -342,7 +345,8 @@ queue of sieges, and every city kept eats a unit.
 - Never start against a **garrisoned** city on archer fire alone: two Archers do not beat the heal.
 - Never assume a tile will take a shot because it is two tiles away — walk the ring and order one
   shot before the assault depends on it.
-- Never start against a walled city without a siege unit or a Siege Tower.
+- Never start against a walled city without a siege unit - and never with a Siege Tower or a Battering
+  Ram, which this army neither builds nor fields (human instruction 2026-09-30: 不生产也不使用撞锤/攻城塔).
 - Never let a city sit at 0 HP with no capture-capable unit **adjacent and unspent** — that is the
   whole bombardment thrown away.
 - Never leave a wounded unit inside an enemy's reach.

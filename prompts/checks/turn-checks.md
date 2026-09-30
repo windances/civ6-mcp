@@ -113,7 +113,11 @@ message: An enemy within 2 tiles is at 20 HP or less and nothing attacked this t
 Once a war is on, a second unit standing on a city tile is doing exactly what the first one is
 already doing, while the front is one unit short - and a unit that was attacked and never
 answered invites the next attack. `metric(at_war)` is 1 when this turn's diary row records a
-war (diplomatic state 6), so these rules only apply in wartime.
+war (diplomatic state 6). **A camp raid counts as a war for the rules that answer a fight**
+(human instruction 2026-09-30: 突袭也算战争): the two answer rules below fire on `at_war` **or**
+`camps_within_3`, while the garrison and upgrade rules stay wartime-only, because a raid is a fight
+and not an occupation. A barbarian contact with no camp within three tiles still does not set either
+one - `camps_within_3` is the raid proxy the metric set has.
 
 When a unit *is* hit - or the moment enemy forces are discovered in contact - the answer is not
 a trade: assess the enemy, mass the units standing nearby, and kill. Every input that decision
@@ -132,16 +136,16 @@ message: A city is holding more than one unit while the war is on. One garrison 
 
 <!-- check
 id: answer-the-attack
-when: metric(at_war) >= 1 and metric(damaged_this_turn) >= 1
+when: (metric(at_war) >= 1 or metric(camps_within_3) >= 1) and metric(damaged_this_turn) >= 1
 require: metric(attacks_this_turn) >= 1
-message: One of your units was attacked this turn and nothing answered it. Assess the enemy (the BATTLE ASSESSMENT block in the result lists class, strength, HP and how many of your units are in range), mass the nearby units, and kill - fight back at the attacker, close on the wounded unit to screen it, or pull it out of reach. If the answer is a withdrawal or a heal rather than an attack, say so in the diary's tactical line.
+message: One of your units was attacked this turn and nothing answered it. This fires at war **and on a camp raid** (human instruction 2026-09-30: 突袭也算战争). Assess the enemy (the BATTLE ASSESSMENT block in the result lists class, strength, HP and how many of your units are in range), mass the nearby units, and kill - fight back at the attacker, close on the wounded unit to screen it, or pull it out of reach. If the answer is a withdrawal or a heal rather than an attack, say so in the diary's tactical line.
 -->
 
 <!-- check
 id: mass-on-contact
-when: metric(at_war) >= 1 and metric(enemies_within_2) >= 1
+when: (metric(at_war) >= 1 or metric(camps_within_3) >= 1) and metric(enemies_within_2) >= 1
 require: metric(local_superiority) >= 2
-message: Enemy units are in contact and only one of your units is within two tiles of them. Do not trade one-for-one - the enemy heals and you do not get the unit back. Assess (the BATTLE ASSESSMENT block lists class, strength, HP and how many of your units are in range), pull the nearby units into contact so that two or three hit the same target, and kill it this turn. If every contacted enemy really can only be faced by one unit - a lone garrison, a unit with nothing within two turns of it - withdraw it to terrain or a city and say so in the diary, rather than leaving it to be defeated in detail.
+message: Enemy units are in contact and only one of your units is within two tiles of them. **A raid is a war** (human instruction 2026-09-30: 突袭也算战争), so this fires while clearing a camp exactly as it does on a front. Do not trade one-for-one - the enemy heals and you do not get the unit back. Assess (the BATTLE ASSESSMENT block lists class, strength, HP and how many of your units are in range), pull the nearby units into contact so that two or three hit the same target, and kill it this turn. If every contacted enemy really can only be faced by one unit - a lone garrison, a unit with nothing within two turns of it - withdraw it to terrain or a city and say so in the diary, rather than leaving it to be defeated in detail.
 -->
 
 <!-- check
@@ -214,15 +218,18 @@ capture cannot.
 
 ## The assault train (before any declaration of war)
 
-The directive's list for one city: about 3 siege, 2 melee, 4 ranged, 1
-cavalry — **no ram or tower** (human instruction 2026-09-26: 不用锤，用投石车, 一城3投石车). Only checked once a
+The directive's list for one city: **1-3 siege by the arithmetic, not by a fixed number**
+(human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，
+一辆也可以 - two or three Catapults depending on the situation, not hard-coded; one is enough when the ground
+and the ranged line can do the work), 2 melee, 4 ranged, 1 cavalry — **no ram or tower, ever** (human
+instruction 2026-09-26 and 2026-09-30: 不用锤，用投石车, and 不生产也不使用撞锤/攻城塔). Only checked once a
 war is plausible (turn 90+), because early game it is noise.
 
 <!-- check
 id: siege-train
 when: turn() >= 90
-require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 3
-message: Fewer than 3 siege units for one city. Ranged fire is not a substitute for siege - a Trebuchet breaks walls far faster than any Crossbowman, and three Catapults (~260 a turn measured) out-damage a city's ~20/turn heal many times over, which is what keeps a siege bounded. This is the gap that turned a 170-turn campaign into cities that took ten turns each.
+require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 1
+message: No siege unit at all. Ranged fire is not a substitute for siege - a Trebuchet breaks walls far faster than any Crossbowman, and that gap turned a 170-turn campaign into cities that took ten turns each. **One is the floor; the number is a judgement, not a quota** (human instruction 2026-09-30): two or three guns when the walls are thick, the ring is open and the city heals faster than the ranged line can chip it, and one when the ground or the ranged line already covers it. Decide with the arithmetic - wall pool divided by the wall damage each gun does per turn, against the city's ~20 HP/turn heal and what the shooters add - and write the number you chose and why in the diary's tactical line. tactics/01 and tactics/06 carry the same rule.
 -->
 
 <!-- check

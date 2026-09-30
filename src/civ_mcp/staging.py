@@ -38,10 +38,13 @@ _PREFERRED_DISTANCE = {
 # Ordered by what the assault needs first when two units want the same tile.
 _ROLE_PRIORITY = {"siege": 0, "melee": 1, "short-ranged": 2, "ranged": 3}
 
-# What one city's assault actually needs (the directive's establishment): 3 siege, 2 melee,
+# What one city's ring can usefully seat (the directive's establishment): up to 3 siege, 2 melee,
 # 4 ranged - and the cavalry is counted in the melee bucket, because both are capture-capable
 # front-line units and the plan does not need to tell them apart. Everything above these caps
-# is surplus, and surplus has a job: see the ladder in `render`.
+# is surplus, and surplus has a job: see the ladder in `render`. These are **caps, not quotas**:
+# siege is 1-3 by the arithmetic (human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况
+# 而定，不写死，当地面和远程部队攻击力够的话，一辆也可以 - two or three by the situation, and one is
+# enough when the ground and the ranged line cover it), so a plan with one gun is complete.
 _ESTABLISHMENT = {"siege": 3, "melee": 3, "ranged": 3, "short-ranged": 1}
 
 
@@ -442,8 +445,9 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
         killing = [a for a in result.surplus if a.note == "KILL"]
         depth = [a for a in result.surplus if a.note not in ("SUPPLY", "ADVANCE", "KILL")]
         lines.append(
-            "  SURPLUS (the assault establishment is 3 siege / 3 melee-or-cavalry / 4 ranged —"
-            " everything else has a job, and it is not a firing tile):"
+            "  SURPLUS (the ring seats up to 3 siege / 3 melee-or-cavalry / 4 ranged - siege being"
+            " 1-3 by the arithmetic, so one gun is a complete plan - and everything above the caps"
+            " has a job, which is not a firing tile):"
         )
         for a in on_supply:
             if result.camp:

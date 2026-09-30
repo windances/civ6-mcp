@@ -14,16 +14,30 @@ economy keeps compounding.
 
 | Role | Count for one assault | Types |
 |---|---|---|
-| Siege | 2 | Catapult → Trebuchet → Bombard |
+| Siege | **1-3, by the arithmetic** | Catapult → Trebuchet → Bombard |
 | Melee | 2 | Warrior → Swordsman → Man-at-Arms |
 | **Anti-cavalry** | **1** | Spearman → Pikeman → Pike and Shot |
 | Ranged | 4 | Slinger → Archer → Crossbowman, plus China's Crouching Tiger |
 | Cavalry | 1 | Horseman → Knight (survivor hunter, reaches past the screen) |
 | **Recon** | **1** | Scout → Ranger, or a spare cavalry unit |
-| Ram / tower | **only one already owned** | Battering Ram / Siege Tower - never bought (see the production order) |
+| Ram / tower | **never - not built, not fielded** | Battering Ram / Siege Tower |
 
-**Three rows changed after the A2 experiment (2026-09-29), and each one is a measurement rather than a
-preference:**
+**The siege number is the one row that is not a count.** Human instruction 2026-09-30 settled it:
+攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以 - two or three
+Catapults by the situation, not hard-coded, and **one is enough when the ground and the ranged line
+already do the work**. The arithmetic that decides it:
+
+- what the wall pool is (read it before the declaration: `walls none` is a number, not a missing one);
+- what each gun does per turn against that pool (Catapult 45, Trebuchet 45, Bombard 55), times the
+  number of guns that actually have a firing tile;
+- against the city's ~20 HP/turn heal **and** what the ranged line adds.
+
+One gun is a complete plan when that sum beats the heal; two or three when it does not. The diary
+carries the number chosen and the sum behind it, because a number nobody wrote down is the thing a
+later review cannot check. The rule (`siege-train`) enforces the **floor of one**, not a quota.
+
+**Four rows changed after the A2 experiment (2026-09-29) and the raid/camp rulings (2026-09-30), and
+each one is a measurement or a human instruction rather than a preference:**
 
 - **`Anti-cavalry` was missing entirely.** `counter-the-cavalry` was red for the whole of A2's assault
   because nothing in the army could answer a Heavy Chariot: the city-state parked one **adjacent to both
@@ -33,10 +47,12 @@ preference:**
   twenty-six turns unable to read the target's walls, HP or garrison - the numbers `tactics/07`'s gates
   ask for. The first Catapult shot finally produced `walls: none` in one line. A role the table does not
   name is a role the empire does not build.
-- **The ram row was unsatisfiable as written.** It asked for one ram while the human instruction two
-  paragraphs below forbids buying one, so "the establishment is complete" was a claim no obedient session
-  could satisfy: A2 read `siege 2/2, ram 0/1` at its best moment. It is now a *conditional* row - an
-  already-owned ram joins the assault, and nothing is bought for that slot.
+- **The ram row is gone.** It was first an unsatisfiable ask, then a conditional one; human instruction
+  2026-09-30 settled it as **不生产也不使用撞锤/攻城塔** - neither built nor fielded, so the row now reads
+  "never" and no assault plan carries one.
+- **The siege row is a band, not a count.** Human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际
+  情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以. The row reads 1-3 and the arithmetic below
+  decides it; `siege-train` enforces the floor of one.
 
 Peacetime establishment is different and smaller: **one garrison per city plus one mobile unit**.
 Once a war is on, that is the cap, not the floor - everything above one unit per city belongs at
@@ -47,10 +63,10 @@ the front (`one-garrison-per-city`).
 1. **Anything the assault is missing, first.** Siege outranks everything that
    is merely nice: the whole point of the train is that it exists *before* the war, not during
    it. A campaign in this game built zero siege units and took ten turns per city. **No ram and
-   no tower is bought** (human instruction 2026-09-26: 不用锤，用投石车) — the Catapult is the
-   wall-breaker, and a support unit that only helps melee beside a city is production the siege
-   could have had. The ram the empire already owns is the exception: it **does** join the assault
-   (same day: 已经有攻城锤，就参战).
+   no tower, ever** (human instruction 2026-09-26: 不用锤，用投石车; 2026-09-30: 不生产也不使用撞锤/
+   攻城塔) - the Catapult is the wall-breaker, and a support unit that only helps melee beside a city
+   is production the siege could have had. **A ram the empire already owns is not an exception**: it
+   is not fielded either, and it is a garrison unit like any other.
 2. **Then the screens**: melee to hold the front tile, ranged to fire from range 2.
 3. **Then the economy buildings** the empire is short of (food first where a city is stalled).
 
@@ -75,9 +91,10 @@ the front (`one-garrison-per-city`).
 - Trebuchet 200 / CS 35 / 45 (Military Engineering, no resource).
 - Bombard 280 / CS 45 / 55 (needs Niter - mine it at home; an import ends when you declare war).
 - Battering Ram 65 and Siege Tower 100 are support units: they help **melee only**, must stand
-  adjacent to the target city, and **both go obsolete at `CIVIC_CIVIL_ENGINEERING`**. They are never
-  bought (the production order above), and a ram the empire already owns is the only case in which one
-  joins an assault; if a wall has to come down, that is what the siege row is for.
+  adjacent to the target city, and **both go obsolete at `CIVIC_CIVIL_ENGINEERING`**. Human
+  instruction 2026-09-30: 不生产也不使用撞锤/攻城塔 - **neither is built and neither is fielded**, including
+  any ram the empire already owns, which stays a garrison unit. If a wall has to come down, that is what
+  the siege row is for.
 - Upgrades are usually the cheapest strength in the game: Slinger → Archer (Archery),
   Warrior → Swordsman (Iron Working), Horseman → Knight (Stirrups). An old unit at full health
   plus gold is a new unit without the production queue.

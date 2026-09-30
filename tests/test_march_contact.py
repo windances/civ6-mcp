@@ -208,7 +208,10 @@ class TestTheRules:
                 "gold_per_turn": 30, "at_war": 1, "local_superiority": 0, "enemies_massed_on": 0,
                 "siege_units": 0, "siege_exposed": 0, "damaged_this_turn": 0,
                 "unused_attacks": 0, "cities_over_garrison": 0, "cities_guarded": 0,
-                "weakest_enemy_hp_within_2": 0, "enemies_within_3": 0}
+                "weakest_enemy_hp_within_2": 0, "enemies_within_3": 0,
+                # The answer rules fire on `at_war` or a camp raid (human instruction 2026-09-30:
+                # 突袭也算战争), so the raid proxy must be present for the expression to evaluate.
+                "camps_within_3": 0}
         base.update(metrics)
         return turn_checks.CheckContext(turn=100, units={}, metrics=base, researched=frozenset())
 

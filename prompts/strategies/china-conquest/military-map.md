@@ -101,11 +101,17 @@ every distance-based judgement suspect.
   (`weakest_enemy_hp_within_2`) before denting a healthy one.
 - Report a deliberately ignored enemy (a lone scout, or a barbarian unit kept
   alive for Thirty-Six Stratagems) as a stated decision, not as an omission.
-- **Do not clear barbarian camps near our territory.** Barbarians upgrade with the
-  era, so a live camp is a source of era-appropriate units. Suppress its units
-  with ranged fire where they threaten a city, and report any barbarian whose type
-  is worth converting, so the human player can use the leader ability from the
-  game UI.
+- **A barbarian camp near our territory is a target, and it is cleared by force** (human instruction
+  2026-09-26, reconfirmed 2026-09-30: 清理野蛮营地). Barbarians upgrade with the era, so an uncleared
+  camp keeps producing era-appropriate units beside our cities - the camp at (60,30) produced the
+  Spearman that forced a 160-gold Warrior purchase at T65. Run `tactics/07`'s six camp gates
+  (`CAMP / GUARD / FORCE / GROUND / WORTH / HOLD`), and one military unit **moving onto the camp's
+  tile** destroys it: ranged fire plus a melee walk-in against barbarian Spearmen, never cavalry into
+  spears, never a Scout, Builder or Trader at a camp. **A raid counts as a war** (human instruction
+  2026-09-30: 突袭也算战争), so `mass-on-contact` and `answer-the-attack` fire on it too - two attackers
+  on one guard, not one. Report any barbarian whose type is worth converting **before** the raid, so
+  the human player can use the leader ability from the game UI, and do not let that report delay the
+  clear.
 - Rank unit survival above territorial gain, and give civilian survival the
   highest `priority` you assign.
 

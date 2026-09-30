@@ -76,6 +76,13 @@ def row(turn: int, **fields) -> dict:
 
 
 class TestWarTrainStatus:
+    """The train's counts, with siege as a **band** rather than a quota.
+
+    Human instruction 2026-09-30 settled the siege row: two or three Catapults by the arithmetic,
+    not hard-coded, and one is enough when the ground and the ranged line cover the wall pool. So
+    the shortfall is measured against a floor of one and the row prints the band.
+    """
+
     def test_counts_each_role_and_names_the_gap(self):
         units = {
             1: unit(1, "UNIT_ARCHER"),
@@ -83,15 +90,18 @@ class TestWarTrainStatus:
             3: unit(3, "UNIT_CATAPULT"),
         }
         train, missing = _war_train_status(units)
-        assert "siege 1/3" in train
+        assert "siege 1 (want 1-3 by the arithmetic)" in train
         assert "ranged 1/4" in train
-        assert "2 siege" in missing
+        assert not any("siege" in item for item in missing), (
+            "one gun is a complete siege plan; the floor is 1, not 3"
+        )
+        assert "3 ranged" in missing
         assert not any("ram" in item for item in missing), (
-            "the train still asks for a ram or tower; human instruction 2026-09-26 is 不用锤，用投石车"
+            "the train still asks for a ram or tower; human instructions 2026-09-26 and 2026-09-30"
         )
 
     def test_a_complete_train_reports_none_missing(self):
-        # Three siege units for one city (一城3投石车), not two.
+        # Three siege units is the top of the band, and every other role at its count.
         units = {
             1: unit(1, "UNIT_CATAPULT"),
             2: unit(2, "UNIT_TREBUCHET"),
@@ -108,21 +118,28 @@ class TestWarTrainStatus:
         _, missing = _war_train_status(units)
         assert missing == []
 
-    def test_two_siege_units_are_not_enough_for_one_city(self):
-        # The gap that matters: what the empire had at T110 (2 Catapults) is one short.
+    def test_two_siege_units_are_inside_the_band(self):
+        # What the empire had at T110 (2 Catapults) is no longer one short: 2 is inside 1-3.
         train, missing = _war_train_status({1: unit(1, "UNIT_CATAPULT"), 2: unit(2, "UNIT_CATAPULT")})
-        assert "siege 2/3" in train
+        assert "siege 2 (want 1-3 by the arithmetic)" in train
+        assert not any("siege" in item for item in missing)
+
+    def test_no_siege_unit_at_all_is_the_shortfall(self):
+        # One Catapult is the floor, and the rule `siege-train` enforces exactly that.
+        train, missing = _war_train_status({1: unit(1, "UNIT_ARCHER")})
+        assert "siege 0 (want 1-3 by the arithmetic)" in train
         assert "1 siege" in missing
 
     def test_a_battering_ram_is_not_a_role(self):
-        # It is in the roster and it counts for nothing: the Catapult is the wall-breaker.
+        # It is in the roster and it counts for nothing: the Catapult is the wall-breaker, and
+        # since 2026-09-30 neither a ram nor a tower is built or fielded.
         train, missing = _war_train_status({1: unit(1, "UNIT_BATTERING_RAM")})
         assert "ram" not in train
         assert len(missing) == 4
 
     def test_no_units_is_not_a_crash(self):
         train, missing = _war_train_status({})
-        assert "siege 0/3" in train and len(missing) == 4
+        assert "siege 0 (want 1-3 by the arithmetic)" in train and len(missing) == 4
 
 
 class TestReviewText:

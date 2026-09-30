@@ -76,16 +76,19 @@ Two consequences that decide whether the assembly finishes on schedule:
 
 ## Step 3 — what must be true before the column moves
 
-1. **The assault list is complete** first: **3 siege per city** (一城3投石车), 2 melee, 4 ranged,
-   1 cavalry
-   (`siege-train`, `ranged-mass`, `melee-screen`) — **no ram and no tower** (human instruction
-   2026-09-26: 不用锤，用投石车). Staging
+1. **The assault list is complete** first: **1-3 siege by the arithmetic** (human instruction
+   2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以 -
+   two or three by the situation, and one when the ground and the ranged line cover the walls), 2 melee,
+   4 ranged, 1 cavalry
+   (`siege-train`, `ranged-mass`, `melee-screen`) — **no ram and no tower, ever** (human instruction
+   2026-09-26: 不用锤，用投石车; 2026-09-30: 不生产也不使用撞锤/攻城塔). Staging
    with a missing role is how a war starts that cannot be finished.
 2. **The composition is justified by THIS target.** Every Russian
-   city in the T103–T130 war read `walls 0/0` from first contact to the last, so the Battering Ram —
+   city in the T103–T130 war read `walls 0/0` from first contact to the last, so a Battering Ram —
    65 production, dragged across the map — did nothing for seventeen turns, and the Catapult is a
    damage tool rather than a wall-breaker. Read the walls (file 7, gate 4) before deciding what to
-   bring; leave the ram at home when the answer is "no walls".
+   bring, and let the wall pool decide the **number** of guns: one is enough where the ranged line
+   and the ground already cover it, and none of that is a reason to carry a ram.
 3. **Reinforcements already in motion.** The declaration waits for the formation, not the other way
    round: the directive's rule is that a war you cannot finish is a war you must not start.
 4. **Full health.** A stack that arrives wounded spends the first two turns of the war healing; heal
@@ -380,9 +383,9 @@ before the declaration and again the turn the stack forms:
    `Catapult 1769485 and Xbow 2752533 were fortified in place because the corridor is jammed`, i.e.
    two shooters spent a turn queued behind their own army. Approaches are one or two tiles wide;
    send the surplus round the other side on the *march*, not on the turn the ring has to be filled.
-7. **Do not bring the ram or the melee forward piecemeal to fill a gap.** A bare melee attack did
-   **9** against 100 walls (T150) where the same attack beside the Battering Ram does full damage,
-   and a 55 HP Horseman attacking a walled, garrisoned city was destroyed outright (T154) — the
+7. **Do not bring the melee forward piecemeal to fill a gap.** A bare melee attack did
+   **9** against 100 walls (T150) - it takes the siege's wall work first, and a 55 HP Horseman
+   attacking a walled, garrisoned city was destroyed outright (T154) — the
    ring is filled by units that can survive on it, in the order that lets them support each other.
 
 ## Step 7 — the go/no-go
@@ -409,8 +412,9 @@ is only safe *because* the war has not started is not a rally point.
 - Do not put two **military** units on one rally tile: the adapter refuses it with
   `STACKING_CONFLICT|... Cannot stack same formation class` (measured T132 — the Man-at-Arms was
   refused onto (55,36) because a Catapult stood there). Melee and siege each need their own tile;
-  only a **support** unit (the ram) may share a tile with a military one, and that is how it is
-  meant to work. When the rally row is written down, give every military unit its own hex.
+  a **support** unit is the only class the game lets share a tile with a military one, and this army
+  fields none of them (human instruction 2026-09-30: 不生产也不使用撞锤/攻城塔). When the rally row is
+  written down, give every unit its own hex.
 - **Do not assume you choose the start date.** Twice now (T103 on the abandoned branch, and T139–T140
   on this one) forming up inside the enemy's sight produced **their** declaration while our line was
   still one or two turns from complete — the Archer appears, the war starts, and the first turn is
@@ -419,10 +423,9 @@ is only safe *because* the war has not started is not a rally point.
   place). Both are plans; drifting into contact is not.
 - Do not stage with the siege train in front or unscreened, even at a safe distance — the
   formation is file 5.
-- Do not drag the ram toward a city read as `walls none`: it only helps melee against walls, so it
-  earns its place beside a walled target and stays behind otherwise. The ram we own **does** come on
-  the march (human instruction 2026-09-26: 已经有攻城锤，就参战), but no tower and no second ram is
-  built (same day: 不用锤，用投石车).
+- Do not plan around a support unit: **no ram and no tower is fielded at all** (human instruction
+  2026-09-30: 不生产也不使用撞锤/攻城塔), not even one the empire already owns - it stays a garrison unit,
+  and nothing new is built. The siege row is the wall answer.
 - Do not order a unit to fire on the turn it must spend two points to enter the ring: it arrives with
   nothing left, and the attack is refused.
 - Do not keep the army parked at the rally point once the formation is complete: an assembled
@@ -445,8 +448,8 @@ is only safe *because* the war has not started is not a rally point.
 RALLY  (x,y) — distance to the city n, to the nearest enemy unit n, second city within reach: yes/no
 FUEL   slowest unit n tiles / n movement points / n turns out (path, not straight line)
 LANES  n lanes through the corridor; tiles held by foreign units: <list or none>
-READY  assault list: siege n/2, melee n/2, ram n/1, ranged n/4, cavalry n/1
-       composition justified: walls <n/max or none> -> ram needed: yes/no
+READY  assault list: siege n (target 1-3, the number chosen and why), melee n/2, ranged n/4, cavalry n/1
+       composition justified by this target: walls <n/max or none> -> how many guns that needs: n
 HEALTH units below full: <list with HP and where they heal>
 RING   n usable tiles at distance 2 of m checked; assigned: <unit -> tile>; free tiles: n
 CONTACT whoever is in contact, what killing it costs (which units, how many turns off the
