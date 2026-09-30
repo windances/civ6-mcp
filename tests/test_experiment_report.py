@@ -1312,26 +1312,72 @@ def test_settlements_reads_a_founding_and_not_the_refusal_beside_it():
 
 
 def test_verdict_a8_holds_on_two_foundings_a_purchase_and_the_gold_floor():
-    """The three things the claim names, all met: three cities, the second gun bought by T58, gpt above A7's."""
+    """The whole claim met: three cities, the gun bought inside its derived deadline, the floor beaten, T110 above A7's.
+
+    `F = 30` here, which is the case the recut exists for: a third city later than T28 moves the gold floor
+    off T50 and onto the next ten-turn row (T60), because a Market cannot exist by T50 for it.
+    """
     by_turn = _floored(
-        frames({1: {"WARRIOR": 1}, 40: FULL, 47: FULL, 50: FULL, 54: FULL, 60: FULL})
+        frames(
+            {
+                1: {"WARRIOR": 1},
+                40: FULL,
+                47: FULL,
+                50: FULL,
+                54: FULL,
+                60: FULL,
+                110: FULL,
+            }
+        )
     )
     by_turn[40]["gold_per_turn"] = 5.0
     by_turn[50]["gold_per_turn"] = 9.5
+    by_turn[60]["gold_per_turn"] = 6.0  # above A7's 4.1 at T60, the floor turn for F=30
+    by_turn[110].update({"science": 40.0, "pop": 20.0, "gold_per_turn": 30.0})
     rows = [
         _settle_row(21, 53, 21),
         _settle_row(30, 40, 26),
         _city_order_row(45, 11, "UNIT_CATAPULT"),
         _purchase_row(50, "UNIT_CATAPULT"),
     ]
-    questions = report.verdict_a8(by_turn, rows)
+    questions = report.verdict_a8(
+        by_turn, rows, a7_t110={"science": 30.0, "pop": 18.0, "gold_per_turn": 24.0}
+    )
     assert questions[1][1] == report.HELD, questions[1]
     assert "2 of 2" in questions[1][2] and "T30" in questions[1][2]
     assert questions[2][1] == report.HELD, questions[2]
-    assert "T50" in questions[2][2]
+    assert "T58" in questions[2][2] and "F+25" in questions[2][2]
     assert questions[3][1] == report.HELD, questions[3]
-    # The floor is read at T50 and the T40 reading is printed beside it as the prediction, not the bar.
-    assert "9.5" in questions[3][2] and "5.0" in questions[3][2]
+    # The floor moved to T60 with F=30, and the T40 reading is printed as the prediction, not the bar.
+    assert "T60" in questions[3][2] and "6.0" in questions[3][2] and "5.0" in questions[3][2]
+
+
+def test_verdict_a8_moves_the_gold_floor_with_the_founding_turn():
+    """The recut's whole point: a late third city cannot be judged at T50, so the floor moves with `F`."""
+    early = _floored(frames({1: {"WARRIOR": 1}, 40: FULL, 47: FULL, 50: FULL, 54: FULL, 60: FULL}))
+    early[50]["gold_per_turn"] = 9.5
+    early[60]["gold_per_turn"] = 0.0
+    late = _floored(frames({1: {"WARRIOR": 1}, 40: FULL, 47: FULL, 50: FULL, 54: FULL, 60: FULL}))
+    late[50]["gold_per_turn"] = 0.0
+    late[60]["gold_per_turn"] = 9.5
+    rows = {
+        "early": [_settle_row(21, 53, 21), _settle_row(28, 55, 22)],
+        "late": [_settle_row(21, 53, 21), _settle_row(30, 40, 26)],
+    }
+    # F=28 reads the floor at T50; F=30 reads it at T60 - and the two readings are swapped between them.
+    assert "T50" in report.verdict_a8(early, rows["early"])[3][2]
+    assert "T60" in report.verdict_a8(late, rows["late"])[3][2]
+
+
+def test_verdict_a8_leaves_the_horizon_open_until_a7s_own_t110_is_measured():
+    """An instrument must not answer a comparison whose baseline does not exist yet."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 50: FULL, 60: FULL, 110: FULL}))
+    by_turn[50]["gold_per_turn"] = 99.0
+    by_turn[110].update({"science": 99.0, "pop": 99.0, "gold_per_turn": 99.0})
+    rows = [_settle_row(21, 53, 21), _settle_row(28, 55, 22)]
+    questions = report.verdict_a8(by_turn, rows, a7_t110={"science": None, "pop": None, "gold_per_turn": None})
+    assert questions[3][1] == report.OPEN, questions[3]
+    assert "not been measured" in questions[3][2]
 
 
 def test_verdict_a8_falsifies_when_the_second_gun_was_built_and_not_bought():
@@ -1377,7 +1423,7 @@ def test_verdict_a8_leaves_the_gold_floor_open_before_fifty():
     by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL}))
     questions = report.verdict_a8(by_turn, [])
     assert questions[3][1] == report.OPEN, questions[3]
-    assert "no T50 row" in questions[3][2]
+    assert "no readable row yet" in questions[3][2]
 
 
 def test_asked_questions_dispatches_every_named_set():
