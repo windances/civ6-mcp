@@ -109,3 +109,4 @@ Task 037 was retired as `done/037-attempt-a6-the-first-siege-unit-is-bought-done
 Task 038 was retired as `done/038-attempt-a7-two-war-cities-done-T60.md`.
 
 Task 039 was retired as `done/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline-done-T110.md`.
+| `040-attempt-a8-three-cities-the-third-one-an-economy-city.md` | 2026-09-30 | turn 115 | settle a third city with a market queue and buy the second siege unit with gold | turn 110 is reached - the claim's last number (A8's science, pop and gold_per_turn against A7's at |
