@@ -209,6 +209,18 @@ against 31), before the target has had any effect at all. The doctrine fixes *wh
 the executor matched them.** A2 carries the deviation and reads its verdicts with it in hand - which is
 why a difference between A1 and A2 is a candidate cause, not a single cause.
 
+**A8 measured the other half of that gap: the pin covers production and not research.** Its task file
+pinned the opening build exactly - and A8 matched all four orders plus the variable - but **said nothing
+about the research order**, which no attempt's file ever has. It went `MINING` -> `POTTERY` -> `WRITING`
+-> `CURRENCY`, an economy-first line, where A1-A7 all took `THE_WHEEL` at T8 and reached `ENGINEERING`
+around T22: **A8 ordered `THE_WHEEL` at T41**, so the gate the whole assault establishment is built
+behind moved with it. The doctrine is not silent by accident - a grep of `directive.md` and `tactics/01`
+for a prescribed research order finds none, only the Catapult's own requirements - so this was a free
+choice inside the doctrine and not a deviation from it. **The lesson is the one the production pin came
+from, applied one layer out**: "one variable" holds only for the things the file writes down, so **a
+later task file should pin the first research choices the way A3-A8 pin the first four builds**, or say
+in the record that the research path is free and read the establishment turn with that in hand.
+
 Two consequences to write into A2's task file rather than discover in it:
 
 - **A city-state is a legitimate target for this experiment and not for the standing directive.** The

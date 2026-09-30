@@ -201,6 +201,16 @@ attribute to the variable. Each is recorded the turn it happens.
    shape change, but it competes with the army for the same city's turns.
 4. **`military` at T10 is 28 against A7's 34** - six down, within what the T5-T6 barbarian fight
    explains, and noted here so the gap is not credited to the third city later.
+5. **The research path is economy-first, and it moved the siege gate itself.** A8 went `MINING` T1 ->
+   `POTTERY` T8 -> `WRITING` T13 -> `CURRENCY` T21 -> `ANIMAL_HUSBANDRY` T39 -> **`THE_WHEEL` T41**,
+   where A1-A7 all took `THE_WHEEL` at **T8** and reached `ENGINEERING` around **T22**. Every attempt's
+   file pins the *production* opening and none has ever pinned research, so this is a free choice - a grep
+   of `directive.md` and `tactics/01` for a prescribed research order finds none, only the Catapult's own
+   requirements. **Its consequence is what matters to the verdict**: the assault establishment is built
+   behind Engineering, and at T43 A8 had not ordered it, so **Q1's T60 deadline and Q3's T60 purchase
+   deadline are both exposed to a gate that opens late** - a reason that is **not the variable** and must
+   be read beside them. The protocol consequence is written into `README.md` section 3: a later task file
+   should pin the first research choices the way A3-A8 pin the first four builds.
 
 ## The wonder obligation is deferred, deliberately
 
