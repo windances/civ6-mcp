@@ -763,3 +763,67 @@ report `POLICIES_SET` and still fail with `WARN:SILENT_FAILURE` naming what each
 retry one slot per call and confirm with `get_policies`; a Great Person activates the turn AFTER the one
 that moved him onto his district; and `skip_remaining_units(force=True)` prints every attack it
 discards, which is the only audit trail for a deliberate discard.
+
+## Task 040 - A8, three cities with the third one an economy city: retired `--done --turn 110`
+
+**The one variable was the third city.** A8 ordered a second Settler and gave the third city (Taiyuan,
+founded T35 at (55,23), advisor score 215, fresh water, five hexes from 西安) a market queue -
+`BUILDING_MONUMENT` -> `DISTRICT_COMMERCIAL_HUB` -> `BUILDING_MARKET` -> `UNIT_BUILDER` - where every
+earlier attempt had either held at two cities or taken its third by capture.
+
+**The four measurements, and the verdict under the claim's own falsification rule.** The second siege
+unit was `PURCHASED|UNIT_CATAPULT|cost=320g (had 446g)` on T59 against a deadline of `max(T58, F+25)` =
+T60 - bought, not built, one turn inside it, with the first Catapult produced in 西安 the same turn. The
+gold-floor turn was T60 and A8 read **+12.0** there against A7's 4.1. At T110, read at turn start:
+
+| field | A8 T110 | A7 T110 |
+|---|---|---|
+| cities | 3 | 3 |
+| pop | 28 | 25 |
+| science | 60.9 | 57.6 |
+| gold_per_turn | +71.0 | +60.0 |
+| districts | 8 | 9 |
+| improvements | 13 | 14 |
+| territory | 49 | 46 |
+| treasury / military / era score | 96 / 332 / 48 | 604 / 616 / 51 |
+| trade capacity (active) | 5 (4) | 4 (3) |
+| explored | 27% | 43% |
+
+All three T110 figures exceed A7's, so the claim is **confirmed on its numbers**.
+
+**The causal half is not, and that is the attempt's finding.** The settled third city did not fund the
+second gun. The purchase was made at T59, sixteen turns before Taiyuan's Market arrived (T76), and the
+T60 floor was carried by the Muscat trade route, Caravansaries, Pingala and Reyna's Tax Collector. The
+gold that decided the horizon came from trade-route capacity and four running routes, from the two
+established governors, and - decisively - from **two policy cards**, Town Charters and Merchant
+Confederation, put in at T102-T103 and worth about +24 gold/turn between them. The science column was
+6.8 short with one turn left, after the Medieval Golden Age's expiry and a Dark Age cost 10.6 science at
+the T107/T108 era boundary, and it was closed by **200 faith spent on a patronized Isaac Newton plus a
+670g University - +10.1 science in one turn**. Total gold spent on purchases across the run: **1730g**
+(Catapult 320, two Traders 160 each, Beijing's walls 210, Taiyuan's walls 210, Taiyuan's University 670).
+
+**What the third city actually supplied**: a Campus site, a fresh-water luxury cluster, a domestic food
+route and trade-route capacity. The T40 row shows what it cost before it paid - `gpt_T40` **5.3**, at or
+below A7's 6.1 exactly as the claim predicted, with 3 cities, pop 9, science 7.7 and one district.
+
+**Divergences, each recorded in the diary on its turn**: war with Maori declared T87 (still open at
+T110, no city exchanged either way); two defensive wall purchases (Beijing T87, Taiyuan T99); a Dark Age
+at the Renaissance boundary with COMMEMORATION_INFRASTRUCTURE chosen; and **no wonder built** - the
+task's explicit override, `dynasty-cycle-wonder` red from T25 and accepted out loud rather than by
+silence.
+
+**The experiment generator's own verdict block** (`scripts/experiment-report.py`, A8's four sessions -
+volcanic-ochre-catapult-47, tempered-jet-temple-30, silver-vermil-pennant-47, zealous-sepia-catapult-56)
+reads `FALSIFIED P1` (a siege unit ordered by T45; A8's first siege order is T53, which is the design -
+the pin's fifth slot is the second Settler, not tactics/01's siege first), `FALSIFIED P2` (establishment
+complete by T60) and `FALSIFIED P3` (first enemy city kept by T80 - none), with `P4` (the gold floor)
+HELD. P1's falsification is the attempt, not a deviation from it.
+
+**Tooling for A9.** The funding arm is proven - 1730g of purchases all landed on time. The levers that
+actually moved a column were a policy-slot reading (`get_policies`, all forty-odd lines), trade-route
+capacity, two established governors and a 200-faith Great Person, not the Market. Two hazards: A7's
+continuation and A8 share `diary_china_911679432.jsonl`, so every TURN START delta, every "you planned
+this turn" line and every 10-TURN REVIEW window over T60-T110 mixes the two runs (read the rows whose
+city list matches the live one, and prefer the run-filtered report); and a flood can re-pillage a
+repaired district building within two turns, because repairing a district repairs the district only -
+Beijing's Market was pillaged twice in four turns for exactly that reason.

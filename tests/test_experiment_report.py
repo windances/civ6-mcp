@@ -1109,6 +1109,42 @@ def test_siege_purchases_counts_only_what_the_game_acknowledged():
     assert report.siege_purchases([_purchase_row(44, "UNIT_ARCHER")]) == []
 
 
+def _overview_row(turn: int, science: float, gpt: float, pop: int) -> dict:
+    """A logged `get_game_overview` - the game's own turn-start figures (A8's T110, verbatim)."""
+    text = (
+        f"Turn {turn} | China (Qin (Unifier)) | Score: 247 | Prince\n"
+        f"Gold: 96 (+{gpt:.0f}/turn) | Income: 99 | Maintenance: -28 (units: 15) | "
+        f"Science: {science} | Culture: 29.1 | Faith: 86\n"
+        f"Research: Siege Tactics | Civic: Humanism\n"
+        f"Cities: 3 | Population: {pop} | Units: 18"
+    )
+    return {"turn": turn, "tool": "get_game_overview", "params": {}, "result": text,
+            "result_summary": text}
+
+
+def test_overview_economy_reads_the_horizon_row_the_diary_never_wrote():
+    """A8 retired on reaching T110 and stopped before writing the diary's T110 row.
+
+    The claim's discriminating comparison is the T110 trio, so `OPEN` would have been
+    indistinguishable from *lost*. The game's own overview carries the same three numbers, in the
+    attempt's own log, and the gold figure is the net one - so the fallback is comparable to the
+    diary rather than merely similar.
+    """
+    rows = [_overview_row(109, 60.9, 62.6, 28), _overview_row(110, 60.9, 71.0, 28)]
+    assert report.overview_economy(rows, 110) == {
+        "turn": 110, "science": 60.9, "gold_per_turn": 71.0, "pop": 28.0,
+    }
+    # A turn the log never read is None, not an empty row - the caller must be able to say which.
+    assert report.overview_economy(rows, 105) is None
+    # A reply that does not carry all three numbers is not a row.
+    assert report.overview_economy([{"turn": 110, "tool": "get_game_overview",
+                                     "result": "Turn 110 | China"}], 110) is None
+    # The last read of the turn wins: a turn re-read after re-planning reports the later figures.
+    assert report.overview_economy(
+        [_overview_row(110, 60.9, 71.0, 28), _overview_row(110, 61.5, 72.0, 29)], 110
+    ) == {"turn": 110, "science": 61.5, "gold_per_turn": 72.0, "pop": 29.0}
+
+
 def test_war_declared_reads_the_games_own_reply():
     """A2's three declarations answered WARN:WAR_UNCERTAIN and changed nothing, so this reads the reply."""
     uncertain = {"turn": 60, "tool": "send_diplomatic_action",

@@ -656,6 +656,51 @@ def pin_check(rows: list[dict]) -> dict:
     }
 
 
+#: The game's own turn-start figures, as `get_game_overview` prints them. Three lines of the reply
+#: carry the three numbers an attempt's horizon comparison is made of:
+#:   Gold: 96 (+71/turn) | Income: 99 | Maintenance: -28 (units: 15) | Science: 60.9 | ...
+#:   Cities: 3 | Population: 28 | Units: 18 -- ...
+#: The gold figure is the **net** one (`Income` minus `Maintenance`), which is what the diary's own
+#: `gold_per_turn` is, so the two sources are comparable rather than merely similar.
+OVERVIEW_SCIENCE_RE = re.compile(r"Science:\s*([\d.]+)")
+OVERVIEW_GPT_RE = re.compile(r"Gold:\s*\d+\s*\(\+?([\d.]+)/turn\)")
+OVERVIEW_POP_RE = re.compile(r"Population:\s*(\d+)")
+
+
+def overview_economy(rows: list[dict], turn: int) -> dict | None:
+    """The log's own `get_game_overview` figures for one turn, or None if the log has no read of it.
+
+    **Why this exists**: the horizon comparison reads the diary's per-ten-turn row, and an attempt that
+    ends **at the start of** its horizon turn never writes one - the session retires on reaching the
+    turn and stops before the row exists. Measured in A8 at T110: its row is absent, A7's is present,
+    and the claim's discriminating comparison read `OPEN` with nothing to distinguish "not measured
+    yet" from "measured and lost". The game's own overview carries the same three numbers and is in
+    the attempt's own log, which is the record of the attempt, so it is read as the fallback and the
+    reader says which source it used.
+
+    Last read of the turn wins: a turn can be read more than once as it is re-planned.
+    """
+    found: dict | None = None
+    for row in rows:
+        if row.get("tool") != "get_game_overview":
+            continue
+        if (row.get("turn") or 0) != turn:
+            continue
+        text = f"{row.get('result') or ''}\n{row.get('result_summary') or ''}"
+        science = OVERVIEW_SCIENCE_RE.search(text)
+        gpt = OVERVIEW_GPT_RE.search(text)
+        pop = OVERVIEW_POP_RE.search(text)
+        if not (science and gpt and pop):
+            continue
+        found = {
+            "turn": turn,
+            "science": float(science.group(1)),
+            "gold_per_turn": float(gpt.group(1)),
+            "pop": float(pop.group(1)),
+        }
+    return found
+
+
 #: The game's own acknowledgement of a purchase (`civ_mcp/lua/cities.py:929`, the MCP strips `OK:`).
 #: The reply a refused `purchase_item` gives carries the item's name but never this word, which is why
 #: the reader keys on it rather than on the call's parameters.
@@ -1853,6 +1898,14 @@ def verdict_a8(
 
     keys = ("science", "pop", "gold_per_turn")
     row110 = by_turn.get(110)
+    horizon_source = "the diary's T110 row"
+    if row110 is None:
+        # The attempt may have stopped at the start of T110 and never written the row; the game's own
+        # overview is in its log (see `overview_economy`).
+        row110 = overview_economy(rows, 110)
+        horizon_source = "the log's own T110 `get_game_overview`"
+    if row110 is None:
+        horizon_source = "no T110 row in the diary and no T110 overview in the log"
     horizon_ok: bool | None = None
     if row110 and all(isinstance(a7_t110.get(k), (int, float)) for k in keys):
         horizon_ok = all(
@@ -1860,7 +1913,7 @@ def verdict_a8(
             for k in keys
         )
     horizon_text = (
-        "; T110 "
+        "; T110 (from " + horizon_source + ") "
         + ", ".join(
             f"{k} {row110.get(k)} vs A7's {a7_t110.get(k)}"
             if isinstance(row110.get(k), (int, float))

@@ -301,3 +301,10 @@ purchase** - and hand back to the orchestrator.
      at: 2026-09-30T15:53:53+08:00
      chinese backup: prompts/tasks/cn/040-attempt-a8-three-cities-the-third-one-an-economy-city.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 040 --done --turn 110 --note "A8's claim is CONFIRMED on its numbers and only partly on its cause. The second UNIT_CATAPULT was bought at T59 for 320g from a 446g treasury against the deadline max(T58, F+25) = T60, with the first produced in Xi'an the same turn; the T60 gold floor read +12.0 against A7's 4.1; and at T110 science 60.9 v 57.6, pop 28 v 25 and gold_per_turn 71.0 v 60.0 all beat A7. But the settled third city (founded T35) reached its Market only at T76, after the floor it was meant to move: the gold came from trade routes, Reyna's Tax Collector and two policy cards worth +24/turn, and the science column was closed by a 200-faith patronized Isaac Newton worth +10 science. Total gold spent on purchases in the run: 1730g."
+     at: 2026-09-30T19:00:16+08:00
+     status: done at T110
+     chinese backup: prompts/tasks/cn/040-attempt-a8-three-cities-the-third-one-an-economy-city.cn.md
+-->
