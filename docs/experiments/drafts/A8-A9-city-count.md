@@ -1,10 +1,12 @@
 ﻿# A8 / A9 - the city count as the variable (three cities, then four)
 
-**Status: design note, not published.** Neither attempt has a task file, and neither should get one
-until the pre-flight in section 7 has been run - no attempt in the programme has ever read the settle
-advisor *after* its second city existed, so the third and fourth sites on this start are unknown. This
-note exists so that when the pre-flight is taken the claim is already written and can be cut to its
-arithmetic the way A6's and A4's were, before ~70 turns are spent playing it.
+**Status: A8 is published and playing; A9 is not published and waits on it.** A8's task file is
+`prompts/tasks/tmp/040-attempt-a8-three-cities-the-third-one-an-economy-city.md`, its record is
+`008-attempt-A8.md` (in `drafts/` as front matter plus a running section), and section 10 below is what
+it has measured so far. A9 still must not be published before A8 ends: two attempts in force at once
+would put two instructions in the same turn loop. The pre-flight in section 7 was taken and is
+straightened out in section 3b; the claims in section 5 below are A8's, and A9's are cut from the same
+arithmetic.
 
 ## 1. What is genuinely untested
 
@@ -233,4 +235,47 @@ cleaning a game session cannot take down the interface driving it.
 shared T1 start. **The stale heartbeat is the trap this order removes**: left in place it describes a run
 that no longer exists, and a `"phase": "playing", "turn": N` from a dead session is exactly what makes a
 stopped game look live.
+
+**And the same recipe hands A8 to A9**, with one difference that matters: A8 will end by **retiring task
+040 at T110**, so the A9 publish happens after that retirement and not before, and the shared start is
+loaded over A8's position exactly as A8 was loaded over A7's.
+
+## 10. What A8 has measured, and what it does to A9
+
+**A8 is at T66 while this is written and three of its four questions are decided** (the full reads are in
+`008-attempt-A8.md`): `Q2` three cities settled **HELD** - the pin's fifth slot ordered the second
+`UNIT_SETTLER` and the city was founded **T35**, which is the first time the programme has held three
+cities without taking one; `Q3` the second siege unit **bought by the deadline HELD**,
+`PURCHASED|UNIT_CATAPULT|cost=320g (had 446g)` at **T59** against `max(T58, F+25) = T60`; `Q1` the
+establishment **FALSIFIED** at T60, short `anticav 0/1`, `cavalry 0/1` and `ranged 2/4`; and `Q4`'s floor
+clause answered at **`gpt` +12.0 against A7's 4.1** while its mechanism is unproven and its T110 trio is
+still to come.
+
+**Three of those are inputs to A9's own claim, and one of them is new arithmetic.**
+
+1. **The extra Settler's cost is no longer an estimate.** Section 2 computes A9's third Settler at **221
+   Quick production, about 18 turns of 西安's queue, and three population points** out of the war city.
+   A8's measured version of the same trade is smaller and already visible: one extra Settler cost it the
+   establishment outright at T60. A9 spends **two** more than A8 did, so its establishment question is
+   not a harder version of A8's - it is the same question with a bigger number in front of it.
+2. **The market chain's clock is now measured, and it is long.** A8's third city took
+   `BUILDING_MONUMENT` at T35, its `DISTRICT_COMMERCIAL_HUB` at T48 with a **14-turn** quote, so its
+   Market sits about **T70** - and the empire's first Market actually landed in city #2 at **T59**. A
+   fourth city on the same chain puts its Market past T80, so **A9's gold claim has to be written
+   against the T110 horizon and not against a deadline**, which is what the A8 task file's own
+   `expires:` note already anticipated.
+3. **Settle-first has a cost A9 has not yet priced: the raids.** A8 ran four districts and five
+   buildings' worth of queue on a five-unit army, and Xi'an's **Library was pillaged at T54**, five turns
+   after it finished, with farms pillaged at T36/T37 and again at T60. The `carrying-capacity` rule read
+   red on the T59 review (`gold/turn +8.0 with military 272 - BELOW the +10 the directive requires`).
+   A fourth city spends more of the same queue, so A9 should state **what garrison and what repairs it
+   expects to pay for**, or the attempt will spend its own variable's budget on barbarians.
+
+**What A9 should therefore carry, cut before it is played**: the same four-question shape, with the
+establishment question demoted to a *divergence* (A8 has already shown the settle-first opening does not
+reach the T60 table), and the discriminating number at T110 made the primary claim - four settled cities
+against A7's three, on `science`, `pop` and `gold_per_turn`, with the Settler arithmetic above as the
+stated price. Whether A9 runs at all is the human's call, and the honest input to it is that **A8's
+result so far is a purchase and a floor clause held, an establishment falsified, and a T110 comparison
+still unread** - a mixed answer, not a green light.
 
