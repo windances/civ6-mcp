@@ -92,7 +92,7 @@
 "取所有存档中最大的回合数"（`AutoSave` 家族自洽且名字领先一回合，max 恰好等于真实回合：
 T216 的例子是 `AutoSave_0217`→216 胜过错名的 `0_MCP_0215`→215）。
 
-## 六、这个窗口的教训如何落地了（对照 `AGENTS.md` 的落地阶梯）
+## 六、这个窗口的教训如何落地了（对照 `docs/experiments/README.md` 的落地阶梯）
 
 - **L1 代码 + 回归测试**（`b295c3d`）：`get_staging_plan` 小数移动力崩溃、`unused_attacks`
   幽灵条目、`cut-the-supply` 点名空格、集结的 `RALLY` 段。

@@ -66,7 +66,8 @@ walled target changed and what it did not**.
 
 - A3's row in `RETRO-2026-09-29.md`'s "the attempts since A2, one row each".
 - Any finding this attempt produced, with its **sink** (code + test / a check rule / the task file / the
-  directive / the tactics file / this retro), in the ladder the retro's section 2 uses.
+  directive / the tactics file / this retro), in the ladder defined in `docs/experiments/README.md`
+  section 5 ("The landing ladder").
 - The owed list, if A3 closed or opened something on it.
 
 ## 6. Retire 034 and publish A4 - one commit, in this order

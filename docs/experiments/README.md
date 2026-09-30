@@ -318,8 +318,8 @@ The rules that keep this honest:
 4. **A finding that changes the doctrine goes into the doctrine**, not only into this directory:
    `prompts/tactics/01` for a production rule, `turn-checks.md` for a rule the engine can enforce,
    `pending/` when its metric does not exist yet, a task file for a bounded objective. This is the
-   same ladder `docs/retrospectives/` uses; a finding that lands nowhere is a diary entry and will
-   be lost.
+   same ladder `docs/retrospectives/` uses (defined once, below); a finding that lands nowhere is a
+   diary entry and will be lost.
 5. **The diary keeps the last write per turn.** After a rollback, the early turns belong to the
    abandoned branch while the logs still hold both. An attempt that was rolled back says so at the
    top of its record, or its numbers will be read as one continuous game.
@@ -334,3 +334,36 @@ The rules that keep this honest:
    which of the directive's standing goals are live in the shipped file**, and a goal restored by hand
    is restored before the attempt's first decision, not after. `docs/experiments/CHINA-KIT-AUDIT.md`
    is the case; the class-level fix is staged in the retro's section 5.
+
+### The landing ladder
+
+**A finding lands at the lowest level that can hold it, and a restatement at a weaker level does not
+count as landing it.** The levels, strongest first. This is the same ladder the retrospectives reason
+in and the A3 runbook enumerates (`drafts/a3-endgame-runbook.md`, section 5: *"code + test / a check
+rule / the task file / the directive / the tactics file / this retro"*); it is written down here
+because three files referred to it and none of them held it - each pointed at the next, and the last
+pointed at a section of `AGENTS.md` that no longer exists (measured 2026-09-30).
+
+| level | the artifact | what makes it hold |
+|---|---|---|
+| **L1** | **code + a regression test** | the tool cannot do the wrong thing again - `tests/` fails if it tries |
+| **L2** | **a check rule** (`prompts/checks/turn-checks.md`) | `end_turn` evaluates it every turn and prints `CHECK FAILED ... (require: metric(...))`, and the diary must fix it or record why it is accepted. `prompts/checks/pending/` while its metric does not exist |
+| **L3** | **a task file** (`prompts/tasks/tmp/`) | it is in force, with the game-queryable `done when:` and `expires:` that retire it |
+| **L4** | **the directive** (`prompts/strategies/<preset>/directive.md`) | it is injected into the skill, delivered once per change, and it is the strategy |
+| **L5** | **a tactics file** (`prompts/tactics/`) | it is **reference material**: the agent reads it when the directive or `AGENTS.md` sends it there, or when it looks it up. Nothing enforces it |
+| **L6** | **the record** (this directory, `docs/retrospectives/`, `docs/task-history.md`, `done/`) | it preserves the reasoning and changes no behaviour |
+
+**A worked example, and it is why the distinction earns its keep.** The three phases - analysis
+(`prompts/tactics/07-pre-war-analysis.md`), staging (`prompts/tactics/04-staging-out-of-range.md`),
+execution (`prompts/tactics/05` and `06`) - are mandated at **L4**: the directive restates them, so they
+reach the agent every session. Their **consequences** are enforced at **L2**: `screen-the-siege`,
+`cut-the-supply`, `siege-train`, `ranged-mass` and `melee-screen` all fire from board state. **But no
+metric exists for "the analysis was done" or "a staging plan was written", so those two sit at L4/L5 as
+statements and can be skipped silently** - which is what happened in A6, which arrived with a complete
+establishment and a bought gun and left its target at `200/200` with `SIEGE FIRE: 1/2`. A finding that
+the gates were skipped therefore has **nowhere above L4 to land until a metric exists for it**, and
+saying so is worth more than restating the rule a third time.
+
+**The corollary for choosing a sink**: L1-L3 change what the machine does; L4-L6 change what the agent
+is told or what a reader can reconstruct. Only the first three survive a session that stops reading.
+
