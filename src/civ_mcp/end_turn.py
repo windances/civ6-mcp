@@ -42,6 +42,7 @@ _CONTACT_METRIC_KEYS = (
     "siege_units",
     "siege_exposed",
     "siege_in_city_range",
+    "siege_firing_alone",
     "siege_city_distance_min",
     "enemy_cities_seen",
     "downed_enemy_cities",
@@ -1240,6 +1241,7 @@ def _siege_metrics(posture: list) -> dict:
         "siege_units": len(posture or []),
         "siege_exposed": 0,
         "siege_in_city_range": 0,
+        "siege_firing_alone": 0,
         "siege_city_distance_min": 999,
     }
     for entry in posture or []:
@@ -1250,6 +1252,16 @@ def _siege_metrics(posture: list) -> dict:
         metrics["siege_city_distance_min"] = min(
             metrics["siege_city_distance_min"], int(getattr(entry, "city_distance", 999) or 999)
         )
+    # **One gun in range, which is the measured signature of an assault that lands nothing.**
+    # A6 arrived with a complete establishment and a Catapult bought with gold, and its target
+    # finished the window at `200/200` with `SIEGE FIRE: 1/2`: a siege unit does 45-52 against a
+    # city where an Archer does 9-11 into a CS 35 garrison, and a city heals about twenty a turn
+    # while any adjacent hex is outside our zone of control - so **two guns out-damage the heal and
+    # one does not**. The directive counts *units*; what fires is *shots*, and this is the metric
+    # that separates the two: it is 1 exactly when a train is deployed and only one of its guns can
+    # reach the target.
+    if metrics["siege_units"] and metrics["siege_in_city_range"] == 1:
+        metrics["siege_firing_alone"] = 1
     return metrics
 
 

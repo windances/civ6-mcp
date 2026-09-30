@@ -326,6 +326,75 @@ class TestSiegePosture:
         assert et._siege_metrics([])["siege_units"] == 0
         assert et._siege_metrics([])["siege_exposed"] == 0
 
+    def test_one_gun_in_range_is_the_assault_that_lands_nothing(self):
+        """`siege_firing_alone`: the train is deployed and only one of its guns can reach.
+
+        This is A6's measured signature, and it is why the metric counts **shots and not units**:
+        A6 arrived with a complete establishment and a Catapult bought with gold, and its target
+        finished the window at `200/200` with `SIEGE FIRE: 1/2`. A siege unit does 45-52 against a
+        city and the city heals about twenty a turn, so two guns out-damage the heal and one does
+        not - the directive's "3 Catapults" is a count of units, and this is the number that says
+        how many can actually fire.
+        """
+        alone = self.posture(city_distance=2)
+        assert et._siege_metrics([alone])["siege_firing_alone"] == 1
+
+        # The train that can actually fire is not alone, however many units are standing about.
+        two_in_range = [
+            self.posture(city_distance=1),
+            self.posture(x=54, y=38, city_distance=2),
+        ]
+        assert et._siege_metrics(two_in_range)["siege_firing_alone"] == 0
+
+        # Three units and one shot: still alone, and that is the case the metric exists for.
+        one_shot_of_three = [*two_in_range, self.posture(x=60, y=30, city_distance=8)]
+        assert et._siege_metrics(one_shot_of_three)["siege_in_city_range"] == 2
+        assert et._siege_metrics(one_shot_of_three)["siege_firing_alone"] == 0
+        far_train = [
+            self.posture(city_distance=2),
+            self.posture(x=54, y=38, city_distance=8),
+            self.posture(x=60, y=30, city_distance=9),
+        ]
+        assert et._siege_metrics(far_train)["siege_firing_alone"] == 1
+
+        # A train marching towards its target is not an assault that has begun: it is 0 when
+        # nothing is in range, because the rule keyed on it must not fire during staging.
+        marching = [self.posture(city_distance=4), self.posture(x=54, y=38, city_distance=5)]
+        assert et._siege_metrics(marching)["siege_in_city_range"] == 0
+        assert et._siege_metrics(marching)["siege_firing_alone"] == 0
+
+        # And no siege units at all is not the failure either.
+        assert et._siege_metrics([])["siege_firing_alone"] == 0
+
+    def test_the_firing_metric_is_exposed_to_rules_and_safe_on_a_stored_row(self):
+        """A rule may key on it, and a diary row must read 0 rather than `un-evaluable`.
+
+        `_CONTACT_METRIC_KEYS` is what `_context_from_row` fills with zeros: a key missing from it
+        makes its rule report `un-evaluable` on every row-based pass, which reads as a permanent
+        streak and shifts the TURN START verdict - the trap that took `attacks-that-land-nothing`
+        and `power-the-cities` in and out of the live file.
+        """
+        assert "siege_firing_alone" in et._CONTACT_METRIC_KEYS
+
+    def test_the_rule_is_staged_until_a_server_computes_the_metric(self):
+        """`concentrate-the-siege` is staged, and promoting it is the two-file move.
+
+        A rule naming a metric the running server does not know reports itself `un-evaluable` on
+        every turn and nobody can satisfy it - a rule that looks alive and is not. The metric here
+        is new, so the rule waits in `pending/` for a server started after this commit.
+        """
+        root = pathlib.Path(__file__).resolve().parents[1]
+        staged = root / "prompts/checks/pending/concentrate-the-siege.md"
+        live = root / "prompts/checks/turn-checks.md"
+        assert staged.is_file(), "the rule is staged until a server computes the metric"
+        text = staged.read_text(encoding="utf-8")
+        assert "id: concentrate-the-siege" in text
+        assert "metric(siege_firing_alone) >= 1" in text
+        assert "id: concentrate-the-siege" not in live.read_text(encoding="utf-8"), (
+            "promoting it is the two-file move pending/README.md describes, and only once a server "
+            "computing `siege_firing_alone` is running"
+        )
+
     def test_the_event_names_the_exposed_unit_only_when_it_matters(self):
         text = et._siege_posture_event([self.posture()], et._siege_metrics([self.posture()]), 116)
         assert "UNIT_CATAPULT@(54,39)" in text
