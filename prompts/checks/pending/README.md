@@ -22,4 +22,11 @@ capture-readiness scan): both were cut in at T174, once a server computing their
   failure this directory exists to prevent, reintroduced by the staging format itself. Measured
   2026-09-30: both staged files here were written without a `message:` and would have been dropped on
   promotion; `tests/test_pending_rules.py` now holds every staged rule to the promotable shape.
+- **A staged file's `level:` is not automatically the live convention.** All **24** rules in
+  `../turn-checks.md` are `warn`, and **none of them declares a `level:` line at all** (measured
+  2026-09-30, the day the third rule was promoted), while both staged files here say `level: error`. The
+  only thing `level` does is sort the reported failures - `end_turn.py:1093` reads
+  `priority=1 if check.level == "error" else 2` - so promoting a staged block verbatim would introduce
+  the file's first `error` rules and quietly change what the agent reads first. Decide it on purpose:
+  carry the `level:` over, or drop it to match the file. `concentrate-the-siege` was promoted as `warn`.
 - A rule that needs no new metric does not belong here: write it straight into `../turn-checks.md`.
