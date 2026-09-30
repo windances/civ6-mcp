@@ -8,14 +8,33 @@ held the city count fixed at two in every attempt - no second Settler was ever o
 third cities in the record were all **captured**. A8 adds the second Settler and gives the third city a
 market queue instead of an army queue. Nothing else changes.
 
-## Start: the shared start
+## Start: the shared start, and the one trap that has already cost this programme a session
 
 0. `get_game_status`. **This attempt is measured from the experiment's shared start**:
-   `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`. If the game does not stand on it, load that save
-   (`restart_and_load`, or the save list) and say in the diary which turn the loaded save holds. Playing
-   A8 on another position makes its numbers incomparable with A1-A7, which is the one thing the experiment
-   cannot afford.
-1. Then `get_diary` and one `scripts\orient.py` read.
+   `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`. Playing A8 on another position makes its numbers
+   incomparable with A1-A7, which is the one thing the experiment cannot afford - so **the first thing to
+   get right is the load, and it is not one call.**
+
+   **The trap, measured in the A5 handover (2026-09-30)**: `list_saves()` and `load_save(index)` are
+   **two different lists**. `list_saves()` returns the **filesystem** scan, capped at the newest 25 - and
+   the shared start is old by definition, so as soon as an attempt has played a session it falls off that
+   list entirely. `load_save(index)` reads the **game's own Lua list**, whose order is not the scan's: in
+   the measured case the scan showed the save at index 1 and the Lua list had it at **index 12**. Loading
+   by the scan's index loads the wrong save or nothing.
+
+   **The recipe that worked, in order**: if the save is missing from `list_saves()`, touch its mtime so the
+   scan sees it again (its contents are unchanged - that was verified by hash); then drive the Lua list
+   (`_list_saves_lua`) so the cache `load_save` reads is populated; then `load_save` by **that** index.
+   The MCP-side half of this is now fixed (`load_save` populates the cache itself instead of answering
+   `No save list cached`), so if you do see `No save list cached` say so in the diary - it means the fix
+   is not in the running server.
+
+   **Then verify the load before playing anything**: `get_game_overview` must read **turn 1**. If it reads
+   any other turn, **stop and say so** - a whole attempt played on the wrong position is worse than no
+   attempt, and it is not recoverable by arithmetic afterwards.
+1. Then `get_diary` and one `scripts\orient.py` read. On a fresh T1 position the diary's early rows belong
+   to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
+   unavailable rather than as A8's own history.
 
 ## The opening is pinned, and the pin's fifth slot is the variable
 
