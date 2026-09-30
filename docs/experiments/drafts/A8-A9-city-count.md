@@ -135,11 +135,14 @@ pinned opening is overridden to a second Settler (settle-first), and the third c
 and routes, not army.
 
 > **Hypothesis (falsifiable by numbers):** the third city's *first* contribution is gold, not
-> production - it buys the **second** Catapult. The number is the turn a **second** siege unit is
-> purchased: **before T58**, against A6's single purchase at T46 (`PURCHASED|UNIT_CATAPULT|cost=320g
-> (had 396g)`), with `gpt_T40` above the **+10** floor that A7 missed on all 60 of its turns
-> (`gpt_T40 6.1`). Falsified if no second purchase happens by T58, or if `gpt_T50` is no higher than
-> A7's.
+> production - it buys the **second** Catapult. The number is the **second** siege unit **in hand by
+> T58, bought and not built**, against A6's single purchase at T46 (`PURCHASED|UNIT_CATAPULT|cost=320g
+> (had 396g)`) - A6 bought the *first*, A8 produces the first and buys the second, and the compare
+> block already carries that caveat for A6's `siege_order` column. The floor is **`gpt_T50` above A7's
+> 8.1**, which is the clause a market is supposed to move; **`gpt_T40` is a prediction and not a bar** -
+> it is expected at or below A7's 6.1, because a third city founded about T30 has no market by T40 and
+> is meant to cost gold before it pays. Falsified if the second siege unit is not in hand by T58, if it
+> was built rather than bought, or if `gpt_T50` is not above 8.1.
 
 **A9 - four cities, and it answers A8's open end.** Same variable, one more dose: if A8 shows the third
 city paying, A9 shows whether it scales; if A8 shows it not paying, A9 locates the turn the curve goes

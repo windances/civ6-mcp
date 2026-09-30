@@ -88,11 +88,25 @@ second**, so the two attempts' purchase columns are not the same act - the compa
   **320g** out of a 396g treasury (`PURCHASED|UNIT_CATAPULT|cost=320g`), and the programme's arithmetic
   said **two** were impossible before about T70 on the path it was computed from, which is the claim the
   third city's gold is supposed to break;
-- and the floor: **`gpt_T40` above +10**, which A7 missed on **all 60** of its turns (`gpt_T40 6.1`) and
-  A6 missed as well (`5.4`), A4's 13.9 being the only attempt above it - bought with Pingala's science
-  rather than with markets;
+- and the floor, **taken at T50 and not at T40, because the arithmetic says a third city cannot be paying
+  at T40**: `gold_per_turn` at **T50 above A7's 8.1** - A7's own T50 row, read out of the merged A7 report
+  (`--game china_911679432 --run divine-amber-outpost-82,stormborn-azure-palisade-94`). The directive's own
+  floor is **+10**, and across the programme only **A4** ever stood above it (`gpt_T40 13.9` against A7's
+  6.1 and A6's 5.4) - and A4's was bought with Pingala's science, not with markets. **This is the clause
+  the third city's market is supposed to move;**
+- and a **prediction to check, not a bar to clear**: **`gpt_T40` will be at or below A7's 6.1.** A third
+  city founded about T30 has `BUILDING_MONUMENT` -> `DISTRICT_COMMERCIAL_HUB` -> `BUILDING_MARKET` to build
+  at a young city's production, so at T40 it is a garrison and a Builder's maintenance with **no market
+  yet** - it is *supposed* to cost gold before it pays. If T40 reads above A7's 6.1, say what paid for it,
+  because the market cannot have;
+- **the confound is already in the record, and it is A7's own curve**: the continuation's merged report
+  reads `gpt` **8.1 at T50, 4.1 at T60, 2.1 at T70 and 11.8 at T76** - so **A7 crosses the directive's +10
+  on its own, with no market at all**, on the strength of the Campus and eight improved tiles. A8 therefore
+  cannot claim the market merely because its `gpt` ends high; **T50 is the discriminator**, because that is
+  the window in which A7's own climb has not yet arrived. Judge the market at T50, and if A8 is only ahead
+  at T76, say that the market did not do it;
 - **falsified** if the second siege unit is not in hand by T58, if it was built rather than bought, or if
-  `gpt_T50` is no higher than A7's.
+  `gpt_T50` is not above A7's 8.1.
 
 If the treasury cannot fund a second purchase, **that is the answer**: say so, name the turn the gold
 actually reached 320, and do not sell the plan by building it quietly instead - the attempt exists to
