@@ -194,6 +194,70 @@ class TestTheScan:
         assert not m.CaptureReadiness("X", 1, 1, hp=200, max_hp=200).down
 
 
+class TestTheCaptureGap:
+    """`capture_uncovered`: a city at 0 HP that no capture-capable unit can reach.
+
+    This is `tactics/07`'s gate 3 ("a capture-capable unit can be adjacent at the start of the turn
+    the pool empties") missed, and it is invisible to everything else: `capture_ready` is 0 in
+    exactly this state, so the `take-the-city` rule - whose `when:` is `capture_ready >= 1` - stays
+    silent while the pool refills. Measured: Moscow sat at 0/200 with a Spearman two tiles away,
+    was back to 120/200 six turns later, and the siege had to be fought again from nothing.
+    """
+
+    def metrics(self, *readiness):
+        return et._capture_metrics(list(readiness))
+
+    def test_a_healthy_city_is_not_a_gap(self):
+        assert self.metrics(m.CaptureReadiness("X", 1, 1, hp=200, max_hp=200))["capture_uncovered"] == 0
+
+    def test_a_downed_city_with_a_unit_adjacent_is_ready_not_uncovered(self):
+        metrics = self.metrics(m.CaptureReadiness("X", 1, 1, hp=0, max_hp=200, melee_adjacent=1))
+        assert metrics["capture_ready"] == 1
+        assert metrics["downed_enemy_cities"] == 1
+        assert metrics["capture_uncovered"] == 0
+
+    def test_a_downed_city_with_nothing_in_reach_is_the_gap(self):
+        metrics = self.metrics(m.CaptureReadiness("X", 1, 1, hp=0, max_hp=200, melee_adjacent=0))
+        assert metrics["downed_enemy_cities"] == 1
+        assert metrics["capture_ready"] == 0, "the take-the-city rule cannot see this state"
+        assert metrics["capture_uncovered"] == 1
+
+    def test_a_unit_two_tiles_away_is_not_in_reach(self):
+        # `melee_within_2` is a neighbour of the city, not a unit on it: the walk-in takes a turn,
+        # and a turn is about twenty points of healing.
+        metrics = self.metrics(
+            m.CaptureReadiness("X", 1, 1, hp=0, max_hp=200, melee_adjacent=0, melee_within_2=3)
+        )
+        assert metrics["capture_uncovered"] == 1
+
+    def test_the_counts_add_up_across_cities(self):
+        metrics = self.metrics(
+            m.CaptureReadiness("A", 1, 1, hp=0, max_hp=200, melee_adjacent=1),
+            m.CaptureReadiness("B", 2, 2, hp=0, max_hp=200, melee_adjacent=0),
+            m.CaptureReadiness("C", 3, 3, hp=40, max_hp=200, melee_adjacent=2),
+        )
+        assert metrics["downed_enemy_cities"] == 2
+        assert metrics["capture_ready"] == 1
+        assert metrics["capture_uncovered"] == 1
+
+    def test_the_metric_is_exposed_to_rules_and_safe_on_a_stored_row(self):
+        # A key missing from the tuple makes its rule report `un-evaluable` on every row-based pass,
+        # which reads as a permanent streak and shifts the TURN START verdict.
+        assert "capture_uncovered" in et._CONTACT_METRIC_KEYS
+
+    def test_the_rule_is_live_and_parses(self):
+        from civ_mcp import turn_checks
+
+        live = (pathlib.Path(__file__).resolve().parents[1] / "prompts/checks/turn-checks.md").read_text(
+            encoding="utf-8-sig"
+        )
+        parsed = {check.check_id: check for check in turn_checks.parse_checks(live)}
+        rule = parsed.get("cover-the-capture")
+        assert rule is not None, "the rule is live in the shipped file"
+        assert rule.require == "metric(capture_uncovered) == 0"
+        assert rule.message.strip(), "a block without a message is skipped by parse_checks"
+
+
 class TestCavalryCanCapture:
     """Live T122: a Heavy Chariot took the Free City of Moscow, and the scan had said it could not.
 
@@ -254,6 +318,7 @@ class TestTheMetric:
             "enemy_cities_seen": 0,
             "downed_enemy_cities": 0,
             "capture_ready": 0,
+            "capture_uncovered": 0,
             "enemy_city_hp_min": 999,
             "enemy_supply_open_min": 999,
             "enemy_cities_supplied": 0,

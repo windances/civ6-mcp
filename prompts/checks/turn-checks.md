@@ -190,10 +190,22 @@ require: metric(downed_enemy_cities) <= 0
 message: An enemy city's HP pool is empty and one of our capture-capable units is adjacent to it - the city falls this turn if that unit is ordered onto its tile, and does not if it is not. Melee, anti-cavalry and cavalry units can take a city (a Battering Ram or Siege Tower is refused with CAPTURE_MOVE BLOCKED, and ranged and siege units cannot), and only from the city's own tile. Cavalry was wrongly listed as unable until T122, when a Heavy Chariot walked into Moscow at 0/200 and took it while the scan called the tile empty - so a chariot parked next to a broken city is a capture waiting to happen, not a spectator. A city heals about twenty points a turn: live, Moscow sat at 0/200 with a Spearman two tiles away, was back to 120/200 six turns later, and the siege had to be fought again from nothing. Move the unit in (unit_action action='move', target_x/target_y of the city), then resolve keep/raze with city_action.
 -->
 
+<!-- check
+id: cover-the-capture
+when: metric(capture_uncovered) >= 1
+require: metric(capture_uncovered) == 0
+message: An enemy city's HP pool is empty and no capture-capable unit can walk into it - so the pool is refilling and the siege is being fought again from nothing. This is tactics/07's gate 3 ("a capture-capable unit can be adjacent at the start of the turn the pool empties") missed, and it is invisible to take-the-city, which only fires when a unit is already adjacent. A city heals about twenty points a turn while any adjacent hex is outside our zone of control - measured, Moscow sat at 0/200 with a Spearman two tiles away and was back to 120/200 six turns later. Only a melee, anti-cavalry or cavalry unit can take a city, and only from the city's own tile, so get one into reach now; if none is close, that is the unit to build, buy or bring up, and the next siege stages its walk-in one turn BEFORE the pool empties rather than the turn after.
+-->
+
 `TAKE THE CITY` in the turn result names every enemy city whose HP pool is empty, the melee unit
 in reach of it, and what happens if it is ignored. `metric(capture_ready)` counts the cities that
 are takeable this turn; `downed_enemy_cities` counts all of them, reachable or not, and
 `enemy_city_hp_min` is the lowest city HP pool we can see.
+
+**`capture_uncovered` is the difference between those two**, and it is the number that says the
+siege is being wasted: it counts the cities at 0 HP that **no** capture-capable unit can reach, a
+state `capture_ready` cannot show because it is 0 there, and one the take-the-city check stays
+silent on for the same reason.
 
 Every attack on a city tile records that city's HP, so a siege that is not working looks
 different from one that is. What has no number attached to it is the last step: **the city only

@@ -47,6 +47,7 @@ _CONTACT_METRIC_KEYS = (
     "enemy_cities_seen",
     "downed_enemy_cities",
     "capture_ready",
+    "capture_uncovered",
     "enemy_city_hp_min",
     "enemy_supply_open_min",
     "enemy_cities_supplied",
@@ -1339,6 +1340,7 @@ def _capture_metrics(readiness: list) -> dict:
         "enemy_cities_seen": len(readiness or []),
         "downed_enemy_cities": 0,
         "capture_ready": 0,
+        "capture_uncovered": 0,
         "enemy_city_hp_min": 999,
         # Supply line: an enemy city heals while any adjacent hex is outside our zone of control,
         # so the count of open hexes on the city we are grinding is what decides whether the
@@ -1370,6 +1372,13 @@ def _capture_metrics(readiness: list) -> dict:
             metrics["downed_enemy_cities"] += 1
             if int(getattr(entry, "melee_adjacent", 0) or 0) > 0:
                 metrics["capture_ready"] += 1
+    # **A city at 0 HP with nothing able to walk in is the expensive state, and `capture_ready` is 0
+    # in exactly that case** - so the rule that fires on a takeable city (`take-the-city`) is silent
+    # while the pool refills. tactics/07's gate 3 is "a capture-capable unit can be adjacent at the
+    # start of the turn the pool empties", and this is the count of times that gate was missed.
+    # Measured: Moscow sat at 0/200 with a Spearman two tiles away and was back to 120/200 six turns
+    # later, and the siege had to be fought again from nothing.
+    metrics["capture_uncovered"] = metrics["downed_enemy_cities"] - metrics["capture_ready"]
     return metrics
 
 
