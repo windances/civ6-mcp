@@ -341,8 +341,23 @@ finding as the research-pin note in `README.md` section 3, one step further alon
 
 ## The measurement
 
-`python scripts/experiment-report.py --game china_911679432 --run <sessions> --questions a8` answers the
-four questions the claim is made of; `--save docs/experiments/A8-final.json` writes the snapshot the
+**A8 spans three sessions, and the final snapshot's `--run` must name all three** - this is the trap
+that cut A7's own snapshot short, where a `--run` naming one session made the report start at that
+session's first turn and call everything before it unattributed:
+
+```
+python scripts/experiment-report.py --game china_911679432 ^
+  --run volcanic-ochre-catapult-47,tempered-jet-temple-30,silver-vermil-pennant-47 ^
+  --questions a8 --save docs/experiments/A8-final.json
+```
+
+| session | turns | why it ended |
+|---|---|---|
+| `volcanic-ochre-catapult-47` | T1-T6 | stopped on the double T6 hang; recovered by a relaunch |
+| `tempered-jet-temple-30` | T6-T77 | **its own context budget**, at T77, with the position clean |
+| `silver-vermil-pennant-47` | T77- | the continuation, running under the same task file |
+
+`--questions a8` answers the four questions the claim is made of and `--save` writes the snapshot the
 compare block reads. The diary's **per-10-turn economy rows** are what the comparison uses, and their
 presence is verified per turn rather than assumed.
 
@@ -485,6 +500,89 @@ T36/T37 and again at T60.
 Mil 149, Gold +12** against Māori **4 cities, Sci 13, Mil 102, Gold +15**. So at T60 the empire is
 ahead on science and soldiers, behind on cities and income, and **there is still no enemy city the
 record can name as a target** - which is the other half of what `Q1` measures.
+
+## T70: the like-for-like table, and the claim is live on all three measures
+
+**The pipeline was verified before T110 rather than at it** - the retro's own lesson, since a fault found
+at the verdict cannot be fixed. The command above, run while A8 had only its first two sessions,
+resolved A8's economy rows at **T1, T10, T20, T30, T40, T50, T60, T70 and T73** - every ten-turn row the
+claim needs, including the ones written while the two attempts shared the diary - so the final snapshot
+will have its numbers once the third session id is added to `--run`. The same command run for A7's two
+sessions reaches **T110**, and the two arrays put side by side are the comparison the claim is made of:
+
+| turn | A8 science | A7 science | A8 `gpt` | A7 `gpt` | A8 pop | A7 pop | A8 districts | A7 districts |
+|---|---|---|---|---|---|---|---|---|
+| T40 | **7.7** | 6.3 | 5.3 | 6.1 | **9** | 8 | **1** | 0 |
+| T50 | **20.0** | 14.4 | **13.6** | 8.1 | **12** | 10 | **3** | 0 |
+| T60 | **22.5** | 15.7 | **12.0** | 4.1 | **16** | 14 | **4** | 1 |
+| T70 | **21.1** | 19.4 | **13.0** | 2.1 | **17** | 14 | **4** | 2 |
+
+**A8 leads on all three of the claim's measures at every turn they can be compared**, and the shape of
+the lead is the interesting part. `gold_per_turn` is not close - **13.0 against 2.1 at T70** - which is
+the market-and-library economy doing what the design note said a settled third city would do, and it is
+the one column where the lead is *widening*. `pop` leads 17-14 and `districts` 4-2. **`science` is the
+one that is narrowing**: A8 went **22.5 -> 21.1** across T60-T70 while A7 went **15.7 -> 19.4**, so the
+same lead shrank from +6.8 to +1.7 in ten turns. The T80 row will say whether that is the pillaged
+Library and the absence of a second Campus (A8 has one, with a Library) or the beginning of A7's Campus
+run overtaking it.
+
+**A7's own curve is the confound and it is now visible turn by turn**: from T70 A7 has 40 turns to reach
+its T110 figures - **57.6 science, 25 pop, 60.0 `gpt`** - and it does that with **no market and no
+wonder at all**. So A8's +12 at T70 is not the claim; the claim is the three numbers at T110, and the
+record states the arithmetic it has to beat in advance: **science 57.6, pop 25.0, `gpt` 60.0.**
+
+## T77: the first session hands over, and what it left in the log
+
+**The session that played T6-T77 ended on its own context budget, not on the claim**: it reported at
+T77 with the position clean (all units ordered, all queues set, the game auto-saved), and the
+continuation is the same task file - 040's own `done when:` is T110 and its `expires:` is T115, and its
+step 0 case 2 is written for exactly this ("is the position A8's own run in progress? ... continue from
+where it stands, say which turn you picked it up on and what had already been spent, and do not load
+anything").
+
+**What it confirms, in its own words, and what it adds.** The start was **case 5**, not a fresh T1:
+`get_game_status` found the game parked on China/Qin's leader intro, the diary and `hang_diagnosis.jsonl`
+showed **A8 already in progress at T6** with two `HANG:6:0_MCP_0006` stalls, and the session recovered
+it and continued rather than loading the shared start. That is the recovery this record already
+carries, reported from the other side.
+
+- **The site is a satellite, and the pre-flight was taken properly** - read at **T22 with two cities
+  standing**, `Taiyuan (55,23)`, **score 215, fresh water, defence 2, five hexes from Xi'an**, the whole
+  top ten in one cluster (x54-57 / y22-25). So the design note's fear of a fifteen-to-twenty-turn walk
+  to a far colony is refuted on this map, exactly as its corrected section 3b predicted, and the third
+  city's cost is its own production rather than distance.
+- **The third city's four orders ran as written** - `BUILDING_MONUMENT` T35, `DISTRICT_COMMERCIAL_HUB`
+  T48, `BUILDING_MARKET`, `UNIT_BUILDER` - and **the Market completed at T76**. The chain the design note
+  set out for the third city exists in the log, in order, for the first time in the programme.
+- **The purchase and the floor stand as recorded**, and the session flagged the same caveat this record
+  did, independently: `PURCHASED|UNIT_CATAPULT|cost=320g (had 446g)` at **T59**, the floor **+12.0 at
+  T60 against A7's 4.1**, and - its own words - the Market **did not** move that number, because it
+  arrived at T76. Two independent readings of the same fact is the strongest form this caveat can take.
+- **Its `gpt_T40` read is 5.0 where this record says 5.3.** The instrument reads the diary's per-10-turn
+  row (5.3); the session was reading the live turn-start figure. Both are at or below A7's 6.1, which is
+  the prediction, and the record keeps the instrument's number and names the other.
+- **State at T77**: three cities, **pop 19**, **science 21.3**, **gold ~280 at +10-13/t**, **4 districts
+  plus a Government Plaza**; the establishment reads **`siege 2/3`** (a third Catapult), **`melee 4/2`**,
+  **`ranged 4/4`**, `cavalry 0/1`. So the empire is now **over strength in three rows** and short only
+  the cavalry row - which is what `Q1` was about, ten turns after the deadline it missed.
+- **Zhang Heng was recruited at T66** (Great Scientist, three free tech boosts) and **is still on the
+  map unactivated** - the session's own handover lists it, and a record that leaves a Great Person idle
+  is a yield left uncollected, so it goes in the open work.
+
+**Two things outside the claim that the continuation must carry.**
+
+1. **Contact became war-adjacent.** Māori were met at **T57**, and at **T64 a Māori Heavy Chariot
+   damaged a Catapult to 40/100**; two AI diplomatic sessions arrived (Māori T66, Australia T71) and
+   both were answered `POSITIVE`, which is not a peace offer and so is not the directive's refusal.
+   **And Australia stands at `science 44.8`, `score 197` against China's 21.3 and 156** - the session
+   named it as the standing risk. It is not this attempt's variable and it is the largest unknown
+   beside the claim, because `Q4`'s T110 trio is a comparison against **A7**, not against a rival who is
+   out-researching both runs.
+2. **The open work it hands forward**, recorded so the continuation does not have to rediscover it: the
+   **T80/T90/T100/T110 rows** (each naming `F = 35` and both deadlines) and the final report; an
+   outstanding **envoy**; an unspent **governor title**; **Zhang Heng's activation**; the idle **trade
+   routes**; and the **Builders** on unimproved tiles. **No wonder was built** - the file's override,
+   accepted out loud in the diary the first turn it fired (T25).
 
 ## The record
 
