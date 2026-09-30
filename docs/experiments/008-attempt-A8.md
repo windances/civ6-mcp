@@ -739,13 +739,15 @@ before the deadline it failed on.
   move, a retry and three calls.
 - **Q4 HELD, with its mechanism explicitly disowned.** The floor turn was T60 (`F = 35 > 28`) and `gpt`
   there read **+12.0 against A7's 4.1**; at **T110** the trio read **`science` 60.9, `pop` 28,
-  `gold_per_turn` +71.0 against A7's 57.6, 25 and 60.0** - all three above, which is the discriminating
-  test the claim was cut to. **And the Market did not do it.** The session that played the end of the
-  run named the lever itself: **two policy cards, Town Charters and Merchant Confederation, worth about
-  +24 gold/turn.** Taiyuan's Market arrived at T76 and the gold crossed the bar after that, on cards.
-  This is precisely the confound the task file wrote into its own text - *"if A8 is only ahead later,
-  say the market did not do it"* - and the honest form of the verdict is that the **settled third city
-  cleared the bar and the mechanism the claim named is not what cleared it.**
+  `gold_per_turn` +70.7 against A7's 57.6, 25 and 60.0** - all three above, which is the discriminating
+  test the claim was cut to. **The two sources agree on that row**: the diary's T110 row reads
+  `gold_per_turn 70.7` and the game's own T110 `get_game_overview`, read live, reads `+71.0` - and
+  `A8-final.json` carries the diary's. **And the Market did not do it.** The session that played the end
+  of the run named the lever itself: **two policy cards, Town Charters and Merchant Confederation, worth
+  about +24 gold/turn.** Taiyuan's Market arrived at T76 and the gold crossed the bar after that, on
+  cards. This is precisely the confound the task file wrote into its own text - *"if A8 is only ahead
+  later, say the market did not do it"* - and the honest form of the verdict is that the **settled third
+  city cleared the bar and the mechanism the claim named is not what cleared it.**
 
 ### The two runs, field by field
 
@@ -761,14 +763,14 @@ before the deadline it failed on.
 | T80 | **31.3** | 29.4 | 8.8 | **24.4** | **20** | 18 | **6** | 5 |
 | T90 | **45.2** | 37.1 | 21.9 | **49.0** | **22** | 20 | **7** | 6 |
 | T100 | **56.0** | 52.1 | 45.8 | **49.3** | **26** | 22 | 8 | **9** |
-| **T110** | **60.9** | 57.6 | **71.0** | 60.0 | **28** | 25 | 8 | **9** |
+| **T110** | **60.9** | 57.6 | **70.7** | 60.0 | **28** | 25 | 8 | **9** |
 
 **What the table says, and it is not a victory lap.** A8 leads the science and population columns at
 **every** row from T40 on - the settled city compounds in people and in research, and it does so
 early: +3.3 science and +3 pop at the horizon, with the lead on science having been as wide as +8.1 at
 T90. **The gold column is a different story and it is the interesting one**: A8 led it at T50-T70
 (+13.6/+12.0/+13.0 against 8.1/4.1/2.1), **lost it for thirty turns** (8.8 vs 24.4, 21.9 vs 49.0, 45.8
-vs 49.3) and won it back only at the horizon (+71.0 vs 60.0). **A7's war-and-Campus economy out-earns
+vs 49.3) and won it back only at the horizon (+70.7 vs 60.0). **A7's war-and-Campus economy out-earns
 a settled city's market economy for the middle third of the run**, and what closes the gap in the last
 ten turns is **policy cards, not buildings**. Districts finish **8 against A7's 9** - the captured city
 came with its own.
