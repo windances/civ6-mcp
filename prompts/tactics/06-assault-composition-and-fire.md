@@ -68,7 +68,10 @@ a re-siege. Both failures above cost a full turn each.
    rule read from the map (`manual:999`), `FIRE?` is a tile the map cannot settle (order the shot and
    read the reply), and `NO LINE OF SIGHT: <blocker>` names the tile in the way and one that works
    instead. `SIEGE POSTURE` is the in-turn arbiter — the `CAN ATTACK:` hint lists targets a Catapult
-   then answers `NO_LOS` to, and hex distance cannot be worked out by hand. Measured at 阿斯特拉罕
+   then answers `NO_LOS` to, and hex distance cannot be worked out by hand. **And the plan says which
+   guns are spent**: a gun standing in the ring with no movement left is reported as `NO SHOT THIS
+   TURN`, is not counted in `n shooter(s) in position`, and pushes the opening turn out by one —
+   `tactics/04`: a unit that spends its move arriving fires next turn. Measured at 阿斯特拉罕
    (54,40): **(54,38) fires, (55,38) is distance 2 with no LOS, (56,38) is distance 3**, so a
    three-Catapult train fired **twice** a turn and the 200-point pool took three turns instead of the
    one the arithmetic promised. Sort the ring into "fires" and "dead" *before* the column advances,

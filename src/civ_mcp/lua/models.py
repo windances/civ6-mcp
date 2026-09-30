@@ -706,6 +706,11 @@ class StagingPlan:
     # a unit already on the tile it would fire from. `plan.engine_fire` is complete for the guns
     # in range; a unit absent from it is one the engine was not asked about.
     engine_fire: dict[int, bool] = field(default_factory=dict)
+    # Guns in range with **no movement left**: they are in the ring and cannot shoot this turn (a
+    # unit that spent its move arriving fires next turn). This is the one fact the map cannot show,
+    # and it is deliberately not a line-of-sight verdict - `engine_fire` is about the line, this is
+    # about the turn.
+    engine_spent: set[int] = field(default_factory=set)
     # The **assembly** ring: tiles at distance 3, outside the city's two-tile strike, where a unit
     # forms up before stepping onto the firing ring. Nothing is ever assigned to them (they are not
     # firing tiles); they exist so the plan can print `RALLY x,y d3 T+n`, which is the leg the

@@ -239,6 +239,58 @@ class TestThePlan:
         assert "LOS unread" in st.render(result, plan(units, options, ring))
 
 
+class TestAGunThatHasAlreadyFired:
+    """`CANFIRE ... spent`: in the ring with no movement left - the fact the map cannot show.
+
+    `tactics/04`: a unit that spends its move arriving fires next turn. Before this, the plan read a
+    spent gun's tile out of the map and called it `FIRE from here`, which is true of the *line* and
+    false of the *turn* - so `n shooter(s) in position` over-counted by one every time a gun had
+    already moved.
+    """
+
+    def _plan(self, **kw):
+        units = [siege()]
+        ring = [m.StagingRingTile(x=55, y=41, distance=2, between=[(56, 41, 0)])]
+        options = [m.StagingOption(unit_id=1, x=55, y=41, turns=0, this_turn=True)]
+        built = plan(units, options, ring)
+        built.engine_spent = kw.get("spent", {1})
+        return built
+
+    def test_a_spent_gun_is_not_a_shooter_in_position(self):
+        result = st.assign(self._plan())
+        assert result.placed[0].spent
+        assert result.shooters_in_place == 0
+        assert result.opens_on == 1, "it fires next turn, so the assault opens a turn later"
+
+    def test_the_row_says_no_shot_this_turn_rather_than_fire(self):
+        built = self._plan()
+        text = st.render(st.assign(built), built)
+        assert "NO SHOT THIS TURN" in text and "no movement left" in text
+        assert "FIRE from here" not in text
+        assert "SPENT THIS TURN" in text
+
+    def test_a_gun_with_movement_left_is_unaffected(self):
+        built = self._plan(spent=set())
+        result = st.assign(built)
+        assert not result.placed[0].spent
+        assert result.shooters_in_place == 1 and result.opens_on == 0
+        assert "NO SHOT THIS TURN" not in st.render(result, built)
+
+    def test_the_parser_records_spent_apart_from_the_line_of_sight_verdict(self):
+        from civ_mcp import lua as lq
+
+        parsed = lq.parse_staging_plan_response(
+            [
+                "STAGEPLAN|58,42|ring:2|camp:0",
+                "RING|55,41|2|ok|land|hill:0|sight:0|via:56,41,0",
+                "CANFIRE|7|0|spent",
+                "CANFIRE|9|1|ok",
+            ]
+        )
+        assert parsed.engine_spent == {7}
+        assert parsed.engine_fire == {7: False, 9: True}
+
+
 class TestTheQuery:
     """The facts come from the game, and the engine's own answer is asked for where it exists."""
 
@@ -259,13 +311,18 @@ class TestTheQuery:
         # An impassable tile between blocks everything: the manual calls those impenetrable.
         assert "(n.passable and n.sight or -1)" in q
 
-    def test_the_engine_is_asked_only_for_a_gun_with_movement_left_in_range(self):
+    def test_the_engine_is_asked_for_every_gun_in_range_and_a_spent_one_says_so(self):
         from civ_mcp import lua as lq
 
         q = lq.build_staging_plan_query(60, 29)
         assert 'print("CANFIRE|"' in q
-        assert "if moves > 0 and (rs > 0 or bomb > 0)" in q
-        assert "Map.GetPlotDistance(ux, uy, tx, ty) <= (info and info.Range or 1)" in q
+        assert "if (rs > 0 or bomb > 0) and Map.GetPlotDistance(ux, uy, tx, ty) <=" in q
+        # A gun with no movement left is *reported*, not skipped: it is in the ring and cannot
+        # shoot this turn, and that is a fact the map cannot show (`tactics/04`: arriving costs the
+        # shot). The engine is asked only where the answer is a line-of-sight verdict.
+        assert 'print("CANFIRE|" .. u:GetID() .. "|0|spent")' in q
+        assert 'if moves <= 0 then' in q
+        assert '.. (canF and 1 or 0) .. "|ok")' in q
 
     def test_the_parser_reads_the_sight_facts_and_the_engines_answer(self):
         from civ_mcp import lua as lq

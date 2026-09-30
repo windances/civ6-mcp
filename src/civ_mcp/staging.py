@@ -67,6 +67,9 @@ class Assignment:
     # ring tile that cannot fire is a walk, not a firing position: the row used to claim
     # `FIRE from here` for every distance-2 tile, which the map itself can answer.
     los: los.Verdict | None = None
+    # True for a gun in the ring with no movement left: it cannot shoot this turn, so it is not a
+    # shooter in position however clear its line is (`tactics/04`: arriving costs the shot).
+    spent: bool = False
 
     @property
     def where(self) -> str:
@@ -93,15 +96,19 @@ class StagingPlanResult:
 
     @property
     def shooters_in_place(self) -> int:
-        """Shooters on a tile they can actually fire from.
+        """Shooters on a tile they can actually fire from, this turn.
 
-        A shooter whose tile the map rules out is **not** in position, whatever its distance: the
-        whole reason the verdict exists is that distance 2 is not the same as line of sight.
+        A shooter whose tile the map rules out is **not** in position, whatever its distance, and
+        neither is a gun with no movement left: it is standing in the ring and cannot shoot again
+        this turn, which is a different fact from a blocked line.
         """
         return sum(
             1
             for a in self.placed
-            if a.unit.role in _SHOOTERS and a.tile and not (a.los and a.los.ruled_out)
+            if a.unit.role in _SHOOTERS
+            and a.tile
+            and not a.spent
+            and not (a.los and a.los.ruled_out)
         )
 
 
@@ -265,6 +272,10 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
             continue
         tile = by_pos[(chosen.x, chosen.y)]
         taken[(chosen.x, chosen.y)] = f"{unit.unit_type} #{unit.unit_id}"
+        # A gun with no movement left is in the ring and cannot shoot this turn: the engine said so
+        # (`CANFIRE ... spent`), and it is not a line-of-sight verdict, so the map rule still
+        # answers for the tile - but the row and the count treat it as not firing this turn.
+        spent = unit.unit_id in getattr(plan, "engine_spent", set())
         verdict = (
             los.line_of_sight(tile, engine=plan.engine_fire.get(unit.unit_id))
             if unit.role in _SHOOTERS
@@ -277,6 +288,7 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
                 turns=chosen.turns,
                 this_turn=chosen.this_turn,
                 los=verdict,
+                spent=spent,
             )
         )
 
@@ -398,7 +410,12 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
         for a in result.placed
         if a.unit.role in ("siege", "ranged") and a.tile and not (a.los and a.los.ruled_out)
     ]
-    result.opens_on = max((a.turns for a in shooters), default=0)
+    # The assault opens when the last shooter can fire; a gun that is standing there spent fires
+    # next turn, so it counts as one turn later rather than as ready now.
+    result.opens_on = max(
+        (a.turns + (1 if a.spent else 0) for a in shooters),
+        default=0,
+    )
     return result
 
 
@@ -437,6 +454,11 @@ def _rally_option(plan: m.StagingPlan | None, unit: m.StagingUnit, rally_tiles: 
 def _fire_note(assignment: Assignment) -> str:
     """The firing verdict, on the row that assigns the tile."""
     verdict = assignment.los
+    if assignment.spent:
+        return (
+            " - NO SHOT THIS TURN: no movement left (it has already fired or moved), so it fires"
+            " next turn - arriving costs the shot (`tactics/04`)"
+        )
     if verdict is None or assignment.unit.role not in _SHOOTERS:
         return ""
     if verdict.state == los.FIRE:
@@ -680,6 +702,13 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                 " shoot from"
             )
             lines.append(f"    {a.unit.unit_type} #{a.unit.unit_id} -> {a.where}: {blockers}{alt}")
+    spent_guns = [a for a in result.placed if a.spent and a.unit.role in _SHOOTERS]
+    if spent_guns:
+        lines.append(
+            "  SPENT THIS TURN — these guns are in the ring with no movement left (already fired or"
+            " moved), so they cannot fire again until next turn and the assault opens a turn later:"
+        )
+        lines.extend(f"    {a.unit.unit_type} #{a.unit.unit_id} at {a.where}" for a in spent_guns)
     if any(
         a.los is not None and a.los.source == "map" and a.unit.role in _SHOOTERS
         for a in result.placed

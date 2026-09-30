@@ -2679,18 +2679,22 @@ for _, u in Players[me]:GetUnits():Members() do
             -- same `CanStartOperation(RANGE_ATTACK)` the attack path uses, aimed at the target
             -- tile. It is what turns the map's sight numbers above into a reading for a unit in
             -- position, and it is the oracle the map rule can be calibrated against tile by tile.
-            -- Only for a unit with movement left: the operation is refused for a unit that has
-            -- already attacked, and that refusal is not a line-of-sight verdict.
-            if moves > 0 and (rs > 0 or bomb > 0)
-                and Map.GetPlotDistance(ux, uy, tx, ty) <= (info and info.Range or 1) then
-                local lp = {{}}
-                lp[UnitOperationTypes.PARAM_X] = tx
-                lp[UnitOperationTypes.PARAM_Y] = ty
-                local okF, canF = pcall(function()
-                    return UnitManager.CanStartOperation(u, UnitOperationTypes.RANGE_ATTACK, nil, lp)
-                end)
-                if okF then
-                    print("CANFIRE|" .. u:GetID() .. "|" .. (canF and 1 or 0))
+            -- A gun with no movement left is reported as `spent` rather than skipped: it is in the
+            -- ring and it cannot shoot this turn, which is a different fact from "the map says the
+            -- line is clear" - a unit that spends its move arriving fires NEXT turn.
+            if (rs > 0 or bomb > 0) and Map.GetPlotDistance(ux, uy, tx, ty) <= (info and info.Range or 1) then
+                if moves <= 0 then
+                    print("CANFIRE|" .. u:GetID() .. "|0|spent")
+                else
+                    local lp = {{}}
+                    lp[UnitOperationTypes.PARAM_X] = tx
+                    lp[UnitOperationTypes.PARAM_Y] = ty
+                    local okF, canF = pcall(function()
+                        return UnitManager.CanStartOperation(u, UnitOperationTypes.RANGE_ATTACK, nil, lp)
+                    end)
+                    if okF then
+                        print("CANFIRE|" .. u:GetID() .. "|" .. (canF and 1 or 0) .. "|ok")
+                    end
                 end
             end
             if ntx ~= -9999 and moves > 0 then
@@ -2876,7 +2880,12 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                 )
             )
         elif line.startswith("CANFIRE|") and len(parts) >= 3:
-            plan.engine_fire[int(parts[1])] = parts[2] == "1"
+            unit_id = int(parts[1])
+            plan.engine_fire[unit_id] = parts[2] == "1"
+            # `spent` is not a line-of-sight verdict: the gun is in the ring and cannot shoot this
+            # turn (no movement left), which is the one fact the map cannot show.
+            if len(parts) > 3 and parts[3] == "spent":
+                plan.engine_spent.add(unit_id)
         elif line.startswith("UNIT|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[3].split(","))
             distance = strength = 0
