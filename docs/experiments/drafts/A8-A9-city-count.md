@@ -70,6 +70,38 @@ remaining legal site has no fresh water or scores far below the cluster, A9 is d
 exactly the class of pre-publication falsification that killed A4's first form (*"No attempt has ever
 built an Encampment at all"*) and cut A6's claim to one purchase.
 
+### 3b. The pre-flight was taken, and it corrects the paragraph above
+
+**Measured 2026-09-30, T69 of the A7 continuation** (`stormborn-azure-palisade-94`) - the read no attempt
+had ever taken, with three cities standing. Its top ten is **not** the cluster above, and it is not a
+worse list:
+
+```
+#1 (40,26) 217  fresh water  STONE, HORSES, COPPER, BANANAS, MAIZE, WHEAT, FURS
+#2 (40,28) 211  fresh water  COPPER, BANANAS, MAIZE, WHEAT, DYES, HORSES
+#3 (39,29) 207  fresh water  BANANAS, WHEAT, MAIZE, FURS, HORSES, DYES
+#4 (39,25) 205  fresh water  ...   #5 (41,27) 203   #6 (41,28) 202   #7 (42,27) 202 **no water**
+#8 (40,27) 202  fresh water  ...   #9 (40,29) 200   #10 (39,27) 197
+```
+
+**What this corrects.** The T15 cluster is gone from the list because it is now *excluded* - Chengdu
+(53,21), 成都 and 西安 sit on it - so the near land really is used up, exactly as section 3 said. **But a
+second cluster of the same quality exists**, at **x 39-42 / y 25-29**, and **nine of its ten sites have
+fresh water** (only #7 does not), where the old cluster's top ten had three dry sites. It is a *better*
+list, not a worse one, and its #1 scores **217** against the 215 that A7 actually settled on.
+
+**So the land does not kill A8, and the constraint is not land at all - it is distance.** (40,26) is about
+**11 tiles from 耶路撒冷 and 14 from 成都**: the third city is an **expansion, not a satellite**. It shares no
+tiles with the core, it needs its own garrison and its own Builder, and the Settler's walk is turns taken
+out of the window before the city even exists. Section 4's timeline does not include that walk; **it has to
+be added to it** (a two-move Settler over eleven tiles of hills and forest is roughly ten to fourteen
+turns, and `get_pathing_estimate` is the tool that says which).
+
+The second correction is a tool one: **the advisor returns a top ten, not a census**, so the question this
+section's pre-flight asked - *how many legal sites remain at all* - is **not answerable from its output**.
+What can be said is what the read shows: the best ten are one cluster, and anything closer than x 43 scores
+below 197.
+
 ## 4. The timeline, from the one second city measured
 
 A7's Chengdu (founded **T21**) is the only data point for what a new city contributes:
