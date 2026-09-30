@@ -108,6 +108,16 @@ flagged above showing up concretely: **the floor clause alone is weak here**, an
 carries the claim. The record will read the floor beside it rather than as the headline, exactly as the
 claim's own fourth bullet says.
 
+**And the Market is not even due by T60.** The third city's chain is `BUILDING_MONUMENT` (ordered T35,
+12 turns) then `DISTRICT_COMMERCIAL_HUB` then `BUILDING_MARKET`, at a population-one city's production -
+so the Market lands around **T67**, seven turns *after* the floor is read. **The T60 floor therefore
+measures A8's empire economy and not its market**, which is the sharpest form of the caveat: the clause
+the recut added so that a late city would not be scored as a market failure is, for *this* late city, not
+about the market by construction. Stating that now rather than at the verdict is the point - at the
+verdict it would read as an excuse. **A8's discriminating test is the T110 trio**: `science`, `pop` and
+`gold_per_turn` against A7's at the horizon, where both runs hold three cities and the difference is how
+the third was obtained.
+
 **(55,23) is in the near-west cluster, about five tiles from 西安** - and it is the same tile A3 founded
 its second city on. So the cluster A3-A7 consumed is genuinely open for A8, exactly as the T69 read's
 blind spot predicted, and **A8's third city is a satellite rather than the twenty-tile colony the
