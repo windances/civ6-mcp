@@ -60,8 +60,18 @@ market queue instead of an army queue. Nothing else changes.
       `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`** and say in the diary what you replaced and why. A
       load can land and still leave a position altered by whatever tried to confirm it, so turn 1 alone is
       not sufficient evidence that the position is the one this file measures from;
-   5. **anything else** - a different match key, a leader screen, a main menu - is the one case to **stop
-      and report**: do not guess which position the task meant.
+   5. **is there no game loaded at all** - a main menu, a leader screen, `not_running` - **while A8 is
+      already in progress?** Its own diary rows exist, its task is in force, and a `HANG:` line named the
+      autosave the stall wrote. Then **the attempt crashed or was restarted mid-run, and the recovery is
+      to load that autosave**: `load_game_save` by the `0_MCP_NNNN` name the hang printed, say in the
+      diary which save you loaded and which turn it holds, and **continue from there** - a resumed turn
+      inherits the previous session's plan. **Verify before playing**: the loaded position must be A8's
+      (its cities, its pin, its diary rows). If it is A7's, or any other attempt's, **stop and report**
+      rather than play on it;
+   6. **nothing of A8's exists and no position can be identified** - a different match key, a menu with no
+      attempt behind it - is the one case to **stop and report**: do not guess which position the task
+      meant. **This is the narrow case, not the default**: a menu is not by itself a reason to stop when
+      there is an attempt to resume.
 1. Then `get_diary` and one `scripts\orient.py` read. On a fresh T1 position the diary's early rows belong
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
    unavailable rather than as A8's own history.
