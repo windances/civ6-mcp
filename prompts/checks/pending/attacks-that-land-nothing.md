@@ -5,6 +5,7 @@ id: attacks-that-land-nothing
 level: error
 when: metric(attacks_landed_nothing) >= 1
 require: metric(attacks_landed_nothing) == 0
+message: A melee land unit attacked an enemy at sea, which the rules refuse - a melee unit cannot attack a unit at sea (manual:723, MELEE UNITS - "They cannot attack enemies at sea"). The engine does not refuse the order: it acknowledges it as OK:MELEE_ATTACK and the target's HP never moves, while the attack spent the move that would have carried the unit out of the water. Measured on this branch, T222-T237: seven melee attacks on Dutch Caravels with the target's HP identical every time, and two of our units sunk. Attack a hull only with a ranged or a naval unit; move a melee unit out of the water rather than swinging from it.
 ```
 
 **Why it exists.** A melee **land** unit cannot attack a unit **at sea** (`manual:723`, MELEE UNITS:

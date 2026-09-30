@@ -5,6 +5,7 @@ id: power-the-cities
 level: error
 when: metric(unpowered_cities) >= 1
 require: metric(unpowered_cities) == 0
+message: A city is not fully powered, so every building that needs power runs at reduced strength - Research Lab, Stock Exchange, Broadcast Center and Film Studio need 3 power each, Factory and Stadium 2, Food Market and Shopping Mall 1. Power comes from a Coal or Oil Power Plant (1 resource into 4 Power) or a Nuclear Power Plant (1 Uranium into 16), and each plant serves every city within 6 tiles that needs power, so this is a coverage question and not a per-city one. The free sources are the Hydroelectric Dam (+6), the Geothermal Plant (+4) and the Solar, Wind and Offshore Wind Farms (+2 each). Build or buy a plant that covers the city, or trade for the resource it burns.
 ```
 
 **Why it exists.** Power is the one city fact that decided whether a building was working and that

@@ -376,24 +376,31 @@ class TestSiegePosture:
         """
         assert "siege_firing_alone" in et._CONTACT_METRIC_KEYS
 
-    def test_the_rule_is_staged_until_a_server_computes_the_metric(self):
-        """`concentrate-the-siege` is staged, and promoting it is the two-file move.
+    def test_the_rule_is_live_and_no_longer_staged(self):
+        """`concentrate-the-siege` was cut in on 2026-09-30, once its metric shipped.
 
-        A rule naming a metric the running server does not know reports itself `un-evaluable` on
-        every turn and nobody can satisfy it - a rule that looks alive and is not. The metric here
-        is new, so the rule waits in `pending/` for a server started after this commit.
+        It waited in `pending/` while no server computed `siege_firing_alone`, because a rule naming
+        a metric the running server does not know reports itself `un-evaluable` on every turn and
+        nobody can satisfy it - a rule that looks alive and is not. Promoting it is the two-file move
+        `pending/README.md` describes: the block moves into `turn-checks.md` and the staged file goes.
         """
         root = pathlib.Path(__file__).resolve().parents[1]
-        staged = root / "prompts/checks/pending/concentrate-the-siege.md"
-        live = root / "prompts/checks/turn-checks.md"
-        assert staged.is_file(), "the rule is staged until a server computes the metric"
-        text = staged.read_text(encoding="utf-8")
-        assert "id: concentrate-the-siege" in text
-        assert "metric(siege_firing_alone) >= 1" in text
-        assert "id: concentrate-the-siege" not in live.read_text(encoding="utf-8"), (
-            "promoting it is the two-file move pending/README.md describes, and only once a server "
-            "computing `siege_firing_alone` is running"
+        live = (root / "prompts/checks/turn-checks.md").read_text(encoding="utf-8-sig")
+        assert "id: concentrate-the-siege" in live
+        assert "metric(siege_firing_alone) >= 1" in live
+        assert not (root / "prompts/checks/pending/concentrate-the-siege.md").exists(), (
+            "the staged file is deleted by the same move that cuts the rule in"
         )
+        # And the live block is one the parser accepts rather than skips: a block with no `message:`
+        # is dropped silently, so it would read as in force and never fire.
+        parsed = {
+            check.check_id: check
+            for check in turn_checks.parse_checks(live)
+        }
+        rule = parsed.get("concentrate-the-siege")
+        assert rule is not None, "the live block must parse"
+        assert rule.require == "metric(siege_firing_alone) == 0"
+        assert rule.message.strip(), "a block without a message is skipped by parse_checks"
 
     def test_the_event_names_the_exposed_unit_only_when_it_matters(self):
         text = et._siege_posture_event([self.posture()], et._siege_metrics([self.posture()]), 116)

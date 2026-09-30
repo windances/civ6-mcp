@@ -151,6 +151,13 @@ require: metric(siege_exposed) <= 0
 message: A siege unit is within two tiles of an enemy with nothing in front of it. Catapults and Trebuchets are the most expensive thing in the stack and the least able to take a hit, so the formation is not optional: the front-line unit must be closer to the enemy than the siege unit is, and the siege unit sits at range 2, never adjacent. Pull the screen up first, or move the siege unit back, and only then advance.
 -->
 
+<!-- check
+id: concentrate-the-siege
+when: metric(siege_firing_alone) >= 1
+require: metric(siege_firing_alone) == 0
+message: The train is deployed and only one of its guns is inside range 2 of the target. The directive counts units; what takes a city is shots. A Catapult does 45-52 against a city where an Archer does 9-11 into a CS 35 garrison, and a city heals about twenty a turn while any adjacent hex is outside our zone of control - so two guns out-damage the heal and one does not, which is not a slow siege but a siege that lands nothing. Measured in A6: a complete establishment and a Catapult bought with gold left the target at 200/200 with SIEGE FIRE: 1/2 for its whole window. Walk the other guns into the ring before firing again, and remember that a unit which spends its move arriving cannot fire the same turn (a two-tile move, a river or a hill costs both points) - stage a turn early rather than shoot with one.
+-->
+
 ## Staging the assault: outside their range, screen in front, siege behind
 
 A city's ranged strike reaches two tiles, and so does a Catapult. The difference is that the
@@ -166,6 +173,13 @@ the front-line unit nearest the siege unit, and the distance to the nearest visi
 `metric(siege_exposed)` counts the siege units that are within two tiles of an enemy with
 nothing closer to that enemy than themselves; `siege_in_city_range` counts those already within
 two tiles of a city, and `siege_city_distance_min` is the closest approach to any target.
+
+**`siege_firing_alone` is the count that decides whether the siege works at all**: it is 1 when a
+train is deployed and only one of its guns is inside range 2, and 0 while the train is still
+marching in, when two or more can fire, and when no siege unit is ours. It exists because the
+directive counts **units** and the city is taken by **shots** - `siege-train` asks whether three
+Catapults exist, and this asks how many of them the target is actually inside range of. `SIEGE
+FIRE: n/m` in the `SIEGE POSTURE` block prints the same pair.
 
 ## Finishing a city once its HP pool is empty
 
