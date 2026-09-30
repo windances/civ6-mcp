@@ -194,3 +194,43 @@ natural place to build one, and **it is the same city A8 wants for markets**. A 
 which one it is and why the other was dropped** - otherwise the attempt answers neither question, and
 the audit in `CHINA-KIT-AUDIT.md` ends up recording a second programme that tracked China's kit and did
 not play it.
+
+## 9. The handoff from the A7 continuation to A8, verified before it is needed
+
+**FireTuner serves exactly one connection**, so A8 cannot attach while the A7 continuation holds it. The
+tool for the handoff is `scripts\civ6-clean.ps1`, and **the switch matters more than anything else here**:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\civ6-clean.ps1 -DryRun      # report only
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\civ6-clean.ps1 -KeepGame    # <-- the handoff
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\civ6-clean.ps1              # ALSO KILLS THE GAME
+```
+
+**`-KeepGame` is the one to use, and the plain invocation is a footgun**: it stops the game as well, and
+A8 needs Civilization VI *running* to load the shared start - killing it means a Steam relaunch before
+anything can be measured.
+
+Measured 2026-09-30 with `-DryRun` while the continuation was live, so the plan below is what the tool
+actually resolves rather than what it is documented to do:
+
+```
+plan
+  game       28736:CivilizationVI_DX12
+  mcp        20696:python
+  agent      4588:node, 25548:node
+  node?      none
+state
+  delete       heartbeat.json  {"phase": "playing", "turn": 91, ... "run_id": "stormborn-azure-palisade-94" ...}
+```
+
+So `-KeepGame` stops **the MCP and the agent** and deletes the stale heartbeat, and leaves the game. The
+Web GUI is found by its port and excluded from every kill list (`protected: ..., 4992 on :3080, ...`), so
+cleaning a game session cannot take down the interface driving it.
+
+**The order, then**: A7 reaches T110 -> the session retires task 039
+(`python scripts/temp-task.py retire 039 --done --turn 110 --note "..."`, which has its own `--dry-run`)
+-> if anything still holds the tuner, `civ6-clean.ps1 -KeepGame` -> publish task 040 -> launch A8 from the
+shared T1 start. **The stale heartbeat is the trap this order removes**: left in place it describes a run
+that no longer exists, and a `"phase": "playing", "turn": N` from a dead session is exactly what makes a
+stopped game look live.
+
