@@ -32,8 +32,8 @@ the variable** - a second `UNIT_SETTLER`, ordered the turn the Builder completes
 | 1 | `UNIT_SCOUT` | the pin's recon slot | **T1 - matched** (`PRODUCING\|UNIT_SCOUT\|4 turns`, the same turn `TECH_MINING` was set) |
 | 2 | `UNIT_SLINGER` | the pin | **T5 - matched** (`PRODUCING\|UNIT_SLINGER\|5 turns`, the same turn A3/A5/A6/A7 ordered theirs) |
 | 3 | `UNIT_SETTLER` | the pin - city #2, founded about T21 | **T10 - matched to A4 and A6** (`PRODUCING\|UNIT_SETTLER\|9 turns`; A3/A5/A7 ordered theirs on T6) |
-| 4 | `UNIT_BUILDER` | the pin | to come |
-| 5 | **`UNIT_SETTLER`** | **the variable** | not yet ordered |
+| 4 | `UNIT_BUILDER` | the pin | **T18 - matched to A4 and A6** (`PRODUCING\|UNIT_BUILDER\|4 turns`; A3/A5/A7 ordered theirs on T15) |
+| 5 | **`UNIT_SETTLER`** | **the variable** | not yet ordered - it comes the turn the Builder completes |
 
 Research and civics so far: `TECH_MINING` T1, `TECH_POTTERY` T8 (Mining completed T7), `TECH_WRITING`
 T13; `CIVIC_CODE_OF_LAWS` T1, `CIVIC_CRAFTSMANSHIP` T11.
@@ -58,6 +58,18 @@ about T30 has a Market by T50; a colony founded about T48 does not.**
 **And the city brings something the core lacks**: HORSES - a strategic resource no A3-A7 city held (the
 programme's `cavalry` row was filled by Heavy Chariots, which need none) - plus a second luxury cluster
 (`FURS`, `DYES`).
+
+**The two settle advisors are not the same instrument, and the record says which was used.**
+`get_settle_advisor(unit_id)` lists the best sites **near one settler unit** (top five);
+`get_global_settle_advisor()` scans **the whole revealed map** (top ten). The task file names the global
+one for the third city, and **the pre-flight read's blind-spot argument belongs to the global list**,
+because that is what the T69 read was. A8's first read - `get_settle_advisor` at **T17**, returning
+`#1 (62,25) Score 195 F:60 P:29 no water` among five - was the **per-settler** one, and it was the right
+tool for the question it was answering: the pin's own Settler, deciding where **city #2** goes (matching
+A4/A6's T10 order, it is founded about T21). So it is not a deviation. **For the third city, the record
+will state which of the two the site was chosen from and how many candidates it ranked** - a site chosen
+from the local list is a legitimate choice, but the "the far cluster is not necessarily the only option"
+argument was made about the global one and does not transfer without saying so.
 
 **Its first four orders, named in the file**: `BUILDING_MONUMENT` -> `DISTRICT_COMMERCIAL_HUB` ->
 `BUILDING_MARKET` -> `UNIT_BUILDER`, the Builder going to the Horses first.
