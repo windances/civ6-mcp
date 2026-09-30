@@ -23,7 +23,9 @@ into 4 Power**, an **Oil Power Plant 1 Oil into 4**, a **Nuclear Power Plant 1 U
 each plant serves every city **within 6 tiles** that needs power, which makes plants a coverage question
 rather than a per-city one. The free sources are `MODIFIER_SINGLE_CITY_ADJUST_FREE_POWER`:
 **Hydroelectric Dam +6**, **Geothermal Plant +4**, **Solar Farm, Wind Farm and Offshore Wind Farm +2
-each**, and the Merchant governor's `RENEWABLE_ENERGY` promotion adds **+2** to each of those in its city.
+each**, and the Merchant governor's `RENEWABLE_ENERGY` promotion adds **+2** to each of those in its city
+(that title sits behind Tax Collector, which sits behind Harbourmaster or Foreign Exchange -
+`Expansion1_Governors.xml:223-228` - so it is a plan, not a switch).
 
 **What is already in place** (so promoting this is a file move, nothing else):
 

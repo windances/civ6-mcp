@@ -112,7 +112,7 @@ Factory +5, Airport +2**. A compounding city that is unpowered is compounding at
 | Hydroelectric Dam | **+6**, no fuel | ~81 production once Electricity is in; river city, one per river |
 | Geothermal Plant | +4, no fuel | a geothermal vent and a builder charge |
 | Solar / Wind / Offshore Wind Farm | +2 each, no fuel | one builder charge each |
-| 商人's `RENEWABLE_ENERGY` promotion | +2 on each renewable in that city | one governor promotion |
+| 商人's `RENEWABLE_ENERGY` promotion | +2 on each renewable in that city | **not the first title spent**: it sits behind Tax Collector, which sits behind Harbourmaster or Foreign Exchange (`Expansion1_Governors.xml:223-228`) |
 
 Four rules that decide it:
 
@@ -130,7 +130,9 @@ Four rules that decide it:
 4. **Dams and renewables are the compounding answer**, because they cost no fuel and no CO2: the
    Hydroelectric Dam is the largest free source in the game (+6), a Geothermal Plant +4, and one
    builder charge per Solar/Wind farm. The card-style play is the 商人 governor with `RENEWABLE_ENERGY`
-   in whichever city holds the most renewable sources.
+   in whichever city holds the most renewable sources - and it is a *plan*, not a switch: that title
+   sits behind Tax Collector, which sits behind Harbourmaster or Foreign Exchange, so it is not the
+   first title the Merchant spends.
 
 **Read it, do not assume it.** `get_cities` prints `Power available/required` on each city line and a
 `!! UNPOWERED` line naming the requirement, the available power and the game's own advice, and the
