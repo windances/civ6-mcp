@@ -255,6 +255,67 @@ for ten minutes without being a hang**.
 which stops the agent and the MCP **and leaves the game**, because the shared start has to be loaded into
 a running game. The plain invocation would have killed it.
 
+## The order chain, read from the log while the run is still going
+
+Every order the attempt has placed, with the city that placed it (`65536` is the capital Xi'an at
+`60,22`, `131073` the city founded T20 at `63,25`, `196610` the third city founded T35 at `55,23`):
+
+| turn | city | ordered | the reply |
+|---|---|---|---|
+| T20 | 131073 | `BUILDING_MONUMENT` | 15 turns |
+| T31 | 65536 | `DISTRICT_CAMPUS` at `58,21` | 5 turns |
+| T33 | 131073 | `BUILDING_GRANARY` | 12 turns |
+| T35 | 196610 | `BUILDING_MONUMENT` | 12 turns |
+| T36 | 65536 | `BUILDING_GRANARY` | 4 turns |
+| T40 | 65536 | `UNIT_WARRIOR` | 3 turns |
+| T42 | 131073 | `DISTRICT_COMMERCIAL_HUB` at `64,25` | 9 turns (the T33 Granary is dropped for it) |
+| T43 | 65536 | `UNIT_TRADER` | 3 turns, built T45 |
+| T46 | 65536 | `BUILDING_LIBRARY` | 5 turns |
+| T48 | 196610 | `DISTRICT_COMMERCIAL_HUB` at `55,24` | 14 turns |
+
+Research, from the same log: `MINING` T1, `POTTERY` T8, `WRITING` T13, `CURRENCY` T21 (the T38 read
+is `3 techs, 3 civics` completed, still on Currency), `ANIMAL_HUSBANDRY` T39, **`THE_WHEEL` T41**,
+**`ENGINEERING` T45**.
+
+**Three readings come out of that table, and two of them are the attempt's own claim.**
+
+1. **The third city is on the chain the claim needs, and its clock is longer than the claim's.**
+   `196610` took its Monument at T35 (12 turns, so it lands around T47) and its Commercial Hub at T48
+   (14 turns, so around T62) - the Hub is the third city's second order, which is the plan the design
+   note called for, and a **Market behind a Hub that ends near T62 cannot exist before about T70**.
+   That is late for an arm of a claim judged at T60, and it is late because 14 turns is what a
+   five-tile colony with fresh water and no production pays for a district. **The record states it
+   before the deadline rather than after**: the claim's market arm will be read at the horizon, not at
+   its own deadline.
+2. **From T36 the capital's queue is economy only** - Granary T36, Trader T43, Library T46, Campus
+   before them - with one Warrior at T40 the only military order in that stretch, and **no city
+   working toward the siege train while Engineering is still in research**. So the gun is not being
+   built early and upgraded, nor being pre-built; it waits for the tech.
+3. **The establishment has not moved at all.** At T48 the corrected table reads
+   `siege 0/2  melee 2/2  anticav 0/1  ranged 1/4  cavalry 0/1  recon 1/1`, and the army those rows
+   count is five units (`WARRIOR:2, SLINGER:1, TRADER:1, SCOUT:1, BUILDER:1`).
+
+**The consequence, written now because most of it is a tech list and not a matter of how the next
+twelve turns are played: `Q1`'s T60 deadline is out of reach without changing the plan.** Seven units
+of the corrected table are short at T48 - `siege 0/2`, `anticav 0/1`, `ranged 1/4`, `cavalry 0/1` -
+and **three of those four rows stand behind techs this attempt has never opened**: the techs it has
+completed by T48 are `MINING, POTTERY, WRITING, CURRENCY, ANIMAL_HUSBANDRY, THE_WHEEL` with
+`ENGINEERING` in progress from T45, and there is **no `ARCHERY`, no `BRONZE_WORKING` and no
+`HORSEBACK_RIDING`** anywhere in the log. So the anti-cavalry row needs a tech plus a unit, the
+cavalry row needs another tech plus a unit, and the siege row needs the tech that was ordered 23
+turns later than the baseline's T22. Only the ranged row is production alone (Slingers carry it, as
+the instrument's own `first ranged: T10` shows) - and that row is short three, with no city running a
+military queue. **The cause is the attempt's own plan, not its variable**: the production that would
+have filled those rows went into four districts and five buildings, and the opening's tech list is
+the one every attempt is free to choose and none has pinned. The
+third city itself is **not** implicated - `Q2` is HELD and the pin held - so the honest reading at the
+end of this attempt is that `Q1` measures **A8's economy-first opening**, and the third-city variable
+is carried by `Q3` (the bought gun) and by `Q4`'s T110 trio. **That distinction is the one thing the
+verdict must not blur**, and it is the second time in the programme that a question has been decided
+by a divergence the task file never pinned: the pin fixes the first four builds and nothing after
+them, so two attempts can hold the same pin and still be asking different questions. It is the same
+finding as the research-pin note in `README.md` section 3, one step further along the queue.
+
 ## The measurement
 
 `python scripts/experiment-report.py --game china_911679432 --run <sessions> --questions a8` answers the
@@ -290,6 +351,27 @@ pipeline fault while there are eighty turns left to fix it, not at the verdict:
 read from `found_city`'s own acknowledgements rather than from a `cities` count - which is the
 discrimination the settlement reader was written for, since A3, A4 and A7 all also ended with three
 cities, by conquest.
+
+**Re-read again at T48, on the same command, and this is the reading the record above is built on:**
+
+```
+  OPEN      Q1 establishment complete by T60 (corrected table)
+            [establishment not reached by T48; ...]        -> NOT complete at T48, short anticav 0/1
+                                                              cavalry 0/1  ranged 1/4  siege 0/2
+  HELD      Q2 three cities settled            [foundings beyond the capital: 2 of 2 (T20 at 63,25, T35 at 55,23); ...]
+  OPEN      Q3 the second siege unit in hand by T60, bought not built
+            [deadline T60 (max(T58, F+25) with F=T35); bought: no siege unit was bought;
+             built in a city: none; ...]
+  OPEN      Q4 the gold clause                 [the floor turn T60 has no readable row yet; ...]
+  (the attempt stands at T48; the run is still playing)
+```
+
+**And the same command surfaces the thing that decides `Q1` early**: `first siege: never`,
+`first anticav: never`, `first cavalry: never`, `ranged 1/4`, beside `map revealed 2% -> 15%` and
+**`no rival met by T48: there is no city to aim at yet`**. The establishment is not merely late at
+T48; the empire has not met anyone to point it at, and the two facts share one cause - the opening
+spent its turns on the colony and its buildings. That is recorded here as the attempt's own shape,
+not as a verdict on the third city.
 
 **And the derived deadlines are verified on live data, not only in fixtures**: Q3 now reads `deadline T60
 (max(T58, F+25) with F=T35)` - the code path that the whole recut rests on, printing its own derivation
