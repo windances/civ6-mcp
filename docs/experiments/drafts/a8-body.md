@@ -65,39 +65,53 @@ The first four orders are **unchanged from A3-A7**, so the opening stays compara
 | 4 | `UNIT_BUILDER` | the pin |
 | 5 | **`UNIT_SETTLER`** | **the variable.** `UNIT_SETTLER` is 80 base with `COST_PROGRESSION_PREVIOUS_COPIES` +30 per copy, so copy #2 is 110 base / **74 Quick** - about one Catapult's production. Order it the turn the Builder completes, and say in the diary the turn it is ordered and the turn the city is founded |
 
-## The third city: the site is named, and it is far
+## The third city: choose the nearest good site, because distance is the cost
 
-**Settle (40,26).** Read from `get_global_settle_advisor` at T69 of the A7 continuation - the only
-post-second-city read the programme has ever taken - where it is **#1 of ten, score 217, fresh water,
-defense 4**, with `STONE, HORSES, COPPER, BANANAS, MAIZE, WHEAT, FURS` in its radius. Nine of that read's
-ten sites have fresh water and all ten sit in one block (x 39-42, y 25-29); (40,26) is the best of them and
-the only one the file names.
+**The site is chosen on the turn you order the second Settler, from your own `get_global_settle_advisor`
+read. The rule: the highest-scoring legal site, preferring the nearest one within about 10 score of the
+best.** Record the tile, the score, whether it has fresh water, and its hex distance from 西安. It is a rule
+rather than a tile because of the arithmetic below - and because a tile named by a different position is not
+a decision.
 
-**Carry the distance into the plan, because it is the cost.** (40,26) is about **11 tiles from 耶路撒冷 and
-14 from 成都** - this is an **expansion, not a satellite**: it shares no tiles with the core, it needs its
-own garrison (`one-garrison-per-city`), its own Builder, and it will be the barbarians' target long before
-it is the enemy's. Run `get_pathing_estimate` for the Settler before ordering it and write the arrival turn
-into the diary; a Settler that walks eleven turns is eleven turns of the variable.
+**What the programme knows about the land, and the blind spot in it.** The only read taken from a three-city
+position is T69 of the A7 continuation: its top ten were all in one block **(x 39-42, y 25-29)**, #1 at
+**(40,26), score 217, fresh water, defense 4**, with `STONE, HORSES, COPPER, BANANAS, MAIZE, WHEAT, FURS` in
+radius, and nine of the ten with fresh water. **That read's blind spot is A8's opportunity**: it was taken
+with **three** cities standing (西安, 成都 and the kept 耶路撒冷), and the advisor excludes everything within
+3 tiles of a city - so it is strictly *more* restrictive than the position A8 chooses from, which has
+**two**. A site four to six tiles from 西安 can be legal at T21 and simply never have appeared in a
+three-city top ten. **Do not assume the far cluster is the only option: read, and see.**
 
-**And it brings two things the core does not have**: **HORSES**, a strategic resource no A3-A7 city held
-(the programme's `cavalry` row was filled by Heavy Chariots, which need none), and a second luxury cluster
-(`FURS`, `DYES`) against an empire at `Amenities 5/2/2`.
+**Why distance matters more than score here.** (40,26) is about **20 tiles from 西安** (about 10 from
+耶路撒冷, which is itself 10 from the capital), and a two-move Settler over that ground walks **fifteen to
+twenty turns**. Chain the measured pieces - the pinned Settler ordered T6 founded a city at T21; copy #2 is
+110 base / **74 Quick**; and A7's Chengdu took **24 turns** from founding to its first siege-relevant order,
+at **1.5x the capital's turn cost** - and a far site puts the third city at about **T48**, its Market at
+about **T70**, and its first real contribution after that. **A satellite founded about T30 has a Market by
+T50; a colony founded about T48 does not.** The claim below is written to survive both, and says which one
+it is reading.
 
-### Confirm the site with your own read, because that read was taken on an explored map
+**And the city brings two things the core does not have**: **HORSES**, a strategic resource no A3-A7 city
+held (the programme's `cavalry` row was filled by Heavy Chariots, which need none), and a second luxury
+cluster (`FURS`, `DYES`) against an empire at `Amenities 5/2/2`.
 
-**(40,26) is a target, not a guarantee, and the difference is fog.** The read it comes from was taken at
-**T69**, when the west was already revealed by the scouts; A8 orders its second Settler around **T21**, when
-much of that corridor may still be dark. Three things can therefore differ, and each has a stated answer:
+### Confirm the site with your own read, because the pre-flight read was taken on an explored map
+
+**A target read at T69 is not a guarantee at T21, and the difference is fog.** The read it comes from was
+taken when the west was already open; A8 orders its second Settler around **T21**, when much of that corridor
+may still be dark. Three things can therefore differ, and each has a stated answer:
 
 - **run `get_global_settle_advisor` yourself on the turn you are about to order the Settler** - it is the
-  same tool, and it is cheap. If (40,26) is not in your list, or is not revealed, **take the best legal
-  site it does name**, settle that instead, and **record the substitution in the diary with both sites and
-  the reason**. The variable is *the number of settled cities and the third one's economy queue*, not the
-  tile - a substitution does not weaken the attempt, but an unrecorded one would;
+  same tool, and it is cheap. Apply the rule at the top of this section (best score, nearest within about
+  10 of it), **settle the site it names, and record it in the diary with the tile, the score, the water and
+  the distance from 西安, beside (40,26) and why one beat the other.** The variable is *the number of
+  settled cities and the third one's economy queue*, not the tile - so a different site does not weaken the
+  attempt, but **an unrecorded one would**, and a site chosen from a read taken with three cities standing
+  is exactly the choice this section exists to avoid making blind;
 - **send the recon unit down the corridor before the Settler commits.** Gate 0 of `tactics/07` applies to a
   settle site as much as to a city: you cannot settle what you have not seen, and a Settler that walks
-  eleven turns into fog and finds the tile taken has spent the variable's whole budget. Say in the diary
-  which unit revealed which tiles and on what turn;
+  fifteen to twenty turns into fog and finds the tile taken has spent the variable's whole budget. Say in
+  the diary which unit revealed which tiles and on what turn;
 - **watch for foreign borders, a camp, and the `PrereqPopulation="2"` gate on the Settler itself** - a
   Settler costs `PopulationCost="1"`, so the city that builds it must be at pop 2 or more and loses one;
   `UNIT_SETTLER` is also `COST_PROGRESSION_PREVIOUS_COPIES`, so the second one is more expensive than the
@@ -112,37 +126,50 @@ record of why the intended one failed - not a second city and a quiet redefiniti
 
 ## The claim, and it is about gold
 
-**Hypothesis (falsifiable by numbers): the third city contributes gold before it contributes production,
-and the gold buys the second gun.**
+**Hypothesis (falsifiable by numbers): a third city that is settled pays for itself where a third city that
+is captured does not - and on the way it funds the second gun.**
 
 **Say which unit is bought and which is built, on every purchase, because A6 and A8 buy different ones.**
 A6 bought the **first** siege unit (T46, 320g); **A8 produces the first in the war city and buys the
 second**, so the two attempts' purchase columns are not the same act - the compare block's own
 `siege_order` caveat says exactly this about A6, and A8 has to state its side of it.
 
-- the number: the **second** siege unit is **in hand by T58** (bought, not built) - A6's first cost
-  **320g** out of a 396g treasury (`PURCHASED|UNIT_CATAPULT|cost=320g`), and the programme's arithmetic
-  said **two** were impossible before about T70 on the path it was computed from, which is the claim the
-  third city's gold is supposed to break;
-- and the floor, **taken at T50 and not at T40, because the arithmetic says a third city cannot be paying
-  at T40**: `gold_per_turn` at **T50 above A7's 8.1** - A7's own T50 row, read out of the merged A7 report
+- **the two turns are set by the founding, not by the calendar.** Let **`F`** be the turn the third city is
+  founded. The **purchase deadline** is **`max(T58, F+25)`**, and the **gold-floor turn** is **T50 if
+  `F <= 28`**, otherwise **the ten-turn row at or after `F+22`**. **Name `F` and both turns in the diary on
+  the turn the city is founded** - a claim whose window moves has to fix its window when it moves, not at
+  review time, or every reading afterwards is a choice;
+- the number: the **second** siege unit is **in hand by the purchase deadline, bought and not built** - A6
+  bought its *first* at T46 for **320g** out of a 396g treasury (`PURCHASED|UNIT_CATAPULT|cost=320g`), and
+  the programme's arithmetic said **two** were impossible before about T70 on the path it was computed from,
+  which is the claim the third city's gold is supposed to break;
+- and the floor: `gold_per_turn` at the **gold-floor turn** is **above A7's value at that same turn** - the
+  merged A7 report reads **8.1 at T50, 4.1 at T60, 2.1 at T70 and 24.4 at T80**
   (`--game china_911679432 --run divine-amber-outpost-82,stormborn-azure-palisade-94`). The directive's own
   floor is **+10**, and across the programme only **A4** ever stood above it (`gpt_T40 13.9` against A7's
-  6.1 and A6's 5.4) - and A4's was bought with Pingala's science, not with markets. **This is the clause
-  the third city's market is supposed to move;**
+  6.1 and A6's 5.4), and A4's was bought with Pingala's science rather than a market. **This is the clause
+  the third city's market is supposed to move - and be careful with it: A7's own curve reaches 24.4 by T80
+  with no market at all, so a late high reading proves nothing;**
+- **and the second number, which is the one that discriminates at the horizon**: at **T110**, A8's empire
+  **`science`, `pop` and `gold_per_turn` each exceed A7's at T110.** Both runs end holding **three cities**,
+  and the difference between them is **how the third was obtained**: A8 pays a Settler, a colony's buildings
+  and a fifteen-to-twenty-turn walk; A7 paid a war. If a settled city compounds where a captured one does
+  not, this is where it shows, and if it does not, this is where it shows too;
 - and a **prediction to check, not a bar to clear**: **`gpt_T40` will be at or below A7's 6.1.** A third
   city founded about T30 has `BUILDING_MONUMENT` -> `DISTRICT_COMMERCIAL_HUB` -> `BUILDING_MARKET` to build
   at a young city's production, so at T40 it is a garrison and a Builder's maintenance with **no market
   yet** - it is *supposed* to cost gold before it pays. If T40 reads above A7's 6.1, say what paid for it,
   because the market cannot have;
 - **the confound is already in the record, and it is A7's own curve**: the continuation's merged report
-  reads `gpt` **8.1 at T50, 4.1 at T60, 2.1 at T70 and 11.8 at T76** - so **A7 crosses the directive's +10
-  on its own, with no market at all**, on the strength of the Campus and eight improved tiles. A8 therefore
-  cannot claim the market merely because its `gpt` ends high; **T50 is the discriminator**, because that is
-  the window in which A7's own climb has not yet arrived. Judge the market at T50, and if A8 is only ahead
-  at T76, say that the market did not do it;
-- **falsified** if the second siege unit is not in hand by T58, if it was built rather than bought, or if
-  `gpt_T50` is not above A7's 8.1.
+  reads `gpt` **8.1 at T50, 4.1 at T60, 2.1 at T70, 24.4 at T80 and 49.0 at T90** - so **A7 crosses the
+  directive's +10 on its own, with no market at all**, on the strength of its Campus, twelve improved tiles
+  and six districts. A8 therefore cannot claim the market merely because its `gpt` ends high. **Judge the
+  floor at the gold-floor turn and compare it to A7's value at that same turn**, and if A8 is only ahead
+  later, **say the market did not do it** - the T110 comparison above is the one that still has to hold;
+- **falsified** if the second siege unit is not in hand by the purchase deadline, if it was built rather
+  than bought, if `gpt` at the gold-floor turn is not above A7's value at that turn, or if any of A8's
+  three T110 figures is at or below A7's. **Nothing here depends on the site being near**: if the third
+  city is a far colony, the deadlines move out with it and the T110 comparison carries the claim.
 
 If the treasury cannot fund a second purchase, **that is the answer**: say so, name the turn the gold
 actually reached 320, and do not sell the plan by building it quietly instead - the attempt exists to
@@ -178,18 +205,22 @@ answered by silence here.
 The experiment reads the diary's **per-10-turn economy rows**. Keep the five reflection fields every turn
 and write the rows for **T10, T20, T30, T40, T50, T60, T70, T80, T90, T100 and T110** - the comparison
 needs the same rows A7's continuation writes. What matters at T110, in numbers: `cities` (3 by design),
-`pop`, `science`, `gold_per_turn`, `districts`, `improvements`, the turn the third city was founded, the
-turn the second siege unit was bought, and the total gold spent on purchases.
+`pop`, `science`, `gold_per_turn`, `districts`, `improvements`, **the founding turn `F` and the two
+deadlines derived from it**, the turn the second siege unit was bought, and the total gold spent on
+purchases.
 
 ## End
 
-The attempt ends the turn **a second siege unit is purchased with gold, or turn 110 is reached**, whichever
-comes first. On that turn report:
+The attempt ends the turn **turn 110 is reached**, because the claim's last number - A8's `science`, `pop`
+and `gold_per_turn` against A7's at the same turn - cannot be read before then. The purchase is recorded
+whenever it happens; it is not a reason to stop. On the final turn report:
 
-- the purchase (the item, the price, the treasury before it, and the turn) or that no second purchase
-  happened and why;
-- the T110 economy row beside A7's, field by field - it is the comparison the two runs exist for;
-- the third city's founding turn, its first four orders, and what it had actually produced by T110;
+- the purchase (the item, the price, the treasury before it, the turn) or that no second purchase happened
+  and why, against the purchase deadline;
+- `gpt` at the gold-floor turn beside A7's value at that turn, and the T110 rows beside A7's field by field
+  - that pair is the comparison the two runs exist for;
+- the third city: `F`, the tile and its score and distance, its first four orders, and what it had actually
+  produced by T110;
 - whether the empire's shape changed anywhere else, with the diary turn;
 - whether any wonder was built (the expected answer is none, accepted).
 
