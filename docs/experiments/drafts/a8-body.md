@@ -52,7 +52,15 @@ market queue instead of an army queue. Nothing else changes.
       diary which position you loaded over. **Do not play A8 on A7's position, and do not treat it as a
       blocker**: it is the state the handoff deliberately leaves behind, because the tuner has to be free
       before the shared start can be loaded;
-   4. **anything else** - a different match key, a leader screen, a main menu - is the one case to **stop
+   4. **is the game already on the shared start?** One city, turn 1, nothing in the log but the pre-game.
+      **Then A8 starts here and nothing has to be loaded** - say so in the diary and begin with the pinned
+      opening. **Look before you accept it, though**: if the position shows signs of having been played -
+      units moved off the capital, a research or a production order the pin below does not ask for, a
+      second city, or a leader or civ that is not China - then **reload
+      `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save`** and say in the diary what you replaced and why. A
+      load can land and still leave a position altered by whatever tried to confirm it, so turn 1 alone is
+      not sufficient evidence that the position is the one this file measures from;
+   5. **anything else** - a different match key, a leader screen, a main menu - is the one case to **stop
       and report**: do not guess which position the task meant.
 1. Then `get_diary` and one `scripts\orient.py` read. On a fresh T1 position the diary's early rows belong
    to whichever attempt wrote them last, so say which turns you can actually read and treat the rest as
