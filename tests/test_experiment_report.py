@@ -1276,13 +1276,108 @@ def test_a_deviated_pin_is_printed_beside_the_new_modes_q1():
         _city_order_row(15, 11, "UNIT_BUILDER"),
     ]
     deviated = [*opening[:3], _city_order_row(15, 11, "UNIT_WARRIOR")]
-    for setter in (report.verdict_a5, report.verdict_a6, report.verdict_a7):
+    for setter in (report.verdict_a5, report.verdict_a6, report.verdict_a7, report.verdict_a8):
         assert "PIN DEVIATED" not in setter(by_turn, opening)[0][2]
         q1 = setter(by_turn, deviated)[0]
         assert "PIN DEVIATED" in q1[2] and "UNIT_WARRIOR" in q1[2] and "T15" in q1[2]
     # A2's and A3's verdict text is untouched: for A3 the deviation shows in the doctrine block.
     assert "PIN" not in report.verdict_a3(by_turn, deviated)[0][2]
     assert "PIN" not in report.verdict_a2(by_turn, deviated)[0][2]
+
+
+def _settle_row(turn: int, x: int, y: int) -> dict:
+    """A `found_city` the game accepted - the row A8's variable is read from."""
+    return {
+        "turn": turn,
+        "tool": "unit_action",
+        "params": {"unit_id": 5, "action": "found_city", "target_x": x, "target_y": y},
+        "result": f"FOUNDED|{x},{y}",
+    }
+
+
+def _refused_settle_row(turn: int, x: int, y: int) -> dict:
+    """The refusal, which sits one turn before the founding in every attempt that settled."""
+    return {
+        "turn": turn,
+        "tool": "unit_action",
+        "params": {"unit_id": 5, "action": "found_city", "target_x": x, "target_y": y},
+        "result": "Error: CANNOT_FOUND|Unit cannot found cities (not a settler or no moves)",
+    }
+
+
+def test_settlements_reads_a_founding_and_not_the_refusal_beside_it():
+    """Measured in A5, A6 and A7: `CANNOT_FOUND` on T20 and `FOUNDED` on T21."""
+    rows = [_refused_settle_row(20, 57, 25), _settle_row(21, 57, 25)]
+    assert report.settlements(rows) == [(21, "57,25")]
+
+
+def test_verdict_a8_holds_on_two_foundings_a_purchase_and_the_gold_floor():
+    """The three things the claim names, all met: three cities, the second gun bought by T58, gpt above A7's."""
+    by_turn = _floored(
+        frames({1: {"WARRIOR": 1}, 40: FULL, 47: FULL, 50: FULL, 54: FULL, 60: FULL})
+    )
+    by_turn[40]["gold_per_turn"] = 5.0
+    by_turn[50]["gold_per_turn"] = 9.5
+    rows = [
+        _settle_row(21, 53, 21),
+        _settle_row(30, 40, 26),
+        _city_order_row(45, 11, "UNIT_CATAPULT"),
+        _purchase_row(50, "UNIT_CATAPULT"),
+    ]
+    questions = report.verdict_a8(by_turn, rows)
+    assert questions[1][1] == report.HELD, questions[1]
+    assert "2 of 2" in questions[1][2] and "T30" in questions[1][2]
+    assert questions[2][1] == report.HELD, questions[2]
+    assert "T50" in questions[2][2]
+    assert questions[3][1] == report.HELD, questions[3]
+    # The floor is read at T50 and the T40 reading is printed beside it as the prediction, not the bar.
+    assert "9.5" in questions[3][2] and "5.0" in questions[3][2]
+
+
+def test_verdict_a8_falsifies_when_the_second_gun_was_built_and_not_bought():
+    """The claim names the unit; a second Catapult ordered in a city is the thing A8 replaces, not the buy."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 50: FULL, 54: FULL, 60: FULL}))
+    by_turn[50]["gold_per_turn"] = 20.0
+    rows = [
+        _settle_row(21, 53, 21),
+        _settle_row(30, 40, 26),
+        _city_order_row(45, 11, "UNIT_CATAPULT"),
+        _city_order_row(50, 11, "UNIT_CATAPULT"),
+    ]
+    questions = report.verdict_a8(by_turn, rows)
+    assert questions[2][1] == report.FALSIFIED, questions[2]
+    assert "no siege unit was bought" in questions[2][2]
+
+
+def test_verdict_a8_falsifies_a_purchase_that_arrives_after_the_deadline():
+    """Bought is not enough: the claim is the turn it is in hand, and T58 is the mark."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 50: FULL, 60: FULL, 65: FULL}))
+    by_turn[50]["gold_per_turn"] = 20.0
+    rows = [
+        _settle_row(21, 53, 21),
+        _settle_row(30, 40, 26),
+        _city_order_row(45, 11, "UNIT_CATAPULT"),
+        _purchase_row(62, "UNIT_CATAPULT"),
+    ]
+    questions = report.verdict_a8(by_turn, rows)
+    assert questions[2][1] == report.FALSIFIED, questions[2]
+    assert "T62" in questions[2][2]
+
+
+def test_verdict_a8_falsifies_with_one_founding_past_the_deadline():
+    """A3, A4 and A7 all reached three cities by taking one - this is the mode's whole discrimination."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL, 60: FULL}))
+    questions = report.verdict_a8(by_turn, [_settle_row(21, 53, 21)])
+    assert questions[1][1] == report.FALSIFIED, questions[1]
+    assert "1 of 2" in questions[1][2]
+
+
+def test_verdict_a8_leaves_the_gold_floor_open_before_fifty():
+    """A floor read before its turn is not a falsification - it is a window that has not closed."""
+    by_turn = _floored(frames({1: {"WARRIOR": 1}, 47: FULL}))
+    questions = report.verdict_a8(by_turn, [])
+    assert questions[3][1] == report.OPEN, questions[3]
+    assert "no T50 row" in questions[3][2]
 
 
 def test_asked_questions_dispatches_every_named_set():
@@ -1295,11 +1390,11 @@ def test_asked_questions_dispatches_every_named_set():
         _city_order_row(15, 11, "UNIT_BUILDER"),
     ]
     ids = {"generic": ["P1", "P2", "P3", "P4"]}
-    for name in ("generic", "a2", "a3", "a5", "a6", "a7"):
+    for name in ("generic", "a2", "a3", "a5", "a6", "a7", "a8"):
         got = report.asked_questions(name, by_turn, rows)
         assert [q[0].split()[0] for q in got] == ids.get(name, ["Q1", "Q2", "Q3", "Q4"]), name
         assert all(status in (report.HELD, report.FALSIFIED, report.OPEN) for _n, status, _d in got), name
-    assert set(report.QUESTION_SETS) == {"a2", "a3", "a5", "a6", "a7"}
+    assert set(report.QUESTION_SETS) == {"a2", "a3", "a5", "a6", "a7", "a8"}
     assert "a4" not in report.QUESTION_SETS
     # The generic set is the only one that takes the caller's own labels.
     generic = report.asked_questions("generic", by_turn, rows, ids=("X1", "X2", "X3", "X4"))

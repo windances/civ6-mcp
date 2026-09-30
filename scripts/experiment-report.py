@@ -675,6 +675,36 @@ def siege_purchases(rows: list[dict]) -> list[tuple[int, str]]:
     return out
 
 
+#: A city we FOUNDED, as the game's own acknowledgement prints it. `CANNOT_FOUND` is the refusal and
+#: deliberately does not match: the two appear one turn apart in every attempt that settled a second
+#: city (T20 refusal, T21 founded), so a loose `FOUND` match would count the refusal as a city.
+FOUNDED_RE = re.compile(r"FOUNDED\|")
+
+
+def settlements(rows: list[dict]) -> list[tuple[int, str]]:
+    """Every city this log **founded**, as (turn, "x,y"), earliest first.
+
+    A8's variable is the number of *settled* cities, which is why this reads `found_city` and not the
+    diary's `cities` count: three of the programme's three-city attempts (A3, A4, A7) reached three
+    cities by **capturing** one, and a count that cannot tell founding from conquest would score A8's
+    variable as already tested when it never was.
+    """
+    out: list[tuple[int, str]] = []
+    for row in rows:
+        if row.get("tool") != "unit_action":
+            continue
+        params = row.get("params") or {}
+        if "found_city" not in json.dumps(params):
+            continue
+        result = str(row.get("result") or "")
+        if "CANNOT_FOUND" in result or not FOUNDED_RE.search(result):
+            continue
+        match = re.search(r"FOUNDED\|([\d,]+)", result)
+        out.append((row.get("turn") or 0, match.group(1) if match else "?"))
+    out.sort(key=lambda entry: entry[0])
+    return out
+
+
 #: The game's own acknowledgement of a declaration: `src/civ_mcp/lua/diplomacy.py` prints
 #: `OK:WAR_REQUESTED|...` on the player operation that declares the war. Deliberately narrow - A2's
 #: three calls answered `WARN:WAR_UNCERTAIN` and changed nothing, so this reads the game's own reply.
@@ -1299,6 +1329,23 @@ A6_WAR_DEADLINE = 55
 #: A7's mark: the first city kept by T80 (`docs/experiments/README.md`'s A7 window).
 A7_LATE_KEEP = 80
 
+#: A8's own marks, all read out of the merged A7 report before A8 was published (2026-09-30).
+#: `A7_GPT_T50` is the floor A8's third-city market has to beat and **the clause the attempt exists to
+#: move**: A7's own `gpt` series is 6.1 at T40, **8.1 at T50**, 4.1 at T60, 2.1 at T70 and 11.8 at T76,
+#: so A7 crosses the directive's +10 by itself and without any market - which makes the **T50** reading
+#: the discriminator, because that is the window in which A7's own climb has not yet arrived.
+A7_GPT_T50 = 8.1
+A7_GPT_T40 = 6.1
+#: The turn the second siege unit has to be in hand - twelve turns after A6 bought its first (T46).
+A8_SIEGE_DEADLINE = 58
+#: The third city is designed to be founded about T30; a window that reaches T60 with one founding left
+#: it undone rather than late, and the deadline is generous on purpose so a slow Settler is not scored as
+#: a missing city.
+A8_SETTLE_DEADLINE = 60
+#: The directive's own gold floor, printed for context rather than used as the test. Only A4 ever stood
+#: above it in the whole programme, and A4's was bought with Pingala's science.
+A8_DIRECTIVE_FLOOR = 10.0
+
 
 def _q1_establishment(
     generic: dict[str, tuple[str, str, str]], rows: list[dict], expect_est: int
@@ -1660,6 +1707,112 @@ def verdict_a7(
     ]
 
 
+def verdict_a8(
+    by_turn: dict[int, dict],
+    rows: list[dict],
+    expect_est: int = 60,
+    expect_city: int = 80,
+    expect_gold_red: int = 10,
+) -> list[tuple[str, str, str]]:
+    """A8's four questions: three cities settled, and the third one's market buying the second gun.
+
+    Q1 is the corrected table's deadline, **Q2 is the variable** - the empire **founded** a third city -
+    Q3 is the number the attempt exists for, the **second** siege unit in hand by `A8_SIEGE_DEADLINE`
+    **and bought rather than built**, and Q4 is the floor the market is supposed to move, `gpt` at T50
+    above A7's own 8.1.
+
+    Q2 counts `found_city`, not the diary's `cities`: the capital is already standing in the shared start,
+    so three cities is **two** foundings, and a `cities` count could not tell founding from conquest -
+    A3, A4 and A7 all reached three cities by **taking** one, which is the thing A8 exists to do
+    differently. A garrison in the new city is expected and is not the variable; the army-order spread is
+    printed beside the count so a reader can see whether the third city stayed economic.
+
+    Q4 is deliberately **not** the generic gold-floor count. That slot counts turns under the directive's
+    +10, and A7 crosses it by T76 on the strength of its Campus and eight improved tiles with **no market
+    at all** - a count that ends high would credit the third city for the second one's work. `gpt_T40` is
+    printed beside it as the draft's own prediction (at or below A7's 6.1), not as a bar.
+    """
+    generic = _generic_slots(by_turn, rows, expect_est, expect_city, expect_gold_red)
+    last = _last_turn(by_turn)
+
+    # Q2 - the variable: cities this empire settled.
+    founded = settlements(rows)
+    third_turn = founded[1][0] if len(founded) >= 2 else None
+    spread = military_city_spread(rows)
+    busiest = ", ".join(
+        f"city {city} {count}"
+        for city, count in sorted(spread["per_city"].items(), key=lambda kv: -kv[1])[:4]
+    )
+    found_text = (
+        ", ".join(f"T{turn} at {xy}" for turn, xy in founded) if founded else "none"
+    )
+    q2_detail = (
+        f"foundings beyond the capital: {len(founded)} of 2 ({found_text})"
+        + (f"; the third city is the one founded T{third_turn}" if third_turn is not None else "")
+        + f"; army orders by city, busiest first: {busiest or 'none placed'}"
+        + f"; window: no third city by T{A8_SETTLE_DEADLINE} is the falsifier"
+    )
+    q2_status = _status(len(founded) >= 2, last >= A8_SETTLE_DEADLINE)
+
+    # Q3 - the number: the second siege unit in hand by the deadline, and bought.
+    bought = siege_purchases(rows)
+    built = [
+        row.get("turn") or 0
+        for row in rows
+        if row.get("tool") == "set_city_production"
+        and role_of_item(str((row.get("params") or {}).get("item_name") or "")) == "siege"
+    ]
+    siege_two = next(
+        (
+            turn
+            for turn in sorted(by_turn)
+            if role_counts(by_turn[turn].get("unit_composition")).get("siege", 0) >= 2
+        ),
+        None,
+    )
+    bought_in_time = bool(bought) and bought[0][0] <= A8_SIEGE_DEADLINE
+    in_hand_in_time = siege_two is not None and siege_two <= A8_SIEGE_DEADLINE
+    q3_status = _status(bought_in_time and in_hand_in_time, last >= A8_SIEGE_DEADLINE)
+    q3_detail = (
+        f"bought: {', '.join(f'T{turn} {name}' for turn, name in bought) if bought else 'no siege unit was bought'}"
+        f"; built in a city: {', '.join(f'T{turn}' for turn in built) if built else 'none'}"
+        f"; the siege row reached 2 on "
+        f"{f'T{siege_two}' if siege_two is not None else 'no turn read'}"
+        f" - A6 bought its **first** at T46 where A8 produces the first and buys the second, so the two "
+        f"purchase columns are not the same act"
+    )
+
+    # Q4 - the floor the market is supposed to move, and the prediction printed beside it.
+    row50 = by_turn.get(50)
+    gpt50 = row50.get("gold_per_turn") if row50 else None
+    row40 = by_turn.get(40)
+    gpt40 = row40.get("gold_per_turn") if row40 else None
+    t40_text = f"{gpt40:+.1f}" if isinstance(gpt40, (int, float)) else "no T40 row"
+    if isinstance(gpt50, (int, float)):
+        q4_status = _status(gpt50 > A7_GPT_T50, True)
+        q4_head = f"gpt at T50 {gpt50:+.1f} against A7's {A7_GPT_T50}"
+    else:
+        q4_status = OPEN
+        q4_head = f"no T50 row in the diary, so A7's {A7_GPT_T50} is not yet met or missed"
+    q4_detail = (
+        f"{q4_head}; the directive's own floor is {A8_DIRECTIVE_FLOOR:.0f} and only A4 ever stood above "
+        f"it in the whole programme, with Pingala's science rather than a market; the draft's own "
+        f"prediction is gpt at T40 at or below A7's {A7_GPT_T40} and it read {t40_text} - a prediction, "
+        f"not a bar"
+    )
+
+    return [
+        _q1_establishment(generic, rows, expect_est),
+        ("Q2 three cities settled - two foundings beyond the capital", q2_status, q2_detail),
+        (
+            f"Q3 the second siege unit in hand by T{A8_SIEGE_DEADLINE}, bought not built",
+            q3_status,
+            q3_detail,
+        ),
+        (f"Q4 gpt at T50 above A7's {A7_GPT_T50}", q4_status, q4_detail),
+    ]
+
+
 #: `--questions` names one of the question sets, and each is a function with the same signature.
 #: There is deliberately no `a4`: A4 uses A3's question set, because its variable moves the same
 #: wall-phase question to a different city.
@@ -1669,6 +1822,7 @@ QUESTION_SETS = {
     "a5": verdict_a5,
     "a6": verdict_a6,
     "a7": verdict_a7,
+    "a8": verdict_a8,
 }
 
 
@@ -2091,15 +2245,16 @@ def main() -> int:
     ap.add_argument("--ids", default="P1,P2,P3,P4",
                     help="the attempt's own prediction labels for the verdict, comma separated "
                          "(default P1,P2,P3,P4: A1's; A2's are Q1,Q2,Q3,Q4)")
-    ap.add_argument("--questions", choices=("generic", "a2", "a3", "a5", "a6", "a7"), default="generic",
+    ap.add_argument("--questions", choices=("generic", "a2", "a3", "a5", "a6", "a7", "a8"), default="generic",
                     help="which four questions to answer: the generic P1-P4 slots (default), A2's own "
                          "Q1-Q4 (its Q2 is the ordering after Engineering, which no generic slot "
                          "measures), A3's own Q1-Q4 (its Q2 is the wall phase - whether a city's wall "
                          "pool was ever above zero and how many turns it took to breach), A5's "
                          "(Groundbreaker: a 5+ turn earlier establishment against the economy), A6's "
-                         "(the train bought with gold, at the cost of a longer gold-floor window) or "
-                         "A7's (two war cities before the first keep). There is deliberately no 'a4': "
-                         "A4 uses A3's question set")
+                         "(the train bought with gold, at the cost of a longer gold-floor window), "
+                         "A7's (two war cities before the first keep) or A8's (three cities settled, "
+                         "and the second siege unit bought by T58 against the gpt the third city's "
+                         "market has to beat). There is deliberately no 'a4': A4 uses A3's question set")
     ap.add_argument("--run", help="keep one or more sessions' rows (comma separated when an attempt "
                                   "spans a resume); attempts share a game key")
     ap.add_argument("--save", help="write this attempt's report to a JSON file, for --compare later")
