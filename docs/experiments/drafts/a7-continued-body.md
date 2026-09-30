@@ -10,13 +10,20 @@ its own.
 0. `get_game_status`. **This task continues the match where it stands** - it stood on **T69** when this
    file was written, on A7's own branch. **Do not load `evals/saves/ATTEMPT-A1-T1-settled.Civ6Save` and do
    not restart**: that save is the starting point for **A8 and A9**, and loading it here would destroy the
-   comparison this task exists to create. If the game stands anywhere in T69-T72 of this branch, continue
-   it. If it stands somewhere else, **say where in the diary and stop** - do not guess which position the
-   task meant.
+   comparison this task exists to create.
+   - **If the game stands anywhere on this branch from T69 up to the horizon (T110), continue it.** That
+     window is deliberately wide because this task may be **resumed**: a session that runs out of its own
+     budget hands the match over mid-window, and a resume has to be able to carry on from wherever it
+     stopped rather than refuse the position it was handed. Say in the diary which turn you picked it up
+     on, and read `get_diary` first - a resumed turn inherits the previous session's plan and its
+     half-finished orders.
+   - **If it stands before T69, or past T110, or somewhere that is not this branch** - a different save, a
+     different match - **say where in the diary and stop**. Do not guess which position the task meant.
 1. The position inherited from A7, to be confirmed and not assumed: **three cities** - 西安, the second
    city founded at T21 (the tile is in A7's record and in the diary), and **耶路撒冷, kept at T60**. Read
    `get_cities` and say in the diary whether the reading matches that description, city by city, with the
-   population.
+   population. **On a resume the city count may legitimately have grown or shrunk** - say what it is and
+   when it changed rather than treating a difference from three as an error.
 2. Then `get_diary` and one `scripts\orient.py` read.
 
 ## The first thing to do after orienting: the read A8 is blocked on
