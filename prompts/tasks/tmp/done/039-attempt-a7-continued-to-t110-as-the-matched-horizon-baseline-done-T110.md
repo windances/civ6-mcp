@@ -123,3 +123,10 @@ the shared T1 start, and the pre-flight read is what publishes it.**
      at: 2026-09-30T14:11:21+08:00
      chinese backup: prompts/tasks/cn/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 039 --done --turn 110
+     at: 2026-09-30T14:48:22+08:00
+     status: done at T110
+     chinese backup: prompts/tasks/cn/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline.cn.md
+-->

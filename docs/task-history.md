@@ -687,3 +687,70 @@ The records are `docs/experiments/A7-final.json` (the snapshot), `docs/experimen
 history entry here**, so the file jumps from A5 to A7. A6's measurements are in
 `docs/experiments/006-attempt-A6.md`, `docs/experiments/A6-final.json` and section 8 of the retro, and
 this gap is recorded rather than papered over.
+
+## Task 039 - A7 continued to T110 as the matched-horizon baseline: retired `--done --turn 110`
+
+**`039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline.md` was retired to
+`prompts/tasks/tmp/done/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline-done-T110.md`
+on the turn its `done when:` asked for** (`python scripts/temp-task.py retire 039 --done --turn 110`),
+which re-synced `prompts/tasks/tmp/current_tasks.md` and the `IN FORCE NOW` line - **none in force**
+after it. As with 036, the script's own auto-commit did not run because it shells out to a Python
+without `pytest`, and the session's own hand-run commit did not land either: it exited before one
+existed, leaving the retirement staged in the working tree. **The orchestrator committed it**, with this
+entry, after re-running the text gate and `tests/test_temp_tasks.py` (`21 passed`) and confirming the
+three sources agree (`in force: 0`, `retired: 39`).
+
+**The task held A7's position, not the shared start, for forty-one turns** (T69-T110, one session)
+and existed for one reason: A8 and A9 are measured at T110, and a baseline that stopped at A7's T60
+had no T70-T110 economy row to be compared against. It introduced no variable of its own, and its one
+explicit override - `dynasty-cycle-wonder` deferred, no wonder built - was accepted out loud on T69 and
+carried to the end (metric(wonders) 0 at T60 and 0 at T110, with four rival wonders completed inside
+the window).
+
+**The two rows the comparison is read against, field by field** (T60 from A7's own closing entry, T110
+from the continuation's final report):
+
+| field | T60 | T110 |
+|---|---|---|
+| cities | 3 | 3 (held, never expanded) |
+| pop | 14 | 25 |
+| science | 15.7/t | 57.6/t |
+| gold_per_turn | +4.1 | +52 (rule) / +60 (rivals block), GNP rank 1 |
+| districts | 2 | 9 (one over floor(pop/3)) |
+| improvements | 4 added in the T50-T60 window | 12 counted by hand; the block's counter has run 2-3 lower at every review |
+| 2nd siege unit bought with gold | NO | NO - four Catapults and one Trebuchet all built, four upgrades offered at 110g then 55g and all declined with 552 gold banked |
+
+**What the forty-one turns actually contained**, and what it cost: three trade deals (the Maori's
+horse-and-silk deals at +9 gold/turn twice, Australia's open borders for horses and then for favor); a
+240g Library and a 670g University bought outright; three free Great People (Crassus for three annexed
+tiles and 120 gold, Omar Khayyam for two Eurekas and an Inspiration, Piero de' Bardi for 134 gold and an
+envoy); a CATASTROPHIC VOLCANIC ERUPTION at T93 that pillaged Xi'an's Campus, Commercial Hub, Library
+and Market and destroyed its silk plantation, all four repaired by T97; and a BANKRUPTCY at T98 that
+disbanded three units and cost a Catapult - the visible price of spending the treasury to zero on the
+University. No war was opened, no city taken, no peace accepted, no Settler trained.
+
+**The comparison's point, in one sentence:** three cities compounding correctly for forty turns - two
+Campuses with Libraries and a University, three Commercial Hubs with Markets, three trade routes, two
+city-state tiers, gold/turn rank 1 and the carrying-capacity rule green for the last fourteen turns -
+produced +42 science and +48 gold a turn and seven districts, and still finished **eight techs, six
+population ranks and 160 score behind a six-city neighbour** (Australia 30 techs, science 92, score 391;
+China 22 techs, science 57.6, score 231). A8's third-city arm is therefore testing the LEVEL, not the
+rate. The row also puts A7's own finding on the record from the other side: the two-war-city widening
+paid for production and charged the cash line, and the continuation that inherited it never got the
+cash line comfortably above the floor until diplomacy and Markets carried it there.
+
+**The read A8's publication was waiting on was taken once, early, and is verbatim in the T69 diary
+entry**: `get_global_settle_advisor`'s whole top ten - ten legal sites, nine with fresh water (only #7
+at (42,27) without), and all ten inside one cluster around (40,27), 8-11 tiles west of 耶路撒冷 and 20
+west of 西安 - with the caveat the task demanded, that 耶路撒冷 is ours now so its exclusion ring is
+part of that read and will not be part of A8's read from the shared T1 start.
+
+**Tooling the next session should carry**: three of forty-one turns opened with every unit at 0 moves
+(T69, T77, T79 - re-read once, then end the turn, never restart); a melee `attack` fires only from a
+tile the unit is already adjacent from and has not moved from, while a ranged attack at range 2 is
+reliable and takes no retaliation; `get_builder_tasks` recommends tiles that `improve` then refuses for
+a blocking feature or for being outside our territory, so check `get_map_area` first; `set_policies` can
+report `POLICIES_SET` and still fail with `WARN:SILENT_FAILURE` naming what each slot really holds, so
+retry one slot per call and confirm with `get_policies`; a Great Person activates the turn AFTER the one
+that moved him onto his district; and `skip_remaining_units(force=True)` prints every attack it
+discards, which is the only audit trail for a deliberate discard.

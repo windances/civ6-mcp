@@ -107,4 +107,5 @@ Task 036 was retired as `done/036-attempt-a5-the-chops-go-into-units-expired-T70
 Task 037 was retired as `done/037-attempt-a6-the-first-siege-unit-is-bought-done-T70.md`.
 
 Task 038 was retired as `done/038-attempt-a7-two-war-cities-done-T60.md`.
-| `039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline.md` | 2026-09-30 | turn 112 | continue A7 to the horizon A8 is measured at, and take the settle-advisor read A8's publication waits on | turn 110 is reached (get_game_overview reports turn 110) - the horizon A8 and A9 are measured at; |
+
+Task 039 was retired as `done/039-attempt-a7-continued-to-t110-as-the-matched-horizon-baseline-done-T110.md`.
