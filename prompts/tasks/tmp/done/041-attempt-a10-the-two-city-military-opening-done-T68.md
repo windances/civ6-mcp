@@ -191,3 +191,10 @@ Then retire this task with `--done` or `--expired` - **`--expired` if the window
      at: 2026-09-30T21:18:19+08:00
      chinese backup: prompts/tasks/cn/041-attempt-a10-the-two-city-military-opening.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 041 --done --turn 68
+     at: 2026-09-30T22:51:53+08:00
+     status: done at T68
+     chinese backup: prompts/tasks/cn/041-attempt-a10-the-two-city-military-opening.cn.md
+-->
