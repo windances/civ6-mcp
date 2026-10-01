@@ -152,6 +152,60 @@ class TestTheServedDocumentsAreEnglish:
         assert text_encoding.stray_boms(ROOT) == []
 
 
+class TestTheBilingualDocuments:
+    """The one exception to the English bar, pinned so it cannot be mistaken for drift.
+
+    Human instruction 2026-09-30: 用于中英对照的文档除外 - a document written to be read side by side
+    is not held to the English-only bar. That is the per-decision playbooks under `prompts/tactics/`:
+    a bilingual H1, the human's own instructions quoted verbatim in Chinese, and the prose in English
+    so the rule can be followed from either side.
+
+    Both mistakes are one edit away, which is why this is a test rather than a comment. Translating
+    the quotes away loses the instruction a rule came from (the directive quotes them for the same
+    reason); adding a playbook to `text_encoding.ASCII_ONLY` - which matches on file *name* - would
+    fail the gate on a document that is correct, and the pressure to "fix" it would land on the
+    Chinese the human asked to keep.
+    """
+
+    TACTICS = ROOT / "prompts" / "tactics"
+
+    def playbooks(self) -> list[pathlib.Path]:
+        return sorted(p for p in self.TACTICS.glob("*.md") if p.name != "README.md")
+
+    def test_the_exception_set_is_the_per_decision_playbooks(self):
+        found = self.playbooks()
+        assert len(found) >= 8, f"the playbook set collapsed to {[p.name for p in found]}"
+
+    def test_none_of_them_is_held_to_the_pure_ascii_bar(self):
+        for path in self.playbooks():
+            assert path.name not in text_encoding.ASCII_ONLY, (
+                f"{path.name} is bilingual by design; adding it to text_encoding.ASCII_ONLY would "
+                "make the gate fail on a correct document"
+            )
+            assert path not in served_documents(), (
+                f"{path.relative_to(ROOT)} would then be served to the model as English"
+            )
+
+    def test_each_one_opens_with_a_bilingual_title(self):
+        for path in self.playbooks():
+            head = path.read_text(encoding="utf-8-sig").splitlines()[0]
+            assert " / " in head and cjk_characters(head) > 0, (
+                f"{path.relative_to(ROOT)} opens with {head[:80]!r} - a bilingual document's title "
+                "carries both languages, which is what marks it as the exception"
+            )
+
+    def test_each_one_still_carries_a_bom_and_real_chinese(self):
+        # The exception is to the English-only bar, not to the BOM rule: these files hold CJK.
+        for path in self.playbooks():
+            assert path.read_bytes().startswith(text_encoding.BOM), (
+                f"{path.relative_to(ROOT)} holds Chinese and must carry a BOM"
+            )
+            assert cjk_characters(path.read_text(encoding="utf-8-sig")) > 0, (
+                f"{path.relative_to(ROOT)} has no Chinese left - if the quotes were translated away, "
+                "say so in the diary and in the file, and do not leave it in the bilingual set"
+            )
+
+
 class TestTheChineseBackups:
     def test_every_served_document_has_a_backup(self):
         missing = [str(b.relative_to(ROOT)) for b in backups() if not b.is_file()]

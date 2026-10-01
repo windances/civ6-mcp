@@ -199,6 +199,13 @@ def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str
 # written there (human instruction 2026-09-28). `scripts/set-strategy.*` refuses non-ASCII text for the
 # same reason. Each file has a Chinese **backup** beside it, `<name>.cn.md`, generated from the English
 # for a human reader, never edited and never a source - and no DSH search pattern matches it.
+#
+# **The deliberate exception: documents written to be read side by side** (human instruction
+# 2026-09-30, 用于中英对照的文档除外). The per-decision playbooks under `prompts/tactics/` carry a
+# bilingual H1 and quote the human's own instructions verbatim in Chinese; the `.zh.`/`.en.` prompt
+# pairs are two files of one instruction. Those are correct as they are, so they are **not** in this
+# tuple - the bar is matched on `path.name`, so no tactics file is ever held to pure ASCII. They still
+# carry a BOM, because they hold non-ASCII bytes and that rule has no exception.
 ASCII_ONLY = ("AGENTS.md", "SKILL.md", "directive.md")
 
 # Applied to ASCII-only documents by `ascii_fix`, longest mark first so `—` never eats a `–`.
