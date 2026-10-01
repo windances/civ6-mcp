@@ -23,6 +23,7 @@
 ## 设计与研究
 
 - [智能体对智能体](agent-vs-agent.md) — 多智能体对局设计（提案，尚未实现）
+- [军事策略覆盖](military-strategy-coverage.md) — 哪些军事策略能被模型看到，哪些真正被强制执行
 - [功能构想](feature-ideas.md) — 带状态标记的规划功能
 - [MCP 设计报告](research/game_mcp_design_report.md) — 初期设计研究与最佳实践
 

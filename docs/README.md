@@ -21,6 +21,7 @@
 ## Design & Research
 
 - [Agent vs Agent](agent-vs-agent.md) — Multi-agent play design (proposal, not implemented)
+- [Military Strategy Coverage](military-strategy-coverage.md) — Which military strategies the model can see, and which are actually enforced
 - [Feature Ideas](feature-ideas.md) — Planned features with status markers
 - [MCP Design Report](research/game_mcp_design_report.md) — Initial design research and best practices
 
