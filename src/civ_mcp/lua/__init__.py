@@ -36,9 +36,11 @@ from civ_mcp.lua.cities import (  # noqa: F401
     build_resolve_city_capture,
     build_set_yield_focus,
     build_verify_production,
+    build_visible_foreign_cities_query,
     parse_cities_response,
     parse_city_production_response,
     parse_loyalty_response,
+    parse_visible_foreign_cities_response,
 )
 from civ_mcp.lua.diplomacy import (  # noqa: F401
     build_check_diplomacy_session_state,
@@ -203,6 +205,7 @@ from civ_mcp.lua.models import (  # noqa: F401
     TargetEnemy,
     TargetReport,
     TargetTile,
+    CitySighting,
     PendingDeal,
     PlayerRow,
     PolicyInfo,

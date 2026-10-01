@@ -60,6 +60,13 @@ first pre-war task is often reconnaissance, not arithmetic. Send the scout and t
 toward the likely neighbour, check `get_strategic_map` and `get_pathing_estimate`, and consider an
 embassy or a spy for the capital.
 
+**The sighting now arrives by itself** (2026-10-01): a move that ends in sight of a foreign city
+appends an `IN SIGHT` block to the move reply, and the first turn a foreign city is visible `end_turn`
+prints a `NEW TARGET` block. Both name the city, its owner and population, and both carry the next two
+calls - `get_target_report(x,y)` and this file. That is Gate 0 passing, and it is where the *analysis*
+starts; it is not where the war starts (the trigger for that is the decision to attack, and
+不用获取所有城市信息才开战 still holds).
+
 Live T99: five cities, gold 173 at +34.8 a turn, and an army already in the doctrine's shape (two
 Catapults, four Archers, two Warriors, one Heavy Chariot) — with **no enemy city visible at all**,
 only a city-state. Every gate below was unevaluable, and the reports that could still be produced

@@ -21,7 +21,7 @@ and loud can be ignored with a diary line.
 |---|---|---|---|---|
 | A | **The directive** | the DIRECTIVE block of `.dsh/skills/civ6-orchestrator/SKILL.md` (42,179 chars) | appended to the `end_turn` result **once per change**, plus once on the first call in a process (`src/civ_mcp/server.py:2493`, `strategy_directive.py:53`) | delivery is code, not habit: it cannot be skipped while `end_turn` is called |
 | B | **Live rules** | `prompts/checks/turn-checks.md`, 27 rules (21 about the army) | `CHECK FAILED [id] ... (require: ...)` on every `end_turn` while failing; the `TURN START` briefing appended to the same result adds the streak | 43 of 158 transcripts had a live rule fail; 21 of 27 rules have fired at least once (`node .tools/rule-census.mjs`); the briefing itself reaches essentially every session that plays a turn - 44 of the 66 transcripts showing a turn advance, and 21 of the other 22 predate the feature (`cc1c4a1`, 2026-09-21) |
-| C | **Turn-result blocks** | `end_turn`'s own output | when the block's condition holds, that turn | over the adapter logs: BATTLE ASSESSMENT 195, SIEGE POSTURE 131, SIEGE PROGRESS 147, SIEGE FIRE 74, SIEGE STALLED 2, LOYALTY WARNING 34, UPGRADE AVAILABLE 154, WAR ECONOMY 18, 10-TURN REVIEW 94, MATCHUP 5 (`python .tools/block-census.py`) |
+| C | **Turn-result blocks** | `end_turn`'s own output | when the block's condition holds, that turn | over the adapter logs: BATTLE ASSESSMENT 195, SIEGE POSTURE 131, SIEGE PROGRESS 147, SIEGE FIRE 74, SIEGE STALLED 2, LOYALTY WARNING 34, UPGRADE AVAILABLE 154, WAR ECONOMY 18, 10-TURN REVIEW 94, MATCHUP 5 (`python .tools/block-census.py`). Since 2026-10-01 it also carries `NEW TARGET`, the one block that reacts to a city becoming visible, and a resolving move appends an `IN SIGHT` block to its own reply - section 7 |
 | D | **Tool refusals** | the `ERR:` set in `src/civ_mcp/lua/*.py` | only at the moment the order is issued | 18 military-relevant codes: `SIEGE_CANNOT_ATTACK_UNITS`, `MELEE_CANNOT_ATTACK_AT_SEA`, `NO_LOS`, `OUT_OF_RANGE`, `NO_MOVES`, `STACKING_CONFLICT`, `ZOC`, `REQUIRES_WAR`, `NOT_AT_WAR`, `NO_WALLS`, `ALREADY_FIRED`, `ATTACK_BLOCKED`, `CANNOT_ATTACK`, `NO_TARGETS`, `CANNOT_CONDEMN`, `NO_CONDEMN_COMMAND`, `STOPPED_SHORT`, `NOT_YOUR_TERRITORY` |
 | E | **The tactics playbooks** | `prompts/tactics/01`-`08` | only if the orchestrator reads the file **and pastes its text** into the `civ_advisor` call | **seven of eight never appeared in a brief**; `04` appeared in 1 session (3 advisor lines). Files read at all: 01 in 7 sessions, 04 in 3, 05/06/07/08 in 1-2, and 02/03 in **none** (`node .tools/tactics-in-briefs.mjs`) |
 | F | **The reference** | `AGENTS.md` (injected every session), `docs/turn-result-blocks.md` and `docs/game-recovery.md` via `search_knowledge` | session start, or on demand | `AGENTS.md` is injected by the harness; the docs are one query away and are cited by `AGENTS.md` at the point of use |
@@ -119,7 +119,42 @@ a plan can route through it and the unit just stops; and the plan's arrival turn
 from movement points rather than the real per-tile cost. The doctrine in those areas can only be
 followed by hand, and the file that says so cannot be delivered (G1).
 
-## 6. How to re-run this survey
+## 6. What changed on 2026-10-01: the discovery path
+
+The worked example the question asked for ("a scout discovers a city - how does the agent find
+out?") turned out to have no working answer, so it was built. The old chain: a move returned only
+tiles (`MOVING_TO|58,42|from:54,40`), the one block that named *content* was gated on tiles revealed
+for the first time **in this session** and fired zero times for a city or a camp in 158 recorded
+sessions, and nothing in `end_turn` reacted to a city appearing - `enemy_cities_seen` is computed and
+**no rule reads it**, and the capture blocks stay silent until a pool is empty. Discovery was a pull:
+`get_map_area` gives the tile and its owner (`[CITY_CENTER]`, no name), `get_trade_options` gives a
+met civ's city names, `get_target_report` gives everything.
+
+Three changes, all of them delivery rather than new analysis:
+
+1. **`IN SIGHT` on the move** (`narrate_sight`, `game_state.move_unit`): every move that resolves now
+   reports what the unit can see from where it stopped - a foreign city (with its owner), a barbarian
+   camp, enemy units - with no dependence on novelty. A revealed-but-not-currently-visible city is
+   excluded, so a remembered capital does not re-announce itself every turn.
+2. **The discovery line carries the doctrine**: a city line ends with `get_target_report(x,y)` and
+   `prompts/tactics/07-pre-war-analysis.md` to paste into the advisor brief; a camp line names
+   `tactics/07`'s camp gates. The two follow-ups ride in the same message as the sighting, which is
+   the cheapest possible fix for G1's "the doctrine never arrives".
+3. **`NEW TARGET` in `end_turn`**: the first turn a foreign city is visible it is named in the result
+   with its owner, population, capital flag and war state, plus the same two follow-ups. The
+   comparison is per process and its **first scan only seeds**, so a fresh session does not announce
+   the whole map. This is the check that would have fired in every session that met a neighbour and
+   said nothing.
+
+   Tests: `tests/test_discovery_delivery.py` (19) - the sight block's four cases, the scan's two new
+   fields, back-compat with a nine-field row, the move integration, and the `NEW TARGET` diff
+   (seeding, one report per city, no re-report after a city leaves and returns).
+
+**What this does not fix**: the advisor still cannot read a playbook (the overlay gives it no tools),
+so the paste is still the orchestrator's decision - the fix is that the decision now arrives with the
+discovery. G3 and G4 are untouched.
+
+## 7. How to re-run this survey
 
 ```powershell
 node .tools/tactics-in-briefs.mjs      # did each playbook reach an advisor brief

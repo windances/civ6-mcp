@@ -1068,6 +1068,51 @@ def _failed_check_message(check, reason: str, supply_note: str | None = None) ->
     return text
 
 
+async def _new_target_event(gs, turn: int) -> str | None:
+    """The turn a foreign city first becomes visible, and the two calls that answer it.
+
+    `capture_readiness` is war-scoped, so nothing else in the turn result reacts to the ordinary
+    discovery - a scout walks over a hill and a neighbour's city is on the map. Measured before this
+    existed: the discovery narration attached to moves fired for a city or a camp **zero** times in
+    158 recorded sessions, and the doctrine that answers a city (`tactics/07`) reached an advisor
+    brief zero times. Naming the city, its owner and the two next calls here is the cheapest way to
+    put the trigger and the doctrine in the same message.
+
+    The first call in a process only seeds the comparison and reports nothing, so a fresh session
+    does not announce every city it can already see.
+    """
+    cities = await gs.visible_foreign_cities()
+    known = getattr(gs, "_known_foreign_cities", None)
+    keys = {city.key for city in cities}
+    if known is None:
+        gs._known_foreign_cities = keys
+        return None
+    fresh = [city for city in cities if city.key not in known]
+    gs._known_foreign_cities = known | keys
+    if not fresh:
+        return None
+    lines = [
+        f"NEW TARGET (T{turn}) - {len(fresh)} foreign city/cities visible for the first time:"
+    ]
+    for city in sorted(fresh, key=lambda c: (c.owner_name, c.name)):
+        state = "AT WAR" if city.at_war else "at peace"
+        lines.append(
+            f"  **{city.name}** ({city.owner_name}, pop {city.pop}, {state}"
+            + (", original capital" if city.capital else "")
+            + f") at ({city.x},{city.y}) -> `get_target_report({city.x},{city.y})` for its walls,"
+            " city pool, garrison and the firing ring; paste"
+            " `prompts/tactics/07-pre-war-analysis.md` into the advisor brief and run its gates"
+            " before committing to anything about it"
+        )
+    lines.append(
+        "  `tactics/07` Gate 0 is exactly this - a candidate city is actually visible - and the"
+        " doctrine's trigger is the decision to attack, not the sighting: seeing it starts the"
+        " analysis, it does not start the war. The three phases are `tactics/07` -> `tactics/04`"
+        " (staging, built by `get_staging_plan`) -> `tactics/05`/`tactics/06` (the assault)."
+    )
+    return "\n".join(lines)
+
+
 async def _check_turn_checks(
     gs, turn: int, units: dict | None, now: dict | None
 ) -> list[lq.TurnEvent]:
@@ -1135,6 +1180,21 @@ async def _check_turn_checks(
                 ),
             )
         )
+
+    # A foreign city the map has just shown us is the one event with no reporter anywhere else: the
+    # metric set counts visible enemy cities (`enemy_cities_seen`) and **no rule reads it**, and the
+    # capture blocks stay silent until a pool is empty. So the first turn a city is visible it is
+    # named here, with the two calls that answer it. The comparison lives on the process, and the
+    # first scan of a process only seeds it - a fresh session must not announce every city it can
+    # see as new.
+    if turn is not None:
+        try:
+            new_targets = await _new_target_event(gs, turn)
+        except Exception:
+            log.debug("new-target scan failed", exc_info=True)
+            new_targets = None
+        if new_targets:
+            events.append(lq.TurnEvent(priority=2, category="target", message=new_targets))
 
     # What makes `answer-the-attack` actionable rather than a scolding: the enemy that is in
     # contact, which of them is killable right now, and how many of our units are already in

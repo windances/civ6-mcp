@@ -191,7 +191,10 @@ Each turn in order:
    warnings** every turn (loyalty crises, idle trade routes, gold deficits, resource caps,
    scoreboard position, military imbalance) - and every one of them has a rule attached. **What each
    block means, and which measurement produced it, is `docs/turn-result-blocks.md`**; read that
-   before acting on a block you have not seen before.
+   before acting on a block you have not seen before. **A foreign city that has just become visible
+   gets its own `NEW TARGET` block** - its name, owner and population plus the two calls that answer
+   it (`get_target_report` and the `tactics/07` pre-war gates) - and a move that ends in sight of one
+   appends an `IN SIGHT` block to the move reply, so the discovery and the doctrine arrive together.
    **The strategy directive is delivered once per change, not once per turn** - `take_update()`
    returns nothing while the directive is unchanged, and it reports on the first call in a process to
    cover a stale skill load. Seeing it in one `end_turn` result is not evidence that it repeats, and

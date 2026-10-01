@@ -2401,6 +2401,64 @@ def narrate_notifications(notifs: list[lq.GameNotification]) -> str:
     return "\n".join(lines)
 
 
+def narrate_sight(
+    tiles: list[tuple[int, int, dict]],
+    unit_pos: tuple[int, int],
+    unit_label: str = "",
+) -> str:
+    """What the unit can see from where it landed - foreign cities, camps, enemy units.
+
+    The move result used to name only tiles (`MOVING_TO|58,42|from:...`), and the one block that
+    said anything about *content* reported only tiles revealed for the first time in this session:
+    measured over 158 recorded sessions it fired **zero** times for a city or a camp, while 70
+    sessions contained moves that resolved. So a scout could walk up to a foreign capital and the
+    agent's next message said nothing about it. This is the unconditional version - every move that
+    resolves reports what is in sight of where it stopped.
+
+    A foreign city is the one case that carries a next step with it: the pre-war analysis is
+    `prompts/tactics/07-pre-war-analysis.md` (Gate 0 is "a candidate city is actually visible", and
+    this line *is* Gate 0 passing), and its numbers come from `get_target_report`. Naming both here
+    is deliberate: discovery and the doctrine that answers it travel in the same message, because
+    the measured failure is that the doctrine never arrives (seven of eight playbooks have never
+    reached an advisor brief).
+    """
+    if not tiles:
+        return ""
+    cities: list[tuple[str, str, int, int]] = []
+    camps: list[tuple[int, int]] = []
+    enemies: list[tuple[int, int, str]] = []
+    for x, y, meta in tiles:
+        if meta.get("visible") is False:
+            continue  # revealed earlier, not in sight now
+        if meta.get("city"):
+            cities.append((str(meta["city"]), str(meta.get("city_owner") or "?"), x, y))
+        if meta.get("camp"):
+            camps.append((x, y))
+        for unit in meta.get("units") or []:
+            enemies.append((x, y, unit))
+    if not cities and not camps and not enemies:
+        return ""
+    at = f" from ({unit_pos[0]},{unit_pos[1]})" if unit_pos else ""
+    who = f" after {unit_label}" if unit_label else ""
+    lines = [f"IN SIGHT{at}{who}:"]
+    for name, owner, x, y in cities:
+        lines.append(
+            f"  ({x},{y}): **[City: {name}]** - {owner}"
+            f" -> get_target_report({x},{y}) for its walls, pool and garrison, and paste"
+            f" `prompts/tactics/07-pre-war-analysis.md` into the advisor brief before deciding"
+            f" anything about it (`tactics/07` Gate 0 is exactly this: a candidate city visible)"
+        )
+    for x, y in camps:
+        lines.append(
+            f"  ({x},{y}): **[Barbarian Camp!]** -> `prompts/tactics/07`'s camp gates"
+            f" (CAMP/GUARD/FORCE/GROUND/WORTH/HOLD/CONVERT/GO); one military unit walks onto the"
+            f" tile to clear it, so the guard is the enemy"
+        )
+    for x, y, unit in enemies:
+        lines.append(f"  ({x},{y}): **[{unit}]**")
+    return "\n".join(lines)
+
+
 def narrate_move_discoveries(
     newly_revealed: list[tuple[int, int, dict]],
     total_new: int,

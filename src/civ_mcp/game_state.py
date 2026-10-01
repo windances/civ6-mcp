@@ -20,6 +20,7 @@ from civ_mcp.narrate import (
     narrate_combat_estimate,
     narrate_move_discoveries,
     narrate_settle_candidates,
+    narrate_sight,
     narrate_test_trade,
 )
 
@@ -282,6 +283,16 @@ class GameState:
         lines = await self.conn.execute_write(lq.build_cities_query())
         return lq.parse_cities_response(lines)
 
+    async def visible_foreign_cities(self) -> list[lq.CitySighting]:
+        """Every foreign city we can see right now - at war or not, city-state or major.
+
+        The capture-readiness scan is war-scoped, so this is the only read that answers "what has the
+        map just shown us". `end_turn` diffs it across turns into its `NEW TARGET` block; the first
+        scan in a process seeds the comparison silently.
+        """
+        lines = await self.conn.execute_write(lq.build_visible_foreign_cities_query())
+        return lq.parse_visible_foreign_cities_response(lines)
+
     async def get_map_area(
         self, center_x: int, center_y: int, radius: int = 2
     ) -> list[lq.TileInfo]:
@@ -449,7 +460,11 @@ class GameState:
                         break
             except Exception:
                 pass
-        # Post-move: visibility diff for discovery feedback
+        # Post-move: visibility diff for discovery feedback, and what is in sight from where the
+        # unit stopped. The sight block does not depend on novelty: a unit that walks up to a
+        # foreign city must say so in the same message, whether or not the session had already
+        # revealed the tile (measured: the novelty-gated block never once reported a city or a camp
+        # in 158 recorded sessions, while 70 of them contained moves that resolved).
         blocked = "|BLOCKED" in result
         if not blocked and self.spatial is not None and self.spatial._revealed_seeded:
             try:
@@ -481,6 +496,9 @@ class GameState:
                             newly_revealed,
                             0,
                         )
+                    sight = narrate_sight(vis_tiles, (vis_x, vis_y))
+                    if sight:
+                        result += "\n" + sight
             except Exception:
                 log.debug("Post-move visibility diff failed", exc_info=True)
         return result

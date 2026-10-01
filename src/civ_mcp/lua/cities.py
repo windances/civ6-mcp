@@ -10,7 +10,82 @@ from civ_mcp.lua._helpers import (
     _bail_lua,
     _lua_get_city,
 )
-from civ_mcp.lua.models import CityInfo, CityLoyalty, ProductionOption
+from civ_mcp.lua.models import CityInfo, CityLoyalty, CitySighting, ProductionOption
+
+
+def build_visible_foreign_cities_query() -> str:
+    """InGame: every foreign city we can currently see, at war or not.
+
+    The capture-readiness scan only looks at cities of civs we are **at war with**, so the one event
+    that has no reporter anywhere is the ordinary one: a scout walks over a hill and a neighbour's
+    city is suddenly on the map. The metric set counts visible enemy cities (`enemy_cities_seen`) and
+    no rule reads it, and the capture blocks stay silent until a pool is empty - so this exists to
+    answer "which foreign city became visible since last turn", which `end_turn` turns into a
+    `NEW TARGET` block.
+
+    Read-only, InGame (visibility is a UI-side table), and cheap: one pass over the players, no
+    district or damage reads.
+    """
+    return f"""
+local me = Game.GetLocalPlayer()
+local pVis = PlayersVisibility[me]
+local pDiplo = Players[me]:GetDiplomacy()
+for pid = 0, 63 do
+    if pid ~= me and Players[pid] and Players[pid]:IsAlive() then
+        local atWar = (pid == 63)
+        if pid ~= 63 then pcall(function() atWar = pDiplo:IsAtWarWith(pid) end) end
+        local ownerName = "Barbarian"
+        if pid ~= 63 then
+            local cfg = PlayerConfigurations[pid]
+            if cfg then
+                ownerName = Locale.Lookup(cfg:GetCivilizationShortDescription()):gsub("|", "/")
+            end
+        end
+        pcall(function()
+            for _, c in Players[pid]:GetCities():Members() do
+                local cx, cy = c:GetX(), c:GetY()
+                if pVis:IsVisible(cx, cy) then
+                    local cap = 0
+                    pcall(function() if c:IsOriginalCapital() then cap = 1 end end)
+                    local nm = "unknown"
+                    pcall(function() nm = Locale.Lookup(c:GetName()):gsub("|", "/") end)
+                    print("FCITY|" .. pid .. "|" .. ownerName .. "|" .. nm .. "|" .. cx .. "," .. cy
+                        .. "|pop:" .. c:GetPopulation() .. "|capital:" .. cap
+                        .. "|atwar:" .. (atWar and 1 or 0))
+                end
+            end
+        end)
+    end
+end
+print("{SENTINEL}")
+""".replace("{SENTINEL}", SENTINEL)
+
+
+def parse_visible_foreign_cities_response(lines: list[str]) -> list[CitySighting]:
+    """Parse `FCITY|` rows into `CitySighting` records."""
+    out: list[CitySighting] = []
+    for line in lines:
+        parts = line.split("|")
+        if not line.startswith("FCITY|") or len(parts) < 6:
+            continue
+        xy = parts[4].split(",")
+        fields: dict[str, str] = {}
+        for token in parts[5:]:
+            key, _, value = token.partition(":")
+            fields[key] = value
+        out.append(
+            CitySighting(
+                player_id=int(parts[1]),
+                owner_name=parts[2],
+                name=parts[3],
+                x=int(xy[0]),
+                y=int(xy[1]),
+                pop=int(fields.get("pop", "0") or 0),
+                capital=fields.get("capital") == "1",
+                at_war=fields.get("atwar") == "1",
+            )
+        )
+    return out
 
 
 def build_loyalty_check_query() -> str:

@@ -3154,9 +3154,15 @@ for dy = -r, r do
                 if #uParts > 0 then units = table.concat(uParts, ";") end
             end
             local cityName = "none"
+            local cityOwner = "none"
             if plot:IsCity() then
                 local cOwner = plot:GetOwner()
                 if cOwner >= 0 and cOwner ~= me then
+                    if cOwner == 63 then cityOwner = "Barbarian"
+                    else
+                        local cfg2 = PlayerConfigurations[cOwner]
+                        if cfg2 then cityOwner = Locale.Lookup(cfg2:GetCivilizationShortDescription()) end
+                    end
                     pcall(function()
                         for _, c in Players[cOwner]:GetCities():Members() do
                             if c:GetX() == x and c:GetY() == y then
@@ -3167,7 +3173,12 @@ for dy = -r, r do
                     end)
                 end
             end
-            print("TILE|" .. x .. "," .. y .. "|" .. terrain .. "|" .. feature .. "|" .. resource .. "|" .. hills .. "|" .. camp .. "|" .. units .. "|" .. cityName)
+            -- `visible` is the difference between "in sight right now" and "known from an earlier
+            -- look": the row is printed for every *revealed* plot, so a caller that wants to say
+            -- what a unit can see this turn has to ask, and a city remembered from ten turns ago
+            -- must not be reported as newly seen.
+            local visible = vis:IsVisible(plot:GetX(), plot:GetY()) and "1" or "0"
+            print("TILE|" .. x .. "," .. y .. "|" .. terrain .. "|" .. feature .. "|" .. resource .. "|" .. hills .. "|" .. camp .. "|" .. units .. "|" .. cityName .. "|" .. cityOwner .. "|" .. visible)
         end
     end
 end
@@ -3181,7 +3192,11 @@ def parse_post_move_visibility(
     """Parse TILE| lines from post-move visibility query.
 
     Returns (x, y, metadata) tuples where metadata contains terrain, feature,
-    resource, resource_class, hills, camp, units, and city fields.
+    resource, resource_class, hills, camp, units, city, city_owner and visible.
+
+    The last two fields are optional: a server that predates them sends nine, and "not reported"
+    reads as ``city_owner=None`` / ``visible=True`` (the old behaviour, where every row of the scan
+    was treated as something the unit could see).
     """
     results: list[tuple[int, int, dict]] = []
     for line in lines:
@@ -3209,6 +3224,8 @@ def parse_post_move_visibility(
             "camp": parts[6] == "1",
             "units": None if parts[7] == "none" else parts[7].split(";"),
             "city": None if parts[8] == "none" else parts[8],
+            "city_owner": None if len(parts) <= 9 or parts[9] == "none" else parts[9],
+            "visible": True if len(parts) <= 10 else parts[10] == "1",
         }
         results.append((x, y, meta))
     return results

@@ -125,6 +125,21 @@ added the same day that file was cut back to the running-game loop: **the 10-TUR
    cost of nine attacks). Assign a governor (`assign_governor`) or garrison the tile; if the
    governor is needed at the front, say so in the diary.
 
+**The first turn a foreign city is visible, the result carries a `NEW TARGET` block** (2026-10-01):
+the city's name, its owner, its population, whether it is an original capital, whether a war is
+already on, and the two calls that answer it — `get_target_report(x,y)` for the walls, the city pool,
+the garrison and the firing ring, and `prompts/tactics/07-pre-war-analysis.md` to paste into the
+advisor brief. It exists because the ordinary event had no reporter anywhere else: the metric set
+counts visible enemy cities (`enemy_cities_seen`) and **no rule reads it**, and the capture blocks
+stay silent until a pool is empty. The comparison is held per process and its **first scan only
+seeds** it, so a fresh session does not announce every city it can already see — only the ones that
+become visible after it. The same information arrives the moment a unit moves: the move reply ends
+with an `IN SIGHT from (x,y)` block naming any foreign city, barbarian camp or enemy unit the unit
+can see from where it stopped, and the city line carries the same two follow-ups. The
+novelty-gated `Revealed N new tiles` block beside it reports only tiles never seen before *in this
+session* — measured over 158 recorded sessions it never once reported a city or a camp, which is why
+the sight block does not depend on novelty.
+
 **Every tenth turn, `end_turn` also prints a 10-TURN REVIEW** — the window measured rather than
 remembered: what the last 10 turns bought and at what per-turn rates, your own plan and prediction from
 ten turns earlier quoted back at you, the assault prerequisites the directive requires against the

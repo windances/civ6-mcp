@@ -923,6 +923,33 @@ class ReinforcementReport:
 
 
 @dataclass
+class CitySighting:
+    """A foreign city we can currently see, whether or not we are at war with it.
+
+    This is the discovery half of the pre-war analysis: `capture_readiness` only ever lists cities of
+    civs we are already fighting, so the ordinary event - a scout reveals a neighbour's city - had no
+    reporter until `end_turn` started diffing this list across turns into a `NEW TARGET` block. It is
+    deliberately *not* called `VisibleCity`: that model is the richer foreign-city read used by
+    `get_trade_options` and the wall/loyalty probes, and two dataclasses with one name in one module
+    is how the second silently replaces the first.
+    """
+
+    player_id: int
+    owner_name: str
+    name: str
+    x: int
+    y: int
+    pop: int = 0
+    capital: bool = False
+    at_war: bool = False
+
+    @property
+    def key(self) -> str:
+        """Identity for the cross-turn diff: a capture or a rename reads as a different city."""
+        return f"{self.owner_name}:{self.name}@{self.x},{self.y}"
+
+
+@dataclass
 class ResourceStockpile:
     """Strategic resource stockpile info."""
 
