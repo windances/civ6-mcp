@@ -45,6 +45,30 @@ def cjk(text: str) -> int:
     return sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
 
 
+def prose_coverage(path: pathlib.Path) -> float:
+    """The share of a backup's prose lines that carry Chinese.
+
+    The structural checks - banner, BOM, sections, inline spans, a CJK floor - can all pass while a
+    chunk of prose is still English, which is the failure a reader notices and no test does. This is
+    the measurement for it: of the non-blank lines outside fenced blocks, the share that hold at
+    least one CJK character. Table separator rows (`|---|---|`) and a YAML title are counted as
+    English, so the honest reading of the number is "at least this much of it is translated".
+    """
+    inside = False
+    prose = 0
+    translated = 0
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        if line.lstrip().startswith("```"):
+            inside = not inside
+            continue
+        if inside or not line.strip():
+            continue
+        prose += 1
+        if cjk(line):
+            translated += 1
+    return translated / prose if prose else 1.0
+
+
 def role(rel: str) -> str:
     name = pathlib.Path(rel).name
     if name in text_encoding.ASCII_ONLY:
@@ -107,10 +131,17 @@ def main() -> int:
             elif not backup.read_bytes().startswith(text_encoding.BOM):
                 problems.append(f"{backup.relative_to(ROOT)}: the backup holds Chinese and has no BOM")
         elif role(rel) == "backup (Chinese)":
+            coverage = prose_coverage(path)
+            print(f"{'':<{width}}  {'':<22}         prose in Chinese: {coverage:6.1%}")
             if not has_bom:
                 problems.append(f"{rel}: the backup holds Chinese and has no BOM")
             if cjk(text) == 0:
                 problems.append(f"{rel}: the backup holds no Chinese - a stub, not a translation")
+            if coverage < 0.6:
+                problems.append(
+                    f"{rel}: only {coverage:.0%} of its prose lines carry Chinese - check for a "
+                    "paragraph left in English"
+                )
         elif non_ascii and not has_bom:
             problems.append(f"{rel}: holds non-ASCII and has no BOM")
 

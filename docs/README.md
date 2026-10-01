@@ -31,3 +31,21 @@
 ## Archive
 
 - [Idea Research](research/idea_research.md) — Pre-implementation research (2025), superseded by [Architecture](architecture-diagrams.md)
+
+## Chinese backups
+
+Every document in this directory (and the advisor role files in `prompts/workers/`) has a Chinese
+backup beside it, `<name>.cn.md`, **generated from the English file for a human reader** (human
+instruction 2026-10-01). The English file is the source: edit it, then bring the backup back in step -
+for a role file that means re-applying the preset (`scripts/use-strategy.ps1`) and then re-syncing
+`prompts/workers/<role>.cn.md`, because the switcher copies the English file by name and leaves the
+backup where it is.
+A backup is never a source - nothing reads or writes it, and DSH cannot load it (it is not
+`AGENTS.md`, and a skill has to be a file named exactly `SKILL.md`).
+
+`tests/test_dsh_documents.py` holds both sets to the same four rules: the backup opens with a
+`> 本文件是 \`<name>\` 的中文备份...` banner, carries a UTF-8 BOM (it holds Chinese), is a
+translation rather than a stub (Chinese enough per prose line, the whole document's byte length, and
+the same sections as the English), and carries every inline `` `code span` `` of the English
+verbatim. `python .tools/audit-md-language.py` prints the whole corpus classified by role when you
+want to see the state rather than the verdict.

@@ -68,6 +68,31 @@ def cjk_characters(text: str) -> int:
     return sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
 
 
+def prose_lines(path: pathlib.Path) -> int:
+    """Non-blank lines outside fenced blocks: what a translation actually has to carry.
+
+    A floor computed from *total* lines calls a faithful translation a stub as soon as the document
+    is diagram-heavy: `docs/agent-vs-agent.md` is 577 lines, of which 286 are ASCII-art diagrams
+    inside fences and only 185 are prose. The Chinese backup of it carries Chinese on 171 of those
+    185 lines and would still have failed a `577 x 5` floor.
+    """
+    count = 0
+    inside = False
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        if line.lstrip().startswith("```"):
+            inside = not inside
+            continue
+        if not inside and line.strip():
+            count += 1
+    return count
+
+
+def headings(path: pathlib.Path) -> list[str]:
+    return [
+        line for line in path.read_text(encoding="utf-8-sig").splitlines() if line.startswith("#")
+    ]
+
+
 def without_fences(text: str) -> str:
     """The document with its fenced code blocks removed.
 
@@ -217,19 +242,26 @@ class TestTheChineseBackups:
     def test_a_backup_holds_chinese_and_is_not_a_stub(self):
         for path, backup in zip(served_documents(), backups(), strict=True):
             text = backup.read_text(encoding="utf-8")
-            source_lines = len(path.read_text(encoding="utf-8").splitlines())
-            # A complete translation carries Chinese on most of the source's lines, so the floor is
-            # per source line rather than a flat number: `balanced/directive.md` is two lines long.
-            floor = max(20, source_lines * 5)
+            # A complete translation carries Chinese on most of the source's *prose* lines, so the
+            # floor is per prose line rather than a flat number: `balanced/directive.md` is two lines
+            # long.
+            floor = max(20, prose_lines(path) * 5)
             assert cjk_characters(text) >= floor, (
                 f"{backup.relative_to(ROOT)} holds {cjk_characters(text)} CJK characters, under the "
-                f"{floor} a translation of {path.name} ({source_lines} lines) should carry - it is a "
-                "stub, not a translation"
+                f"{floor} a translation of {path.name} ({prose_lines(path)} prose lines) should carry"
+                " - it is a stub, not a translation"
             )
             # Chinese is more compact than English, so the bar is a third of the source's bytes.
             assert len(text.encode("utf-8")) >= len(path.read_bytes()) // 3, (
                 f"{backup.relative_to(ROOT)} is much shorter than {path.name} - check that it is the "
                 "whole document, not a summary"
+            )
+            # A skipped section is the one failure a length floor cannot see: the headings are the
+            # document's skeleton and they have to survive one for one, in order.
+            source_headings = headings(path)
+            assert len(headings(backup)) == len(source_headings), (
+                f"{backup.relative_to(ROOT)} has {len(headings(backup))} headings where {path.name} "
+                f"has {len(source_headings)} - a section was dropped or added in translation"
             )
 
     def test_a_backup_covers_every_identifier_the_english_document_names(self):
@@ -321,3 +353,129 @@ class TestTheChineseBackups:
         assert indexed, "the corpus walk found nothing - this test would pass vacuously"
         offenders = sorted(str(p.relative_to(ROOT)) for p in indexed if p.name.endswith(BACKUP_SUFFIX))
         assert not offenders, f"the index would serve a Chinese backup: {offenders}"
+
+
+# The reference documents beyond the three DSH serves: the current material under `docs/` and the
+# advisor role files. Human instruction 2026-10-01: 备份中文版 applies to these too. The **dated
+# archives** under `docs/` - `devlog/`, `experiments/`, `retrospectives/`, `research/`, `paper/`,
+# `agent-essays/` - are deliberately outside the set: they record what happened on a turn, and a
+# backup of a record is a second copy of history to keep in step, not a document a reader follows.
+REFERENCE_TREES = ("docs", "prompts/workers")
+
+
+def reference_documents() -> list[pathlib.Path]:
+    found: list[pathlib.Path] = []
+    for tree in REFERENCE_TREES:
+        found += [
+            path
+            for path in sorted((ROOT / tree).glob("*.md"))
+            if not path.name.endswith(BACKUP_SUFFIX)
+        ]
+    return found
+
+
+class TestTheBackupsOfTheReferenceDocuments:
+    """The wider corpus, held to the same rules as the served set - and to the same drift checks.
+
+    A backup that nothing verifies is worse than no backup: it looks like a translation, goes stale
+    in silence, and the reader trusts it. These are the same four checks the served documents get -
+    the banner, the BOM, Chinese enough to be a translation rather than a stub, and every inline span
+    of the English present in the Chinese - plus heading parity, which is what catches a section that
+    was dropped rather than mistranslated.
+    """
+
+    def test_the_set_is_the_current_reference_material(self):
+        found = reference_documents()
+        assert len(found) >= 20, f"the reference set collapsed to {[p.name for p in found]}"
+
+    def test_the_dated_archives_are_not_in_the_set(self):
+        """The set is the top level of each tree; `docs/`'s dated archives are not translated.
+
+        The check has two halves, because "the archives are excluded" is only meaningful while they
+        exist: the walk's parents are exactly the two tree roots, and the archive directories are
+        still there to be excluded.
+        """
+        parents = {path.relative_to(ROOT).parent.as_posix() for path in reference_documents()}
+        assert parents == {"docs", "prompts/workers"}, sorted(parents)
+        for archive in (
+            "devlog",
+            "experiments",
+            "retrospectives",
+            "research",
+            "paper",
+            "agent-essays",
+        ):
+            assert (ROOT / "docs" / archive).is_dir(), (
+                f"docs/{archive} is gone - if the archive was reorganised, update the set this test "
+                "and `reference_documents()` define"
+            )
+
+    def test_every_one_has_a_backup(self):
+        missing = [
+            str(path.relative_to(ROOT)) for path in reference_documents() if not backup_of(path).is_file()
+        ]
+        assert not missing, (
+            "every reference document has a Chinese backup beside it (human instruction 2026-10-01); "
+            f"these are missing: {missing}"
+        )
+
+    def test_each_backup_says_what_it_is(self):
+        for path in reference_documents():
+            backup = backup_of(path)
+            lines = backup.read_text(encoding="utf-8-sig").splitlines()
+            head = "\n".join(lines[:5])
+            assert "备份" in head and path.name in head, (
+                f"{backup.relative_to(ROOT)} does not say it is a backup of {path.name}; its first "
+                f"lines are: {head[:160]!r}"
+            )
+            # The banner is a blockquote on the first line, like every other backup in the tree: a
+            # reader who opens the file has to meet the warning before the document, not inside it.
+            assert lines[0].startswith("> ") and "本文件是" in lines[0], (
+                f"{backup.relative_to(ROOT)} opens with {lines[0][:60]!r} - the banner is a "
+                "blockquote on line one"
+            )
+
+    def test_each_backup_holds_chinese_and_is_not_a_stub(self):
+        problems: list[str] = []
+        for path in reference_documents():
+            backup = backup_of(path)
+            text = backup.read_text(encoding="utf-8-sig")
+            floor = max(20, prose_lines(path) * 4)
+            if cjk_characters(text) < floor:
+                problems.append(
+                    f"{backup.relative_to(ROOT)}: {cjk_characters(text)} CJK characters, under the "
+                    f"{floor} a translation of {prose_lines(path)} prose lines should carry"
+                )
+            if len(text.encode("utf-8")) < len(path.read_bytes()) // 3:
+                problems.append(f"{backup.relative_to(ROOT)}: much shorter than the English original")
+            if len(headings(backup)) != len(headings(path)):
+                problems.append(
+                    f"{backup.relative_to(ROOT)}: {len(headings(backup))} headings against "
+                    f"{len(headings(path))} - a section moved"
+                )
+        assert not problems, problems
+
+    def test_each_backup_covers_every_inline_span_of_the_english(self):
+        problems: list[str] = []
+        for path in reference_documents():
+            backup = backup_of(path)
+            english = without_fences(path.read_text(encoding="utf-8-sig"))
+            haystack = " ".join(backup.read_text(encoding="utf-8-sig").split())
+            missing = [span for span in inline_spans(english) if span not in haystack]
+            if missing:
+                problems.append(
+                    f"{backup.relative_to(ROOT)} is missing {len(missing)} span(s) of {path.name}: "
+                    f"{missing[:5]}"
+                )
+        assert not problems, problems
+
+    def test_each_backup_carries_a_bom_and_no_served_name(self):
+        for path in reference_documents():
+            backup = backup_of(path)
+            assert backup.read_bytes().startswith(text_encoding.BOM), (
+                f"{backup.relative_to(ROOT)} holds Chinese and must carry a BOM"
+            )
+            assert backup.name not in INSTRUCTION_CANDIDATES, (
+                f"{backup.name} would be injected as workspace instructions"
+            )
+            assert backup.name != SKILL_FILE_NAME, f"{backup.name} would be loaded as the skill"
