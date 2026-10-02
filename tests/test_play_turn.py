@@ -9,6 +9,7 @@ it, and the unit lookup they are built on.
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import pathlib
 import sys
@@ -35,6 +36,51 @@ class FakeUnit:
         self.x = x
         self.y = y
         self.moves_remaining = moves
+
+
+class TestThePopupLayerHasACommand:
+    """The layer that holds a turn without leaving any other trace (measured live T96).
+
+    The driver had no way to clear it: `end` reported the same `Turn 95 -> 96` twice while the
+    screen read `NATURAL DISASTER OCCURRING`, and one `dismiss_popup` cleared 23 popups
+    (`cinematic_camera`, `NaturalDisasterPopup`, `InvitePopup` x20). A normal MCP session has
+    `spectator.PopupWatcher` for this; a direct session had nothing.
+    """
+
+    class FakePopups:
+        def __init__(self, answers):
+            self.answers = list(answers)
+            self.calls = 0
+
+        async def dismiss_popup(self):
+            self.calls += 1
+            return self.answers.pop(0) if self.answers else "No popups to dismiss."
+
+    def test_it_stops_at_the_first_pass_that_found_nothing(self):
+        gs = self.FakePopups(["Dismissed: NaturalDisasterPopup, InvitePopup", "No popups to dismiss."])
+        answers = asyncio.run(play.dismiss_popups(gs))
+        assert answers == ["Dismissed: NaturalDisasterPopup, InvitePopup", "No popups to dismiss."]
+        assert gs.calls == 2, "a pass that found nothing ends the loop"
+
+    def test_it_is_bounded_even_when_popups_keep_appearing(self):
+        gs = self.FakePopups(["Dismissed: a", "Dismissed: b", "Dismissed: c", "Dismissed: d"])
+        answers = asyncio.run(play.dismiss_popups(gs))
+        assert len(answers) == 3, "re-dismissing in a loop during AI processing is how a turn hangs"
+        assert gs.calls == 3
+
+    def test_one_pass_reports_everything_it_cleared(self):
+        # The live T96 shape: one call, 23 names in it.
+        report = "Dismissed: cinematic_camera, NaturalDisasterPopup, " + ", ".join(
+            ["InvitePopup"] * 20
+        )
+        gs = self.FakePopups([report, "No popups to dismiss."])
+        answers = asyncio.run(play.dismiss_popups(gs))
+        assert answers[0].count("InvitePopup") == 20
+
+    def test_the_default_is_one_pass_when_nothing_is_there(self):
+        gs = self.FakePopups(["No popups to dismiss."])
+        assert asyncio.run(play.dismiss_popups(gs)) == ["No popups to dismiss."]
+        assert gs.calls == 1
 
 
 UNITS = [

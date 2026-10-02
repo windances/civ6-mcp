@@ -9,6 +9,7 @@ scan. This is that, deliberately small:
   play-turn.py march TYPE:X,Y ...             one unit per order, screen first, siege last
   play-turn.py attack <type-or-index> <x> <y> attack a tile (a city tile resolves as the city)
   play-turn.py diplo | respond <pid> <POSITIVE|NEGATIVE>
+  play-turn.py dismiss                        clear the popup layer (disaster, invite, tech)
   play-turn.py scan <x> <y> [radius]          enemy cities in reach + the narrated map
   play-turn.py civic <CIVIC>                  start a civic (the end-of-turn blocker)
   play-turn.py produce <city> <ITEM> [X,Y]    set a city's production, category resolved for you
@@ -41,6 +42,14 @@ Two guards exist because each one cost units before it existed (Moscow, T105-T12
   attacking — because the only units this driver moves are the ones the caller names.
 
 `--force` overrides the first guard; say why in the diary when you use it.
+
+`dismiss` exists because a popup holds the turn and leaves no other trace. Measured live T96 on this
+branch: `end` reported the same `Turn 95 -> 96` twice while the screen read `NATURAL DISASTER
+OCCURRING`, and one dismissal cleared 23 popups (`cinematic_camera`, `NaturalDisasterPopup`,
+`InvitePopup` x20) - after which the turn number settled. Measured again an hour later, on the turn
+after that: `TechCivicCompletedPopup` plus twenty `InvitePopup`s were waiting. A normal MCP session
+has `spectator.PopupWatcher` clearing these in the background; without the command, a session reads
+the symptom as "the game will not advance" and reaches for the wrong tool.
 
 Before the skip list, `end` also prints every ranged unit that still has movement and is within five
 tiles of an enemy city. That warning exists because the skip list is twelve lines long and "the
@@ -293,6 +302,29 @@ def end_turn_blocker(unused_attacks: list[str], force: bool) -> str | None:
     if unused_attacks and not force:
         return "REFUSING to end the turn: a legal attack is still unused"
     return None
+
+
+async def dismiss_popups(gs, attempts: int = 3) -> list[str]:
+    """Clear the popup layer and report what each pass found.
+
+    A popup holds the turn until somebody clears it, and this driver had no way to: measured live
+    T96 on the running branch, `end` reported the same `Turn 95 -> 96` twice while the screen read
+    `NATURAL DISASTER OCCURRING`, and one `dismiss_popup` cleared 23 popups (`cinematic_camera`,
+    `NaturalDisasterPopup`, `InvitePopup` x20) - after which the turn number settled immediately.
+    A normal MCP session has `spectator.PopupWatcher` doing this in the background; a direct session
+    has only this verb.
+
+    Bounded on purpose, and it stops at the first pass that found nothing: dismissing is safe, but
+    re-dismissing in a tight loop during AI processing is the documented way to hang an AI turn
+    (`end_turn.py`'s post-timeout block dismisses exactly once for that reason).
+    """
+    answers: list[str] = []
+    for _ in range(max(1, attempts)):
+        answer = str(await gs.dismiss_popup())
+        answers.append(answer)
+        if "Dismissed" not in answer:
+            break
+    return answers
 
 
 def wounded_in_reach(pairs: list[dict]) -> list[str]:
@@ -724,6 +756,19 @@ async def main() -> int:
                     value = getattr(session, field, None)
                     if value not in (None, "", [], 0, False):
                         print(f"  {field}: {value}")
+            return 0
+
+        if verb == "dismiss":
+            # The popup layer, which is the one thing that can hold a turn without anything else
+            # saying so - measured live T96 on this branch: `end` reported the same `Turn 95 -> 96`
+            # twice while the screen read `NATURAL DISASTER OCCURRING`, and one dismissal cleared 23
+            # popups (`cinematic_camera`, `NaturalDisasterPopup`, `InvitePopup` x20). A normal MCP
+            # session has a background watcher for this (spectator.PopupWatcher); this driver has
+            # nothing, so a direct session sits behind the stack and reads as "the turn will not
+            # advance". `end` clears the layer once itself, but only after its AI-turn wait has
+            # already timed out, which is why the command is separate.
+            for answer in await dismiss_popups(gs):
+                print(answer)
             return 0
 
         if verb == "respond":

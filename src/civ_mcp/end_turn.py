@@ -3600,6 +3600,9 @@ async def execute_end_turn(gs: GameState) -> str:
     # Set when a mid-turn World Congress session had to be voted and submitted for
     # us; surfaced in the turn events so the agent learns it happened.
     wc_mid_turn_note: str | None = None
+    # What the popup layer held, when it had to be cleared to let the turn through. The layer is the
+    # one blocker with no other trace in the result, so its answer rides in the failure message.
+    popup_note: str = ""
 
     # Phase 1: Quick check (4s) — turn sometimes advances within 1-2s
     for _ in range(8):
@@ -3769,6 +3772,10 @@ async def execute_end_turn(gs: GameState) -> str:
             dismissed = await gs.dismiss_popup()
             if "Dismissed" in dismissed:
                 log.info("Post-timeout popup dismissed: %s", dismissed)
+                # The layer is the one blocker that leaves no other trace, so the answer is kept for
+                # the failure message below: measured live T96, a NaturalDisasterPopup plus twenty
+                # InvitePopups held the turn and the only symptom was "Turn 95 -> 96" reported twice.
+                popup_note = dismissed
                 await gs.conn.execute_write(lua)
                 for _ in range(5):
                     await asyncio.sleep(2.0)
@@ -3861,6 +3868,10 @@ async def execute_end_turn(gs: GameState) -> str:
         # No blockers, no diplomacy, no game over — true AI turn hang.
         # Return structured HANG: prefix so server.py can auto-recover.
         turn_num = turn_after or turn_before
+        popup_clause = (
+            f" The popup layer held: {popup_note}." if popup_note else
+            " No popup was found on the layer either - if the screen shows a dialog, Lua cannot see it."
+        )
         if turn_num is not None:
             from .autosave import get_autosave_for_turn
 
@@ -3868,9 +3879,12 @@ async def execute_end_turn(gs: GameState) -> str:
             return (
                 f"HANG:{turn_num}:{hang_save}|"
                 f"End turn requested (turn is still {turn_num}). "
-                f"AI turn processing appears stuck."
+                f"AI turn processing appears stuck.{popup_clause}"
             )
-        return f"End turn requested (turn is still {turn_num}). Check get_pending_diplomacy or dismiss_popup."
+        return (
+            f"End turn requested (turn is still {turn_num}). Check get_pending_diplomacy or"
+            f" dismiss_popup.{popup_clause}"
+        )
 
     # Turn advanced — clear the pending flag
     gs._pending_end_turn = False
