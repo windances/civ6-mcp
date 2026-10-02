@@ -163,8 +163,12 @@ python scripts/fix-text-encoding.py --check
    -> UNIT_GALLEY@59,13`），而真正去攻击时 `attack_unit` 直接回
    `ERR:MELEE_CANNOT_ATTACK_AT_SEA`（manual:723）。也就是说：**一个合法攻击列表里的条目，工具自己
    永远不会执行**，而唯一的出口是 `--force`（它一次丢掉全部未用攻击，包括真正可打的那几个）。
-   修法是把 `unused_attacks` 的判据与攻击路径对齐（陆地对海上的近战目标不算），或让守卫在报告里
-   标出"这条路径会拒绝"。
+   **已修（`a68ee9b`）**：两处扫描——`build_unused_attack_query` 与 `build_units_query` 的
+   `>> CAN ATTACK` 提示（后者是同一句"两处判据完全一致"的第三次落空）——现在都套用攻击路径自己的
+   判据：攻击者是陆上近战（`rs == 0` 且 `Domain == "DOMAIN_LAND"`）、目标在海上
+   （`Domain == "DOMAIN_SEA"`）时清掉既有的 LOS 标志。修完当场复验：守卫只剩
+   `UNIT_ARCHER@50,14 -> UNIT_CROSSBOWMAN@50,12;UNIT_SWORDSMAN@51,14;UNIT_CROSSBOWMAN@51,15`
+   ——一个真能打的目标列表，而不是那艘谁都不碰不到的战船。
 2. **城墙是城市打击的前提，而文档把它写成了普遍手段。** `AGENTS.md` 的 Wartime 段说"有城墙的城市"
    能打 2 格内敌人（实测 43 伤害、不吃反击，是帝国里最便宜的伤害）；奥克兰（我们打下来的城邦，
    只有港口）回的是 `ERR:NO_WALLS|City has no walls — build Ancient Walls first`。这条限制是对的
