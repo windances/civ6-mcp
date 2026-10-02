@@ -118,3 +118,15 @@ python scripts/fix-text-encoding.py --check
 - 开局之后、确定目标之前，先用 `scripts/temp-task.py` 把这次的**作战对象**立成一个临时任务
   （五行列头 + `done when:` + `expires:`），这样它在会话里是"in force"，而不是又一份躺在
   `docs/` 里没人读的记录。
+- **2026-10-02 23:40 起的现场情况**：Civ6 已启动（pid 33900），FireTuner 在 127.0.0.1:4318 监听，
+  但**尚未载入对局**：`game_status` 报 `main_menu`，并给出下一步
+  `load_game_save("AutoSave_0095")`（最新存档 T95；Continue Game 也是这一档）。
+  `game_launcher.load_save_from_menu("AutoSave_0095")` 的菜单导航**只走了一半**：界面已到
+  Load Game → Autosaves 列表（`AutoSave_0095` 在第一行），随后在找底部的 Load Game 按钮时报
+  `FAILED: Could not find 'Load Game' button`。记下来是因为它本身就是本轮要观察的现象之一：
+  **载入流程是可观测的薄弱环节**，与 `docs/game-recovery.md` 那串"看起来像恢复失败、其实是
+  载入窗口"的清单同源。
+- 本次打法：**路线 A**（不走 MCP，直接用仓库的直连驱动器：`orient.py` / `target-report.py` /
+  `staging-plan.py` / `play-turn.py`）。因此第 2 节的 **P14（`tactics/07` 有没有进顾问简报）
+  本次无法观测**，会标为"未观测"，不算通过。
+
