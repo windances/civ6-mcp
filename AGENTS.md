@@ -337,6 +337,20 @@ refused our scout while `get_city_states` listed us as its Suzerain with 5 envoy
 it rather than assume suzerainty grants passage. Hills, forests and jungles cost 2 movement each and
 stack (forest-hills 3+), so a 2-move civilian that lands on forest-hills cannot act until the next
 turn. `get_pathing_estimate(unit_id, target_x, target_y)` uses the game's own pathfinding.
+**So does every turn estimate a tool prints** (2026-10-02): `get_pathing_estimate` and
+`get_staging_plan` walk the route tile by tile, paying each tile what the map says
+(`plot:GetMovementCost()` - 1 on flat ground, 2 for Hills or Woods, 3 for Forest on Hills) and ending
+a turn where the route enters an enemy's zone of control (manual:875), so every row carries the
+path's `cost` in movement points and a `ZOC STOP at (x,y) on turn +k` when there is one. The current
+turn is the engine's own reachable set, so a river crossing or an embark that spends the whole turn
+(manual:73) is included there; later turns are walked from the terrain cost and the visible ZOC, so
+a river crossing on turn 2 or later can still read a turn short. Only the units the game's own data
+marks as projecting a zone of control are counted (`ZoneOfControl`): the melee, cavalry and
+anti-cavalry line - **no ranged or siege unit projects one**, so walking past an enemy Archer or
+Catapult costs nothing while an enemy Spearman beside the route costs a turn. Light and heavy cavalry
+ignore ZOC (manual:735-737). `arrive T+n`, `ASSAULT OPENS on T+n` and the tie-break between two equal
+tiles all count both facts now; the old arithmetic extrapolated from tiles-per-turn and left the stop
+to be discovered - measured, T228-T299 recorded 232 `STOPPED_MID_PATH` results.
 
 ### Builders
 `get_builder_tasks` lists every tile that needs work, prioritized (URGENT > HIGH > NORMAL) with the

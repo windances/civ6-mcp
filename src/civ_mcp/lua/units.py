@@ -2554,11 +2554,171 @@ def diff_threats(
     return disappeared, new_threats, moved
 
 
+# The march: what a path really costs and where the engine actually stops. Two facts the
+# tile-count arithmetic (`ceil((#path - reach) / reach)`) cannot see, and this war paid for both
+# after the fact:
+#
+#   * **a tile costs what the map says** - `plot:GetMovementCost()`, the number the game's own
+#     tooltip prints (`Base/Assets/UI/ToolTips/PlotToolTip.lua:659`): 1 on flat ground, 2 for Hills
+#     or Woods, 3 for Forest on Hills, and a river crossing takes the rest of the turn;
+#   * **entering a tile in an enemy's zone of control ends that turn's movement** (manual:875),
+#     light and heavy cavalry excepted (manual:735-737) - so one clipped ZOC tile costs a whole
+#     turn, which is what `STOPPED_MID_PATH` was reporting after the event (232 of them over
+#     T228-T299, and a rule written to excuse the stop rather than predict it).
+#
+# Which units project a ZOC is the game's own flag and not a guess: `GameInfo.Units[type].ZoneOfControl`
+# is `true` for the melee, cavalry and anti-cavalry line (47 of the base game's 71 combat units) and
+# `false` for every ranged and siege unit (Archer, Crossbowman, Catapult, Bombard - 24 of 71), so a
+# plan may walk past an enemy gun without a stop and must not walk past an enemy Spearman. All 71
+# carry the flag explicitly (`Base/Assets/Gameplay/Data/Units.xml`), so `~= false` is the whole test.
+#
+# Turn 0 is the **engine's own answer**, not a simulation: `UnitManager.GetReachableMovement` already
+# accounts for terrain, rivers and ZOC, so the walk follows the engine's path while the engine says
+# the tile is reachable and only simulates from the first tile it cannot reach. Later turns are
+# walked with the unit's own `GetMaxMoves()` (`Base/Assets/UI/Panels/UnitPanel.lua:2242`) as the
+# per-turn budget. Every call sits inside a `pcall`: when an API is unavailable the caller keeps the
+# old tile-count arithmetic and reports `cost:-1` / `zoc:-1`, which mean "not known" and never
+# "clear".
+#
+# **What is still an approximation**, and it is stated so nobody reads the number as exact: a river
+# crossing and an embarkation spend the whole turn as well (manual:73), and those are modelled only
+# on turn 0 - where the engine's reachable set ends the movement for us. On later turns the walk
+# pays each tile's terrain cost and stops for ZOC, so a route that crosses a river on turn 2 can
+# read one turn short. The per-tile costs, the ZOC stops and the engine's first turn are exact.
+#
+# The enemy scan sees **visible** enemies only. An unseen ZOC cannot be known, so `zoc:0` means "no
+# ZOC we can see on this route" - the same honesty the line-of-sight verdict uses.
+_MARCH_HELPER = """
+-- Does this unit type project a zone of control? The game's data carries the answer
+-- (`ZoneOfControl` in `GameInfo.Units`: true for the melee, cavalry and anti-cavalry line, false
+-- for every ranged and siege unit), and a boolean column can come back as `false` **or** as `0`
+-- depending on how the row was built, so both are read as "no". A row that does not carry the
+-- column at all falls back to the promotion class the ranged and siege lines share - never to
+-- "assume it projects", because that would invent a detour past an enemy Archer that is not there.
+local function _marchProjectsZoc(info)
+    if info == nil then return false end
+    local v = nil
+    pcall(function() v = info.ZoneOfControl end)
+    if v == false or v == 0 then return false end
+    if v == true or v == 1 then return true end
+    local pc = ""
+    pcall(function() pc = info.PromotionClass or "" end)
+    if pc == "PROMOTION_CLASS_RANGED" or pc == "PROMOTION_CLASS_SIEGE" then return false end
+    return true
+end
+local _MARCH_ZOC, _MARCH_ZOC_READY = nil, false
+local function _marchZoc(me)
+    if _MARCH_ZOC_READY then return _MARCH_ZOC end
+    _MARCH_ZOC_READY = true
+    _MARCH_ZOC = {}
+    local vis = PlayersVisibility[me]
+    local dip = Players[me]:GetDiplomacy()
+    for pid = 0, 63 do
+        if pid ~= me and Players[pid] and Players[pid]:IsAlive()
+            and (pid == 63 or Players[pid]:IsMajor() or dip:IsAtWarWith(pid)) then
+            for _, eu in Players[pid]:GetUnits():Members() do
+                local ex, ey = eu:GetX(), eu:GetY()
+                if ex ~= -9999 and vis:IsVisible(ex, ey) then
+                    local ei = GameInfo.Units[eu:GetType()]
+                    local cs = ((ei and ei.Combat) or 0) + ((ei and ei.RangedCombat) or 0)
+                        + ((ei and ei.Bombard) or 0)
+                    if cs > 0 and _marchProjectsZoc(ei) then
+                        for dx = -1, 1 do for dy = -1, 1 do
+                            local np = Map.GetPlot(ex + dx, ey + dy)
+                            if np and Map.GetPlotDistance(ex, ey, np:GetX(), np:GetY()) == 1 then
+                                _MARCH_ZOC[np:GetIndex()] = true
+                            end
+                        end end
+                    end
+                end
+            end
+        end
+    end
+    return _MARCH_ZOC
+end
+-- Light and heavy cavalry ignore ZOC (manual:735-737). Compared with `==` on the whole class and
+-- never by substring: an anti-cavalry unit carries "CAVALRY" in its PromotionClass too, and a
+-- `string.find(pc, "CAVALRY")` would hand a Spearman the exemption.
+local function _marchIgnoresZoc(unit)
+    local pc = ""
+    pcall(function()
+        local ei = GameInfo.Units[unit:GetType()]
+        pc = (ei and ei.PromotionClass) or ""
+    end)
+    return pc == "PROMOTION_CLASS_LIGHT_CAVALRY" or pc == "PROMOTION_CLASS_HEAVY_CAVALRY"
+end
+-- The unit's own per-turn budget, or 0 when the engine will not say (the caller then falls back to
+-- the tile-count arithmetic rather than to a number this helper made up).
+local function _marchPerTurn(unit)
+    local m = 0
+    pcall(function() m = unit:GetMaxMoves() end)
+    if not m or m <= 0 then return 0 end
+    return m
+end
+local function _marchTileCost(plot)
+    local c = 1
+    pcall(function() c = plot:GetMovementCost() end)
+    if not c or c < 1 then c = 1 end
+    return c
+end
+-- Walk `path` (plot indices) from where `unit` stands. `reachSet` is this turn's reachable set, the
+-- engine's own answer for turn 0. Returns turns (0 = this turn), the sum of the tiles' movement
+-- costs, how many turns the route ends inside a ZOC, and the first such tile as x, y, turn. Returns
+-- nil when the engine will not report the unit's per-turn moves.
+local function _marchWalk(me, unit, path, reachSet, perTurn, ignoreZoc)
+    if perTurn == nil then perTurn = _marchPerTurn(unit) end
+    if perTurn <= 0 then return nil end
+    if ignoreZoc == nil then ignoreZoc = _marchIgnoresZoc(unit) end
+    local zoc = _marchZoc(me)
+    local cost, stops, sx, sy, sturn = 0, 0, -1, -1, -1
+    local idx = 1
+    while idx <= #path and reachSet[path[idx]] do
+        cost = cost + _marchTileCost(Map.GetPlotByIndex(path[idx]))
+        idx = idx + 1
+    end
+    if idx > #path then return 0, cost, 0, -1, -1, -1 end
+    local turn, budget = 1, perTurn
+    while idx <= #path do
+        if budget <= 0 then
+            turn = turn + 1
+            budget = perTurn
+        end
+        local plot = Map.GetPlotByIndex(path[idx])
+        local c = _marchTileCost(plot)
+        cost = cost + c
+        budget = budget - c
+        if budget < 0 then budget = 0 end
+        if zoc[path[idx]] and not ignoreZoc then
+            budget = 0
+            stops = stops + 1
+            if sx < 0 then sx, sy, sturn = plot:GetX(), plot:GetY(), turn end
+        end
+        idx = idx + 1
+    end
+    return turn, cost, stops, sx, sy, sturn
+end
+-- The route tokens an option line carries: `zoc:N`, `cost:N`, and `zocat:x,y,turn` for the first
+-- stop. -1 on either means the engine would not say, which is not the same as clear.
+local function _marchTokens(cost, zoc, sx, sy, sturn)
+    if cost == nil then cost = -1 end
+    if zoc == nil then zoc = -1 end
+    local s = "|zoc:" .. zoc .. "|cost:" .. cost
+    if zoc > 0 and sx and sx >= 0 then
+        s = s .. "|zocat:" .. sx .. "," .. sy .. "," .. sturn
+    end
+    return s
+end
+"""
+
+
 def build_pathing_estimate_query(unit_index: int, target_x: int, target_y: int) -> str:
     """InGame context: estimate turns for a unit to reach a destination.
 
-    Uses UnitManager.GetMoveToPath for the full path and
-    UnitManager.GetReachableMovement for this-turn reachable tiles.
+    ``UnitManager.GetMoveToPath`` for the full path, ``GetReachableMovement`` for this turn's
+    reachable tiles - and then the walk in `_MARCH_HELPER`, which pays each tile's real movement
+    cost and ends a turn where the route enters an enemy zone of control (manual:875). The old
+    tile-count arithmetic survives only as the fallback for a game that will not report the unit's
+    per-turn moves, and says so (`cost:-1|zoc:-1`).
     """
     return f"""
 {_lua_get_unit(unit_index)}
@@ -2569,6 +2729,7 @@ if unit:GetMovesRemaining() <= 0 then
     print("{SENTINEL}")
     return
 end
+{_MARCH_HELPER}
 local targetPlot = Map.GetPlot({target_x}, {target_y})
 if not targetPlot then {_bail(f"ERR:INVALID_TARGET|Target ({target_x},{target_y}) is out of bounds")} end
 local path = UnitManager.GetMoveToPath(unit, targetPlot:GetIndex())
@@ -2597,14 +2758,28 @@ for _, pIdx in ipairs(path) do
     if reachSet[pIdx] then reachCount = reachCount + 1 end
 end
 local totalTiles = #path
-local tilesPerTurn = math.max(reachCount, 1)
+-- The walk replaces the tile-count arithmetic: real per-tile cost, and the turn a ZOC stop costs.
+-- `reachCount` is still printed - it is the engine's own answer for this turn and older callers
+-- read it - and it is still the fallback when the engine will not report the unit's per-turn moves.
+local walkTurns, walkCost, walkZoc, walkSx, walkSy, walkSturn = _marchWalk(me, unit, path, reachSet)
 local turnsNeeded
-if reachCount >= totalTiles then
-    turnsNeeded = 0
+if walkTurns ~= nil then
+    turnsNeeded = walkTurns
 else
-    turnsNeeded = math.ceil((totalTiles - reachCount) / tilesPerTurn)
+    walkCost, walkZoc = -1, -1
+    if reachCount >= totalTiles then
+        turnsNeeded = 0
+    else
+        turnsNeeded = math.ceil((totalTiles - reachCount) / math.max(reachCount, 1))
+    end
 end
-print("PATH|" .. turnsNeeded .. "|" .. totalTiles .. "|" .. reachCount)
+print("PATH|" .. turnsNeeded .. "|" .. totalTiles .. "|" .. reachCount
+    .. "|" .. walkCost .. "|" .. walkZoc)
+if walkZoc ~= nil and walkZoc > 0 and walkSx >= 0 then
+    -- Where the route ends a turn inside an enemy ZOC (manual:875). A light or heavy cavalry unit
+    -- never produces one: it ignores ZOC (manual:735-737).
+    print("ZOCSTOP|" .. walkSx .. "," .. walkSy .. "|" .. walkSturn)
+end
 -- Emit waypoints for context (first tile, last reachable, destination)
 local waypoints = {{}}
 for i, pIdx in ipairs(path) do
@@ -2617,7 +2792,12 @@ print("{SENTINEL}")
 
 
 def parse_pathing_estimate(lines: list[str]) -> PathingEstimate:
-    """Parse PATH| and WAYPOINTS| output."""
+    """Parse ``PATH|``, ``WAYPOINTS|`` and ``ZOCSTOP|`` output.
+
+    The ``PATH`` line carries two more fields than it used to (the walk's movement cost and the
+    number of turns the route ends inside an enemy ZOC); a server that predates the walk sends four
+    and the two read as ``-1``, "not known" - never as "clear".
+    """
     est = PathingEstimate(turns=0, total_tiles=0, reachable_this_turn=0, waypoints=[])
     for line in lines:
         if line.startswith("PATH|"):
@@ -2626,6 +2806,14 @@ def parse_pathing_estimate(lines: list[str]) -> PathingEstimate:
                 est.turns = int(parts[1])
                 est.total_tiles = int(parts[2])
                 est.reachable_this_turn = int(parts[3])
+            if len(parts) >= 6:
+                est.total_cost = int(_number(parts[4]))
+                est.zoc_stops = int(_number(parts[5]))
+        elif line.startswith("ZOCSTOP|"):
+            parts = line.split("|")
+            if len(parts) >= 3:
+                x, y = (int(v) for v in parts[1].split(","))
+                est.zoc_at = (x, y, int(_number(parts[2])))
         elif line.startswith("WAYPOINTS|"):
             est.waypoints = line.split("|", 1)[1].split(";")
     return est
@@ -2645,6 +2833,7 @@ if not pTarget then
     print("__SENTINEL__")
     return
 end
+__MARCH__
 local ring = {}
 for dx = -2, 2 do for dy = -2, 2 do
     local px, py = tx + dx, ty + dy
@@ -2793,6 +2982,10 @@ for _, u in Players[me]:GetUnits():Members() do
             local reach = UnitManager.GetReachableMovement(u)
             local reachSet = {}
             if reach then for _, i in ipairs(reach) do reachSet[i] = true end end
+            -- The walk's per-unit inputs, read once: the unit's own per-turn budget and whether it
+            -- is a cavalry unit, which ignores ZOC (manual:735-737).
+            local perTurnU = _marchPerTurn(u)
+            local ignoreZocU = _marchIgnoresZoc(u)
             -- Recon is not a front-line unit: a Scout has Combat 10, so a test that only asks
             -- "is Combat > 0" files it as melee and the plan sends it to a tile adjacent to a
             -- city, where it dies for nothing (seen on the first live run of this query,
@@ -2839,12 +3032,17 @@ for _, u in Players[me]:GetUnits():Members() do
                             for _, pIdx in ipairs(path2) do
                                 if reachSet[pIdx] then rc2 = rc2 + 1 end
                             end
-                            local turns2
-                            if rc2 >= #path2 then turns2 = 0
-                            else turns2 = math.ceil((#path2 - rc2) / math.max(rc2, 1)) end
+                            local turns2, cost2, zoc2, sx2, sy2, st2 =
+                                _marchWalk(me, u, path2, reachSet, perTurnU, ignoreZocU)
+                            if turns2 == nil then
+                                cost2, zoc2 = -1, -1
+                                if rc2 >= #path2 then turns2 = 0
+                                else turns2 = math.ceil((#path2 - rc2) / math.max(rc2, 1)) end
+                            end
                             if turns2 <= 3 then
                                 print("NEXTOPTION|" .. u:GetID() .. "|" .. t2.x .. "," .. t2.y
-                                    .. "|" .. turns2 .. "|" .. (reachSet[t2.idx] and 1 or 0))
+                                    .. "|" .. turns2 .. "|" .. (reachSet[t2.idx] and 1 or 0)
+                                    .. _marchTokens(cost2, zoc2, sx2, sy2, st2))
                             end
                         end
                     end
@@ -2860,12 +3058,17 @@ for _, u in Players[me]:GetUnits():Members() do
                             for _, pIdx in ipairs(path3) do
                                 if reachSet[pIdx] then rc3 = rc3 + 1 end
                             end
-                            local turns3
-                            if rc3 >= #path3 then turns3 = 0
-                            else turns3 = math.ceil((#path3 - rc3) / math.max(rc3, 1)) end
+                            local turns3, cost3, zoc3, sx3, sy3, st3 =
+                                _marchWalk(me, u, path3, reachSet, perTurnU, ignoreZocU)
+                            if turns3 == nil then
+                                cost3, zoc3 = -1, -1
+                                if rc3 >= #path3 then turns3 = 0
+                                else turns3 = math.ceil((#path3 - rc3) / math.max(rc3, 1)) end
+                            end
                             if turns3 <= 3 then
                                 print("KILLOPTION|" .. u:GetID() .. "|" .. t3.x .. "," .. t3.y
-                                    .. "|" .. turns3 .. "|" .. (reachSet[t3.idx] and 1 or 0))
+                                    .. "|" .. turns3 .. "|" .. (reachSet[t3.idx] and 1 or 0)
+                                    .. _marchTokens(cost3, zoc3, sx3, sy3, st3))
                             end
                         end
                     end
@@ -2881,12 +3084,17 @@ for _, u in Players[me]:GetUnits():Members() do
                             for _, pIdx in ipairs(path) do
                                 if reachSet[pIdx] then rc = rc + 1 end
                             end
-                            local turns
-                            if rc >= #path then turns = 0
-                            else turns = math.ceil((#path - rc) / math.max(rc, 1)) end
+                            local turns, mcost, mzoc, msx, msy, mst =
+                                _marchWalk(me, u, path, reachSet, perTurnU, ignoreZocU)
+                            if turns == nil then
+                                mcost, mzoc = -1, -1
+                                if rc >= #path then turns = 0
+                                else turns = math.ceil((#path - rc) / math.max(rc, 1)) end
+                            end
                             if turns <= 3 then
                                 print("RALLYOPTION|" .. u:GetID() .. "|" .. t.x .. "," .. t.y .. "|"
-                                    .. turns .. "|" .. (reachSet[t.idx] and 1 or 0) .. "|" .. #path)
+                                    .. turns .. "|" .. (reachSet[t.idx] and 1 or 0) .. "|" .. #path
+                                    .. _marchTokens(mcost, mzoc, msx, msy, mst))
                             end
                         end
                     end
@@ -2902,12 +3110,17 @@ for _, u in Players[me]:GetUnits():Members() do
                             for _, pIdx in ipairs(path) do
                                 if reachSet[pIdx] then reachCount = reachCount + 1 end
                             end
-                            local turns
-                            if reachCount >= #path then turns = 0
-                            else turns = math.ceil((#path - reachCount) / math.max(reachCount, 1)) end
+                            local turns, mcost, mzoc, msx, msy, mst =
+                                _marchWalk(me, u, path, reachSet, perTurnU, ignoreZocU)
+                            if turns == nil then
+                                mcost, mzoc = -1, -1
+                                if reachCount >= #path then turns = 0
+                                else turns = math.ceil((#path - reachCount) / math.max(reachCount, 1)) end
+                            end
                             if turns <= 3 then
                                 print("OPTION|" .. u:GetID() .. "|" .. t.x .. "," .. t.y .. "|"
-                                    .. turns .. "|" .. (reachSet[t.idx] and 1 or 0) .. "|" .. #path)
+                                    .. turns .. "|" .. (reachSet[t.idx] and 1 or 0) .. "|" .. #path
+                                    .. _marchTokens(mcost, mzoc, msx, msy, mst))
                             end
                         end
                     end
@@ -2948,13 +3161,15 @@ def build_staging_plan_query(
 
     One query instead of one per (unit, tile): the ring is at most ~18 tiles and the army is
     ~10 units, so the per-call version is a hundred round trips. Every number here comes from
-    the game's own pathfinding (``GetMoveToPath`` + ``GetReachableMovement``), which is the
-    point - the staging plan decides *which tile for which unit in which turn*, and this war
-    paid twice for computing that by hand.
+    the game's own pathfinding (``GetMoveToPath`` + ``GetReachableMovement``) plus the walk in
+    `_MARCH_HELPER`, which pays each tile's real movement cost and ends a turn where the route
+    enters an enemy zone of control - that is the point: the staging plan decides *which tile for
+    which unit in which turn*, and this war paid twice for computing that by hand.
     """
     return (
         _STAGING_TEMPLATE.replace("__TX__", str(int(_number(target_x))))
         .replace("__TY__", str(int(_number(target_y))))
+        .replace("__MARCH__", _MARCH_HELPER)
         .replace(
             "__NX__", str(int(_number(next_x)) if next_x is not None else -9999)
         )
@@ -2969,6 +3184,29 @@ def build_staging_plan_query(
         )
         .replace("__SENTINEL__", SENTINEL)
     )
+
+
+def _route_tokens(tokens: list[str]) -> tuple[int, int, tuple[int, int, int] | None]:
+    """``zoc:`` / ``cost:`` / ``zocat:`` from an option line, when the server sends them.
+
+    ``-1`` on either number means the server did not report it, and that is never the same as
+    "clear": a plan built from an old server must not read an unknown route as a safe one.
+    """
+    cost, zoc, zoc_at = -1, -1, None
+    for token in tokens:
+        if token.startswith("zocat:"):
+            bits = token[6:].split(",")
+            if len(bits) == 3:
+                zoc_at = (
+                    int(_number(bits[0])),
+                    int(_number(bits[1])),
+                    int(_number(bits[2])),
+                )
+        elif token.startswith("zoc:"):
+            zoc = int(_number(token[4:]))
+        elif token.startswith("cost:"):
+            cost = int(_number(token[5:]))
+    return cost, zoc, zoc_at
 
 
 def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
@@ -3058,6 +3296,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             )
         elif line.startswith("RALLYOPTION|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[2].split(","))
+            cost, zoc, zoc_at = _route_tokens(parts[6:])
             plan.rally_options.append(
                 StagingOption(
                     unit_id=int(parts[1]),
@@ -3066,6 +3305,9 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
                     path_len=int(_number(parts[5])),
+                    cost=cost,
+                    zoc=zoc,
+                    zoc_at=zoc_at,
                 )
             )
         elif line.startswith("KILLRING|") and len(parts) >= 2:
@@ -3073,6 +3315,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             plan.kill_ring.append(StagingRingTile(x=x, y=y, distance=1))
         elif line.startswith("KILLOPTION|") and len(parts) >= 5:
             x, y = (int(v) for v in parts[2].split(","))
+            cost, zoc, zoc_at = _route_tokens(parts[5:])
             plan.kill_options.append(
                 StagingOption(
                     unit_id=int(parts[1]),
@@ -3080,6 +3323,9 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     y=y,
                     turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
+                    cost=cost,
+                    zoc=zoc,
+                    zoc_at=zoc_at,
                 )
             )
         elif line.startswith("NEXTRING|") and len(parts) >= 3:
@@ -3089,6 +3335,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             )
         elif line.startswith("NEXTOPTION|") and len(parts) >= 5:
             x, y = (int(v) for v in parts[2].split(","))
+            cost, zoc, zoc_at = _route_tokens(parts[5:])
             plan.next_options.append(
                 StagingOption(
                     unit_id=int(parts[1]),
@@ -3096,10 +3343,14 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     y=y,
                     turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
+                    cost=cost,
+                    zoc=zoc,
+                    zoc_at=zoc_at,
                 )
             )
         elif line.startswith("OPTION|") and len(parts) >= 6:
             x, y = (int(v) for v in parts[2].split(","))
+            cost, zoc, zoc_at = _route_tokens(parts[6:])
             plan.options.append(
                 StagingOption(
                     unit_id=int(parts[1]),
@@ -3108,6 +3359,9 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     turns=int(_number(parts[3])),
                     this_turn=parts[4] == "1",
                     path_len=int(_number(parts[5])),
+                    cost=cost,
+                    zoc=zoc,
+                    zoc_at=zoc_at,
                 )
             )
     return plan

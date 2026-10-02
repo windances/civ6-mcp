@@ -70,6 +70,13 @@ class Assignment:
     # True for a gun in the ring with no movement left: it cannot shoot this turn, so it is not a
     # shooter in position however clear its line is (`tactics/04`: arriving costs the shot).
     spent: bool = False
+    # The route the unit takes there: the path's movement cost and how many turns it ends inside an
+    # enemy zone of control (manual:875), with the first such tile and turn. -1/None means the
+    # server did not report it. The arrival turn already counts a ZOC stop; these fields are what
+    # lets the row say *why* the turn was spent.
+    cost: int = -1
+    zoc: int = -1
+    zoc_at: tuple[int, int, int] | None = None
 
     @property
     def where(self) -> str:
@@ -254,6 +261,10 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
                 o.turns,
                 _los_rank(unit, by_pos[(o.x, o.y)], plan),
                 _distance_rank(unit, by_pos[(o.x, o.y)]),
+                # Two tiles that take the same number of turns are not equal: one may end a turn
+                # inside an enemy zone of control on the way (manual:875), which is the difference
+                # between a gun that arrives on time and one that arrives a turn late.
+                max(o.zoc, 0),
                 1 if (o.x, o.y) in taken else 0,
             )
         )
@@ -289,6 +300,9 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
                 this_turn=chosen.this_turn,
                 los=verdict,
                 spent=spent,
+                cost=chosen.cost,
+                zoc=chosen.zoc,
+                zoc_at=chosen.zoc_at,
             )
         )
 
@@ -317,7 +331,7 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
                 and (o.x, o.y) not in current_ring
                 and (o.x, o.y) not in taken
             ),
-            key=lambda o: (o.turns, o.x, o.y),
+            key=lambda o: (o.turns, max(o.zoc, 0), o.x, o.y),
         )
         return candidates[0] if candidates else None
 
@@ -331,7 +345,14 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
         taken[(option.x, option.y)] = f"{unit.unit_type} #{unit.unit_id} (advance)"
         result.surplus.append(
             Assignment(
-                unit=unit, tile=tile, turns=option.turns, this_turn=option.this_turn, note="ADVANCE"
+                unit=unit,
+                tile=tile,
+                turns=option.turns,
+                this_turn=option.this_turn,
+                note="ADVANCE",
+                cost=option.cost,
+                zoc=option.zoc,
+                zoc_at=option.zoc_at,
             )
         )
         return True
@@ -350,7 +371,7 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
             return False
         candidates = sorted(
             (o for o in plan.kill_options if o.unit_id == unit.unit_id and (o.x, o.y) not in taken),
-            key=lambda o: (o.turns, not o.this_turn, o.x, o.y),
+            key=lambda o: (o.turns, max(o.zoc, 0), not o.this_turn, o.x, o.y),
         )
         if not candidates:
             return False
@@ -361,7 +382,14 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
         taken[(option.x, option.y)] = f"{unit.unit_type} #{unit.unit_id} (kill)"
         result.surplus.append(
             Assignment(
-                unit=unit, tile=tile, turns=option.turns, this_turn=option.this_turn, note="KILL"
+                unit=unit,
+                tile=tile,
+                turns=option.turns,
+                this_turn=option.this_turn,
+                note="KILL",
+                cost=option.cost,
+                zoc=option.zoc,
+                zoc_at=option.zoc_at,
             )
         )
         return True
@@ -371,7 +399,11 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
         if unit.role == "melee":
             for option in sorted(
                 (o for o in _candidates(plan, unit) if o.turns <= turns_ahead),
-                key=lambda o: (o.turns, 0 if (o.x, o.y) in supply_positions else 1),
+                key=lambda o: (
+                    o.turns,
+                    max(o.zoc, 0),
+                    0 if (o.x, o.y) in supply_positions else 1,
+                ),
             ):
                 if (option.x, option.y) in taken:
                     continue
@@ -384,7 +416,14 @@ def assign(plan: m.StagingPlan, turns_ahead: int = 2, rotate: bool = True) -> St
             supply_positions.discard((chosen.x, chosen.y))
             result.surplus.append(
                 Assignment(
-                    unit=unit, tile=tile, turns=chosen.turns, this_turn=chosen.this_turn, note="SUPPLY"
+                    unit=unit,
+                    tile=tile,
+                    turns=chosen.turns,
+                    this_turn=chosen.this_turn,
+                    note="SUPPLY",
+                    cost=chosen.cost,
+                    zoc=chosen.zoc,
+                    zoc_at=chosen.zoc_at,
                 )
             )
             continue
@@ -445,7 +484,7 @@ def _rally_option(plan: m.StagingPlan | None, unit: m.StagingUnit, rally_tiles: 
         tile = rally_tiles.get((option.x, option.y))
         if tile is None or tile.blocked:
             continue
-        key = (option.turns, option.path_len, tile.distance)
+        key = (option.turns, max(option.zoc, 0), option.path_len, tile.distance)
         if best is None or key < best[0]:
             best = (key, option, tile)
     return best
@@ -472,6 +511,34 @@ def _fire_note(assignment: Assignment) -> str:
         blockers = "; ".join(verdict.blockers)
         return f" - NO LINE OF SIGHT: {blockers}" if blockers else f" - NO LINE OF SIGHT: {verdict.reason}"
     return " - LOS unread: the map sent no sight data for this tile (server too old)"
+
+
+def _route_note(assignment: Assignment) -> str:
+    """What the march costs and where the engine ends a turn on the way, on the row that assigns it.
+
+    Distance is not movement: a tile costs what the map says (Hills 2, Woods 2, Forest-on-Hills 3)
+    and entering a tile in an enemy zone of control expends the rest of that turn's movement
+    (manual:875; light and heavy cavalry are exempt, manual:735-737). The arrival turn on the row
+    already counts both - this line says *why* the number is what it is, so the stop can be routed
+    around instead of reported as a surprise. Measured before this existed: 232 `STOPPED_MID_PATH`
+    results over T228-T299.
+    """
+    if assignment.zoc is None or assignment.zoc < 0:
+        return ""
+    if assignment.zoc == 0:
+        if assignment.cost is not None and assignment.cost > 0:
+            return f"  cost {assignment.cost} mp, no visible ZOC on the way"
+        return ""
+    where = (
+        f"({assignment.zoc_at[0]},{assignment.zoc_at[1]}) on turn +{assignment.zoc_at[2]}"
+        if assignment.zoc_at
+        else "on the way"
+    )
+    return (
+        f"  ZOC STOP at {where}: entering an enemy zone of control spends the rest of that turn's"
+        f" movement (manual:875) - already counted in the arrival turn above, so route around it or"
+        f" accept it"
+    )
 
 
 def _spare_firing_tiles(plan: m.StagingPlan | None, result: StagingPlanResult, unit: m.StagingUnit):
@@ -558,6 +625,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             f"  {a.unit.unit_type:<22} #{a.unit.unit_id} ({a.unit.x},{a.unit.y}) moves {a.unit.moves}"
             f" -> {a.where} d{a.tile.distance}  arrive {when}  [{a.unit.role}]"
             f"{_fire_note(a)}"
+            f"{_route_note(a)}"
             f"{leg}"
         )
     for unit in result.unplaced:
@@ -594,11 +662,13 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                     f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
                     f"  HOLD THE RING (a camp has no supply line to cut — this is where the second"
                     f" attacker stands and where the guard is stopped from stepping onto the camp)"
+                    f"{_route_note(a)}"
                 )
             else:
                 lines.append(
                     f"    {a.unit.unit_type:<20} #{a.unit.unit_id} -> {a.where} d{a.tile.distance}"
                     f"  CUT THE SUPPLY LINE (stands on a hex the city heals from)"
+                    f"{_route_note(a)}"
                 )
         for a in killing:
             lines.append(
@@ -607,6 +677,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                 f" — mobile unit only: one attacker kills it, and the extras take its other"
                 f" neighbours so it cannot step away; `condemn` is one command from adjacent"
                 f" (while at war, task 008)"
+                f"{_route_note(a)}"
             )
         for a in advancing:
             lines.append(
@@ -614,6 +685,7 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
                 f"  ADVANCE toward the next objective"
                 f"{' this turn' if a.this_turn else f' in {a.turns} turn(s)'} — out of this city's"
                 f" strike, and that much less marching when the next siege opens"
+                f"{_route_note(a)}"
             )
         for a in depth:
             lines.append(
@@ -719,6 +791,29 @@ def render(result: StagingPlanResult, plan: m.StagingPlan | None = None) -> str:
             " blocker is Hills+Woods). `FIRE` is clear; `FIRE?` is a tile with two candidate lines"
             " and only one of them clear. A gun already standing on a ring tile gets `CANFIRE` —"
             " the game's own answer, which overrides the map's."
+        )
+    # Zone of control, at plan level: the rows carry the tile and the turn, this says how much of
+    # the plan is affected - the measured failure this fixes was a schedule that treated a ZOC stop
+    # as an unexplained delay (232 `STOPPED_MID_PATH` results over T228-T299).
+    stopped = [
+        a for a in result.placed + result.surplus if a.tile and a.zoc is not None and a.zoc > 0
+    ]
+    if stopped:
+        lines.append(
+            f"  ZONE OF CONTROL on the march: {len(stopped)} of the routes above enter an enemy"
+            " zone of control, which spends the rest of that turn's movement (manual:875 - light"
+            " and heavy cavalry ignore it, manual:735-737). Their arrival turns already count the"
+            " stop:"
+        )
+        lines.extend(
+            f"    {a.unit.unit_type} #{a.unit.unit_id}"
+            + (
+                f" stops at ({a.zoc_at[0]},{a.zoc_at[1]}) on turn +{a.zoc_at[2]}"
+                if a.zoc_at
+                else " stops on the way"
+            )
+            + (f", {a.zoc} such turn(s)" if (a.zoc or 0) > 1 else "")
+            for a in stopped
         )
     shooters = result.shooters_in_place
     when = "this turn" if result.opens_on == 0 else f"T+{result.opens_on}"

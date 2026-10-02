@@ -113,13 +113,12 @@ metric is unreachable; the way to tell them apart is one targeted check in the n
 `SIEGE PROGRESS` block already reads `city hp: N/200`, so a turn where it reads 0 with our melee
 adjacent and no `TAKE THE CITY` block is a metric bug, and that is worth one diary line to record.
 
-**G4 - the metric blind spots that make part of the doctrine unenforceable.** Zone of Control is
-invisible to both pathing tools, so a plan can route through it and the unit just stops; and the
-plan's arrival turns are extrapolated from movement points rather than the real per-tile cost. The
-doctrine in those areas can only be followed by hand, and the file that says so cannot be delivered
-(G1). **The religious-unit half of this gap was closed on 2026-10-01** - see section 7 - and closing
-it also exposed that the predicate the docs had carried for months was wrong: there is no
-`FORMATION_CLASS_RELIGIOUS` in the game's data at all.
+**G4 - the metric blind spots that make part of the doctrine unenforceable.** Zone of Control was
+invisible to both pathing tools, so a plan could route through it and the unit just stopped; and the
+plan's arrival turns were extrapolated from movement points rather than the real per-tile cost. Both
+halves are now closed - the religious-unit half on 2026-10-01 (section 6) and the movement half on
+2026-10-02 (section 7) - and closing the religious half also exposed that the predicate the docs had
+carried for months was wrong: there is no `FORMATION_CLASS_RELIGIOUS` in the game's data at all.
 
 ## 6. What changed on 2026-10-01: the discovery path
 
@@ -191,7 +190,36 @@ Tests: `tests/test_religious_units.py` (18) - the predicate, both parsers, the b
 metrics, the staged rule's shape and the staging boundary, and the pillage verb's operation,
 diagnosis and dispatch.
 
-## 7. How to re-run this survey
+## 7. What changed on 2026-10-02: the movement half of G4
+
+The other half of G4 was two facts no plan could see: **which tiles an enemy's zone of control
+covers**, and **what a path actually costs to walk**. The old arrival turn was
+`ceil((#path - reach) / reach)` - a tile count extrapolated from movement points - so a route that
+climbed hills or clipped an enemy ZOC was scheduled as if it were flat and empty, and the stop
+arrived as a surprise (`STOPPED_MID_PATH`, 232 of them over T228-T299, measured).
+
+- **The walk** is one shared Lua helper (`_MARCH_HELPER` in `src/civ_mcp/lua/units.py`), embedded in
+  `get_pathing_estimate` and `build_staging_plan_query` alike: it walks the route tile by tile,
+  paying each tile what the map says (`plot:GetMovementCost()`), follows the engine's own reachable
+  set for the current turn (`UnitManager.GetReachableMovement` already knows terrain, rivers and
+  ZOC) and the unit's own `GetMaxMoves()` for the turns after it.
+- **The ZOC stop** comes from the game's own flag, `GameInfo.Units[type].ZoneOfControl`: `true` for
+  the melee, cavalry and anti-cavalry line and `false` for every ranged and siege unit, so the scan
+  marks the tiles around the units that really project one. Entering such a tile spends the rest of
+  that turn's movement (manual:875), light and heavy cavalry excepted (manual:735-737). Every option
+  now carries `cost: N` and `zoc:N`, the reply names the first stop as `ZOC STOP at (x,y) on turn +k`,
+  the plan prefers a route that does not stop when two tiles would arrive on the same turn, and
+  `arrive T+n` counts the lost turn instead of reporting it afterwards.
+- **The edges are stated, not hidden.** An enemy in fog cannot be known, so `zoc:0` means "none
+  visible on this route"; a river crossing or an embark after the first turn is not modelled
+  (manual:73); and a game that will not report `GetMaxMoves()` keeps the old tile-count arithmetic
+  and says so (`cost:-1`, `zoc:-1` - "not known", never "clear").
+
+Tests: `tests/test_march_route.py` (36) - the flag and the cavalry exemption, the fallback, both
+parsers with and without the new fields, the tie-break, the rendered row, the narration, and a real
+Lua parse of all four emitted chunks (`luaparser`, now in the dev group in `pyproject.toml`).
+
+## 8. How to re-run this survey
 
 ```powershell
 node .tools/tactics-in-briefs.mjs      # did each playbook reach an advisor brief

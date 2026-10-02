@@ -171,7 +171,9 @@ once, so a task can point at them instead of copying them:
    the tile; re-test a refused tile a turn later (T194).
 4. **A shooter that spends its movement arriving cannot fire** (`NO_MOVES|Ranged attacks require
    movement`, T194 and T236; `NO_LOS` twice at T292). Check the terrain cost (`[mv:2]`, `[mv:3]`)
-   before posting a 2-move siege unit.
+   before posting a 2-move siege unit — and read the row: `get_staging_plan` walks the path and
+   prints what it costs (`cost N mp`) plus a `ZOC STOP at (x,y)` when the route ends a turn next to
+   an enemy, so the cost of the march is on the plan instead of in the post-mortem.
 5. **Entering a Zone of Control costs that turn's attack** (`ZOC|... cannot attack until next turn`,
    T194, T234, T254, T260, T283).
 6. **A unit id is not durable across an upgrade** — re-read `get_units` after every `upgrade_unit`
@@ -272,10 +274,25 @@ record the refusal in the diary; and walking to a supply hex spends the move, so
   (`ZONES OF CONTROL`, p.73): "When a unit moves into a tile within an enemy's ZOC it expends **all
   of its MPs**. Cavalry units are the exception." So stepping into the hex next to an enemy is not
   a cheap detour — it ends that unit's movement for the turn, even if it never intended to attack.
+- **The plan now predicts that stop instead of leaving it to be discovered.** `get_staging_plan` and
+  `get_pathing_estimate` walk the route tile by tile: each tile costs what the map says
+  (`plot:GetMovementCost()` — 1 on flat ground, 2 for Hills or Woods, 3 for Forest on Hills), the
+  row carries the path's `cost` in movement points, and a route that enters an enemy ZOC prints
+  `ZOC STOP at (x,y) on turn +k`. **The `arrive T+n` on that row already includes the lost turn**,
+  and when two tiles take the same number of turns the plan prefers the one that does not stop. So
+  do not treat a stop as an unexplained delay any more (`STOPPED_MID_PATH` was the old way of
+  finding out): either accept the turn it costs or pick the other tile the plan offers.
+- **Only some enemies create that stop, and the game's own data says which.** The flag is
+  `ZoneOfControl` in `GameInfo.Units`: true for the melee, cavalry and anti-cavalry line, **false for
+  every ranged and siege unit** — an Archer, a Crossbowman, a Catapult and a Bombard project no
+  zone of control at all. So an enemy gun beside the route is not a detour, while an enemy Spearman
+  is, and a plan that treats them the same wastes a turn in one direction or the other.
 - **Our cavalry is the exception too, and that is a tool.** Cavalry ignores enemy ZOC: it can slip
   past a front line to reach the enemy's siege and ranged units, cut a supply hex, or pillage the
   tiles the target city depends on. That is the same property that makes enemy cavalry dangerous to
-  us (`counter-the-cavalry`) — use it instead of only defending against it.
+  us (`counter-the-cavalry`) — use it instead of only defending against it. The exemption is by
+  promotion class (light and heavy cavalry, manual:735-737), so the plan never predicts a ZOC stop
+  for them.
 - **Contact outranks the timetable, and during an assembly it has its own procedure: step 5.** The
   moment a unit discovers an enemy or is attacked, the answer is step 5 first and the march second.
   A city is patient; a Catapult that walked past an enemy is not.

@@ -488,6 +488,25 @@ def narrate_cities(
 
 
 def narrate_pathing_estimate(est: lq.PathingEstimate) -> str:
+    # What the march costs, when the server walked it: the sum of the tiles' movement costs and the
+    # turns it ends inside an enemy zone of control (manual:875 - entering one spends the rest of
+    # that turn's movement; light and heavy cavalry are exempt, manual:735-737). A server that
+    # predates the walk sends -1 and the line is simply absent.
+    route = ""
+    if est.total_cost is not None and est.total_cost >= 0:
+        route = f"; {est.total_cost} movement points of terrain"
+        if est.zoc_stops and est.zoc_stops > 0:
+            where = (
+                f"({est.zoc_at[0]},{est.zoc_at[1]}) on turn +{est.zoc_at[2]}"
+                if est.zoc_at
+                else "on the way"
+            )
+            route += (
+                f"; ZOC STOP at {where} - entering an enemy zone of control spends the rest of that"
+                f" turn's movement (manual:875), which the turn count above already includes"
+            )
+        elif est.zoc_stops == 0:
+            route += "; no visible enemy ZOC on the route"
     if est.turns == -2:
         return "Unit has no moves remaining this turn."
     if est.turns < 0:
@@ -496,13 +515,16 @@ def narrate_pathing_estimate(est: lq.PathingEstimate) -> str:
             "behind foreign borders, or blocked by impassable terrain."
         )
     if est.turns == 0:
-        return f"Reachable this turn ({est.total_tiles} tiles in path, all within movement range)."
+        return (
+            f"Reachable this turn ({est.total_tiles} tiles in path, all within movement range"
+            f"{route})."
+        )
     wp_str = ""
     if est.waypoints and len(est.waypoints) > 2:
         wp_str = f"\n  Path: {est.waypoints[0]} -> ... -> {est.waypoints[-1]}"
     return (
         f"~{est.turns} turns ({est.total_tiles} tiles total, "
-        f"{est.reachable_this_turn} reachable this turn){wp_str}"
+        f"{est.reachable_this_turn} reachable this turn{route}){wp_str}"
     )
 
 

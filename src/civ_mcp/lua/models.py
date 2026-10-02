@@ -606,12 +606,22 @@ class CombatEstimate:
 
 @dataclass
 class PathingEstimate:
-    """Estimated turns for a unit to reach a destination."""
+    """Estimated turns for a unit to reach a destination, and what the march costs.
+
+    ``total_cost`` is the sum of the tiles' movement costs (`plot:GetMovementCost`) and
+    ``zoc_stops`` is how many turns the route ends inside an enemy zone of control - entering one
+    expends the unit's remaining movement (manual:875), light and heavy cavalry excepted
+    (manual:735-737). ``zoc_at`` names the first such tile and the turn it happens on.
+    ``-1`` on either number means the server did not report it, which is never "clear".
+    """
 
     turns: int
     total_tiles: int
     reachable_this_turn: int
     waypoints: list[str] = field(default_factory=list)  # ["(x,y)", ...]
+    total_cost: int = -1
+    zoc_stops: int = -1
+    zoc_at: tuple[int, int, int] | None = None  # (x, y, turn) of the first ZOC stop
 
 
 @dataclass
@@ -673,7 +683,13 @@ class StagingUnit:
 
 @dataclass
 class StagingOption:
-    """A unit's path to one ring tile: turns to arrive, and whether it arrives this turn."""
+    """A unit's path to one ring tile: turns to arrive, and whether it arrives this turn.
+
+    ``cost`` is what the path's tiles cost in movement points and ``zoc`` how many turns the route
+    ends inside an enemy zone of control (manual:875: entering one expends the unit's remaining
+    movement, light and heavy cavalry excepted). ``zoc_at`` names the first such tile and the turn.
+    ``-1``/``None`` means the server did not report it, which is never "clear".
+    """
 
     unit_id: int
     x: int
@@ -681,6 +697,9 @@ class StagingOption:
     turns: int
     this_turn: bool = False
     path_len: int = 0
+    cost: int = -1
+    zoc: int = -1
+    zoc_at: tuple[int, int, int] | None = None  # (x, y, turn) of the first ZOC stop
 
 
 @dataclass

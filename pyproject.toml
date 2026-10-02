@@ -85,6 +85,10 @@ build-backend = "hatchling.build"
 dev = [
     "matplotlib>=3.10.8",
     "pytest>=8.0",
+    # A Lua parser, for `tests/test_march_route.py`: the movement queries are Lua, no game is
+    # running during a test run, and a syntax error in one of them would otherwise only surface
+    # mid-war. `luaparser` parses the emitted chunk so the suite fails here instead.
+    "luaparser>=4.2",
 ]
 
 [tool.pytest.ini_options]
