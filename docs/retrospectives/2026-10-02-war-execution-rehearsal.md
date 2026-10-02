@@ -226,3 +226,9 @@ python scripts/fix-text-encoding.py --check
    归类——丢了装饰器的方法会重新开始撒谎，而没有任何测试会注意到。
    顺带修掉同一片区域的一个易用性缺陷：`play-turn.py produce <城> <项> 53 23`（手打时最自然的写法）
    过去会抛 `ValueError` 栈回溯；现在 `X,Y` 与 `X Y` 都接受，其他形状回一行 usage。
+   **工具教训（会再犯）**：这次改 `game_state.py` 是用一个 Python 脚本重写整份文件的，脚本用
+   `pathlib.write_text` 落盘——在 Windows 上它会把 `\n` 翻成 `\r\n`，于是这一改在 diff 里变成
+   "4704 行变更"，整份文件的 `git blame` 一次性作废。仓库里这份文件是 LF。**任何批量改写被跟踪文件的
+   脚本必须用 `write_bytes`（或 `open(..., newline="")`）**，落盘后先用
+   `git diff --stat` 看一眼行数是否离谱；发现之后用 `read_bytes().replace(b"\r\n", b"\n")`
+   还原并 `commit --amend`，比追一个洁净历史便宜得多。
