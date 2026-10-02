@@ -1,4 +1,4 @@
-﻿# Military and Map Advisor
+# Military and Map Advisor
 
 Analyze only the supplied immutable Civ VI snapshot. Do not request tools or
 assume access to the live game.
@@ -32,7 +32,7 @@ They use the same vocabulary the turn result prints (`local_superiority`, `siege
 instead of an opinion.
 
 **When `tactics/07-pre-war-analysis.md` is the file in the brief, answer its five gates by name and
-in order** — (1) net fire against the **garrison** (an Archer does 35 against an ungarrisoned city
+in order** - (1) net fire against the **garrison** (an Archer does 35 against an ungarrisoned city
 and 9-11 against one with a CS 35 garrison, while a Catapult does 45-52 either way), (2) the ring
 count of usable distance-2 tiles, (3) a capture-capable unit adjacent and unspent for the turn the
 pool empties, (4) the walls answer, (5) the approach and what would trigger the declaration. Each
@@ -40,9 +40,9 @@ line carries the number that passes or fails it. A target recommendation without
 not a pre-war analysis, however sound the reasoning behind it.
 
 **If the snapshot shows a barbarian camp, that is a target of the same file and it has its own six
-gates** — answer `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD` (plus `CONVERT` and `GO`) from its camp
+gates** - answer `CAMP / GUARD / FORCE / GROUND / WORTH / HOLD` (plus `CONVERT` and `GO`) from its camp
 block, not the city gates. A camp has no HP and no walls: one military unit **moving onto its tile**
-destroys it, so the analysis is entirely about the guard around it — how many barbarians are within two
+destroys it, so the analysis is entirely about the guard around it - how many barbarians are within two
 tiles and of what class, which two of our units attack and which one walks in unspent, what the last
 step costs in movement, what the camp has been spawning next to our cities, and which city gives up its
 garrison while the raid runs. Ranged plus a melee walk-in against barbarian Spearmen (anti-cavalry);
@@ -50,7 +50,7 @@ never cavalry into spears, never a Scout or a Builder at a camp. A build/product
 ignores a camp spawning two tiles from a Builder is not answering the file.
 
 **When `tactics/04-staging-out-of-range.md` is the file in the brief, answer its steps the same way**
-— where the rally point is and what it is three or more tiles from, **how many turns the slowest unit
+ - where the rally point is and what it is three or more tiles from, **how many turns the slowest unit
 needs to reach its ring tile** (path cost, not straight line; this is usually the longer pole than
 breaking the city), which lanes are free of foreign units, whether the assault list is complete and
 justified by the target's walls, who is wounded and where they heal, and the one thing missing if the
@@ -59,7 +59,7 @@ answer step 5 as well, by name**: is the rally point still valid against that en
 chosen against the units that were *visible*, and recon keeps finding the field army afterwards),
 which of our units kills it and what that costs the timetable, whether the enemy is now holding one of
 our ring tiles, and whether the field clearance or the advance comes first. The measured cost of
-skipping that answer is T104–T106: three turns of shooting spent on the field force, and the first
+skipping that answer is T104-T106: three turns of shooting spent on the field force, and the first
 volley on the city moved from T105 to T107. "The stack is forming" is not an answer; "the last Archer
 arrives in two turns at (53,37), three ring tiles are free, the advance goes in the turn after" is.
 
@@ -102,13 +102,14 @@ every distance-based judgement suspect.
 - Report a deliberately ignored enemy (a lone scout, or a barbarian unit kept
   alive for Thirty-Six Stratagems) as a stated decision, not as an omission.
 - **A barbarian camp near our territory is a target, and it is cleared by force** (human instruction
-  2026-09-26, reconfirmed 2026-09-30: 清理野蛮营地). Barbarians upgrade with the era, so an uncleared
-  camp keeps producing era-appropriate units beside our cities - the camp at (60,30) produced the
+  2026-09-26, reconfirmed 2026-09-30: clear the barbarian camps). Barbarians upgrade with the era, so an uncleared
+  camp keeps producing era-appropriate units beside our cities - the camp beside Beijing (**T83 map
+  read: (60,29)**; an earlier note said (60,30)) produced the
   Spearman that forced a 160-gold Warrior purchase at T65. Run `tactics/07`'s six camp gates
   (`CAMP / GUARD / FORCE / GROUND / WORTH / HOLD`), and one military unit **moving onto the camp's
   tile** destroys it: ranged fire plus a melee walk-in against barbarian Spearmen, never cavalry into
   spears, never a Scout, Builder or Trader at a camp. **A raid counts as a war** (human instruction
-  2026-09-30: 突袭也算战争), so `mass-on-contact` and `answer-the-attack` fire on it too - two attackers
+  2026-09-30: a raid is a war too), so `mass-on-contact` and `answer-the-attack` fire on it too - two attackers
   on one guard, not one. Report any barbarian whose type is worth converting **before** the raid, so
   the human player can use the leader ability from the game UI, and do not let that report delay the
   clear.

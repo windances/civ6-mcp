@@ -206,7 +206,29 @@ def corrupt_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str
 # pairs are two files of one instruction. Those are correct as they are, so they are **not** in this
 # tuple - the bar is matched on `path.name`, so no tactics file is ever held to pure ASCII. They still
 # carry a BOM, because they hold non-ASCII bytes and that rule has no exception.
+#
+# **The two files that reach a model without DSH serving them** (added 2026-10-02). The rule file and
+# the advisor briefs are not "served documents" in the sense above - no `use-strategy` call injects
+# them, and a served document owes a Chinese backup while these are working documents nobody reads in
+# translation - but they are read into a model's context all the same: every `message:` line of
+# `prompts/checks/turn-checks.md` is printed to the orchestrator the moment its rule fails, and
+# `prompts/workers/*.md` is the brief an advisor is handed. The human's instruction ("every document
+# DSH hands the model is English only") covers what arrives at the model, not what carries it, so the
+# bar applies to them and the backup rule does not. Measured before the change: nine Chinese lines in
+# the rule file, two in `military-map.md`.
 ASCII_ONLY = ("AGENTS.md", "SKILL.md", "directive.md")
+ASCII_ONLY_DELIVERED = (
+    "turn-checks.md",
+    "strategy.md",
+    "military-map.md",
+    "economy-cities.md",
+    "diplomacy-victory.md",
+)
+
+#: Everything a model reads, held to the English bar. `ascii_only_documents` selects from this, so the
+#: gate, the ASCII fixer and the tests all cover the delivered files without pretending they are served
+#: documents with backups (the audit reports the two roles separately).
+ENGLISH_ONLY = ASCII_ONLY + ASCII_ONLY_DELIVERED
 
 # Applied to ASCII-only documents by `ascii_fix`, longest mark first so `—` never eats a `–`.
 ASCII_MARKS = (
@@ -226,8 +248,14 @@ ASCII_MARKS = (
 
 
 def ascii_only_documents(root: str | pathlib.Path) -> list[pathlib.Path]:
-    """The documents held to the pure-ASCII bar, that are present in this tree."""
-    return [path for path in documents(root) if path.name in ASCII_ONLY]
+    """The documents held to the pure-ASCII bar, that are present in this tree.
+
+    Selects `ENGLISH_ONLY` - the served documents *and* the two files that reach a model by another
+    road - because the bar is about what a model reads. The backup rule is not symmetric: only the
+    served documents owe a `<name>.cn.md`, and `.tools/audit-md-language.py` reports the two roles
+    separately so "English with a translation beside it" is never confused with "English".
+    """
+    return [path for path in documents(root) if path.name in ENGLISH_ONLY]
 
 
 def ascii_lines(root: str | pathlib.Path) -> list[tuple[pathlib.Path, int, str]]:

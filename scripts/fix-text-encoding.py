@@ -54,7 +54,7 @@ def main() -> int:
             print(f"not ASCII  {shown(path)}:{number}: {line.strip()[:110]}")
         print(
             f"{len(boms)} stray BOM(s), {len(lines)} non-ASCII line(s) in "
-            + ", ".join(text_encoding.ASCII_ONLY)
+            + ", ".join(text_encoding.ENGLISH_ONLY)
         )
         return 1 if (missing or corrupt or boms or lines) else 0
 

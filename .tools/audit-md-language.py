@@ -73,6 +73,11 @@ def role(rel: str) -> str:
     name = pathlib.Path(rel).name
     if name in text_encoding.ASCII_ONLY:
         return "served (English only)"
+    if name in text_encoding.ASCII_ONLY_DELIVERED:
+        # English, but not a document anybody reads in translation: the rule file's `message:` lines
+        # are printed to the orchestrator when a rule fails, and the advisor briefs are pasted into a
+        # proposal prompt. Same bar, no backup.
+        return "delivered (English only)"
     if name.endswith(".cn.md"):
         return "backup (Chinese)"
     if rel.startswith(BILINGUAL_DIRS) or name.endswith(BILINGUAL_SUFFIXES):
@@ -130,6 +135,17 @@ def main() -> int:
                 problems.append(f"{rel}: no Chinese backup beside it")
             elif not backup.read_bytes().startswith(text_encoding.BOM):
                 problems.append(f"{backup.relative_to(ROOT)}: the backup holds Chinese and has no BOM")
+        elif role(rel) == "delivered (English only)":
+            # The bar without the backup: these reach a model, so Chinese here is a defect, but
+            # nobody reads them in translation and a `.cn.md` beside them would be a second file to
+            # keep in step for no reader.
+            if has_bom:
+                problems.append(f"{rel}: a delivered document must carry no BOM")
+            if non_ascii:
+                problems.append(
+                    f"{rel}: a delivered document must be pure ASCII"
+                    f" ({len(non_ascii)} line(s), first at {non_ascii[0]})"
+                )
         elif role(rel) == "backup (Chinese)":
             coverage = prose_coverage(path)
             print(f"{'':<{width}}  {'':<22}         prose in Chinese: {coverage:6.1%}")

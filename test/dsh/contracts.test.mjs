@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url'
 
 import {
   ContractError,
+  EXECUTOR_TOOL_ALLOWLIST,
+  FORBIDDEN_TOOLS,
+  WORKER_PROPOSAL_TOOL_ALLOWLIST,
+  WORKER_TOOL_ALLOWLISTS,
   validateProposal,
   validateSnapshot,
 } from '../../dsh/orchestrator/contracts.mjs'
@@ -78,4 +82,32 @@ test('one hundred malformed proposals are rejected before mutation', () => {
     assert.throws(() => validateProposal(proposal, { snapshot }))
   }
   assert.equal(mutationCalls, 0)
+})
+
+// The strategy bans peace outright - both presets say "never call propose_peace" - and until
+// 2026-10-02 that ban lived only in prose: the tool sat in the diplomacy-victory allowlist, so the
+// sole writer could end a war the strategy says has no exit. A ruling with no machinery is a
+// suggestion, so this pins the machinery.
+test('propose_peace is refused, because the strategy forbids peace', () => {
+  const proposal = fixture('valid-military-proposal.json')
+  proposal.worker = 'diplomacy-victory'
+  proposal.actions[0].tool = 'propose_peace'
+  assert.throws(
+    () => validateProposal(proposal, { snapshot: validSnapshot() }),
+    (error) => {
+      assert.equal(error instanceof ContractError, true)
+      assert.equal(error.code, 'forbidden_tool')
+      assert.match(error.message, /strategy directive forbids peace/)
+      return true
+    },
+  )
+})
+
+test('the banned tool is in no allowlist, and the lists stay derived from each other', () => {
+  for (const tools of Object.values(WORKER_TOOL_ALLOWLISTS)) {
+    assert.equal(tools.includes('propose_peace'), false)
+  }
+  assert.equal(WORKER_PROPOSAL_TOOL_ALLOWLIST.includes('propose_peace'), false)
+  assert.equal(EXECUTOR_TOOL_ALLOWLIST.includes('propose_peace'), false)
+  assert.deepEqual([...FORBIDDEN_TOOLS], ['propose_peace'])
 })

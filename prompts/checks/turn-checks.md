@@ -1,9 +1,9 @@
-﻿# Turn checks — read and evaluated by `end_turn` on **every** turn
+# Turn checks - read and evaluated by `end_turn` on **every** turn
 
 They are also evaluated at the **start** of every turn, by `get_game_overview`: the failing
 rules with a per-rule streak ("failing for 40 turn(s)"), what the last turn actually bought,
 your own plan quoted back, and a verdict. That is the check on whether the plan is being
-executed — recomputed for the last forty diary rows, so a rule that has been failing for a
+executed - recomputed for the last forty diary rows, so a rule that has been failing for a
 long time says so, and a rule that has just been cleared says that too.
 
 Free prose here is for the human editing this file. Everything the MCP must enforce goes in
@@ -16,11 +16,11 @@ Fields:
 | field | meaning |
 |---|---|
 | `id` | short name used in the report |
-| `when` | optional gate — the check only applies while this is true |
+| `when` | optional gate - the check only applies while this is true |
 | `require` | the assertion that must hold; when false the check fails |
 | `message` | what to print on failure (one or more lines) |
 | `level` | `warn` (default) or `error` |
-| `once` | `true` = a **goal**: the first turn `require` holds it is achieved, reported once as `CHECK ACHIEVED`, and retired for the rest of the game (recorded per game in `.civ6-mcp-data/turn-checks-state.json`). Omit it for a standing rule that must keep holding — a district slot can go idle again, a siege unit can die, so those stay live. |
+| `once` | `true` = a **goal**: the first turn `require` holds it is achieved, reported once as `CHECK ACHIEVED`, and retired for the rest of the game (recorded per game in `.civ6-mcp-data/turn-checks-state.json`). Omit it for a standing rule that must keep holding - a district slot can go idle again, a siege unit can die, so those stay live. |
 
 **An achieved goal is also deleted from this file**, at the end of the turn that achieves it.
 The file as it was is copied to `prompts/checks/archive/turn-checks-<YYYYmmdd-HHMMSS>.md`
@@ -31,18 +31,21 @@ that has been achieved and removed comes back only under a new `id`.
 
 Functions: `researched(NAME)`, `units(T1, T2, ...)`, `metric(NAME)`, `turn()`.
 Metrics: science, culture, gold_per_turn, military, pop, cities, districts, improvements,
-wonders, territory, techs_completed, civics_completed — plus the contact metrics listed under
+wonders, territory, techs_completed, civics_completed - plus the contact metrics listed under
 "Contact on the march" below (enemy distance from our units, and attacks made this turn).
 Operators: `+ - * / // %`, comparisons, `and` / `or` / `not`, parentheses.
-Expressions are parsed with `ast` against a whitelist — a check file is data, never code.
+Expressions are parsed with `ast` against a whitelist - a check file is data, never code.
 
-## The one hard deadline
+## The support-unit deadline (a toolkit this strategy does not carry)
 
 Both support units go obsolete the moment `CIVIC_CIVIL_ENGINEERING` is adopted: after that
-nothing except a siege unit bypasses walls. It is the only prerequisite with a cliff edge.
+nothing except a siege unit bypasses walls. For a strategy that builds and fields neither a ram
+nor a tower it is a deadline on a toolkit we do not carry - the siege unit is the answer at every
+era - and it is recorded here because the goal below existed and was retired, not because there is
+work to do before the civic lands.
 
 This rule was a **goal** (`once: true`) and it retired at T99. **The ram is no longer part of
-the plan at all** (human instruction 2026-09-26: 不用锤，用投石车): the Catapult breaks the
+the plan at all** (human instruction 2026-09-26: no ram, use the Catapult): the Catapult breaks the
 walls, and the assault train is siege / melee / ranged / cavalry.
 
 <!-- achieved T99: ram-tower-before-civil-engineering (original in archive/turn-checks-20260926-012524.md) -->
@@ -52,7 +55,7 @@ walls, and the assault train is siege / melee / ranged / cavalry.
 An assembling army that walks past an enemy fights two things at once: the city's ranged
 strike from the front and the bypassed unit from behind, which is how the siege train dies.
 When enemy units are standing within two tiles of our units, the turn is supposed to deal
-with them first — and the counter unit is the cheap way to do it.
+with them first - and the counter unit is the cheap way to do it.
 
 Metrics for this section, all relative to **our units** (not to our cities) and recomputed
 every turn: `enemies_within_1`, `enemies_within_2`, `enemies_within_3`,
@@ -114,7 +117,7 @@ Once a war is on, a second unit standing on a city tile is doing exactly what th
 already doing, while the front is one unit short - and a unit that was attacked and never
 answered invites the next attack. `metric(at_war)` is 1 when this turn's diary row records a
 war (diplomatic state 6). **A camp raid counts as a war for the rules that answer a fight**
-(human instruction 2026-09-30: 突袭也算战争): the two answer rules below fire on `at_war` **or**
+(human instruction 2026-09-30: a raid counts as a war): the two answer rules below fire on `at_war` **or**
 `camps_within_3`, while the garrison and upgrade rules stay wartime-only, because a raid is a fight
 and not an occupation. A barbarian contact with no camp within three tiles still does not set either
 one - `camps_within_3` is the raid proxy the metric set has.
@@ -138,14 +141,14 @@ message: A city is holding more than one unit while the war is on. One garrison 
 id: answer-the-attack
 when: (metric(at_war) >= 1 or metric(camps_within_3) >= 1) and metric(damaged_this_turn) >= 1
 require: metric(attacks_this_turn) >= 1
-message: One of your units was attacked this turn and nothing answered it. This fires at war **and on a camp raid** (human instruction 2026-09-30: 突袭也算战争). Assess the enemy (the BATTLE ASSESSMENT block in the result lists class, strength, HP and how many of your units are in range), mass the nearby units, and kill - fight back at the attacker, close on the wounded unit to screen it, or pull it out of reach. If the answer is a withdrawal or a heal rather than an attack, say so in the diary's tactical line.
+message: One of your units was attacked this turn and nothing answered it. This fires at war **and on a camp raid** (human instruction 2026-09-30: a raid counts as a war). Assess the enemy (the BATTLE ASSESSMENT block in the result lists class, strength, HP and how many of your units are in range), mass the nearby units, and kill - fight back at the attacker, close on the wounded unit to screen it, or pull it out of reach. If the answer is a withdrawal or a heal rather than an attack, say so in the diary's tactical line.
 -->
 
 <!-- check
 id: mass-on-contact
 when: (metric(at_war) >= 1 or metric(camps_within_3) >= 1) and metric(enemies_within_2) >= 1
 require: metric(local_superiority) >= 2
-message: Enemy units are in contact and only one of your units is within two tiles of them. **A raid is a war** (human instruction 2026-09-30: 突袭也算战争), so this fires while clearing a camp exactly as it does on a front. Do not trade one-for-one - the enemy heals and you do not get the unit back. Assess (the BATTLE ASSESSMENT block lists class, strength, HP and how many of your units are in range), pull the nearby units into contact so that two or three hit the same target, and kill it this turn. If every contacted enemy really can only be faced by one unit - a lone garrison, a unit with nothing within two turns of it - withdraw it to terrain or a city and say so in the diary, rather than leaving it to be defeated in detail.
+message: Enemy units are in contact and only one of your units is within two tiles of them. **A raid is a war** (human instruction 2026-09-30: a raid counts as a war), so this fires while clearing a camp exactly as it does on a front. Do not trade one-for-one - the enemy heals and you do not get the unit back. Assess (the BATTLE ASSESSMENT block lists class, strength, HP and how many of your units are in range), pull the nearby units into contact so that two or three hit the same target, and kill it this turn. If every contacted enemy really can only be faced by one unit - a lone garrison, a unit with nothing within two turns of it - withdraw it to terrain or a city and say so in the diary, rather than leaving it to be defeated in detail.
 -->
 
 <!-- check
@@ -157,9 +160,9 @@ message: A siege unit is within two tiles of an enemy with nothing in front of i
 
 <!-- check
 id: concentrate-the-siege
-when: metric(siege_units) >= 2 and metric(siege_in_city_range) <= 1
+when: metric(at_war) >= 1 and metric(siege_units) >= 2 and metric(siege_in_city_range) <= 1
 require: metric(siege_in_city_range) >= 2
-message: Two or more siege units are deployed and fewer than two of them are inside range 2 of the target. **One gun is a legitimate plan** (human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，一辆也可以 - the number is the arithmetic's, and one is enough when the ground and the ranged line cover the wall pool), so this is not about a single gun: **what is never right is having a second gun and not firing it.** What takes a city is shots. A Catapult does 45-52 against a city where an Archer does 9-11 into a CS 35 garrison, and a city heals about twenty a turn while any adjacent hex is outside our zone of control - so a second gun that is standing at distance 3-4 is the cheapest damage in the empire being left unspent. Measured in A6: a complete establishment and a Catapult bought with gold left the target at 200/200 with SIEGE FIRE: 1/2 for its whole window; at 阿斯特拉罕 only one distance-2 tile had line of sight and at 圣彼得堡 one gun was inside range 2 while two stood at distance 4 and 6 for three turns. Walk the other guns into the ring before firing again, and remember that a unit which spends its move arriving cannot fire the same turn (a two-tile move, a river or a hill costs both points) - stage a turn early rather than shoot with one.
+message: Two or more siege units are deployed, a war is on, and fewer than two of them are inside range 2 of an **enemy** city. **One gun is a legitimate plan** (human instruction 2026-09-30: the number is the arithmetic's, and one is enough when the ground and the ranged line cover the wall pool), so this is not about a single gun: **what is never right is having a second gun and not firing it.** What takes a city is shots. A Catapult does 45-52 against a city where an Archer does 9-11 into a CS 35 garrison, and a city heals about twenty a turn while any adjacent hex is outside our zone of control - so a second gun that is standing at distance 3-4 is the cheapest damage in the empire being left unspent. Measured in A6: a complete establishment and a Catapult bought with gold left the target at 200/200 with SIEGE FIRE: 1/2 for its whole window; at Astrakhan only one distance-2 tile had line of sight and at St Petersburg one gun was inside range 2 while two stood at distance 4 and 6 for three turns. Walk the other guns into the ring before firing again, and remember that a unit which spends its move arriving cannot fire the same turn (a two-tile move, a river or a hill costs both points) - stage a turn early rather than shoot with one. **The war gate and the enemy-city count are both load-bearing** (added 2026-10-02): without them the rule failed every peacetime turn once a second gun existed, punishing the "build the siege train before the war" this strategy requires, and a gun parked near a friend's walls satisfied it. `war_city_distance` is the distance to the nearest city of a civ we are at war with; `city_distance` remains the nearest city of any kind, which is what the assembly is judged against.
 -->
 
 ## Staging the assault: outside their range, screen in front, siege behind
@@ -173,10 +176,14 @@ unit at a time is defeated one unit at a time.
 
 `SIEGE POSTURE` in the turn result gives the geometry, measured by the game: for each of our
 siege units, the distance to the nearest visible enemy unit, the distance from that enemy to
-the front-line unit nearest the siege unit, and the distance to the nearest visible enemy city.
+the front-line unit nearest the siege unit, and the distance to the nearest visible city - **twice
+over**: `city_distance` to the nearest city of any major civilisation, which is the reference the
+assembly is judged against and which exists before a declaration, and `war_city_distance` to the
+nearest city of a civilisation we are **at war with**, which is the only one a siege rule may count
+(a gun two tiles from a friend's walls is not besieging anybody).
 `metric(siege_exposed)` counts the siege units that are within two tiles of an enemy with
 nothing closer to that enemy than themselves; `siege_in_city_range` counts those already within
-two tiles of a city, and `siege_city_distance_min` is the closest approach to any target.
+two tiles of an **enemy** city, and `siege_city_distance_min` is the closest approach to any target.
 
 **`siege_firing_alone` is the signature of the failure, not the rule itself**: it is 1 when a train
 of two or more is deployed and only one of its guns is inside range 2, and 0 while the train is still
@@ -220,10 +227,10 @@ capture cannot.
 ## The assault train (before any declaration of war)
 
 The directive's list for one city: **1-3 siege by the arithmetic, not by a fixed number**
-(human instruction 2026-09-30: 攻城使用2或3辆投石车，根据实际情况而定，不写死，当地面和远程部队攻击力够的话，
-一辆也可以 - two or three Catapults depending on the situation, not hard-coded; one is enough when the ground
-and the ranged line can do the work), 2 melee, 4 ranged, 1 cavalry — **no ram or tower, ever** (human
-instruction 2026-09-26 and 2026-09-30: 不用锤，用投石车, and 不生产也不使用撞锤/攻城塔). Only checked once a
+(human instruction 2026-09-30: two or three Catapults depending on the situation, not hard-coded;
+one is enough when the ground and the ranged line can do the work), 2 melee, 4 ranged, 1 cavalry -
+**no ram or tower, ever** (human instruction 2026-09-26 and 2026-09-30: no ram, use the Catapult; and
+neither a ram nor a tower is produced or used). Only checked once a
 war is plausible (turn 90+), because early game it is noise.
 
 <!-- check
@@ -352,7 +359,7 @@ message: Fewer than three improvements per city. Unimproved tiles are the usual 
 ## Activated 2026-09-26 (staged in `pending/` until a server computed their metrics)
 
 A rule that names a metric the running server does not compute reports itself `un-evaluable` every
-turn and cannot be satisfied — the rule file is re-read on every turn, but the *metric set* lives in
+turn and cannot be satisfied - the rule file is re-read on every turn, but the *metric set* lives in
 the MCP process's memory. Both rules below therefore shipped in `prompts/checks/pending/` and were cut
 in here once a server that computes `camps_within_3` and `enemy_supply_uncut_with_idle` was running
 (measured T174). Both metrics are in `end_turn._CONTACT_METRIC_KEYS`, so a dead scan zeroes them and
@@ -362,13 +369,13 @@ the rule switches itself off rather than firing blind.
 id: answer-the-camp
 when: metric(camps_within_3) >= 1
 require: metric(attacks_this_turn) >= 1
-message: A barbarian camp stands within three tiles of one of our cities and nothing attacked this turn. A camp is a tactics/07 target (human instruction 2026-09-26), and it is destroyed by force - one military unit MOVING onto its tile clears it. Run the camp gates and answer them in the diary: CAMP (x,y) terrain; GUARD (every barbarian within two tiles, class/CS/HP); FORCE (two attackers with the counter unit plus the unspent unit that walks in - barbarian Spearmen are anti-cavalry, so ranged plus melee, never cavalry into spears, never a Scout/Builder/Trader); GROUND (what the last step costs, from a tile we already hold); WORTH (gold, era score, the CIVIC_MILITARY_TRADITION inspiration, and what it has been spawning); HOLD (which city gives up its garrison); CONVERT (any barbarian next to our melee worth the human's Three-Six Stratagems play). A camp left alone keeps producing era-appropriate units beside that city - the camp beside 北京 (T83 map read: (60,29); an earlier note said (60,30)) produced the Spearman that cost 160 gold at T65 - so either this turn's attack is on its guard, or the diary says what the raid is waiting for.
+message: A barbarian camp stands within three tiles of one of our cities and nothing attacked this turn. A camp is a tactics/07 target (human instruction 2026-09-26), and it is destroyed by force - one military unit MOVING onto its tile clears it. Run the camp gates and answer them in the diary: CAMP (x,y) terrain; GUARD (every barbarian within two tiles, class/CS/HP); FORCE (two attackers with the counter unit plus the unspent unit that walks in - barbarian Spearmen are anti-cavalry, so ranged plus melee, never cavalry into spears, never a Scout/Builder/Trader); GROUND (what the last step costs, from a tile we already hold); WORTH (gold, era score, the CIVIC_MILITARY_TRADITION inspiration, and what it has been spawning); HOLD (which city gives up its garrison); CONVERT (any barbarian next to our melee worth the human's Three-Six Stratagems play). A camp left alone keeps producing era-appropriate units beside that city - the camp beside Beijing (T83 map read: (60,29); an earlier note said (60,30)) produced the Spearman that cost 160 gold at T65 - so either this turn's attack is on its guard, or the diary says what the raid is waiting for.
 -->
 
 <!-- check
 id: cut-the-supply
 require: metric(enemy_supply_uncut_with_idle) == 0
-message: An enemy city has open adjacent hexes - its supply line - while our fighting units within three tiles still have movement. A city heals about twenty points a turn while any adjacent hex is outside our zone of control (manual:1066-1085, HEALING DAMAGE TO CITIES), so a hex that can be cut cheaply is worth cutting. Measured over the T139-T159 Russian war: 沃罗涅什 read `supply line 3/6 cut` and 喀山 read `1/6` for their whole sieges, while spare units "fortified in place because the corridor is jammed" (T155, verbatim) - both pools came back to full and both cities rebuilt their walls; 圣彼得堡 took six turns of fire for the same reason, because the heal was out-damaged rather than cut, and one firing tile could not out-damage it. Order the surplus units - the ones with movement and nothing to shoot at - onto or beside the open hexes, taking the far side of the ring rather than queueing in the corridor; a unit that walks there is out of the firing line that turn, and declining that trade belongs in the diary. **But read the pool before spending a shooter on it**: a partial cut under continuous fire has not let a city out-heal us - 哈勒姆 held a 3/6 cut and its pool went 200 -> 189 -> 86 -> 60 -> 20 over T266-T270, and the next Dutch city went 200 -> 65 with 3-4/6 - so when the pool is falling, keep firing and record the accepted partial cut rather than walking a shooter off the line to close the last hex.
+message: An enemy city has open adjacent hexes - its supply line - while our fighting units within three tiles still have movement. A city heals about twenty points a turn while any adjacent hex is outside our zone of control (manual:1066-1085, HEALING DAMAGE TO CITIES), so a hex that can be cut cheaply is worth cutting. Measured over the T139-T159 Russian war: Voronezh read `supply line 3/6 cut` and Kazan read `1/6` for their whole sieges, while spare units "fortified in place because the corridor is jammed" (T155, verbatim) - both pools came back to full and both cities rebuilt their walls; St Petersburg took six turns of fire for the same reason, because the heal was out-damaged rather than cut, and one firing tile could not out-damage it. Order the surplus units - the ones with movement and nothing to shoot at - onto or beside the open hexes, taking the far side of the ring rather than queueing in the corridor; a unit that walks there is out of the firing line that turn, and declining that trade belongs in the diary. **But read the pool before spending a shooter on it**: a partial cut under continuous fire has not let a city out-heal us - Haarlem held a 3/6 cut and its pool went 200 -> 189 -> 86 -> 60 -> 20 over T266-T270, and the next Dutch city went 200 -> 65 with 3-4/6 - so when the pool is falling, keep firing and record the accepted partial cut rather than walking a shooter off the line to close the last hex.
 -->
 
 

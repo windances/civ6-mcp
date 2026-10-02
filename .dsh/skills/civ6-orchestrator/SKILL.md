@@ -67,8 +67,10 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   (a raid is a fight, not an occupation), and `camps_within_3` is the proxy: a wandering barbarian with
   no camp within three tiles still sets neither rule.
 - Barbarian units upgrade with the era, so an uncleared camp keeps producing era-appropriate units next
-  to our cities. That spawning is the reason to clear it, and it is measured: the camp at (60,30)
-  produced the Spearman at (60,29) that forced a 160-gold Warrior purchase at T65. Do not walk past a
+  to our cities. That spawning is the reason to clear it, and it is measured: the camp beside Beijing
+  (**T83 map read: (60,29)**; an earlier note said (60,30), which is why the instruction is to locate a
+  camp from the map every time) produced the Spearman that forced a 160-gold Warrior purchase at T65.
+  That camp was cleared at T84. Do not walk past a
   camp that is within three tiles of a city or of a Builder's work.
 - The leader ability Three-Six Stratagems converts an adjacent barbarian, but only from the
   game UI - the adapter exposes no action. So **before destroying a camp, report any barbarian standing
@@ -557,9 +559,9 @@ is the binding constraint in every assault in this game.
 **Foreign missionaries.**
 
 - China has no religion of its own: one Holy Site and roughly 1 faith per turn
-  cannot buy Apostles or Inquisitors. The **Condemn Heretic** verb now exists - 
+  cannot buy Apostles or Inquisitors. The **Condemn Heretic** verb now exists -
   `unit_action(action="condemn")` implements the game's own
-  `UNITCOMMAND_CONDEMN_HERETIC`, one command from an **adjacent** military unit - 
+  `UNITCOMMAND_CONDEMN_HERETIC`, one command from an **adjacent** military unit -
   but the same text that defines it also requires a war declaration
   (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`), so it is a
   war-time verb. Never plan around religious units you cannot purchase.
@@ -569,11 +571,17 @@ is the binding constraint in every assault in this game.
 - While at war with its owner, an adjacent military unit can `condemn` it (one
   command, no charges) or attack it. Treat that as opportunistic: one unit, no
   chase, one tile of movement at most. A missionary is never worth pulling a unit
-  off the front - and the sweep that finds them is task 014's job, not the army's.
+  off the front - and the sweep that finds them is a **temporary task's** job, not the army's:
+  task 014 (`sweep the map for missionaries`) was retired at T200, so if that work is wanted
+  again it is a new file in `prompts/tasks/tmp/`, not an order to the front.
 - The real threat is a rival religious victory, not one missionary. Call
-  get_religion_spread every ~20 turns - it has never been called in this game, so
-  the religious picture is currently unknown. A single civ holding a majority in
-  every other civ is the trigger to act; anything short of that is noise.
+  `get_religion_spread` every ~20 turns. **It has been called**, and the record is
+  the answer to "is the picture known": the missionary campaign of this match was
+  tracked by temporary tasks 008, 014 and 027 (the last read `get_religion_spread`
+  at T246 and put the Dutch Protestant majority on the map), and every one of them
+  is retired - so the state of the religious race is whatever the *last* read said,
+  and a plan built on an unread religion is a guess. A single civ holding a majority
+  in every other civ is the trigger to act; anything short of that is noise.
 - Attack faith income instead of missionaries. Russia's faith comes from its
   Lavra, so pillaging that Holy Site during the war stops the stream at its
   source and is worth more than any number of individual kills.

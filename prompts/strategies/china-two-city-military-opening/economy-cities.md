@@ -1,4 +1,4 @@
-﻿<!-- Role file for the china-two-city-military-opening preset. Copied verbatim from
+<!-- Role file for the china-two-city-military-opening preset. Copied verbatim from
      china-conquest when the preset was created: the four role files are inert (the running
      agent never reads them - measured 2026-09-19), and the difference between the two presets
      lives entirely in directive.md. The header is here because the switcher identifies a
@@ -37,7 +37,7 @@ China-specific direction:
   army counted, the builders/traders/settlers that still have jobs, and the governor in each city. The
   measured shape of it from the T103-T130 war: districts 5 -> 16, improvements 20 -> 30 and science
   32.3 -> 57.3 **during** the war, while gold/turn fell 34.8 -> 0.4 and stayed under the floor for
-  nineteen turns — the production compounds, the income pays for the army. If the brief does not say
+  nineteen turns - the production compounds, the income pays for the army. If the brief does not say
   whether a war is on, ask for it rather than assuming a development phase.
 
 Return only JSON conforming to `contracts/worker-proposal.schema.json`. Set

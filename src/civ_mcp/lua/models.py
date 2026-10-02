@@ -1039,8 +1039,17 @@ class SiegePosture:
 
     Distances are the game's own (``Map.GetPlotDistance``): ``enemy_distance`` to the nearest
     visible enemy unit, ``screen_enemy_distance`` to the nearest enemy of the friendly front
-    line unit that is closest to this siege unit (999 when there is no screen at all), and
-    ``city_distance`` to the nearest visible enemy city.
+    line unit that is closest to this siege unit (999 when there is no screen at all),
+    ``city_distance`` to the nearest visible city of **any** major civilisation, and
+    ``war_city_distance`` to the nearest one whose owner **we are at war with** (999 when there is
+    none).
+
+    The two city numbers answer different questions, which is why both exist: ``city_distance`` is
+    the reference the assembly is judged against - a gun three tiles from the city it will attack
+    is in the rally state `tactics/04` plans for, and that state exists before any declaration -
+    while ``war_city_distance`` is the only one a **siege rule** may count, because a gun standing
+    two tiles from a friend's walls is not besieging anybody. Counting the friend's city was the
+    defect: `concentrate-the-siege` failed every peacetime turn once a second gun existed.
     """
 
     unit_type: str
@@ -1051,6 +1060,8 @@ class SiegePosture:
     screen_enemy_distance: int = 999
     city_distance: int = 999
     city_name: str = ""
+    war_city_distance: int = 999
+    war_city_name: str = ""
 
     @property
     def exposed(self) -> bool:

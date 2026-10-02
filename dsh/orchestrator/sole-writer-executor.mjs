@@ -1,5 +1,5 @@
 import { ActionLedger } from './action-ledger.mjs'
-import { ContractError, EXECUTOR_TOOL_ALLOWLIST } from './contracts.mjs'
+import { ContractError, EXECUTOR_TOOL_ALLOWLIST, FORBIDDEN_TOOLS } from './contracts.mjs'
 
 function assertIdentity(expected, actual) {
   if (actual.gameId !== expected.gameId) {
@@ -48,6 +48,12 @@ export class SoleWriterExecutor {
     for (const action of plan.ordered) {
       if (actionIds.has(action.actionId)) {
         throw new ContractError('duplicate_action_id', `plan repeats ${action.actionId}`)
+      }
+      if (FORBIDDEN_TOOLS.includes(action.tool)) {
+        throw new ContractError(
+          'forbidden_tool',
+          `executor may not invoke ${action.tool}: the strategy directive forbids it`,
+        )
       }
       if (!EXECUTOR_TOOL_ALLOWLIST.includes(action.tool)) {
         throw new ContractError('forbidden_tool', `executor cannot invoke ${action.tool}`)

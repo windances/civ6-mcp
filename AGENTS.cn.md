@@ -474,8 +474,10 @@ military unit moving onto its tile destroys it"、Spearmen 是反骑兵的，以
   30t 友谊 + Diplomatic Service 市政
 - `propose_trade(player_id, ...)`——交易金币/GPT/资源/影响力/开放边境/城池。先用 `mode="test"` 看
   AI 的还价而不作承诺，再用 `mode="send"` 敲定。城池用 `get_trade_options` 里的 `city_id`。
-- `propose_peace(player_id)`——白色和平；需要 10t 战争冷却。**指令文件禁止它**：永不调用，并拒绝
-  每一份提议，无论它是以贸易还是以会话的形式到来
+- `propose_peace(player_id)`——白色和平；需要 10t 战争冷却。**它在到达游戏之前就被拒绝**：该工具在编排器
+  的 `FORBIDDEN_TOOLS` 里，所以 sole writer 拿到的是 `forbidden_tool` 而不是和平；而每一份提议都被拒绝，
+  无论它是以贸易还是以会话的形式到来。理由是指令文件的"永不求和"，而自 2026-10-02 起由契约来执行它
+  ——此前这条禁令只是散文，背后却是一个真能执行的工具。
 - `get_trade_options(other_player_id)`——看一个文明有什么可供交易（金币、资源、影响力、城池、协议）
 - `get_pending_trades`——检查到来的贸易提议；`respond_to_trade(player_id, accept)` 来接受/拒绝
 - 宣战前在 `get_diplomacy` 里检查防御协定

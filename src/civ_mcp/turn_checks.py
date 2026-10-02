@@ -1,17 +1,20 @@
 """Turn checks: rules written in a markdown file, evaluated by end_turn every turn.
 
-The strategy directive states rules that are objectively checkable - "the assault needs 3 siege
-(one city: 一城3投石车), 2 melee, 4 ranged, 1 cavalry", "districts <= floor(pop/3)", "gold/turn
-stays about +10 with the army counted". Prose in a prompt relies on the agent remembering at the
-right moment; the same rules in a file the MCP evaluates every turn do not.
+The strategy directive states rules that are objectively checkable - "the assault needs 1-3 siege by
+the arithmetic (one is enough when the ground and the ranged line cover the wall pool), 2 melee, 4
+ranged, 1 cavalry", "districts <= floor(pop/3)", "gold/turn stays about +10 with the army counted".
+Prose in a prompt relies on the agent remembering at the right moment; the same rules in a file the
+MCP evaluates every turn do not. **The siege number is a band, not a quota** (human instruction
+2026-09-30): the example below shows the shape of the *expression*, and the number it carries is the
+live floor, which is 1.
 
 The file is markdown: prose for a human reader, plus machine-checked blocks::
 
     <!-- check
     id: siege-train
     when: turn() >= 90
-    require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 3
-    message: Fewer than 3 siege units for one city ...
+    require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 1
+    message: No siege unit at all ...
     -->
 
 Expressions are parsed with ``ast`` and evaluated against a whitelist of node types and
@@ -354,7 +357,11 @@ def retire(game_key: str, achieved: dict[str, int]) -> None:
 
 
 def remove_achieved(
-    text: str, achieved: dict[str, int], stamp: str, archive_note: str = ""
+    text: str,
+    achieved: dict[str, int],
+    stamp: str,
+    archive_note: str = "",
+    game_key: str = "",
 ) -> tuple[str, list[str]]:
     """Take achieved goals out of the file, leaving one short trace line each.
 
@@ -362,6 +369,11 @@ def remove_achieved(
     and is not this function's to delete; the backup keeps the original either way. The trace
     line is there so a reader who remembers the rule can see it was done rather than wonder
     whether the check broke.
+
+    **The trace carries the key of the match that achieved it** (added 2026-10-02), because the
+    file is shared by every match played from this checkout and a goal match A achieved was
+    therefore gone for match B as well - see `restore_foreign_games`. Without a key the trace is
+    ambiguous, and an ambiguous trace is left alone rather than guessed at.
 
     Pure on purpose: the caller owns the reading, the backup and the writing.
     """
@@ -373,6 +385,7 @@ def remove_achieved(
         when = achieved[check.check_id]
         trace = (
             f"<!-- achieved T{when}: {check.check_id}"
+            + (f" (game: {game_key})" if game_key else "")
             + (f" (original in {archive_note})" if archive_note else "")
             + " -->"
         )
@@ -389,8 +402,13 @@ def archive_path(path: Path, stamp: str) -> Path:
     return path.parent / "archive" / f"{path.stem}-{stamp}{path.suffix}"
 
 
+# Two shapes: the current one names the match that achieved the goal, and the older one (before
+# 2026-10-02) does not. Both parse, and a missing key means "unknown match", which
+# `restore_foreign_games` treats as this match's - it never re-arms a goal it cannot attribute.
 _ACHIEVED_TRACE = re.compile(
-    r"^<!-- achieved T(\d+): ([\w-]+) \(original in (archive/[^)]+)\) -->$"
+    r"^<!-- achieved T(?P<turn>\d+): (?P<id>[\w-]+)"
+    r"(?: \(game: (?P<game>[^)]+)\))?"
+    r" \(original in (?P<archive>archive/[^)]+)\) -->$"
 )
 
 
@@ -430,8 +448,8 @@ def restore_achieved(text: str, archive_dir: Path | None = None) -> str:
         match = _ACHIEVED_TRACE.match(line.strip())
         if not match:
             continue
-        original = archive_dir / "archive" / Path(match.group(3)).name
-        block = archived_goal_block(original, match.group(2))
+        original = archive_dir / "archive" / Path(match.group("archive")).name
+        block = archived_goal_block(original, match.group("id"))
         if block is None:
             continue
         marker = line + "\n" if line + "\n" in out else line
@@ -439,14 +457,70 @@ def restore_achieved(text: str, archive_dir: Path | None = None) -> str:
     return out
 
 
+def restore_foreign_games(
+    text: str, game_key: str, archive_dir: Path | None = None
+) -> tuple[str, list[str]]:
+    """Put back the goals **another match** achieved, and leave this match's own alone.
+
+    The check file is shared state: one file in the repository, evaluated by every match played from
+    this checkout. A `once: true` goal is pruned from it the turn it is achieved - that is what
+    makes "an achieved goal stops being reported" true - but the *file* is not per match, so a goal
+    match A achieved was gone for match B too. Measured: the A3-A7 military-production experiment
+    ran its whole ~340 turns with `dynasty-cycle-wonder` - China's entire civilisation ability
+    obligation - absent from the loop, and all eight runs ordered zero wonders.
+
+    The fix is the match key in the trace line: a trace naming a different match is restored from
+    the archive it cites, a trace naming this match is left alone because the goal is done, and a
+    trace in the old format (no key) is left alone too - re-arming a goal this match has already
+    achieved would be worse than the drift, and the ambiguity is not worth guessing at.
+
+    Returns the new text and the ids it restored. Idempotent: a restored block replaces its trace,
+    so a second call finds nothing to do.
+    """
+    if not game_key:
+        return text, []
+    if archive_dir is None:
+        archive_dir = Path(__file__).resolve().parents[2] / "prompts" / "checks"
+    out = text
+    restored: list[str] = []
+    for line in text.splitlines():
+        match = _ACHIEVED_TRACE.match(line.strip())
+        if not match:
+            continue
+        other = match.group("game")
+        if other is None or other == game_key:
+            continue
+        original = archive_dir / "archive" / Path(match.group("archive")).name
+        block = archived_goal_block(original, match.group("id"))
+        if block is None:
+            continue
+        marker = line + "\n" if line + "\n" in out else line
+        out = out.replace(marker, block + "\n", 1)
+        restored.append(match.group("id"))
+    return out, restored
+
+
+def write_checks(path: Path, text: str) -> bool:
+    """Replace the check file, copy-last: never leave a state its backup cannot explain."""
+    try:
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(text, encoding=_TEXT_ENCODING)
+        tmp.replace(path)
+    except OSError:
+        log.warning("could not write %s", path, exc_info=True)
+        return False
+    return True
+
+
 def sweep_achieved(
-    path: Path, achieved: dict[str, int], stamp: str
+    path: Path, achieved: dict[str, int], stamp: str, game_key: str = ""
 ) -> tuple[list[str], Path | None]:
     """Back the file up, then drop the goals in ``achieved`` from it. Idempotent.
 
     Called at the end of a turn: whatever has been achieved - by this turn's evaluation or an
     earlier one - is taken out of the live file so what remains is only what still needs
-    doing. A second call finds nothing to remove and writes nothing.
+    doing. A second call finds nothing to remove and writes nothing. The trace it leaves names
+    ``game_key``, so a *different* match can put the goal back (`restore_foreign_games`).
     """
     try:
         text = path.read_text(encoding=_TEXT_ENCODING)
@@ -464,18 +538,17 @@ def sweep_achieved(
         log.debug("could not create the archive directory for %s", path, exc_info=True)
     note = f"{backup.parent.name}/{backup.name}"
 
-    pruned, removed = remove_achieved(text, achieved, stamp, note)
+    pruned, removed = remove_achieved(text, achieved, stamp, note, game_key)
     if not removed:
         return [], None
 
     try:
         # Copy first, then edit: the file is never left in a state its backup cannot explain.
         backup.write_text(text, encoding=_TEXT_ENCODING)
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(pruned, encoding=_TEXT_ENCODING)
-        tmp.replace(path)
     except OSError:
-        log.warning("could not prune %s (backup at %s)", path, backup, exc_info=True)
+        log.warning("could not back up %s (backup at %s)", path, backup, exc_info=True)
+        return [], backup if backup.exists() else None
+    if not write_checks(path, pruned):
         return [], backup if backup.exists() else None
     return removed, backup
 

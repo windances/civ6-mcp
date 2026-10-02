@@ -992,6 +992,17 @@ async def _evaluate_checks(gs, turn: int, units: dict | None, now: dict | None):
     if text is None or "<!--" not in text:
         return None, {}, {}, path, [], None
 
+    game_key = await _game_key(gs)
+    # **The check file is shared by every match played from this checkout**, so a `once: true` goal
+    # another match achieved is put back before this match is judged by it. While the file was
+    # shared without that step the A3-A7 experiment ran ~340 turns with `dynasty-cycle-wonder`
+    # absent from the loop and ordered zero wonders (see `turn_checks.restore_foreign_games`).
+    # Idempotent: a restored block replaces the trace that named it.
+    text, restored = turn_checks.restore_foreign_games(text, game_key, path.parent)
+    if restored:
+        turn_checks.write_checks(path, text)
+        log.info("turn checks: restored goals another match achieved: %s", ", ".join(restored))
+
     if units is None:
         units = await _units_for_checks(gs, turn)
     if now is None:
@@ -1038,7 +1049,6 @@ async def _evaluate_checks(gs, turn: int, units: dict | None, now: dict | None):
         log.warning("turn checks in %s are malformed: %s", path, exc)
         return None, {"__broken__": str(exc)}, {}, path, [], None
 
-    game_key = await _game_key(gs)
     retired = turn_checks.load_retired(game_key)
     achieved = {
         check.check_id: turn
@@ -1052,8 +1062,9 @@ async def _evaluate_checks(gs, turn: int, units: dict | None, now: dict | None):
 
     # Take the achieved goals out of the live file, with a timestamped copy first: what is
     # left in it is what still needs doing, and the history stays readable in archive/.
+    # The trace names this match, so another match restores the goal on load.
     swept, backup = turn_checks.sweep_achieved(
-        path, retired, time.strftime("%Y%m%d-%H%M%S")
+        path, retired, time.strftime("%Y%m%d-%H%M%S"), game_key
     )
     if swept:
         log.info("pruned achieved checks from %s: %s (backup %s)", path, ", ".join(swept), backup)
@@ -1391,7 +1402,13 @@ def _siege_metrics(posture: list) -> dict:
     for entry in posture or []:
         if getattr(entry, "exposed", False):
             metrics["siege_exposed"] += 1
-        if int(getattr(entry, "city_distance", 999) or 999) <= 2:
+        # **The city a siege rule counts is one we are at war with.** `city_distance` is the nearest
+        # city of any kind - the assembly reference, which is meaningful before a declaration - and
+        # using it here made `concentrate-the-siege` fail every peacetime turn from the moment a
+        # second gun existed, because a gun near a *friend's* walls counted as "in range of the
+        # target". `war_city_distance` is 999 when no enemy city is in sight, so the count is 0 and
+        # the rule is quiet until there is a war to fight (measured/reported 2026-10-02).
+        if int(getattr(entry, "war_city_distance", 999) or 999) <= 2:
             metrics["siege_in_city_range"] += 1
         metrics["siege_city_distance_min"] = min(
             metrics["siege_city_distance_min"], int(getattr(entry, "city_distance", 999) or 999)

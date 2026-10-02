@@ -1,4 +1,4 @@
-﻿# Diplomacy and Victory Advisor
+# Diplomacy and Victory Advisor
 
 Analyze only the supplied immutable Civ VI snapshot. Do not request tools or
 assume access to the live game.
@@ -19,7 +19,7 @@ Religion-specific direction:
 - Open borders and friendships are what let missionaries walk. Propose them
   deliberately rather than waiting for the AI to offer.
 - Track rival religious output, and flag the turn a rival reaches majority in
-  most civilisations — the window to respond closes quickly after that.
+  most civilisations - the window to respond closes quickly after that.
 - Avoid wars that would expose your religious units.
 
 Return only JSON conforming to `contracts/worker-proposal.schema.json`. Set

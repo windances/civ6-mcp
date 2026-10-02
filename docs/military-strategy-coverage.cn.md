@@ -43,7 +43,7 @@
 | **战争与大后方**（一座战争城市、+10 金币下限、建造者复利） | `tactics/08` | `carrying-capacity`、`builder-backlog`、`hold-what-you-take`、`one-garrison-per-city`（3）；`WAR ECONOMY` 和 `10-TURN REVIEW`（4） | **3/4**，"一座战争城市"是 **5** |
 | **蛮族营地**（突袭或放着不管，六道门） | `tactics/07` 营地分支，指令 `:35` | `answer-the-camp`（3）+ `camps_within_3`；对营地格子调用 `get_staging_plan` 会打印 `WALK-IN OPENS`（4）；面向人类的"报告一个可转化的蛮族"是散文 | **3/4** |
 | **宗教**（谴责异端、杀死传教士、攻击信仰收入） | 指令 | 和平时期 `condemn` 回答 `ERR:REQUIRES_WAR`、`attack` 回答 `ERR:NOT_AT_WAR`（1 级）；自 2026-10-01 起 `FOREIGN RELIGIOUS UNITS` 块会点名三格以内的每个单位并给出对应情形的学说（4 级），`religious_at_war_within_2` 是一条暂存规则（提升后为 3 级），而 `unit_action(action="pillage")` 已存在——那正是"攻击信仰收入"一直以来的意思 | 和平时期 **1**，战时 **3/4** |
-| **和平**（绝不提出，拒绝每一份提议） | 指令 | 什么都没有：`propose_peace` 是一个会真的执行它的 live 工具；拒绝一份送来的提议是 agent 必须自己选择的 `respond_to_*` 调用 | **5** |
+| **和平**（绝不提出，拒绝每一份提议） | 指令 | `propose_peace` 在编排器的 `FORBIDDEN_TOOLS` 里（`dsh/orchestrator/contracts.mjs`），所以 sole writer 拿到的是 `forbidden_tool`，而不是和平（1 级）；拒绝一份送来的提议仍然需要 agent 自己选择 `respond_to_*` | **1/5** |
 | **移动与交通**（一格一单位、ZOC、移动力、呼叫顺序） | `tactics/04`、`AGENTS.md` | `STACKING_CONFLICT`、`ZOC`、`NO_MOVES`、`OUT_OF_RANGE`（1）；`STOPPED_SHORT` 警告 + `MOVE JAMS` + `issue-the-calls-furthest-first`（3/4） | **1/3** |
 
 ## 4. 这些测量说明了什么
@@ -104,6 +104,17 @@ G4 的另一半是两个任何计划都看不见的事实：**敌方控制区覆
 - **边界是说出来的，不是藏起来的。** 雾里的敌人无法得知，所以 `zoc:0` 的意思是"这条路上我们看得见的范围内没有"；第一回合之后的过河或上船没有建模（manual:73）；而遇到不肯报告 `GetMaxMoves()` 的游戏时，会保留旧的按格数外推并明说如此（`cost:-1`、`zoc:-1`——"未知"，绝不是"畅通"）。
 
 测试：`tests/test_march_route.py`（36 项）——标记与骑兵豁免、回退路径、两个解析器在有/无新字段时的行为、平局取舍、渲染出的那一行、叙述文本，以及对全部四段生成 Lua 的真实解析（`luaparser`，现已加入 `pyproject.toml` 的 dev 组）。
+
+### 2026-10-02，第二轮：四个没有牙齿的机制
+
+对预设的对抗式复核专门找"机制没有做到策略所说之事"的地方。真正成立的有四处，每处都有测试：
+
+- **`concentrate-the-siege` 在和平时期就会触发，而且把友邦城市当成目标。** 它的 `when` 没有战争门，而 `siege_in_city_range` 是按**任何**主要文明的最近城市量的——所以第二门炮一出现，规则就每回合失败，直到两门炮都站到某家的城墙外，这与"战前先把攻城器械成军"正好相反。现在 `SIEGE POSTURE` 同时报告 `city_distance`（任何城市：集结的参照，宣战前就有意义）与 `war_city_distance`（交战方的城市），指标只数后者，规则则由 `metric(at_war) >= 1` 把门。
+- **`propose_peace` 原本在 sole writer 的白名单里。** 两个预设都禁止和平，而这条禁令只是散文，背后却是一个真能执行的工具：现在 `dsh/orchestrator/contracts.mjs` 有 `FORBIDDEN_TOOLS`，该工具被移出所有白名单，拒绝以 `forbidden_tool` 报错并点名指令。
+- **一个对局达成的 `once: true` 目标，对别的对局也消失了。** 检查文件是共享的，而清除已达成目标的清扫会就地改它；退场记录不带对局，于是新对局继承了这次删除——实测 A3-A7 跑了约 340 回合，`dynasty-cycle-wonder` 一直不在循环里，八次会话全部 0 奇观。现在退场记录带上对局，`turn_checks.restore_foreign_games` 在载入时把别的对局达成的目标放回去；无法归属的旧记录保持不动，不去猜。
+- **英文门没有覆盖那两个"不经 `use-strategy` 就到达模型"的文档。** `prompts/checks/turn-checks.md` 的每一条 `message:` 在规则失败时都会打印给编排器，而 `prompts/workers/*.md` 是交给顾问的简报；两者都带着门看不见的中文，因为 `ASCII_ONLY` 只列了三个文件名。现在它们被覆盖了（规则文件 9 行、`military-map.md` 2 行中文已英文化），一条测试把 playbook 的双语例外钉在门外，另一条断言 worker 简报与预设副本逐字节一致——它们本来就是副本，而此前没有任何东西比较这两棵树。
+
+**复核里仍然开放的（因为那是决策而不是缺陷）**：战争的终止条件（"只有当敌人的城市都归你时才结束" 对上只需要原始首都的统治胜利）、别人对我们宣战时那场战争的目标、目标无法抵达时的中止条件、城市因忠诚翻转后的处置，以及编制是否该正式给 `counter-the-cavalry` 已经要求的反骑兵一个位置。
 
 ## 8. 如何重新跑这次调查
 

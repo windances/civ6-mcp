@@ -1498,7 +1498,13 @@ for pid = 0, 63 do
                 for _, c in Players[pid]:GetCities():Members() do
                     local cx, cy = c:GetX(), c:GetY()
                     if pVis:IsVisible(cx, cy) then
-                        table.insert(cities, {cx, cy, Locale.Lookup(c:GetName())})
+                        -- The fourth field is whether we are at war with the city's owner. Every
+                        -- visible major city is reported (the staging state - a gun three or four
+                        -- tiles from the *future* target - is what `tactics/04` plans the rally for,
+                        -- and it exists before any declaration), but a rule that counts guns "in
+                        -- range of a city" must be able to tell an enemy's walls from a friend's.
+                        table.insert(cities, {cx, cy, Locale.Lookup(c:GetName()),
+                            pDiplo:IsAtWarWith(pid) and true or false})
                     end
                 end
             end)
@@ -1525,20 +1531,33 @@ for _, s in ipairs(siege) do
         end
     end
     local cDist, cName = 999, ""
+    local wDist, wName = 999, ""
     for _, c in ipairs(cities) do
         local d = Map.GetPlotDistance(s[2], s[3], c[1], c[2])
         if d < cDist then cDist = d; cName = c[3] end
+        -- `warcity` is the city we are actually besieging: the nearest one whose owner we are at
+        -- war with, 999 when there is none. `city` stays the nearest city of any kind, because the
+        -- *assembly* is judged against the city it is forming up to attack, before the declaration.
+        if c[4] and d < wDist then wDist = d; wName = c[3] end
     end
     print("SIEGE_POSTURE|" .. s[1] .. "|" .. s[2] .. "," .. s[3] .. "|enemy:" .. eDist
         .. "|screen:" .. scrDist .. "|screen_enemy:" .. scrEnemyDist
-        .. "|city:" .. cDist .. "|" .. cName:gsub("|", "/"))
+        .. "|city:" .. cDist .. "|" .. cName:gsub("|", "/")
+        .. "|warcity:" .. wDist .. "|" .. wName:gsub("|", "/"))
 end
 print("{SENTINEL}")
 """.replace("{SENTINEL}", SENTINEL)
 
 
 def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
-    """``SIEGE_POSTURE|<type>|<x>,<y>|enemy:N|screen:N|screen_enemy:N|city:N|<name>``."""
+    """``SIEGE_POSTURE|<type>|<x>,<y>|enemy:N|screen:N|screen_enemy:N|city:N|<name>|warcity:N|<name>``.
+
+    ``city`` is the nearest visible city of **any** major civilisation - the reference the assembly
+    is judged against, which exists before a declaration - and ``warcity`` (added 2026-10-02) is the
+    nearest city of a civilisation **we are at war with**, which is the only one a siege rule may
+    count. A server that predates the field sends eight tokens and ``warcity`` reads 999, "no enemy
+    city in sight", never "the friend's city next door".
+    """
     postures: list[SiegePosture] = []
     for line in lines:
         if not line.startswith("SIEGE_POSTURE|"):
@@ -1557,6 +1576,12 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
             except (IndexError, ValueError):
                 return 999
 
+        war_city_distance = 999
+        war_city_name = ""
+        if len(parts) >= 10 and parts[8].startswith("warcity:"):
+            war_city_distance = number(parts[8])
+            war_city_name = parts[9]
+
         postures.append(
             SiegePosture(
                 unit_type=parts[1],
@@ -1567,6 +1592,8 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
                 screen_enemy_distance=number(parts[5]),
                 city_distance=number(parts[6]),
                 city_name=parts[7],
+                war_city_distance=war_city_distance,
+                war_city_name=war_city_name,
             )
         )
     return postures

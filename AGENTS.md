@@ -538,8 +538,11 @@ sessions do not affect unit movement or orders - continue commanding units norma
 - `propose_trade(player_id, ...)` - trade gold/GPT/resources/favor/open borders/cities. Use
   `mode="test"` first to see the AI's counter-offer without committing, then `mode="send"` to
   finalize. Cities use `city_id` from `get_trade_options`.
-- `propose_peace(player_id)` - white peace; 10t war cooldown required. **The directive forbids it**:
-  never call it, and refuse every offer, whether it arrives as a trade or as a session
+- `propose_peace(player_id)` - white peace; 10t war cooldown required. **It is refused before it
+  reaches the game**: the tool is in the orchestrator's `FORBIDDEN_TOOLS`, so the sole writer gets
+  `forbidden_tool` rather than a peace, and every offer is refused, whether it arrives as a trade or
+  as a session. The directive's "no peace, ever" is the reason, and since 2026-10-02 the contract is
+  what enforces it - the ban used to be prose with a live tool behind it.
 - `get_trade_options(other_player_id)` - see what a civ has available to trade (gold, resources,
   favor, cities, agreements)
 - `get_pending_trades` - check incoming trade offers; `respond_to_trade(player_id, accept)` to

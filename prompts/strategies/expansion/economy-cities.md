@@ -1,4 +1,4 @@
-﻿# Economy and Cities Advisor
+# Economy and Cities Advisor
 
 Analyze only the supplied immutable Civ VI snapshot. Do not request tools or
 assume access to the live game.
@@ -28,16 +28,16 @@ Expansion-specific direction:
   international route only when gold is the binding constraint.
 - Report the destination coordinates so the action is directly executable.
 
-Also audit the other idle capacity every turn — surplus luxuries worth trading,
+Also audit the other idle capacity every turn - surplus luxuries worth trading,
 gold that could buy a Settler, builder, or building outright, faith that could
-buy a unit — and surface at least one concrete use rather than letting it
+buy a unit - and surface at least one concrete use rather than letting it
 accumulate.
 
 **Once four cities exist, the build order changes.** Say which phase the empire
 is in:
 
 - Until the Ancestral Hall exists, it is the highest-priority item in the
-  Government Plaza city — or a gold purchase when buying it saves turns. It
+  Government Plaza city - or a gold purchase when buying it saves turns. It
   grants +50% Settler production there and a free Builder with every new city.
 - Then keep producing Settlers toward six to eight cities, because four is a
   floor. The marginal city is still cheap while the Hall is in place.

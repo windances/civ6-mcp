@@ -479,3 +479,81 @@ class TestTheBackupsOfTheReferenceDocuments:
                 f"{backup.name} would be injected as workspace instructions"
             )
             assert backup.name != SKILL_FILE_NAME, f"{backup.name} would be loaded as the skill"
+
+
+class TestTheRuleFileAndTheAdvisorBriefsAreEnglish:
+    """The documents that reach a model without `use-strategy` naming them (added 2026-10-02).
+
+    The human's instruction is about what arrives at the model, not about which mechanism carries it.
+    Two files arrive that the served set never named: every `message:` line of
+    `prompts/checks/turn-checks.md` is printed to the orchestrator the moment its rule fails, and
+    `prompts/workers/*.md` is the brief an advisor is handed. Both carried Chinese - nine lines in
+    the rule file and two in `military-map.md` - and `ASCII_ONLY` could not see either, because it
+    listed three basenames. They are covered now, and the playbooks that are bilingual *by design*
+    are still outside it (see `TestTheBilingualDocuments`).
+    """
+
+    RULE_FILE = ROOT / "prompts" / "checks" / "turn-checks.md"
+    BRIEFS = ("strategy.md", "military-map.md", "economy-cities.md", "diplomacy-victory.md")
+
+    def test_the_gate_covers_them(self):
+        for name in ("turn-checks.md", *self.BRIEFS):
+            assert name in text_encoding.ENGLISH_ONLY, (
+                f"{name} reaches a model but is not held to the English bar; "
+                "text_encoding.ENGLISH_ONLY is what the pre-commit gate reads"
+            )
+        # The bar is not the backup rule: these two categories are deliberately different, and the
+        # audit prints them as different roles.
+        for name in ("turn-checks.md", *self.BRIEFS):
+            assert name not in text_encoding.ASCII_ONLY, (
+                f"{name} is not a served document and owes no Chinese backup; it belongs in "
+                "ASCII_ONLY_DELIVERED"
+            )
+
+    def test_the_bilingual_playbooks_are_still_outside_it(self):
+        for path in (ROOT / "prompts" / "tactics").glob("*.md"):
+            assert path.name not in text_encoding.ENGLISH_ONLY, (
+                f"{path.name} is bilingual by design and must not be dragged into the English bar"
+            )
+
+    def test_none_of_them_carries_a_chinese_character(self):
+        briefs = sorted(
+            path
+            for path in (ROOT / "prompts" / "workers").glob("*.md")
+            if not path.name.endswith(BACKUP_SUFFIX)
+        )
+        files = [self.RULE_FILE, *briefs]
+        for path in files:
+            text = path.read_text(encoding="utf-8-sig")
+            assert cjk_characters(text) == 0, (
+                f"{path.relative_to(ROOT)} still carries Chinese; the rule messages and the briefs "
+                "are read by a model, so they are English"
+            )
+
+    def test_every_rule_message_the_model_sees_is_ascii(self):
+        messages = [
+            line
+            for line in self.RULE_FILE.read_text(encoding="utf-8-sig").splitlines()
+            if line.startswith("message:")
+        ]
+        assert len(messages) >= 20, f"only {len(messages)} messages parsed: the shape changed"
+        for line in messages:
+            assert line.isascii(), line[:100]
+
+    def test_the_worker_briefs_are_a_preset_byte_for_byte(self):
+        """The brief an advisor gets is a **copy**, and until now nothing compared the two trees.
+
+        `scripts/use-strategy.*` copies the active preset's four files into `prompts/workers/`. An
+        edit to the preset the human actually edits could therefore leave the advisor reading the
+        previous brief for the rest of the match, with no test to say so.
+        """
+        presets = sorted(path for path in PRESETS.glob("*/") if path.is_dir())
+        for brief in self.BRIEFS:
+            target = ROOT / "prompts" / "workers" / brief
+            assert target.exists(), f"{target.relative_to(ROOT)} is missing"
+            body = target.read_bytes()
+            source = [p / brief for p in presets if (p / brief).exists() and (p / brief).read_bytes() == body]
+            assert source, (
+                f"prompts/workers/{brief} is byte-identical to no preset's copy: it has drifted. "
+                "Re-copy the active preset's file (scripts/use-strategy.ps1 does it) or fix the preset."
+            )

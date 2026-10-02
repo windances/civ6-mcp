@@ -296,6 +296,11 @@ class TestSiegePosture:
             screen_enemy_distance=3, city_distance=1, city_name="Moscow",
         )
         base.update(kw)
+        # The war city follows the city unless a case says otherwise: "a city at distance N" is the
+        # ordinary case (it is the one we are besieging), and the friendly-city cases name
+        # `war_city_distance=999` themselves.
+        base.setdefault("war_city_distance", base["city_distance"])
+        base.setdefault("war_city_name", base["city_name"])
         return SiegePosture(**base)
 
     def test_a_siege_unit_with_nothing_in_front_is_exposed(self):
@@ -331,6 +336,56 @@ class TestSiegePosture:
     def test_no_siege_units_means_no_claim(self):
         assert et._siege_metrics([])["siege_units"] == 0
         assert et._siege_metrics([])["siege_exposed"] == 0
+
+    def test_a_friendly_city_next_door_is_not_a_target(self):
+        """`siege_in_city_range` counts **enemy** cities, and that is a fix (2026-10-02).
+
+        `city_distance` is the nearest city of any kind - the reference the *assembly* is judged
+        against, which is meaningful before a declaration - so a gun two tiles from a friend's walls
+        used to count as "in range of the target". `concentrate-the-siege` then failed every
+        peacetime turn from the moment a second gun existed, punishing exactly the "build the siege
+        train before the war" the directive requires. The count uses `war_city_distance` now; the
+        staging reference keeps its own number.
+        """
+        friendly_only = self.posture(city_distance=1, war_city_distance=999)
+        metrics = et._siege_metrics([friendly_only])
+        assert metrics["siege_in_city_range"] == 0
+        assert metrics["siege_city_distance_min"] == 1, "the assembly still reads its own reference"
+        assert metrics["siege_firing_alone"] == 0
+
+        # The same gun once the owner is an enemy: in range, and the pairing is what fires the rule.
+        at_war = self.posture(city_distance=1, war_city_distance=1)
+        assert et._siege_metrics([at_war, self.posture(x=54, y=38)])["siege_in_city_range"] == 2
+
+    def test_the_gate_and_the_enemy_city_are_both_in_the_rule(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        live = (root / "prompts/checks/turn-checks.md").read_text(encoding="utf-8-sig")
+        assert "when: metric(at_war) >= 1 and metric(siege_units) >= 2" in live, (
+            "without the war gate the rule failed every peacetime turn once two guns existed"
+        )
+        assert "war_city_distance" in live, "the rule file has to name the metric it counts"
+
+    def test_the_parser_reads_the_war_city_and_not_the_friendly_one(self):
+        current = lq.parse_siege_posture_response(
+            [
+                "SIEGE_POSTURE|UNIT_CATAPULT|54,39|enemy:1|screen:2|screen_enemy:3"
+                "|city:1|Moscow|warcity:999|"
+            ]
+        )[0]
+        assert current.city_distance == 1 and current.war_city_distance == 999
+        assert current.war_city_name == ""
+
+        # A server that predates the field sends eight tokens: "no enemy city in sight", never
+        # "the friend's city next door".
+        old = lq.parse_siege_posture_response(
+            ["SIEGE_POSTURE|UNIT_CATAPULT|54,39|enemy:1|screen:2|screen_enemy:3|city:1|Moscow"]
+        )[0]
+        assert old.war_city_distance == 999 and old.city_distance == 1
+
+    def test_the_query_marks_which_visible_city_is_an_enemy(self):
+        query = lq.build_siege_posture_query()
+        assert "pDiplo:IsAtWarWith(pid) and true or false" in query
+        assert '.. "|warcity:" .. wDist' in query
 
     def test_one_gun_in_range_is_the_assault_that_lands_nothing(self):
         """`siege_firing_alone`: the train is deployed and only one of its guns can reach.

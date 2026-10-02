@@ -172,26 +172,28 @@ class TestTheRealFile:
         assert len({c.check_id for c in checks}) == len(checks), "duplicate ids"
 
     def test_every_retirement_trace_still_resolves_to_its_archived_block(self):
-        # A `once: true` goal leaves the file as `<!-- achieved T<turn>: <id> (original in
-        # archive/<file>) -->`. That trace is the *only* way back, so an orphaned one is a rule
-        # that can never return - and silence is exactly how it would fail.
+        # A `once: true` goal leaves the file as `<!-- achieved T<turn>: <id> (game: <key>)
+        # (original in archive/<file>) -->`. That trace is the *only* way back, so an orphaned one
+        # is a rule that can never return - and silence is exactly how it would fail.
         text = CHECKS.read_text(encoding="utf-8-sig")
         traces = [ln.strip() for ln in text.splitlines() if turn_checks._ACHIEVED_TRACE.match(ln.strip())]
         assert traces, "no retirement traces: this test would then prove nothing"
         for trace in traces:
             match = turn_checks._ACHIEVED_TRACE.match(trace)
-            archive = pathlib.Path("prompts/checks/archive") / pathlib.Path(match.group(3)).name
+            archive = pathlib.Path("prompts/checks/archive") / pathlib.Path(match.group("archive")).name
             assert archive.exists(), f"{trace} names a missing archive copy"
-            assert turn_checks.archived_goal_block(archive, match.group(2)) is not None, trace
+            assert turn_checks.archived_goal_block(archive, match.group("id")) is not None, trace
 
     def test_the_china_wonder_obligation_is_live_or_recoverable(self):
         # Measured 2026-09-30: this goal had retired as `achieved T99` for a *different* match key
         # (`china_-1894041591`) while the A3-A7 experiment replayed a T1 branch of the same save
-        # (`china_911679432`); a retirement trace carries no match key, so the rule was absent from
+        # (`china_911679432`); a retirement trace carried no match key, so the rule was absent from
         # the live loop for the experiment's whole ~340 turns and all eight sessions built zero
-        # wonders. Dynastic Cycle's wonder clause is half of the civilisations ability the directive
+        # wonders. Dynastic Cycle's wonder clause is half of the civilisation ability the directive
         # opens with, so the goal must be either live in the shipped file or recoverable - never
-        # silently gone.
+        # silently gone. Since 2026-10-02 the trace names the match that achieved it and
+        # `restore_foreign_games` puts another match's goal back, so "recoverable" is now automatic
+        # rather than a property of the file happening to still hold the block.
         text = CHECKS.read_text(encoding="utf-8-sig")
         live = {c.check_id for c in turn_checks.parse_checks(text)}
         trace = next(
@@ -199,7 +201,7 @@ class TestTheRealFile:
                 ln.strip()
                 for ln in text.splitlines()
                 if turn_checks._ACHIEVED_TRACE.match(ln.strip())
-                and turn_checks._ACHIEVED_TRACE.match(ln.strip()).group(2) == "dynasty-cycle-wonder"
+                and turn_checks._ACHIEVED_TRACE.match(ln.strip()).group("id") == "dynasty-cycle-wonder"
             ),
             None,
         )
@@ -250,3 +252,96 @@ class TestTheRealFile:
         # The civic landed, so the `when` gate retires the rule: skipped, not failed.
         assert "ram-tower-before-civil-engineering" not in run.failing_ids
         assert "ram-tower-before-civil-engineering" in run.skipped
+
+
+class TestAGoalAnotherMatchAchievedComesBack:
+    """The check file is shared by every match played from this checkout (fixed 2026-10-02).
+
+    A `once: true` goal is pruned from the file the turn it is achieved, and the file is one file -
+    so a goal match A achieved was gone for match B. Measured: the A3-A7 military-production
+    experiment ran its whole ~340 turns with `dynasty-cycle-wonder` absent from the loop and all
+    eight sessions ordered zero wonders. The trace now names the match that wrote it, and a trace
+    naming a *different* match is restored on load.
+    """
+
+    GOAL = """<!-- check
+id: a-goal
+when: turn() >= 25
+once: true
+require: metric(wonders) >= 1
+message: A wonder is wanted.
+-->
+"""
+
+    def board(self, tmp_path: pathlib.Path, game: str, trace_game: str | None) -> pathlib.Path:
+        """A check file whose only goal has retired, plus the archive the trace points at."""
+        archive = tmp_path / "archive"
+        archive.mkdir(parents=True, exist_ok=True)
+        (archive / "turn-checks-20260101-000000.md").write_text(
+            self.GOAL, encoding="utf-8"
+        )
+        key = f" (game: {trace_game})" if trace_game else ""
+        trace = (
+            f"<!-- achieved T99: a-goal{key}"
+            " (original in archive/turn-checks-20260101-000000.md) -->\n"
+        )
+        path = tmp_path / "turn-checks.md"
+        path.write_text("# Checks\n\n" + trace, encoding="utf-8")
+        return path
+
+    def test_a_goal_another_match_achieved_is_restored(self, tmp_path):
+        path = self.board(tmp_path, "china_B", "china_A")
+        text = path.read_text(encoding="utf-8")
+        restored_text, restored = turn_checks.restore_foreign_games(
+            text, "china_B", tmp_path
+        )
+        assert restored == ["a-goal"]
+        assert "id: a-goal" in restored_text, "the block must come back, not just the id"
+        assert "achieved T99" not in restored_text, "the trace is replaced by the block"
+        # and the rule is live again for the check run
+        assert {c.check_id for c in turn_checks.parse_checks(restored_text)} == {"a-goal"}
+        # idempotent: a second call has nothing left to restore
+        assert turn_checks.restore_foreign_games(restored_text, "china_B", tmp_path)[1] == []
+
+    def test_this_matches_own_achievement_stays_retired(self, tmp_path):
+        path = self.board(tmp_path, "china_A", "china_A")
+        text = path.read_text(encoding="utf-8")
+        restored_text, restored = turn_checks.restore_foreign_games(text, "china_A", tmp_path)
+        assert restored == []
+        assert restored_text == text, "this match already did it; re-arming it would nag for ever"
+
+    def test_an_old_trace_without_a_key_is_left_alone(self, tmp_path):
+        # The ambiguity is real (was it this match?) and guessing could re-arm a goal already done,
+        # so an unattributable trace stays where it is.
+        path = self.board(tmp_path, "china_B", None)
+        text = path.read_text(encoding="utf-8")
+        restored_text, restored = turn_checks.restore_foreign_games(text, "china_B", tmp_path)
+        assert restored == [] and restored_text == text
+
+    def test_without_a_game_key_nothing_is_touched(self, tmp_path):
+        path = self.board(tmp_path, "china_B", "china_A")
+        text = path.read_text(encoding="utf-8")
+        assert turn_checks.restore_foreign_games(text, "", tmp_path) == (text, [])
+
+    def test_the_sweep_writes_the_key_into_the_trace(self, tmp_path):
+        # The round trip: a sweep for game A leaves a trace A can be identified by, so game B's
+        # load restores the goal.
+        archive = tmp_path / "archive"
+        archive.mkdir(parents=True, exist_ok=True)
+        (archive / "turn-checks-20260101-000000.md").write_text(self.GOAL, encoding="utf-8")
+        path = tmp_path / "turn-checks.md"
+        path.write_text("# Checks\n\n" + self.GOAL, encoding="utf-8")
+        text = path.read_text(encoding="utf-8")
+        pruned, removed = turn_checks.remove_achieved(
+            text,
+            {"a-goal": 99},
+            "20260101-000000",
+            "archive/turn-checks-20260101-000000.md",
+            "china_A",
+        )
+        assert removed == ["a-goal"]
+        assert "(game: china_A)" in pruned
+        # ... and the trace the sweep wrote is one the parser reads back and restores.
+        assert turn_checks._ACHIEVED_TRACE.match(pruned.splitlines()[-1].strip())
+        back, restored = turn_checks.restore_foreign_games(pruned, "china_B", tmp_path)
+        assert restored == ["a-goal"] and "id: a-goal" in back

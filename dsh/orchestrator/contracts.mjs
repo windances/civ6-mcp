@@ -49,7 +49,6 @@ export const WORKER_TOOL_ALLOWLISTS = Object.freeze({
   'diplomacy-victory': Object.freeze([
     'respond_to_trade',
     'propose_trade',
-    'propose_peace',
     'respond_to_diplomacy',
     'send_diplomatic_action',
     'form_alliance',
@@ -58,6 +57,30 @@ export const WORKER_TOOL_ALLOWLISTS = Object.freeze({
     'queue_wc_votes',
     'spy_action',
   ]),
+})
+
+/**
+ * Tools no worker may propose and the sole writer may not invoke, whatever its allowlist says.
+ *
+ * `propose_peace` is here because **both** strategy presets forbid it outright - the standing
+ * directive, `prompts/strategies/china-conquest/directive.md` ("**No peace, ever.** Once war is
+ * declared it ends only when the enemy's cities are yours. Never call propose_peace."), and
+ * `prompts/strategies/china-two-city-military-opening/directive.md:183` ("Never call
+ * `propose_peace`"). Until 2026-10-02 the ruling lived only in prose: the tool sat in the
+ * `diplomacy-victory` allowlist, `EXECUTOR_TOOL_ALLOWLIST` is the union of those lists, and the
+ * executor throws `forbidden_tool` only for a tool that is *absent* from it - so the sole writer
+ * could end a war the strategy says has no exit. The allowlist is the door, not the MCP.
+ *
+ * A tool belongs here only when every strategy in this repository bans it; a strategy-specific
+ * ban belongs in that strategy's directive and, if it needs machinery, in this file with the
+ * directive cited, the way this one is.
+ */
+export const FORBIDDEN_TOOLS = Object.freeze(['propose_peace'])
+
+const FORBIDDEN_REASON = Object.freeze({
+  propose_peace:
+    'the strategy directive forbids peace of any kind - a war ends when its cities are ours, and ' +
+    'every incoming offer is refused with respond_to_diplomacy/respond_to_trade',
 })
 
 export const WORKER_PROPOSAL_TOOL_ALLOWLIST = Object.freeze(
@@ -168,6 +191,12 @@ export function validateProposal(value, { snapshot, seenActionIds = new Set() })
     }
     if (localIds.has(action.actionId) || seenActionIds.has(action.actionId)) {
       throw new ContractError('duplicate_action_id', `duplicate actionId ${action.actionId}`)
+    }
+    if (FORBIDDEN_TOOLS.includes(action.tool)) {
+      throw new ContractError(
+        'forbidden_tool',
+        `${action.tool} is forbidden: ${FORBIDDEN_REASON[action.tool] ?? 'the strategy forbids it'}`,
+      )
     }
     if (!WORKER_PROPOSAL_TOOL_ALLOWLIST.includes(action.tool)) {
       throw new ContractError('forbidden_tool', `worker proposals cannot use ${action.tool}`)

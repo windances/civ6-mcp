@@ -60,7 +60,7 @@ asks for in prose (`SKILL.md:673`) and which the measurement says almost never h
 | **War & the home front** (one war city, +10 gold floor, builders compound) | `tactics/08` | `carrying-capacity`, `builder-backlog`, `hold-what-you-take`, `one-garrison-per-city` (3); `WAR ECONOMY` and `10-TURN REVIEW` (4) | **3/4**, "one war city" **5** |
 | **Barbarian camps** (raid or leave, the six gates) | `tactics/07` camp branch, directive `:35` | `answer-the-camp` (3) + `camps_within_3`; `get_staging_plan` on the camp tile prints `WALK-IN OPENS` (4); the human-facing "report a convertible barbarian" is prose | **3/4** |
 | **Religion** (condemn heretics, kill missionaries, attack faith income) | directive | `condemn` answers `ERR:REQUIRES_WAR` and `attack` answers `ERR:NOT_AT_WAR` at peace (1); since 2026-10-01 a `FOREIGN RELIGIOUS UNITS` block names every sighting within three tiles with the doctrine for its case (4), `religious_at_war_within_2` is a staged rule (3 once promoted), and `unit_action(action="pillage")` exists, which is what "attack the faith income" always meant | **1** at peace, **3/4** in war |
-| **Peace** (never propose it, refuse every offer) | directive | nothing: `propose_peace` is a live tool that would execute it; refusing an incoming offer is a `respond_to_*` call the agent has to choose | **5** |
+| **Peace** (never propose it, refuse every offer) | directive | `propose_peace` is in the orchestrator's `FORBIDDEN_TOOLS` (`dsh/orchestrator/contracts.mjs`), so the sole writer gets `forbidden_tool` instead of a peace (1); refusing an incoming offer is a `respond_to_*` call the agent still has to choose | **1/5** |
 | **Movement & traffic** (one unit per tile, ZOC, movement points, call order) | `tactics/04`, `AGENTS.md` | `STACKING_CONFLICT`, `ZOC`, `NO_MOVES`, `OUT_OF_RANGE` (1); `STOPPED_SHORT` warnings + `MOVE JAMS` + `issue-the-calls-furthest-first` (3/4) | **1/3** |
 
 ## 4. What the measurements say
@@ -218,6 +218,43 @@ arrived as a surprise (`STOPPED_MID_PATH`, 232 of them over T228-T299, measured)
 Tests: `tests/test_march_route.py` (36) - the flag and the cavalry exemption, the fallback, both
 parsers with and without the new fields, the tie-break, the rendered row, the narration, and a real
 Lua parse of all four emitted chunks (`luaparser`, now in the dev group in `pyproject.toml`).
+
+### 2026-10-02, second pass: four mechanisms that had no teeth
+
+An adversarial review of the preset looked for rules whose machinery does not do what the strategy
+says. Four were real, and each fix has a test:
+
+- **`concentrate-the-siege` fired in peacetime, and counted a friend's city.** Its `when` had no war
+  gate, and `siege_in_city_range` was measured against the nearest city of *any* major civilisation -
+  so the moment a second gun existed the rule failed every turn until two guns stood outside
+  somebody's walls, which is the opposite of "build the siege train before the war". `SIEGE POSTURE`
+  now reports `city_distance` (any city: the assembly's reference, which is meaningful before a
+  declaration) and `war_city_distance` (a city of a civ we are at war with), the metric counts the
+  second, and the rule is gated on `metric(at_war) >= 1`.
+- **`propose_peace` sat in the sole writer's allowlist.** Both presets forbid peace and the ban was
+  prose with a live tool behind it: `dsh/orchestrator/contracts.mjs` now carries `FORBIDDEN_TOOLS`,
+  the tool is out of every allowlist, and the refusal is a `forbidden_tool` error that names the
+  directive.
+- **A `once: true` goal one match achieved was gone for every other match.** The check file is shared
+  and the sweep that prunes achieved goals edits it in place; the trace named no match, so a new
+  match inherited the deletion - measured, A3-A7 ran ~340 turns with `dynasty-cycle-wonder` absent
+  from the loop and all eight sessions ordered zero wonders. The trace now records the match, and
+  `turn_checks.restore_foreign_games` puts another match's goal back on load; an unattributable old
+  trace is left alone rather than guessed at.
+- **The English-only gate did not cover the two documents that reach a model without `use-strategy`
+  naming them.** Every `message:` line of `prompts/checks/turn-checks.md` is printed to the
+  orchestrator the moment its rule fails, and `prompts/workers/*.md` is the brief an advisor is
+  handed; both carried Chinese the gate could not see, because `ASCII_ONLY` listed three basenames.
+  They are covered now (nine Chinese lines in the rule file and two in `military-map.md` are
+  English), a test pins the playbooks' bilingual exception against that, and another asserts the
+  worker briefs stay byte-identical to a preset's copy - they are copies, and nothing compared the
+  two trees.
+
+**Still open from that review, because they are decisions and not defects**: the war-end condition
+("it ends only when the enemy's cities are yours" against a domination victory that needs capitals),
+what a war we did not start is for, the abort case for a target nothing can reach, what to do with a
+city that flips by loyalty, and whether the establishment should name the anti-cavalry slot that
+`counter-the-cavalry` already requires.
 
 ## 8. How to re-run this survey
 
