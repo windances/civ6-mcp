@@ -69,6 +69,17 @@
 | T96 | 清完弹窗后重读 | `turn=96`（稳定），全员移动力恢复满格，位置却保留了我刚才的移动结果 | — | **发现 5**：弹窗阻塞期间的读数不一致——同一回合内 Skirmisher 的 HP 读到过 **20 / 72 / 18**，侦察兵的格子读到过 **(64,25)** 与 **(63,23)**；一次 `move 0 65 28` 被解释成"从 (63,23) 走到 (64,25)"（原地），白白花掉移动力 |
 | T96 | `attack 18 54 9`（轻骑兵打重装步兵）、`end` → `end --force` | `Est damage to attacker: ~302` / `-> WARNING: attacker likely dies!`，实际 `est damage dealt:~2`；守卫只剩 2 条**打不到**的攻击（两条都是对港内战船的近战）；`--force` 后进入 T97 | 下一回合的 `Action Required`：**Unit available for promotion / Choose a Technology / Choose Production** | 用 `--force` 结束（唯一出口），理由：剩下两条是 `MELEE_CANNOT_ATTACK_AT_SEA`，工具自己会拒绝 |
 | **T97** | `orient --only overview,units` | `turn=97 gold=17.1 gpt=+4.5 research=None`；**Skirmisher 已不在编成里**（`Unit Killed`）；Archer[14] `hp39/100`（被 Anshan 弩手 RS40 打掉）；MAA `62/100`（它杀掉轻骑兵时吃了反击）；三辆投石车 100/100、已退出北口袋 | 待读（下一回合开始） | 结论：**A+C 的第一轮代价 = 一辆轻骑兵 + 一个弓手重伤**，换来投石车全部生还、Anshan 两台剑士掉血、重装步兵掉 38 |
+| **T103** | `play-turn produce Chengdu BUILDING_ETEMENANKI 53,23` 连发三次 | 三次都是 `SILENT_FAILURE\|BUILDING_ETEMENANKI appeared to set but the game engine did not persist it (NOT_SET\|current=NONE\|expected=BUILDING_ETEMENANKI)` | `dynasty-cycle-wonder` 红 | 先 `dismiss`（清 22 个弹窗）再原样重发：`PRODUCING\|BUILDING_ETEMENANKI\|6 turns` → **发现 8** |
+| **T105** | `orient` + `target-report.py 53 14` | `TARGET REPORT for Anshan at (53,14) — Anshan, AT WAR`；`pop 5, walls 100/100, city HP 200/200, defence 51, garrison UNIT_MAN_AT_ARMS (100/100 hp, CS 45), original capital`；`arithmetic (gate 1): **no siege unit can fire at this target**` | —（本次 `orient` 不含 checks） | 第一次把 Anshan 的全部数字摆出来：**墙 100 + 城血 200 + 防 51 + CS 45 驻军** |
+| T105 | 6 单位 × 8 个环位的地形路径探针（`get_pathing_estimate`） | 两门投石车 → `(52,13)`：`turns=4, total_tiles=9`，路线绕北 `(54,10)→(54,9)→(54,8)→(53,8)→(52,9)→…`；Skirmisher **12 回合**；Archer **18 回合**；`(54,13)` 等 4 个环位全线 `turns=-1`（不可达） | — | **Anshan 的攻城部队 = 4 回合后到位的 2 门投石车 + 6–18 回合后的屏卫**。按 `tactics/07` gate 4：2 门炮要在 CS 45 驻军和城市打击（43/回合）下自己啃 300 点，**算不赢** |
+| T105 | `get_purchasable_tiles` × 4 城 | 四城的可购列表里**没有一格 IRON**；耶路撒冷有 `Horses(47,21) 95g`；奥克兰有 `Furs(61,13) 65g` | — | 帝国 **iron 0 / horses 0**：剑士、骑士、弩炮升级链全断 |
+| T105 | `get_great_people` → `recruit_great_person(76)`（大商人克拉苏） | `OK:RECRUITED\|Marcus Licinius Crassus`；激活回 `Error: CANNOT_ACTIVATE ... Requirements: Must be on a tile next to one you own.; Gain 40 Gold. Your largest city annexes this tile... Valid tiles: 59,12=none; 60,12=none; 61,12=none; 58,13=none; 61,13=none` | — | 克拉苏只能吞**一格无主地**；选 `(58,13)`，因为它紧邻无主 **IRON (58,12)**——拿下它，那块铁才可能进入可购列表 |
+| T105–T106 | `scan 58 23 3`（核心圈） | `(56,23): ...[mv:2] **[Māori HEAVY_CHARIOT]**`（成都一格）、`(61,23): ... **[Māori TREBUCHET]**`（西安两格）；`cities`: **四座城的 buildings 里没有一座有 WALLS** | — | 毛利是 NEUTRAL、rel −7；四城无墙。`purchase Xi BUILDING_WALLS` → `CANNOT_PURCHASE\|costs 210g but you only have 173g` |
+| T106 | `end` 结果 | `UPGRADE AVAILABLE (T106) - the treasury holds 258; one upgrade_unit call each: UNIT_ARCHER 1572884 -> CROSSBOWMAN (cost 165g)` | `screen-the-siege`、`dynasty-cycle-wonder` | 升级弓手→弩手（`UPGRADED`，金 173→44.7）。四城城墙改走产能：西安/奥克兰 `BUILDING_WALLS` |
+| T106 | 世委会（`turns_until_next=0`，107 favor，2 决议） | `queue_wc_votes` 回 `WC_VOTER_REGISTERED`；但随后的 `end` 仍报 `!!! World Congress session was open mid-turn - cast 2 free vote(s) (option A, 0 favour)` | — | **自己投的票没有生效**，回退逻辑投了 A/A。主权（对 Trade 城邦 +100% 商路）本来也是我们要的 A；边境管制我们想投 B（不让那个未见面玩家文化扩张），**没投上** |
+| T107 | `set_research TECH_SAILING` / `set_civic CIVIC_MILITARY_TRAINING` / `set_policies {0: POLICY_FEUDAL_CONTRACT, 3: POLICY_BASTIONS}` | 三者分别回 `RESEARCHING` / `PROGRESSING` / `POLICIES_SET` | 三个 blocker（科技/市政/政策）同回合清空 | 封建契约 +50% 近战·反骑·远程产能；棱堡 +6 城防 +5 城远程——城墙落成后这两条一起生效 |
+| **T107–T111** | 北口袋（`54,9 / 55,10 / 56,10 / 56,11`，唯一出口是 (56,11) 一格宽的山口）被 3 个蛮族压住：`UNIT_CROSSBOWMAN`(RS 40) + `UNIT_SKIRMISHER` + `UNIT_SPEARMAN` | `>> Your Catapult (UNIT_CATAPULT) took 19/22/20/8 damage!`；接着 `!!! Your Catapult (UNIT_CATAPULT) was killed! Last seen at (54,10).` **连续两天各死一门**；`BAIT: UNIT_CATAPULT at (54,10) has 25 HP and UNIT_CROSSBOWMAN is 2 away` | `screen-the-siege` 连红 5 回合 | 撤回命令每次都因**山口被自己人占住**而失败（`BLOCKED` / `STACKING_CONFLICT`）；第一次撤退时把 Skirmisher 先调进 (56,11)，正好把出口堵死。**2 门投石车（≈640 金 / 每门约 20 回合产能）死于蛮族** |
+| **T111** | 幸存的 Skirmisher / Archer 南撤回核心；`screen-the-siege` 转绿 | `MOVING_TO\|56,22\|... now_at:56,15` | 只剩 `dynasty-cycle-wonder` 红 | 北线整体放弃：Anshan 不打了 |
 
 
 要顺手留下的东西（打完之后没有它们就没法复查）：
@@ -232,3 +243,26 @@ python scripts/fix-text-encoding.py --check
    脚本必须用 `write_bytes`（或 `open(..., newline="")`）**，落盘后先用
    `git diff --stat` 看一眼行数是否离谱；发现之后用 `read_bytes().replace(b"\r\n", b"\n")`
    还原并 `commit --amend`，比追一个洁净历史便宜得多。
+9. **北线（Anshan）这场仗从头到尾是错的，代价在两门投石车上结清。** 这不是"执行不好"，是**目标选错**，
+   而且每个环节都有可查的数字：
+   - **它不算征服。** 征服胜利要求"控制所有其他文明的原始首都"，Anshan 是**城邦**。T110 的
+     `VICTORY ASSESSMENT` 自己写着 `Domination 40% ... 1 known capitals to capture`——那个首都是毛利的，
+     不是 Anshan 的。**为一个不进入胜利条件的城邦，把主力钉在北线十个回合以上。**
+   - **它打不下来。** `target-report` 的数字是 墙 100 / 城血 200 / 防 51 / 驻军 `UNIT_MAN_AT_ARMS` CS 45；
+     地形探针显示**只有 2 门投石车能在 4 回合内进入环位**，屏卫要 6–18 回合，而 4 个环位 `turns=-1`。
+     2 门炮（CS 25，`ERR:SIEGE_CANNOT_ATTACK_UNITS`、打不了那个 CS 45 驻军）要在城市打击 43/回合和
+     驻军自由攻击下打出 300 点伤害。**Gate 4 直接不成立**——按"打不赢的攻城战不开打"，正确动作是
+     一开始就不把部队开进去。
+   - **它还是个陷阱。** 纵队停在 `(54,9)/(55,10)/(56,10)` 的山间口袋里，**唯一出口 (56,11) 一格宽**；
+     三个蛮族（弩手 RS 40 / 轻骑兵 / 长矛）在 2 格外压制。T96 的日志里已经写过"唯一出口是一格宽的
+     山口——正是 `tactics/04` 说的列队堵自己"，**五个回合后同一个错误把两门投石车送掉了**：撤退时
+     先把 Skirmisher 调进 (56,11)，正好堵死出口，随后 `BLOCKED` / `STACKING_CONFLICT` 连着出现，
+     两门炮各在一天里被打死（`Your Catapult was killed! Last seen at (54,10)` ×2）。
+   - **教训写死成规则**：① 攻城目标先问"它进不进胜利条件"，城邦不进；② `tactics/07` gate 1 里
+     "有几门炮能到"要用**地形探针的 `turns`** 数，不是用距离除以移动力；③ **攻城单位不许进只有一个
+     出口的地形**，无论前后有没有敌人——同一条规矩在 T96 和 T111 各收了一次学费。
+   - **正确的方向（T105–T111 已经动手）**：铁 0 / 马 0 是升级链的真正瓶颈，所以把
+     大商人克拉苏派去吞 `(58,13)`——它紧邻无主 **IRON (58,12)**，一旦边界接上，那块地就进可购列表；
+     同时 `Military Engineering`（4 回合）解锁**弩炮 Trebuchet（Bombard 45，对 200 血城市约 45–52）
+     与 Armory、并揭示 Niter**；四城城墙全部开建（有墙的城市能在 2 格内打出 43 伤害且不吃反击，
+     "帝国里最便宜的伤害"）。**下一次开打之前，先有铁、有炮、有墙。**
