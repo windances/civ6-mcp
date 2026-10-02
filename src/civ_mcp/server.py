@@ -1738,7 +1738,7 @@ async def unit_action(
 
     Args:
         unit_id: The unit's composite ID (from get_units output)
-        action: One of: move, attack, condemn, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion
+        action: One of: move, attack, condemn, pillage, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion
         target_x: Target X coordinate (required for move/attack/trade_route/teleport)
         target_y: Target Y coordinate (required for move/attack/trade_route/teleport)
         improvement: Improvement type for builders (required for improve), e.g.
@@ -1755,6 +1755,11 @@ async def unit_action(
     For activate: activates a Great Person on their matching district.
     For sacrifice_charges: Royal Society builder sacrifice —spends ALL builder charges to boost a district project (2% of cost per charge). Builder must be on the district tile.
     For spread_religion: spreads religion at current tile. Missionaries/Apostles only.
+    For pillage: destroys the improvement or district on the unit's tile (or an adjacent tile named
+        with target_x/target_y) and pays its plunder immediately — gold, faith, science or culture
+        depending on the tile. The directive's answer to a rival's faith income; a pillaged tile pays
+        nothing until a builder repairs it, so this is a war-time verb against a civ you intend to
+        fight, and the verb did not exist before 2026-10-01.
     For build_route: builds road/railroad on current tile. Military Engineers only. No charges used; costs 1 Iron + 1 Coal per railroad tile.
     For fortify/skip/found_city/automate/heal/alert/sleep/delete: no target needed.
     heal = fortify until healed (auto-wake at full HP).
@@ -1821,12 +1826,18 @@ async def unit_action(
                 return await gs.sacrifice_builder_charges(unit_index)
             case "spread_religion":
                 return await gs.spread_religion(unit_index)
+            case "pillage":
+                # The tile the unit stands on, unless a neighbour is named. `pillage` is the
+                # directive's answer to a rival's faith income ("pillaging that Holy Site is worth
+                # more than any number of individual kills") and the staging ladder's rung for a
+                # surplus unit - it had no verb until 2026-10-01.
+                return await gs.pillage_tile(unit_index, target_x, target_y)
             case "teleport":
                 if target_x is None or target_y is None:
                     return "Error: teleport requires target_x and target_y of the destination city"
                 return await gs.teleport_to_city(unit_index, target_x, target_y)
             case _:
-                return f"Error: Unknown action '{action}'. Valid: move, attack, condemn, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion"
+                return f"Error: Unknown action '{action}'. Valid: move, attack, condemn, fortify, skip, found_city, improve, repair, remove_improvement, remove_feature, build_route, automate, heal, alert, sleep, delete, trade_route, activate, sacrifice_charges, teleport, spread_religion, pillage"
 
     result = await _logged(ctx, "unit_action", params, _run)
     if (

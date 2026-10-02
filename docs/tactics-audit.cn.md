@@ -85,7 +85,7 @@ title: Can the tactics files actually be executed? - an audit of prompts/tactics
 
 | 发现 | 证据 |
 |---|---|
-| **`pillage` 没有动作。** 指令下令劫掠（`directive.md:545`，“劫掠那座圣地……比任何数量的单兵击杀都更值钱”），集结阶梯也把它作为一级提供（“劫掠（骑兵无视 ZOC）”），但 `unit_action` 的动作列表里没有 `pillage`（`server.py:1662`），`src/` 里也不存在任何劫掠代码（只有修复与读取路径）。游戏本身是暴露该动作的（劫掠修正，`Expansion1_Buildings.xml:185-189`）。 | 工具唯一无法执行的那条常设命令 |
+| **`pillage` 没有动作。** 指令下令劫掠（`directive.md:545`，“劫掠那座圣地……比任何数量的单兵击杀都更值钱”），集结阶梯也把它作为一级提供（“劫掠（骑兵无视 ZOC）”），但 `unit_action` 的动作列表里没有 `pillage`（`server.py:1662`），`src/` 里也不存在任何劫掠代码（只有修复与读取路径）。游戏本身是暴露该动作的（劫掠修正，`Expansion1_Buildings.xml:185-189`）。 | 工具唯一无法执行的那条常设命令。**2026-10-01 已解决**：`unit_action(action="pillage")` 下发游戏自己的 `UNITOPERATION_PILLAGE`（`lua/units.py::build_pillage_unit`），先报告地块上有什么，并对四种失败方式分别拒绝（没有移动力、距离太远、此处无可掠夺、已被掠夺） |
 | `07:39,69,74` 第 0 步调用 **`get_deal_options(player_id)`**——这不是 MCP 工具。工具是 `get_trade_options(other_player_id)`（`server.py:1333`）；`get_deal_options` 是内部方法名（`game_state.py:1230`）。编排器的第三阶段校验会拒绝未知工具，所以援引它的提案会被丢弃。 | 实测；而且这扇侦察之门已经死了。**2026-09-30 已解决**：三处调用点都写成 `get_trade_options`，那条“37 铁”的说法也已删除——该工具打印的是资源**种类**，不是数量（`narrate.py:1099-1114`） |
 | `07:97` 用 `scripts/probe-tile.py` 回答营地关卡 C2，`04:213,235` 用 `scripts/staging-plan.py`：两者都会**打开自己的 FireTuner 连接**（`probe-tile.py:38-40`、`staging-plan.py:6-8`），在 MCP 会话占着那唯一一个连接时无法运行。MCP 侧的路径是 `get_map_area` 以及 `kill_x/kill_y` / `next_city_x/next_city_y` 参数。 | “一次只能有一个会话” |
 | `05:83-88` 与 `07:276` 让智能体去读一个 **`WOUNDED IN REACH`** 区块，而它只存在于 `scripts/play-turn.py:679-684`（及其测试）中——从不在 `src/civ_mcp` 里。在 MCP 回路中这一行永远不会被打印。 | 智能体在等一行永远不会出现的文本 |
@@ -138,7 +138,7 @@ title: Can the tactics files actually be executed? - an audit of prompts/tactics
 
 **代码（每一项都是新行为，因此每一项都需要测试）：**
 
-10. **`pillage`**：把该动作加入 `unit_action`（`server.py` + 一个 `GameState` 方法 + Lua `UNITOPERATION_PILLAGE`），或者删掉指令里那一行与阶梯项。指令今天在下令劫掠，而没有任何东西能做到。
+10. **`pillage`**：把该动作加入 `unit_action`（`server.py` + 一个 `GameState` 方法 + Lua `UNITOPERATION_PILLAGE`），或者删掉指令里那一行与阶梯项。指令今天在下令劫掠，而没有任何东西能做到。**2026-10-01 已应用**：动词已存在，指令那条常设命令第一次变得可执行。
 11. **一个集结环**：给集结 Lua 加上 `d >= 3` 的环（或一个集结查询），让 `_rally_option` 能触发，并让工具能回答 `04` 的第 1 步。**2026-09-30 已应用**（`RALLYRING`/`RALLYOPTION`，提交 `99765a9`）。
 12. **每个环上格的视线/开火标记**：单项价值最高的新增——它一次性解开 `04` 第 6.2 步、`05`、`06` 第 0 行与 `07` 关卡 2。**2026-09-30 已应用**：`civ_mcp/los.py`（把手册规则套在游戏的 `SightThroughModifier` 上）、每个环上行的视野事实，以及对于已经就位的火炮由引擎自己的 `CANFIRE` 给出回答（它覆盖地图结论）。
 13. **`SIEGE POSTURE` 的可用性**：不要在集结距离上返回 `None`，并且即使只有一个攻城单位也打印火炮数量，好让 `04` 的读数在 `04` 的状态下存在。**2026-09-30 已应用**（提交 `99765a9`）。

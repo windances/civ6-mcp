@@ -346,11 +346,16 @@ military unit moving onto its tile destroys it"、Spearmen 是反骑兵的，以
   转化的蛮族——一个紧挨着我们近战单位的——好让人类能从游戏 UI 里使用领袖能力（Three-Six Stratagems）。
 
 ### 宗教——没有任何度量能看到的那一个事实
-一个宗教单位是 `FORMATION_CLASS_RELIGIOUS` 且 `Combat = 0`，所以**每一个接触度量和每一条规则对它都是
-盲的，`get_map_area` 里该地块的单位列表是唯一的探测器**。对它们的战略是指令文件的
+宗教单位是**带 `ReligiousStrength` 的平民单位**（传教士 100、使徒 350、审判官 200、上师 200）且
+`Combat = 0`。游戏数据里**没有 `FORMATION_CLASS_RELIGIOUS`**——传教士是 `FORMATION_CLASS_CIVILIAN`，
+而且完全没有 `PromotionClass`，这就是文档一直写错到 2026-10-01 的那个判据——所以**每一个接触度量对它
+都是盲的**，`get_map_area` 里该地块的单位列表曾是唯一的探测器。自 2026-10-01 起威胁扫描还会打印
+`RELIGIOUS|` 行，`end_turn` 会带上一块 `FOREIGN RELIGIOUS UNITS`，逐条点名三格以内的每个宗教单位并给出
+对应情形的学说（战时：相邻就 `condemn`；和平：碰不了）。对它们的战略是指令文件的
 （`prompts/strategies/china-conquest/directive.md`）：和平时期根本碰不了它（`condemn` 回答
 `ERR:REQUIRES_WAR`，`attack` 回答 `ERR:NOT_AT_WAR`，城池打击返回 `NO_ENEMY`），所以改为在源头打击信仰
-收入。`get_religion_spread` 的节奏在下面的**战略检查点**里。
+收入——而 `unit_action(action="pillage")` 现在就是做这件事的动词（2026-10-01 加上；在那之前，指令要求的
+是没有任何工具能执行的东西）。`get_religion_spread` 的节奏在下面的**战略检查点**里。
 
 ## 战斗速查
 
@@ -376,6 +381,7 @@ military unit moving onto its tile destroys it"、Spearmen 是反骑兵的，以
 | `found_city` | 建城 | 仅限开拓者 |
 | `improve` | 建造改良设施 | 建造者和军事工程师；见下面的改良设施 |
 | `remove_feature` | 砍伐/收获地貌 | 仅限建造者；从地块移除森林、丛林或沼泽 |
+| `pillage` | 摧毁该单位所在地块上的改良设施或区域 | 指令对"对手信仰收入"的答案，也是集结阶梯给多余部队的一级。默认作用于单位自己所在的地块，也可以用 `target_x`/`target_y` 指定一个相邻地块；掠夺所得（金币、信仰、科技或文化）立即支付，而该地块在建造者修复之前不再产出。2026-10-01 新增——在那之前，指令要求的是没有任何工具能执行的东西。 |
 | `build_route` | 修筑道路/铁路 | 仅限军事工程师；在当前地块上；不使用充能 |
 | `trade_route` | 开始路线 | 商人；目的地城池的 target_x/y |
 | `teleport` | 移动闲置商人 | 仅限商人；城池的 target_x/y |

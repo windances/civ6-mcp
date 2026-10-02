@@ -775,6 +775,36 @@ class StrategicMapData:
 
 
 @dataclass
+class ReligiousSighting:
+    """A visible foreign religious unit, and whether we are at war with its owner.
+
+    This is the one class of unit no contact metric could see: Missionaries, Apostles, Inquisitors
+    and Gurus are `FORMATION_CLASS_CIVILIAN` with ``ReligiousStrength`` (100 / 350 / 200 / 200) and
+    no combat strength, so the threat scan's `Combat > 0 or RangedCombat > 0` filter dropped them and
+    every rule built on it was blind. The whole strategy on them is the directive's, and it depends
+    on the `at_war` flag: at war an adjacent military unit may `condemn` or kill one; at peace the
+    doctrine is to leave it alone and attack the faith income instead.
+    """
+
+    player_id: int
+    owner_name: str
+    unit_type: str
+    x: int
+    y: int
+    hp: int = 0
+    max_hp: int = 100
+    religious_strength: int = 0
+    distance: int = 999  # to the nearest of our cities or units
+    unit_distance: int = 999  # to the nearest of our units
+    at_war: bool = False
+
+    @property
+    def killable(self) -> bool:
+        """A war-time sighting close enough that an adjacent military unit could condemn it."""
+        return self.at_war and self.unit_distance <= 1
+
+
+@dataclass
 class TargetTile:
     """The tile a pre-war analysis is about, as the game sees it right now."""
 

@@ -17,6 +17,7 @@ from civ_mcp.lua.models import (
     CombatEstimate,
     PathingEstimate,
     Reinforcement,
+    ReligiousSighting,
     StagingOption,
     StagingPlan,
     StagingRingTile,
@@ -1031,20 +1032,41 @@ for pid = 0, 63 do
                 if uType then
                     local entry = GameInfo.Units[uType]
                     local bcs = entry and entry.Combat or 0
+                    local minDist = 999
+                    for _, pos in ipairs(myPos) do
+                        local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
+                        if d < minDist then minDist = d end
+                    end
+                    -- Distance to the nearest of our *units*, ignoring cities: "the enemy
+                    -- is next to the army" is a different fact from "next to our borders",
+                    -- and the first one is what the march rule needs.
+                    local minUnit = 999
+                    for _, pos in ipairs(unitPos) do
+                        local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
+                        if d < minUnit then minUnit = d end
+                    end
+                    -- **Religious units are civilians with `ReligiousStrength`** (Missionary 100,
+                    -- Apostle 350, Inquisitor 200, Guru 200 - `Base/Assets/Gameplay/Data/Units.xml`).
+                    -- There is no `FORMATION_CLASS_RELIGIOUS` in the game's data: a Missionary is
+                    -- `FORMATION_CLASS_CIVILIAN` with no `PromotionClass` at all, which is why the
+                    -- combat filter below never matched one and no metric ever saw a missionary.
+                    -- The at-war flag is reported rather than filtered: at peace the doctrine is to
+                    -- leave the unit alone (never declare war over missionaries alone), and the
+                    -- caller has to be able to tell the two cases apart.
+                    local rstr = (entry and entry.ReligiousStrength) or 0
+                    if rstr > 0 then
+                        local atWarWith = false
+                        if pid ~= 63 then
+                            pcall(function() atWarWith = pDiplo:IsAtWarWith(pid) end)
+                        end
+                        print("RELIGIOUS|" .. pid .. "|" .. ownerName:gsub("|","/") .. "|"
+                            .. (entry and entry.UnitType or "UNKNOWN") .. "|" .. bx .. "," .. by
+                            .. "|" .. (bu:GetMaxDamage() - bu:GetDamage()) .. "/" .. bu:GetMaxDamage()
+                            .. "|rstr:" .. rstr .. "|dist:" .. minDist .. "|udist:" .. minUnit
+                            .. "|atwar:" .. (atWarWith and 1 or 0)
+                            .. "|uid:" .. bu:GetID())
+                    end
                     if bcs > 0 or (entry and entry.RangedCombat and entry.RangedCombat > 0) then
-                        local minDist = 999
-                        for _, pos in ipairs(myPos) do
-                            local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
-                            if d < minDist then minDist = d end
-                        end
-                        -- Distance to the nearest of our *units*, ignoring cities: "the enemy
-                        -- is next to the army" is a different fact from "next to our borders",
-                        -- and the first one is what the march rule needs.
-                        local minUnit = 999
-                        for _, pos in ipairs(unitPos) do
-                            local d = Map.GetPlotDistance(pos[1], pos[2], bx, by)
-                            if d < minUnit then minUnit = d end
-                        end
                         -- How many of our fighting units are close enough to join this one:
                         -- one is a trade, two or three is a kill.
                         local near = 0
@@ -1075,6 +1097,80 @@ end -- close for pid
 if not found then print("NO_THREATS") end
 print("{SENTINEL}")
 """.replace("{SENTINEL}", SENTINEL)
+
+
+def build_pillage_unit(unit_index: int, target_x: int | None = None, target_y: int | None = None) -> str:
+    """InGame: pillage the improvement or district on the unit's tile (or a named tile).
+
+    The verb the directive has been ordering since the first draft - "pillaging that Holy Site ...
+    is worth more than any number of individual kills" - and the one standing order the toolkit could
+    not carry out: `unit_action` had no `pillage` case and no pillage code existed anywhere in
+    `src/`. The staging ladder even offered it as a rung.
+
+    The game's own operation is `UNITOPERATION_PILLAGE` (`Base/Assets/Gameplay/Data/UnitOperations.xml`),
+    so this asks `UnitManager.CanStartOperation` first - the same authoritative test `attack` and
+    `move` use - and reports *what* is on the tile before it acts, because "nothing to pillage here"
+    and "the improvement is already pillaged" are different answers and the second one is the common
+    mistake after a repair.
+    """
+    tx = -9999 if target_x is None else int(target_x)
+    ty = -9999 if target_y is None else int(target_y)
+    return f"""
+{_lua_get_unit(unit_index)}
+local ux, uy = unit:GetX(), unit:GetY()
+if unit:GetMovesRemaining() <= 0 then
+    {_bail("ERR:NO_MOVES|Unit has no movement points remaining this turn.")}
+end
+local tx, ty = {tx}, {ty}
+if tx == -9999 then tx, ty = ux, uy end
+local plot = Map.GetPlot(tx, ty)
+if not plot then
+    {_bail_lua('"ERR:INVALID_TARGET|No plot at (" .. tx .. "," .. ty .. ")"')}
+end
+local dist = Map.GetPlotDistance(ux, uy, tx, ty)
+if dist > 1 then
+    {_bail_lua('"ERR:OUT_OF_RANGE|Target at distance " .. dist .. " - a unit pillages the tile it stands on (or one it is adjacent to at most)."')}
+end
+-- What is here, before asking the engine: an improvement, a district, a route.
+local imp, impPillaged, dist2, distPillaged, route = "none", false, "none", false, -1
+pcall(function()
+    local ii = plot:GetImprovementType()
+    if ii >= 0 then
+        local iInfo = GameInfo.Improvements[ii]
+        if iInfo then imp = iInfo.ImprovementType end
+        impPillaged = plot:IsImprovementPillaged()
+    end
+end)
+pcall(function()
+    local di = plot:GetDistrictType()
+    if di >= 0 then
+        local dInfo = GameInfo.Districts[di]
+        if dInfo then dist2 = dInfo.DistrictType end
+    end
+end)
+pcall(function() route = plot:GetRouteType() end)
+print("PILLAGE_TILE|" .. tx .. "," .. ty .. "|improvement:" .. imp
+    .. "|pillaged:" .. (impPillaged and 1 or 0) .. "|district:" .. dist2
+    .. "|route:" .. route .. "|owner:" .. plot:GetOwner())
+if imp == "none" and dist2 == "none" and route < 0 then
+    {_bail_lua('"ERR:NOTHING_TO_PILLAGE|Nothing to pillage at (" .. tx .. "," .. ty .. "): no improvement, no district and no road."')}
+end
+local params = {{}}
+params[UnitOperationTypes.PARAM_X] = {{tx}}
+params[UnitOperationTypes.PARAM_Y] = {{ty}}
+local ok, can = pcall(function()
+    return UnitManager.CanStartOperation(unit, UnitOperationTypes.PILLAGE, nil, params)
+end)
+if not ok or not can then
+    local why = "the engine refused the order"
+    if impPillaged then why = "the improvement here is **already pillaged**" end
+    {_bail_lua('"ERR:CANNOT_PILLAGE|Cannot pillage (" .. tx .. "," .. ty .. ") - " .. why .. ". Re-read the tile with get_map_area; a pillaged improvement pays nothing until it is repaired."')}
+end
+UnitManager.RequestOperation(unit, UnitOperationTypes.PILLAGE, params)
+print("OK:PILLAGE|" .. (imp ~= "none" and imp or (dist2 ~= "none" and dist2 or "route"))
+    .. " at (" .. tx .. "," .. ty .. ")|plunder arrives with the next read|verify with get_map_area (the tile reports PILLAGED) or get_cities (pillaged improvements)")
+print("{SENTINEL}")
+"""
 
 
 def build_fortify_unit(unit_index: int) -> str:
@@ -2262,6 +2358,42 @@ def parse_units_response(lines: list[str]) -> list[UnitInfo]:
             )
         )
     return units
+
+
+def parse_religious_sightings(lines: list[str]) -> list[ReligiousSighting]:
+    """Parse the `RELIGIOUS|` rows of the threat scan into `ReligiousSighting` records.
+
+    Separate from the `THREAT|` rows on purpose: those feed the contact metrics (`enemies_within_2`,
+    `enemies_cavalry_within_2`, `local_superiority`), and a religious unit counted there would move
+    numbers that decide attacks. These rows exist to be *seen*, not to be fought by arithmetic.
+    """
+    out: list[ReligiousSighting] = []
+    for line in lines:
+        parts = line.split("|")
+        if not line.startswith("RELIGIOUS|") or len(parts) < 6:
+            continue
+        xy = parts[4].split(",")
+        hp, _, max_hp = parts[5].partition("/")
+        fields: dict[str, str] = {}
+        for token in parts[6:]:
+            key, _, value = token.partition(":")
+            fields[key] = value
+        out.append(
+            ReligiousSighting(
+                player_id=int(_number(parts[1], -1)),
+                owner_name=parts[2],
+                unit_type=parts[3],
+                x=int(_number(xy[0])),
+                y=int(_number(xy[1])),
+                hp=int(_number(hp)),
+                max_hp=int(_number(max_hp, 100)),
+                religious_strength=int(_number(fields.get("rstr", "0"))),
+                distance=int(_number(fields.get("dist", "999"), 999)),
+                unit_distance=int(_number(fields.get("udist", "999"), 999)),
+                at_war=fields.get("atwar") == "1",
+            )
+        )
+    return out
 
 
 def parse_threat_scan_response(lines: list[str]) -> list[ThreatInfo]:

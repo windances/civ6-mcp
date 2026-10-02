@@ -397,11 +397,18 @@ convert an adjacent barbarian before the raid. What is only here is the tooling.
   use the leader ability (Three-Six Stratagems) from the game UI.
 
 ### Religion - the one fact no metric can see
-A religious unit is `FORMATION_CLASS_RELIGIOUS` with `Combat = 0`, so **every contact metric and
-every rule is blind to it, and the tile's unit list in `get_map_area` is the only detector**. The
+A religious unit is a **civilian with `ReligiousStrength`** (Missionary 100, Apostle 350, Inquisitor
+200, Guru 200) and `Combat = 0`. There is no `FORMATION_CLASS_RELIGIOUS` in the game's data - a
+Missionary is `FORMATION_CLASS_CIVILIAN` with no `PromotionClass` at all, which is the predicate the
+docs got wrong until 2026-10-01 - so **every contact metric is blind to it** and the tile's unit list
+in `get_map_area` was the only detector. Since 2026-10-01 the threat scan also prints `RELIGIOUS|`
+rows and `end_turn` carries a `FOREIGN RELIGIOUS UNITS` block naming each one within three tiles with
+the doctrine for its case (war: `condemn` it if adjacent; peace: it cannot be touched). The
 strategy on them is the directive's (`prompts/strategies/china-conquest/directive.md`): at peace one
 cannot be touched at all (`condemn` answers `ERR:REQUIRES_WAR`, `attack` answers `ERR:NOT_AT_WAR`, a
-city strike returns `NO_ENEMY`), and faith income is attacked at its source instead. The
+city strike returns `NO_ENEMY`), so the faith income is attacked at its source instead - and
+`unit_action(action="pillage")` is now the verb that does it (added 2026-10-01; until then the
+directive ordered something no tool could carry out). The
 `get_religion_spread` cadence is in **Strategic Checkpoints** below.
 
 ## Combat Quick Reference
@@ -429,6 +436,7 @@ city strike returns `NO_ENEMY`), and faith income is attacked at its source inst
 | `found_city` | Settle | Settlers only |
 | `improve` | Build improvement | Builders and Military Engineers; see improvements below |
 | `remove_feature` | Chop/harvest feature | Builders only; removes forest, jungle, or marsh from tile |
+| `pillage` | Destroy the improvement or district on the unit's tile | The directive's answer to a rival's faith income and a rung of the staging ladder for a surplus unit. Works on the unit's own tile by default, or an adjacent one named with `target_x`/`target_y`; the plunder (gold, faith, science or culture) is paid at once, and the tile pays nothing until a builder repairs it. Added 2026-10-01 - before that the directive ordered something no tool could carry out. |
 | `build_route` | Build road/railroad | Military Engineers only; on current tile; no charges used |
 | `trade_route` | Start route | Traders; target_x/y of destination city |
 | `teleport` | Move idle trader | Traders only; target_x/y of city |

@@ -1,4 +1,4 @@
-# Military strategy: what the model can see, and what is actually enforced
+﻿# Military strategy: what the model can see, and what is actually enforced
 
 Written 2026-10-01, answering the question "are all the military strategies visible, and are they
 guaranteed to be carried out". Every claim here is measured against the code or against the recorded
@@ -59,7 +59,7 @@ asks for in prose (`SKILL.md:673`) and which the measurement says almost never h
 | **Pre-war analysis** (gates 0-5 before declaring) | `tactics/07` | nothing blocks a declaration; `get_target_report` supplies gates 0-3's data on demand (4); the camp branch has `answer-the-camp` (3) | **4/5** |
 | **War & the home front** (one war city, +10 gold floor, builders compound) | `tactics/08` | `carrying-capacity`, `builder-backlog`, `hold-what-you-take`, `one-garrison-per-city` (3); `WAR ECONOMY` and `10-TURN REVIEW` (4) | **3/4**, "one war city" **5** |
 | **Barbarian camps** (raid or leave, the six gates) | `tactics/07` camp branch, directive `:35` | `answer-the-camp` (3) + `camps_within_3`; `get_staging_plan` on the camp tile prints `WALK-IN OPENS` (4); the human-facing "report a convertible barbarian" is prose | **3/4** |
-| **Religion** (condemn heretics, kill missionaries, attack faith income) | directive | `condemn` answers `ERR:REQUIRES_WAR` and `attack` answers `ERR:NOT_AT_WAR` at peace (1); **no metric sees a religious unit at all** - it is `FORMATION_CLASS_RELIGIOUS` with Combat 0 | **1** at peace, **5** in war |
+| **Religion** (condemn heretics, kill missionaries, attack faith income) | directive | `condemn` answers `ERR:REQUIRES_WAR` and `attack` answers `ERR:NOT_AT_WAR` at peace (1); since 2026-10-01 a `FOREIGN RELIGIOUS UNITS` block names every sighting within three tiles with the doctrine for its case (4), `religious_at_war_within_2` is a staged rule (3 once promoted), and `unit_action(action="pillage")` exists, which is what "attack the faith income" always meant | **1** at peace, **3/4** in war |
 | **Peace** (never propose it, refuse every offer) | directive | nothing: `propose_peace` is a live tool that would execute it; refusing an incoming offer is a `respond_to_*` call the agent has to choose | **5** |
 | **Movement & traffic** (one unit per tile, ZOC, movement points, call order) | `tactics/04`, `AGENTS.md` | `STACKING_CONFLICT`, `ZOC`, `NO_MOVES`, `OUT_OF_RANGE` (1); `STOPPED_SHORT` warnings + `MOVE JAMS` + `issue-the-calls-furthest-first` (3/4) | **1/3** |
 
@@ -113,11 +113,13 @@ metric is unreachable; the way to tell them apart is one targeted check in the n
 `SIEGE PROGRESS` block already reads `city hp: N/200`, so a turn where it reads 0 with our melee
 adjacent and no `TAKE THE CITY` block is a metric bug, and that is worth one diary line to record.
 
-**G4 - the metric blind spots that make part of the doctrine unenforceable.** A religious unit is
-invisible to every metric and rule (Combat 0); Zone of Control is invisible to both pathing tools, so
-a plan can route through it and the unit just stops; and the plan's arrival turns are extrapolated
-from movement points rather than the real per-tile cost. The doctrine in those areas can only be
-followed by hand, and the file that says so cannot be delivered (G1).
+**G4 - the metric blind spots that make part of the doctrine unenforceable.** Zone of Control is
+invisible to both pathing tools, so a plan can route through it and the unit just stops; and the
+plan's arrival turns are extrapolated from movement points rather than the real per-tile cost. The
+doctrine in those areas can only be followed by hand, and the file that says so cannot be delivered
+(G1). **The religious-unit half of this gap was closed on 2026-10-01** - see section 7 - and closing
+it also exposed that the predicate the docs had carried for months was wrong: there is no
+`FORMATION_CLASS_RELIGIOUS` in the game's data at all.
 
 ## 6. What changed on 2026-10-01: the discovery path
 
@@ -153,6 +155,41 @@ Three changes, all of them delivery rather than new analysis:
 **What this does not fix**: the advisor still cannot read a playbook (the overlay gives it no tools),
 so the paste is still the orchestrator's decision - the fix is that the decision now arrives with the
 discovery. G3 and G4 are untouched.
+
+### 2026-10-01, second pass: the religious-unit half of G4
+
+The question "what do we do about a religious unit of a civ we are *not* at war with" turned out to
+have a doctrine and no machinery. The doctrine: at peace nothing can touch it (`attack` →
+`ERR:NOT_AT_WAR`, `condemn` → `ERR:REQUIRES_WAR`, a city strike → `NO_ENEMY`), never declare war over
+missionaries alone, do not police conversions of our own cities, watch `get_religion_spread` for a
+real victory run, and hit the *faith income* at its source in the next war. The machinery: none - the
+unit was invisible (see below), the rule set said nothing, and the doctrine's own answer
+(pillage the Holy Site) had no verb.
+
+- **The predicate the docs carried was wrong.** There is no `FORMATION_CLASS_RELIGIOUS` in the game's
+  data: a Missionary is `FORMATION_CLASS_CIVILIAN` with `ReligiousStrength="100"` and no
+  `PromotionClass` at all (Apostle 350, Inquisitor 200, Guru 200 - `Base/Assets/Gameplay/Data/Units.xml`).
+  The threat scan filtered on `Combat > 0 or RangedCombat > 0`, so it dropped every one of them before
+  any metric could count it. Fixed in `AGENTS.md`, its backup, and this survey.
+- **They are visible now**: the scan prints `RELIGIOUS|` rows (predicate `ReligiousStrength > 0`),
+  `end_turn` carries a `FOREIGN RELIGIOUS UNITS` block naming each one within three tiles and stating
+  the doctrine for its case, and the two counts `religious_within_3` / `religious_at_war_within_2` are
+  in `_CONTACT_METRIC_KEYS`. The war-time half is a **staged** rule (`answer-the-missionary`, in
+  `prompts/checks/pending/`) because the tuple is read at import time; the peace-time half is
+  deliberately not a rule - "ignore it and watch the victory count" cannot be expressed as a
+  requirement, and a rule that cannot be satisfied is worse than none.
+- **`pillage` exists** (`unit_action(action="pillage")`, `UNITOPERATION_PILLAGE`): the verb the
+  directive has been ordering since its first draft, and audit item 10. It reports what is on the
+  tile first, refuses the four ways it goes wrong (no moves, out of range, nothing there, already
+  pillaged), and tells the caller how to verify.
+- **The peace-time lever is the map**: a foreign unit cannot enter a tile ours occupies, and without
+  open borders it cannot enter our territory at all - so a neutral-lane missionary can be blocked by
+  standing in its way. Now written into the directive (with "never pull a unit off the front for it"),
+  because it is the one concrete thing peace allows besides monitoring.
+
+Tests: `tests/test_religious_units.py` (18) - the predicate, both parsers, the block's two cases, the
+metrics, the staged rule's shape and the staging boundary, and the pillage verb's operation,
+diagnosis and dispatch.
 
 ## 7. How to re-run this survey
 

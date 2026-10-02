@@ -797,6 +797,20 @@ class GameState:
             return f"{result} | STILL THERE: {'; '.join(still)} - re-read next turn before assuming the kill"
         return f"{result} | tile ({tx},{ty}) now empty"
 
+    async def pillage_tile(
+        self, unit_index: int, target_x: int | None = None, target_y: int | None = None
+    ) -> str:
+        """Pillage the improvement or district the unit stands on (the game's `UNITOPERATION_PILLAGE`).
+
+        The standing order the toolkit could not carry out: the directive's answer to a rival's faith
+        income is to pillage the Holy Site, and the staging ladder offers "pillage (cavalry ignores
+        ZOC)" as a rung for surplus units. With no coordinates it acts on the unit's own tile, which
+        is where the operation is legal.
+        """
+        lua = lq.build_pillage_unit(unit_index, target_x, target_y)
+        lines = await self.conn.execute_write(lua)
+        return _action_result(lines)
+
     async def fortify_unit(self, unit_index: int) -> str:
         lua = lq.build_fortify_unit(unit_index)
         lines = await self.conn.execute_write(lua)

@@ -74,6 +74,11 @@ _CONTACT_METRIC_KEYS = (
     "enemies_within_2",
     "enemies_within_3",
     "enemies_cavalry_within_2",
+    # Religious units are invisible to every combat metric (a Missionary is a civilian with
+    # `ReligiousStrength` and no Combat), so these two are counted from their own scan rows. Both
+    # are in this tuple so a stored-row pass reads 0 rather than `un-evaluable` forever.
+    "religious_within_3",
+    "religious_at_war_within_2",
     "enemies_anti_cavalry_within_2",
     "enemies_siege_within_2",
     "enemies_ranged_within_2",
@@ -1068,6 +1073,64 @@ def _failed_check_message(check, reason: str, supply_note: str | None = None) ->
     return text
 
 
+async def _religious_for_checks(gs, turn: int) -> list:
+    """Visible foreign religious units, cached per turn - parsed from the same scan as the threats.
+
+    One round trip serves both: the scan prints `THREAT|` rows for fighting units and `RELIGIOUS|`
+    rows for the civilian religious ones, and this is the second parse. A failure returns an empty
+    list, which switches the religious rule off rather than firing it blind.
+    """
+    cached = getattr(gs, "_last_religious", None)
+    if cached is not None and getattr(gs, "_last_religious_turn", None) == turn:
+        return cached
+    await _threats_for_checks(gs, turn)  # fills both caches from one scan
+    return getattr(gs, "_last_religious", None) or []
+
+
+def _religious_event(sightings: list, turn: int) -> str | None:
+    """Name the foreign religious units in reach, and say what the doctrine does about each.
+
+    This is the *only* place a Missionary can appear in a turn result: it has no combat strength, so
+    every contact metric filters it out (measured predicate: `ReligiousStrength > 0` - the game's own
+    data has no `FORMATION_CLASS_RELIGIOUS`, which is the wrong predicate the docs carried for
+    months). The doctrine depends on the flag, so the line does too: at war with the owner an
+    adjacent military unit may `condemn` it (one command, no charges, one tile of movement at most);
+    at peace it cannot be touched at all, and the answer is the faith income and the religious-victory
+    count, not the unit.
+    """
+    if not sightings:
+        return None
+    near = [s for s in sightings if int(getattr(s, "distance", 999) or 999) <= 3]
+    if not near:
+        return None
+    lines = [f"FOREIGN RELIGIOUS UNITS (T{turn}) - {len(near)} within three tiles of a city or unit:"]
+    for s in sorted(near, key=lambda s: (int(getattr(s, "distance", 999) or 999), s.owner_name)):
+        state = "AT WAR" if getattr(s, "at_war", False) else "at peace"
+        lines.append(
+            f"  {getattr(s, 'unit_type', '?').replace('UNIT_', '')} of {s.owner_name}"
+            f" at ({s.x},{s.y}) rstr {getattr(s, 'religious_strength', 0)}"
+            f" - nearest {getattr(s, 'distance', 999)} tile(s), {state}"
+        )
+    at_war = [s for s in near if getattr(s, "at_war", False) and getattr(s, "unit_distance", 999) <= 2]
+    if at_war:
+        lines.append(
+            "  In reach and at war: an adjacent military unit can `condemn` it (one command, no"
+            " charges) or attack it - opportunistic only, one tile of movement at most, never pull a"
+            " unit off the front for it."
+        )
+    peaceful = [s for s in near if not getattr(s, "at_war", False)]
+    if peaceful:
+        lines.append(
+            "  At peace: **nothing can touch it** - `attack` answers `ERR:NOT_AT_WAR`, `condemn`"
+            " answers `ERR:REQUIRES_WAR`, a city strike answers `NO_ENEMY` - and the directive is"
+            " explicit: never declare war over missionaries alone, and do not police the conversion"
+            " of our own cities. Watch `get_religion_spread` (~every 20 turns) for a civ holding a"
+            " majority everywhere, and hit the faith income at its source in the next war with that"
+            " owner (`pillage` its Holy Site) rather than chasing the unit."
+        )
+    return "\n".join(lines)
+
+
 async def _new_target_event(gs, turn: int) -> str | None:
     """The turn a foreign city first becomes visible, and the two calls that answer it.
 
@@ -1195,6 +1258,13 @@ async def _check_turn_checks(
             new_targets = None
         if new_targets:
             events.append(lq.TurnEvent(priority=2, category="target", message=new_targets))
+        try:
+            religious = _religious_event(await _religious_for_checks(gs, turn), turn)
+        except Exception:
+            log.debug("religious scan failed", exc_info=True)
+            religious = None
+        if religious:
+            events.append(lq.TurnEvent(priority=2, category="religion", message=religious))
 
     # What makes `answer-the-attack` actionable rather than a scolding: the enemy that is in
     # contact, which of them is killable right now, and how many of our units are already in
@@ -2088,6 +2158,9 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         "enemies_ranged_within_2": 0,
         "enemies_melee_within_2": 0,
         "weakest_enemy_hp_within_2": 0,
+        # Religious units: their own count, set below from the scan's `RELIGIOUS|` rows.
+        "religious_within_3": 0,
+        "religious_at_war_within_2": 0,
         # How many of our fighting units are close enough to join the closest fight. One is a
         # trade, two or three is a kill; that is the difference between answering an attack
         # and winning the exchange.
@@ -2124,6 +2197,19 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
     gs._supply_open_note = _supply_hex_note(capture_readiness)
     threats = await _threats_for_checks(gs, turn)
     metrics.update(_matchup_metrics(threats, units))
+    # Religious units, which no contact metric can see: a Missionary is a civilian with
+    # `ReligiousStrength` and no combat strength, so the scan's combat filter drops it. Two counts
+    # and not one, because the doctrine differs with the flag: at war an adjacent military unit may
+    # condemn or kill it; at peace the doctrine is to leave it alone and hit the faith income instead.
+    sightings = await _religious_for_checks(gs, turn)
+    metrics["religious_within_3"] = sum(
+        1 for s in sightings if int(getattr(s, "distance", 999) or 999) <= 3
+    )
+    metrics["religious_at_war_within_2"] = sum(
+        1
+        for s in sightings
+        if getattr(s, "at_war", False) and int(getattr(s, "unit_distance", 999) or 999) <= 2
+    )
     if not threats:
         return metrics
     for threat in threats:
@@ -2232,6 +2318,8 @@ async def _threats_for_checks(gs, turn: int) -> list:
     try:
         lines = await gs.conn.execute_write(lq.build_threat_scan_query())
         threats = lq.parse_threat_scan_response(lines)
+        gs._last_religious = lq.parse_religious_sightings(lines)
+        gs._last_religious_turn = turn
     except Exception:
         log.debug("turn checks: threat scan failed", exc_info=True)
         threats = None

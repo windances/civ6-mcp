@@ -582,6 +582,20 @@ is the binding constraint in every assault in this game.
 - Ignore the conversion of your own cities. No victory condition in this plan
   depends on China's own religion, so do not spend military turn budget policing
   it.
+- **The unit itself is visible now, and the source is reachable** (2026-10-01): the
+  threat scan reports foreign religious units (`ReligiousStrength > 0` - there is no
+  `FORMATION_CLASS_RELIGIOUS` in the game's data, which is why nothing saw one before),
+  `end_turn` carries a `FOREIGN RELIGIOUS UNITS` block naming each one within three
+  tiles with the doctrine for its case, and `unit_action(action="pillage")` exists -
+  which is what "attack the faith income" always meant and could not be ordered until
+  then. Nothing else in this section changed: at peace the unit itself still cannot be
+  touched.
+- **What peace still allows is the map, not the unit.** A foreign unit cannot enter a
+  tile one of ours occupies (the rule that blocked our own column at T101), and without
+  open borders it cannot enter our territory at all - and this plan hands none out. So a
+  missionary working a neutral lane can be *blocked* by standing in its way with a cheap
+  unit: that is a move, not a war. Never pull a unit off the front to do it; know it for
+  the case where the tile it wants is already on the army's line of march.
 
 **Incoming offers.**
 

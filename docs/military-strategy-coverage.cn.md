@@ -42,7 +42,7 @@
 | **战前分析**（宣战前的 0-5 号门） | `tactics/07` | 没有任何东西阻塞宣战；`get_target_report` 按需提供 0-3 号门的数据（4）；营地分支有 `answer-the-camp`（3） | **4/5** |
 | **战争与大后方**（一座战争城市、+10 金币下限、建造者复利） | `tactics/08` | `carrying-capacity`、`builder-backlog`、`hold-what-you-take`、`one-garrison-per-city`（3）；`WAR ECONOMY` 和 `10-TURN REVIEW`（4） | **3/4**，"一座战争城市"是 **5** |
 | **蛮族营地**（突袭或放着不管，六道门） | `tactics/07` 营地分支，指令 `:35` | `answer-the-camp`（3）+ `camps_within_3`；对营地格子调用 `get_staging_plan` 会打印 `WALK-IN OPENS`（4）；面向人类的"报告一个可转化的蛮族"是散文 | **3/4** |
-| **宗教**（谴责异端、杀死传教士、攻击信仰收入） | 指令 | 和平时期 `condemn` 回答 `ERR:REQUIRES_WAR`、`attack` 回答 `ERR:NOT_AT_WAR`（1）；**没有任何指标看得见宗教单位**——它是 `FORMATION_CLASS_RELIGIOUS`，Combat 为 0 | 和平时期 **1**，战时 **5** |
+| **宗教**（谴责异端、杀死传教士、攻击信仰收入） | 指令 | 和平时期 `condemn` 回答 `ERR:REQUIRES_WAR`、`attack` 回答 `ERR:NOT_AT_WAR`（1 级）；自 2026-10-01 起 `FOREIGN RELIGIOUS UNITS` 块会点名三格以内的每个单位并给出对应情形的学说（4 级），`religious_at_war_within_2` 是一条暂存规则（提升后为 3 级），而 `unit_action(action="pillage")` 已存在——那正是"攻击信仰收入"一直以来的意思 | 和平时期 **1**，战时 **3/4** |
 | **和平**（绝不提出，拒绝每一份提议） | 指令 | 什么都没有：`propose_peace` 是一个会真的执行它的 live 工具；拒绝一份送来的提议是 agent 必须自己选择的 `respond_to_*` 调用 | **5** |
 | **移动与交通**（一格一单位、ZOC、移动力、呼叫顺序） | `tactics/04`、`AGENTS.md` | `STACKING_CONFLICT`、`ZOC`、`NO_MOVES`、`OUT_OF_RANGE`（1）；`STOPPED_SHORT` 警告 + `MOVE JAMS` + `issue-the-calls-furthest-first`（3/4） | **1/3** |
 
@@ -68,7 +68,7 @@
 
 **G3——从未开口的守卫。** `take-the-city`、`cover-the-capture` 以及 `TAKE THE CITY` 块从未被观察到触发。要么这种状态在游玩中确实罕见，要么这个指标不可达；区分二者的办法是在下一场战争中有针对性地检查一次——`SIEGE PROGRESS` 块本来就会读出 `city hp: N/200`，所以如果某一回合它读出 0、我们的近战单位相邻、却没有 `TAKE THE CITY` 块，那就是一个指标 bug，值得用一行日记记录下来。
 
-**G4——让部分教条无法被强制执行的那些指标盲区。** 宗教单位对每一个指标和规则都是不可见的（Combat 0）；控制区（Zone of Control）对两个寻路工具都是不可见的，所以一份计划可能穿过它做路线，而单位就只是停下来；而计划的抵达回合是从移动力外推出来的，而不是真实的逐格代价。那些领域的教条只能手工遵循，而说明这一点的文件又无法被投递（G1）。
+**G4——让部分教条无法被强制执行的那些指标盲区。** 控制区（Zone of Control）对两个寻路工具都是不可见的，所以一份计划可能穿过它做路线，而单位就只是停下来；而计划的抵达回合是从移动力外推出来的，而不是真实的逐格代价。那些领域的教条只能手工遵循，而说明这一点的文件又无法被投递（G1）。**其中"宗教单位"这一半已在 2026-10-01 补上**——见第 7 节——而补它的过程还暴露出文档沿用数月之久的判据本身是错的：游戏数据里根本不存在 `FORMATION_CLASS_RELIGIOUS`。
 
 ## 6. 2026-10-01 改了什么：发现这条链路
 
@@ -83,6 +83,17 @@
    测试：`tests/test_discovery_delivery.py`（19 项）——IN SIGHT 块的四种情形、扫描新增的两个字段、对九字段旧行的向后兼容、移动集成，以及 `NEW TARGET` 的差分（播种、每座城市只报一次、城市离开又回来后不重复报告）。
 
 **这没有修复的**：顾问仍然读不到行动手册（overlay 不给它任何工具），所以粘贴仍然是编排者的决定——修复之处在于这个决定现在随着"发现"一起到达。G3 与 G4 未受影响。
+
+### 2026-10-01 第二轮：G4 中"宗教单位"这一半
+
+"对于非敌国的宗教单位我们怎么办"这个问题，答案是有学说、没机器。学说：和平时期碰不了它（`attack` → `ERR:NOT_AT_WAR`、`condemn` → `ERR:REQUIRES_WAR`、城市打击 → `NO_ENEMY`），绝不为了传教士单独宣战，不管自家城市被转化，每约 20 回合看 `get_religion_spread` 判断是否真有宗教胜利威胁，并在下一场战争里打它的**信仰来源**。机器：没有——那个单位是隐形的（见下），规则集一句话都没有，而学说自己给出的答案（劫掠圣地）根本没有动词。
+
+- **文档沿用的判据是错的。** 游戏数据里没有 `FORMATION_CLASS_RELIGIOUS`：传教士是 `FORMATION_CLASS_CIVILIAN`、带 `ReligiousStrength="100"`、而且完全没有 `PromotionClass`（使徒 350、审判官 200、上师 200——`Base/Assets/Gameplay/Data/Units.xml`）。威胁扫描按 `Combat > 0 or RangedCombat > 0` 过滤，于是它在任何指标能计数之前就被丢掉了。已在 `AGENTS.md`、其中文备份和本调查中修正。
+- **现在能看见它们了**：扫描打印 `RELIGIOUS|` 行（判据 `ReligiousStrength > 0`），`end_turn` 带上一块 `FOREIGN RELIGIOUS UNITS`，逐条点名三格以内的每个单位并说明对应情形的学说，两个计数 `religious_within_3` / `religious_at_war_within_2` 也进了 `_CONTACT_METRIC_KEYS`。战时那一半是一条**暂存**规则（`answer-the-missionary`，在 `prompts/checks/pending/`），因为那个元组是导入期读取的；和平那一半刻意**不成规则**——"忽略它、盯胜利计数"无法表达成 require，而一条无法满足的规则比没有更糟。
+- **`pillage` 存在了**（`unit_action(action="pillage")`、`UNITOPERATION_PILLAGE`）：指令从第一版就在要求的动词，也是审计第 10 项。它会先报告地块上有什么，并对四种常见错误分别拒绝（没有移动力、距离太远、此处无可掠夺、已经处于被掠夺状态），并告诉调用者如何验证。
+- **和平期的杠杆是地图，不是那个单位**：外国单位不能进入我方占据的地块，没有开放边界则根本进不了我们的领土——所以在中立通道上的传教士可以用站到它前面的方式堵住。这条已写入指令（并附"绝不为此把单位从前线抽走"），因为这是和平时期除监控之外唯一具体的可行手段。
+
+测试：`tests/test_religious_units.py`（18 项）——判据、两个解析器、块的两情形、指标、暂存规则的形状与暂存边界，以及 pillage 动词的操作、诊断与派发。
 
 ## 7. 如何重新跑这次调查
 
