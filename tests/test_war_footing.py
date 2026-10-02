@@ -701,3 +701,100 @@ class TestTheRules:
         run = turn_checks.run_checks(self.FILE.read_text(encoding="utf-8-sig"), context)
         assert not [c for c, reason in run.failures if "un-evaluable" in reason]
         assert "one-garrison-per-city" not in run.failing_ids, "no city data in a stored row"
+
+
+class TestTheAntiCavalrySlotIsItsOwnRole:
+    """Human instruction 2026-10-02: the establishment names an anti-cavalry unit.
+
+    `counter-the-cavalry` has always required one, while the establishment listed four roles that did
+    not include it - and the melee row counted SPEARMAN/PIKEMAN, so two Spearmen satisfied "2 melee"
+    while doubling as the answer to a Heavy Chariot. The offline experiment harness had already
+    patched its own table with an `anticav` row (`scripts/experiment-report.py`), which is the tell.
+    """
+
+    def roles(self) -> dict[str, tuple[int, int, tuple[str, ...]]]:
+        return {role: (floor, target, types) for role, floor, target, types in et._WAR_TRAIN}
+
+    def test_the_table_has_five_roles_with_the_anti_cavalry_one_at_floor_one(self):
+        roles = self.roles()
+        assert set(roles) == {"siege", "melee", "anticav", "ranged", "cavalry"}, roles
+        assert roles["anticav"][0] == 1 and roles["anticav"][1] == 1
+        assert "SPEARMAN" in roles["anticav"][2] and "PIKEMAN" in roles["anticav"][2]
+
+    def test_a_spearman_is_an_anti_cavalry_unit_and_not_a_melee_one(self):
+        roles = self.roles()
+        for spear in ("SPEARMAN", "PIKEMAN", "PIKE_AND_SHOT"):
+            assert spear not in roles["melee"][2], f"{spear} would be counted twice"
+
+    def test_the_war_footing_line_counts_it_separately(self):
+        units = {
+            1: unit(1, "UNIT_CATAPULT", 1, 1),
+            2: unit(2, "UNIT_SWORDSMAN", 1, 2),
+            3: unit(3, "UNIT_WARRIOR", 1, 3),
+            4: unit(4, "UNIT_SPEARMAN", 1, 4),
+        }
+        line, missing = et._war_train_status(units)
+        assert "anticav 1/1" in line and "melee 2/2" in line, line
+        assert missing == ["4 ranged", "1 cavalry"], missing
+
+    def test_a_missing_anti_cavalry_unit_is_named(self):
+        units = {1: unit(1, "UNIT_SWORDSMAN", 1, 1), 2: unit(2, "UNIT_WARRIOR", 1, 2)}
+        _line, missing = et._war_train_status(units)
+        assert "1 anticav" in missing, missing
+
+    def test_the_rule_file_and_the_directive_both_name_the_slot(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        rules = (root / "prompts/checks/turn-checks.md").read_text(encoding="utf-8-sig")
+        assert "1 anti-cavalry" in rules, "the establishment in the rule file needs the slot"
+        directive = (root / "prompts/strategies/china-conquest/directive.md").read_text(
+            encoding="utf-8"
+        )
+        assert "**1 anti-cavalry**" in directive, "the directive's establishment needs the slot"
+
+    def test_the_melee_rule_no_longer_counts_the_anti_cavalry_line(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        rules = (root / "prompts/checks/turn-checks.md").read_text(encoding="utf-8-sig")
+        melee = next(
+            check
+            for check in turn_checks.parse_checks(rules)
+            if check.check_id == "melee-screen"
+        )
+        assert "SPEARMAN" not in melee.require and "PIKEMAN" not in melee.require, melee.require
+        assert "WARRIOR" in melee.require
+
+
+class TestTheWarIsDecidedOneSiegeAtATime:
+    """Human instructions 2026-10-02: never open an assault you cannot win, and open it only once
+    the siege force has assembled; a war we did not start becomes a conquest of that neighbour.
+
+    The directive used to say a war "ends only when the enemy's cities are yours" while also saying
+    "a war you cannot finish is a war you must not start" - an unbounded objective with the only exit
+    (peace) refused. The decision point is the **siege**, not the war.
+    """
+
+    DIRECTIVE = pathlib.Path("prompts/strategies/china-conquest/directive.md")
+
+    def text(self) -> str:
+        return self.DIRECTIVE.read_text(encoding="utf-8")
+
+    def test_the_unbounded_war_goal_is_gone(self):
+        text = self.text()
+        assert "it ends only when the enemy's cities" not in text, (
+            "the unbounded goal is what this ruling retired"
+        )
+
+    def test_the_per_siege_gate_is_written_down(self):
+        text = self.text()
+        assert "The unit of decision is the siege, not the war" in text
+        assert "Do not open a city you cannot finish" in text
+
+    def test_a_defensive_war_becomes_a_conquest_of_that_neighbour(self):
+        text = self.text()
+        assert "A war we did not start is a conquest, not a holding action" in text
+        assert "the neighbour who declared" in text and "*is* the one front" in text
+
+    def test_no_peace_survives_both_rulings(self):
+        # Refusing peace is what makes the per-siege gate the only decision point; the two live
+        # together and must not be edited apart.
+        text = self.text()
+        assert "**No peace, ever.**" in text and "Never call propose_peace." in text

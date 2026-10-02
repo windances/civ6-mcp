@@ -734,7 +734,15 @@ async def _check_empire_warnings(
 # is 3, and the number in between is a judgement the diary has to carry.
 _WAR_TRAIN: tuple[tuple[str, int, int, tuple[str, ...]], ...] = (
     ("siege", 1, 3, ("CATAPULT", "TREBUCHET", "BOMBARD", "ARTILLERY")),
-    ("melee", 2, 2, ("WARRIOR", "SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY", "PIKEMAN", "SPEARMAN")),
+    ("melee", 2, 2, ("WARRIOR", "SWORDSMAN", "MAN_AT_ARMS", "MUSKETMAN", "INFANTRY")),
+    # **The anti-cavalry slot is its own row** (human instruction 2026-10-02). `counter-the-cavalry`
+    # has always required one of these units, while the establishment listed four roles that did not
+    # include it - and the melee row counted SPEARMAN/PIKEMAN, so two Spearmen satisfied "2 melee"
+    # while doubling as the answer to a Heavy Chariot. The offline experiment harness had already
+    # patched its own table with an `anticav` row (`scripts/experiment-report.py`), which is the tell
+    # that the shipped establishment was the thing out of step. The roles now read: 1-3 siege, 2 melee,
+    # 1 anti-cavalry, 4 ranged, 1 cavalry, and a Spearman counts once, in its own row.
+    ("anticav", 1, 1, ("SPEARMAN", "PIKEMAN", "PIKE_AND_SHOT", "AT_CREW", "MODERN_AT")),
     ("ranged", 4, 4, ("SLINGER", "ARCHER", "CROSSBOWMAN", "FIELD_CANNON", "CROUCHING_TIGER")),
     ("cavalry", 1, 1, ("HORSEMAN", "KNIGHT", "COURSER", "CUIRASSIER", "CAVALRY", "TANK")),
 )

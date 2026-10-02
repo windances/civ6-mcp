@@ -101,19 +101,21 @@ class TestWarTrainStatus:
         )
 
     def test_a_complete_train_reports_none_missing(self):
-        # Three siege units is the top of the band, and every other role at its count.
+        # Three siege units is the top of the band, and every other role at its count - the
+        # anti-cavalry slot included (human instruction 2026-10-02: it has its own row).
         units = {
             1: unit(1, "UNIT_CATAPULT"),
             2: unit(2, "UNIT_TREBUCHET"),
             3: unit(3, "UNIT_CATAPULT"),
             4: unit(4, "UNIT_WARRIOR"),
             5: unit(5, "UNIT_MAN_AT_ARMS"),
-            6: unit(6, "UNIT_BATTERING_RAM"),
-            7: unit(7, "UNIT_ARCHER"),
+            6: unit(6, "UNIT_SPEARMAN"),
+            7: unit(7, "UNIT_BATTERING_RAM"),
             8: unit(8, "UNIT_ARCHER"),
-            9: unit(9, "UNIT_CROUCHING_TIGER"),
+            9: unit(9, "UNIT_ARCHER"),
             10: unit(10, "UNIT_CROUCHING_TIGER"),
-            11: unit(11, "UNIT_HORSEMAN"),
+            11: unit(11, "UNIT_CROUCHING_TIGER"),
+            12: unit(12, "UNIT_HORSEMAN"),
         }
         _, missing = _war_train_status(units)
         assert missing == []
@@ -135,11 +137,12 @@ class TestWarTrainStatus:
         # since 2026-09-30 neither a ram nor a tower is built or fielded.
         train, missing = _war_train_status({1: unit(1, "UNIT_BATTERING_RAM")})
         assert "ram" not in train
-        assert len(missing) == 4
+        # siege, melee, anticav, ranged, cavalry - the ram answers none of them
+        assert len(missing) == 5
 
     def test_no_units_is_not_a_crash(self):
         train, missing = _war_train_status({})
-        assert "siege 0 (want 1-3 by the arithmetic)" in train and len(missing) == 4
+        assert "siege 0 (want 1-3 by the arithmetic)" in train and len(missing) == 5
 
 
 class TestReviewText:

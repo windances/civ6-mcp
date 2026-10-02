@@ -228,10 +228,13 @@ capture cannot.
 
 The directive's list for one city: **1-3 siege by the arithmetic, not by a fixed number**
 (human instruction 2026-09-30: two or three Catapults depending on the situation, not hard-coded;
-one is enough when the ground and the ranged line can do the work), 2 melee, 4 ranged, 1 cavalry -
+one is enough when the ground and the ranged line can do the work), 2 melee, **1 anti-cavalry**
+(human instruction 2026-10-02: the Spearman/Pikeman line gets its own slot, because
+`counter-the-cavalry` requires one and the melee row used to count it twice), 4 ranged, 1 cavalry -
 **no ram or tower, ever** (human instruction 2026-09-26 and 2026-09-30: no ram, use the Catapult; and
 neither a ram nor a tower is produced or used). Only checked once a
-war is plausible (turn 90+), because early game it is noise.
+war is plausible (turn 90+), because early game it is noise. `get_units`' war-footing line prints the
+same five roles with their counts.
 
 <!-- check
 id: siege-train
@@ -250,8 +253,8 @@ message: Fewer than 4 ranged units. Machinery unlocks both the Crossbowman (rang
 <!-- check
 id: melee-screen
 when: turn() >= 90
-require: units(WARRIOR, SWORDSMAN, MAN_AT_ARMS, MUSKETMAN, INFANTRY, PIKEMAN, SPEARMAN) >= 2
-message: Fewer than 2 melee units. Ranged attacks can never capture a city - only a melee unit walking in takes it - so a stack without melee cannot finish anything it breaks.
+require: units(WARRIOR, SWORDSMAN, MAN_AT_ARMS, MUSKETMAN, INFANTRY) >= 2
+message: Fewer than 2 melee units. Ranged attacks can never capture a city - only a melee unit walking in takes it - so a stack without melee cannot finish anything it breaks. **The anti-cavalry line is a separate slot** (human instruction 2026-10-02: the establishment names one): a Spearman or Pikeman answers enemy cavalry and is counted by `counter-the-cavalry`, not here, so two Spearmen are not a melee screen.
 -->
 
 ## Matching what they field, and upgrading what we have

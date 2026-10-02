@@ -232,6 +232,8 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   instruction 2026-09-30: two or three Catapults by the situation rather than a fixed number, and one
   is enough when the ground and the ranged line already
   cover the wall pool), 2 melee,
+  **1 anti-cavalry** (human instruction 2026-10-02: the Spearman/Pikeman line has its own slot -
+  `counter-the-cavalry` requires one and the melee count used to swallow it),
   4 ranged
   (2 Crossbowman at range 2 and 2 Crouching Tiger at range 1) and 1 cavalry for
   survivors. **No Battering Ram and no Siege Tower, built or fielded** (2026-09-26: no ram, use the
@@ -390,7 +392,7 @@ rather than a turn number:
    turns.
 2. The siege train already staged adjacent to it - **1-3 Catapults by the arithmetic** (one when the
    ground and the ranged line cover the wall pool, two or three when they do not - human instruction
-   2026-09-30), 2 melee, 4 ranged,
+   2026-09-30), 2 melee, **1 anti-cavalry** (2026-10-02), 4 ranged,
    1 cavalry, **no ram or tower, built or fielded** (2026-09-26: no ram, use the Catapult; 2026-09-30:
    neither a ram nor a tower is produced or used)
  - **before** the declaration, not queued after it.
@@ -499,16 +501,26 @@ is the binding constraint in every assault in this game.
   `assign_governor` (moving one is free) or a garrison - and if the governor is
   needed at the front, that is a decision to record, not to skip.
 - Great Wall segments along the new frontier make captured ground cheap to hold.
-- **No peace, ever.** Once war is declared it ends only when the enemy's cities
-  are yours. Never call propose_peace. Refuse every offer of peace - a diplomacy
+- **No peace, ever.** Never call propose_peace. Refuse every offer of peace - a diplomacy
   session (get_pending_diplomacy, answered with respond_to_diplomacy NEGATIVE) or
   a trade that bundles peace with anything else. This deliberately overrides the
   standing advice in AGENTS.md that peace usually beats a war of attrition: the
   directive is the strategy, so follow it.
+- **The unit of decision is the siege, not the war** (human instruction 2026-10-02: never open an
+  assault you cannot win, and open it only once the siege force has assembled). Each target is opened on its own arithmetic: the walls breakable in a bounded number of
+  turns, the train in place, the screen in front. There is no separate "when does the war end" question
+  to answer in advance - the war continues because peace is refused, and each new target is a fresh
+  decision under the same gate. **Do not open a city you cannot finish**, and do not open one before the
+  force is assembled and staged.
 - Because there is no way out, the decision to declare is the only decision that
   matters. Declare only on a neighbour whose cities the army already in place can
   take, and only once the siege train and the first reinforcements are in
   position. A war you cannot finish is a war you must not start.
+- **A war we did not start is a conquest, not a holding action** (human instruction 2026-10-02: take
+  the neighbour while you are there). If an AI declares on us, that civilisation becomes the front's
+  target: same three phases, same per-siege gate, its cities taken in the order the analysis gives. Do
+  not settle for defending and waiting, and do not open a second front - the neighbour who declared
+  *is* the one front.
 - An unfinished war is pure cost: war weariness suppresses production and unit
   maintenance keeps running while the enemy keeps every city he still holds. If
   the front stalls, fix the front - bring siege, heal, upgrade, reinforce - and
