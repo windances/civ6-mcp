@@ -43,11 +43,17 @@ log = logging.getLogger(__name__)
 
 DEFAULT_CHECKS_PATH = Path("prompts/checks/turn-checks.md")
 
-# The rule file and its archive copies are read and written as ``utf-8-sig``: the file is meant to be
-# opened by a human, so it carries a UTF-8 BOM, and a plain ``utf-8`` read would leave that BOM in the
-# parsed text while a plain ``utf-8`` write would silently drop it on the next prune. ``utf-8-sig``
-# reads a BOM-less file exactly like ``utf-8`` and writes the BOM every time, so either state settles.
+# The rule file is **read** as ``utf-8-sig`` - a plain ``utf-8`` read would leave a BOM in the parsed
+# text on a file that had one, and ``utf-8-sig`` reads a BOM-less file exactly like ``utf-8`` - and
+# **written** as plain ``utf-8``, because it is one of the documents the English-only bar covers
+# (``text_encoding.ASCII_ONLY_DELIVERED``) and that bar is also a no-BOM rule: a BOM on a pure-ASCII
+# English file is a stray one, and both the pre-commit gate and `tests/test_text_encoding.py` fail on
+# it. Measured on the live branch at T116: the first turn a ``once: true`` goal was achieved, the
+# prune rewrote this file through ``utf-8-sig`` and the suite went red on a file the agent had done
+# nothing to. The archive copies are ordinary documents and still round-trip through
+# ``_TEXT_ENCODING``; they are copies of a BOM-less file, so they are BOM-less too.
 _TEXT_ENCODING = "utf-8-sig"
+_WRITE_ENCODING = "utf-8"
 _BLOCK = re.compile(r"<!--\s*check\b(.*?)-->", re.DOTALL | re.IGNORECASE)
 _KEY = re.compile(r"^([a-z_]+)\s*:\s*(.*)$")
 
@@ -504,7 +510,11 @@ def write_checks(path: Path, text: str) -> bool:
     """Replace the check file, copy-last: never leave a state its backup cannot explain."""
     try:
         tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(text, encoding=_TEXT_ENCODING)
+        # `newline=""`: without it `Path.write_text` opens in text mode and translates every ``\n``
+        # to ``os.linesep``, so on Windows one prune rewrote all 397 lines of this file as CRLF and
+        # the diff became the whole document. The file is LF in the repository; a writer that
+        # silently changes every line ending destroys `git blame` on the one file the rules live in.
+        tmp.write_text(text, encoding=_WRITE_ENCODING, newline="")
         tmp.replace(path)
     except OSError:
         log.warning("could not write %s", path, exc_info=True)
@@ -544,7 +554,8 @@ def sweep_achieved(
 
     try:
         # Copy first, then edit: the file is never left in a state its backup cannot explain.
-        backup.write_text(text, encoding=_TEXT_ENCODING)
+        # `newline=""` for the same reason as `write_checks`: the archive is a copy of an LF file.
+        backup.write_text(text, encoding=_TEXT_ENCODING, newline="")
     except OSError:
         log.warning("could not back up %s (backup at %s)", path, backup, exc_info=True)
         return [], backup if backup.exists() else None

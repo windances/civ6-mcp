@@ -266,3 +266,29 @@ python scripts/fix-text-encoding.py --check
      同时 `Military Engineering`（4 回合）解锁**弩炮 Trebuchet（Bombard 45，对 200 血城市约 45–52）
      与 Armory、并揭示 Niter**；四城城墙全部开建（有墙的城市能在 2 格内打出 43 伤害且不吃反击，
      "帝国里最便宜的伤害"）。**下一次开打之前，先有铁、有炮、有墙。**
+10. **路线 A 没有日记写入者，于是所有 `metric(...)` 规则都在对着"一行都没有"打分。**
+    `dynasty-cycle-wonder` 连报三回合 `No wonder built`，而成都明明站着 **Great Bath 与 Etemenanki
+    两座**——实时快照读到的就是 `wonders=2`。根因：行是 **MCP 服务器**的工具包装器写的
+    （`server.py` 抓一次快照、每玩家发一行），而直接驱动适配器的脚本（`scripts/play-turn.py`
+    及其同类）从不经过那个包装器，所以 `_agent_diary_rows` 返回 **0 行** → `metrics = {}` →
+    `metric(...)` 读到缺失值。**一条永远无法被满足的规则，在回合循环里读起来就是一条永远做不完的
+    指令。**
+    **已修（本轮）**：新增 `_live_agent_row(gs, turn)`——没有存量行时直接读一次
+    `get_diary_snapshot()`，取本玩家那行并补上 `turn`/`is_agent`；`PlayerRow` 本就带着
+    `techs`/`civics` 名单，所以 `researched(...)` 也一并修好。实测同一回合：修之前 15 条规则红
+    （含 `idle-district-slot`、`carrying-capacity`、`builder-backlog` 这类其实满足的），修之后 12 条，
+    且 `dynasty-cycle-wonder` 转绿——**改动只减少假红，不增加**。回归测试
+    `tests/test_live_diary_row.py`（7 条），其中一条把"没有行就失败"的旧行为也钉住。
+11. **规则文件被自己的修剪写进一个多余的 BOM，而它是一份 English-only 交付文档。**
+    T116 第一次有 `once: true` 目标达成，`sweep_achieved` → `write_checks` 用 `utf-8-sig` 落盘，
+    而 `utf-8-sig` **每次写都加 BOM**；`prompts/checks/turn-checks.md` 在
+    `text_encoding.ASCII_ONLY_DELIVERED` 里，纯 ASCII 是它的定义，"多余 BOM"正是那条门禁要抓的东西。
+    于是提交门禁与 `tests/test_text_encoding.py` 在一个 **agent 什么都没碰过的文件**上转红。
+    **已修（本轮）**：读仍用 `utf-8-sig`（两种形态都读得进来），写改用新的
+    `_WRITE_ENCODING = "utf-8"`；归档副本照旧。回归测试在 `tests/test_turn_checks.py` 的
+    `TestTheRuleFileIsWrittenWithoutABom` 三条，含"本来带 BOM 也不许带出去"与"修剪一次不留 BOM"。
+    **同一条写入路径上还埋着发现 8 那个行尾陷阱**：`Path.write_text` 默认文本模式，在 Windows 上
+    把每个 `\n` 翻成 `os.linesep`——于是**一次修剪把这份文件 397 行全部改成了 CRLF**，提交 diff
+    变成整份文档。仓库里这份文件是 LF。两处写入（`write_checks` 与归档副本）现在都带
+    `newline=""`，另加两条"写出来不含 `\r`"的断言。**同一个 `write_text` 一天之内咬了两次，
+    两次都发生在"只是顺手写个文件"的地方。**

@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import time
+from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 import civ_mcp.narrate as nr
@@ -1031,6 +1032,40 @@ def _latest_at_or_before(rows: list[dict], turn: int) -> dict | None:
     return max(candidates, key=lambda r: r["turn"]) if candidates else None
 
 
+async def _live_agent_row(gs, turn: int) -> dict | None:
+    """The agent diary row for this turn, read live, for a session that keeps no diary.
+
+    A diary row is written by the **MCP server's** tool wrapper: `server.py` captures a snapshot and
+    emits one row per player. A session that talks to the adapter directly - the repo drivers,
+    `scripts/play-turn.py` and its siblings - never goes through that wrapper, so it never writes
+    one. Measured on the live branch at T115: `_agent_diary_rows` answered with **zero** rows, so
+    `metrics` was `{}` and **every `metric(...)` rule was judged against a missing value**.
+    `dynasty-cycle-wonder` reported `wonders 0` on three consecutive turns while the live snapshot
+    read `wonders=2` (Great Bath and Etemenanki, both standing in Chengdu) - a rule that cannot be
+    satisfied and that the turn loop reads as an outstanding instruction.
+
+    The snapshot the wrapper would have written is available to any caller, so the fallback is to
+    read it now. `PlayerRow` carries the same fields the stored row does (including the `techs` and
+    `civics` name lists that `researched(...)` needs), so a rule means the same thing on both
+    routes. Returns ``None`` when the snapshot cannot be read, which leaves the previous behaviour
+    - a missing metric - rather than inventing one.
+    """
+    try:
+        snapshot = await gs.get_diary_snapshot()
+        mine = next(
+            (p for p in snapshot.players if p.pid == gs.local_player_id), None
+        )
+    except Exception:
+        log.debug("turn checks: live diary snapshot failed", exc_info=True)
+        return None
+    if mine is None:
+        return None
+    row = asdict(mine)
+    row["turn"] = turn
+    row["is_agent"] = True
+    return row
+
+
 async def _game_key(gs) -> str:
     try:
         civ, seed = await gs.get_game_identity()
@@ -1071,6 +1106,11 @@ async def _evaluate_checks(gs, turn: int, units: dict | None, now: dict | None):
             now = _latest_at_or_before(await _agent_diary_rows(gs), turn)
         except Exception:
             now = None
+    if now is None:
+        # No stored row at all means no diary writer in this session (see `_live_agent_row`).
+        # A stored row that is merely older than `turn` is a different thing and is left alone:
+        # the last known yields are a real reading, an empty context is not.
+        now = await _live_agent_row(gs, turn)
     researched = frozenset(
         str(name).upper()
         for key in ("techs", "civics")

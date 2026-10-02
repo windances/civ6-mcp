@@ -345,3 +345,71 @@ message: A wonder is wanted.
         assert turn_checks._ACHIEVED_TRACE.match(pruned.splitlines()[-1].strip())
         back, restored = turn_checks.restore_foreign_games(pruned, "china_B", tmp_path)
         assert restored == ["a-goal"] and "id: a-goal" in back
+
+
+class TestTheRuleFileIsWrittenWithoutABom:
+    """The English-only bar is also a no-BOM rule, and the prune used to break it.
+
+    Measured on the live branch at T116: the first turn a ``once: true`` goal was achieved, the
+    sweep rewrote ``prompts/checks/turn-checks.md`` through ``utf-8-sig``, which writes a BOM every
+    time. The file is in ``text_encoding.ASCII_ONLY_DELIVERED`` - it is pure ASCII and its
+    ``message:`` lines are printed into a model's context - so a BOM on it is a stray one, and both
+    the pre-commit gate and ``tests/test_text_encoding.py`` went red on a file the agent had done
+    nothing to.
+    """
+
+    GOAL = (
+        "<!-- check\n"
+        "id: a-goal\n"
+        "when: turn() >= 1\n"
+        "require: metric(wonders) >= 1\n"
+        "once: true\n"
+        "message: x\n"
+        "-->\n"
+    )
+
+    def test_write_checks_leaves_no_bom(self, tmp_path):
+        path = tmp_path / "turn-checks.md"
+        assert turn_checks.write_checks(path, "# Checks\n")
+        assert not path.read_bytes().startswith(b"\xef\xbb\xbf")
+
+    def test_write_checks_does_not_translate_line_endings(self, tmp_path):
+        """`Path.write_text` defaults to text mode, which turns every ``\\n`` into ``os.linesep``.
+
+        Measured on the live branch: one prune rewrote all 397 lines of the rule file as CRLF on
+        Windows, so the commit's diff was the whole document and `git blame` on the file the rules
+        live in was destroyed in a single write. The repository stores this file as LF.
+        """
+        path = tmp_path / "turn-checks.md"
+        assert turn_checks.write_checks(path, "# Checks\n\nline\n")
+        assert b"\r" not in path.read_bytes()
+
+    def test_the_backup_copy_does_not_translate_line_endings_either(self, tmp_path):
+        (tmp_path / "archive").mkdir(parents=True, exist_ok=True)
+        path = tmp_path / "turn-checks.md"
+        path.write_bytes(b"# Checks\n\n" + self.GOAL.encode("utf-8"))
+        removed, backup = turn_checks.sweep_achieved(
+            path, {"a-goal": 116}, "20260101-000000", "china_A"
+        )
+        assert removed == ["a-goal"] and backup is not None
+        assert b"\r" not in backup.read_bytes()
+
+    def test_a_bom_that_is_already_there_is_not_carried_forward(self, tmp_path):
+        path = tmp_path / "turn-checks.md"
+        path.write_bytes(b"\xef\xbb\xbf# Checks\n")
+        text, _ = turn_checks.load_checks(path)
+        assert text == "# Checks\n", "the read tolerates a BOM either way"
+        turn_checks.write_checks(path, text)
+        assert not path.read_bytes().startswith(b"\xef\xbb\xbf")
+
+    def test_the_sweep_that_retires_a_goal_leaves_no_bom(self, tmp_path):
+        (tmp_path / "archive").mkdir(parents=True, exist_ok=True)
+        path = tmp_path / "turn-checks.md"
+        path.write_bytes(b"\xef\xbb\xbf# Checks\n\n" + self.GOAL.encode("utf-8"))
+        removed, _ = turn_checks.sweep_achieved(
+            path, {"a-goal": 116}, "20260101-000000", "china_A"
+        )
+        assert removed == ["a-goal"]
+        assert not path.read_bytes().startswith(b"\xef\xbb\xbf"), (
+            "the live rule file must stay pure ASCII"
+        )
