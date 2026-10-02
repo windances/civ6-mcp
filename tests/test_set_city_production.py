@@ -28,6 +28,14 @@ class _StubConnection:
 def _gs(write_lines, read_lines) -> GameState:
     gs = GameState.__new__(GameState)
     gs.conn = _StubConnection(write_lines, read_lines)
+
+    # `set_city_production` is wrapped in `clears_blockers`, so it dismisses the popup layer
+    # before its write. That dismiss has its own round trip and would eat a queued response;
+    # these tests are about the production write itself, so it is stubbed out here.
+    async def _no_popups():
+        return "No popups to dismiss."
+
+    gs.dismiss_popup = _no_popups
     return gs
 
 

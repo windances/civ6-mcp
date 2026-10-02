@@ -460,6 +460,13 @@ military unit moving onto its tile destroys it"、Spearmen 是反骑兵的，以
   对话框也会替你点掉。**Lua 里没有任何东西能看到游戏之外的对话框**——如果 `dismiss_popup` 什么也没
   报告而回合仍然卡住，在断定游戏挂死之前用 `.tools/whats-on-screen.py` 读一下屏幕
   （`docs/game-recovery.md`）。
+- **弹窗层不只卡住回合——它还会无声吃掉下一条指令。** 实测：成都排一个奇观，连报三次
+  `SILENT_FAILURE|... appeared to set but the game engine did not persist it (NOT_SET|...)`，
+  弹窗栈上有 22 个弹窗（一个过场摄像机、一个灾难画面，加那一串邀请）；`dismiss_popup` 清空之后，
+  同一句调用第一次就成功。写入回报了成功而引擎什么都没做——所以**生产变更上的 `SILENT_FAILURE`
+  首先是弹窗层的症状，其次才是队列问题**，重试要放在一次 `dismiss` 之后，而不是把同一句再发一遍。
+  这正是每一个改状态的工具都自己清弹窗层的原因（`GameState.clears_blockers`），而不是留给调用方：
+  弹窗能像吃掉那个奇观一样吃掉一次政策、一次晋升或一次购买，而唯一会注意到的是工具自己的回读。
 
 ## 外交
 

@@ -9,6 +9,7 @@ import the same GameState class but expose different tool subsets.
 from __future__ import annotations
 
 import asyncio
+import functools
 import logging
 import re
 
@@ -33,6 +34,36 @@ log = logging.getLogger(__name__)
 # legal attack. `end_turn` matches on it, because the alternative - sweeping and reporting -
 # is what discarded four attacks over the T139-T152 Russian war.
 SKIP_REFUSED = "REFUSED|"
+
+
+def clears_blockers(fn):
+    """Clear the popup layer before a deliberate game action.
+
+    A blocking popup does not only hold the turn - **it silently eats the next
+    game action**. Measured on the live branch at T103: the same
+    `set_city_production` call answered
+    `SILENT_FAILURE|... appeared to set but the game engine did not persist it
+    (NOT_SET|current=nil|expected=BUILDING_ETEMENANKI)` three times while 22
+    popups (a cinematic camera, a natural-disaster screen and the invites) sat
+    on the stack, and the identical call landed
+    `PRODUCING|BUILDING_ETEMENANKI|6 turns` on the first attempt after
+    `dismiss_popup` had emptied it.
+
+    So the guard belongs on **every** deliberate write, not only on `move_unit`
+    and `attack_unit` (which had it because the same thing was measured on
+    them). It is cheap: on an empty layer `dismiss_popup` answers
+    `No popups to dismiss.` in ~0.7s measured on this branch, less than one Lua
+    round trip, and it never closes a diplomacy session or a deal view (it
+    reports `PENDING|` instead), so it cannot answer for the agent.
+    """
+
+    @functools.wraps(fn)
+    async def wrapper(self, *args, **kwargs):
+        await self._clear_action_blockers()
+        return await fn(self, *args, **kwargs)
+
+    wrapper._clears_blockers = True  # type: ignore[attr-defined]
+    return wrapper
 
 
 class GameState:
@@ -194,11 +225,13 @@ class GameState:
         lines = await self.conn.execute_write(lq.build_get_spies_query())
         return lq.parse_spies_response(lines)
 
+    @clears_blockers
     async def spy_travel(self, unit_index: int, target_x: int, target_y: int) -> str:
         lua = lq.build_spy_travel(unit_index, target_x, target_y)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def spy_mission(
         self, unit_index: int, mission_type: str, target_x: int, target_y: int
     ) -> str:
@@ -402,12 +435,8 @@ class GameState:
             "of the water before their ships answer."
         )
 
+    @clears_blockers
     async def move_unit(self, unit_index: int, target_x: int, target_y: int) -> str:
-        # Pre-dismiss any blocking popups that would silently eat the move
-        try:
-            await self.dismiss_popup()
-        except Exception:
-            pass
         lua = lq.build_move_unit(unit_index, target_x, target_y)
         lines = await self.conn.execute_write(lua)
         result = _action_result(lines)
@@ -520,12 +549,8 @@ class GameState:
                             return False
         return False
 
+    @clears_blockers
     async def attack_unit(self, unit_index: int, target_x: int, target_y: int) -> str:
-        # Pre-attack: dismiss any blocking popups that would silently eat the attack
-        try:
-            await self.dismiss_popup()
-        except Exception:
-            pass
         # Pre-attack: run combat estimator
         estimate_str = ""
         est: lq.CombatEstimate | None = None
@@ -650,6 +675,7 @@ class GameState:
             return estimate_str + result + "\n" + warning
         return estimate_str + result
 
+    @clears_blockers
     async def city_attack(self, city_id: int, target_x: int, target_y: int) -> str:
         lua = lq.build_city_attack(city_id, target_x, target_y)
         lines = await self.conn.execute_write(lua)
@@ -680,17 +706,14 @@ class GameState:
                 log.debug("City attack followup failed: %s", e)
         return result
 
+    @clears_blockers
     async def resolve_city_capture(self, action: str) -> str:
         lua = lq.build_resolve_city_capture(action)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def found_city(self, unit_index: int) -> str:
-        # Pre-dismiss any blocking popups (tech completion, era change, etc.)
-        try:
-            await self.dismiss_popup()
-        except Exception:
-            pass
 
         lua = lq.build_found_city(unit_index)
         lines = await self.conn.execute_write(lua)
@@ -757,6 +780,7 @@ class GameState:
         lines = await self.conn.execute_read(lua)
         return lq.parse_settle_advisor_response(lines)
 
+    @clears_blockers
     async def condemn_heretic(self, unit_index: int) -> str:
         """Destroy an adjacent enemy religious unit (Condemn Heretic).
 
@@ -765,10 +789,6 @@ class GameState:
         (`LOC_UNITCOMMAND_CONDEMN_HERETIC_REQUIRES_WAR_DECLARATION`). The Lua reports every
         adjacent candidate before firing, so a condemnation is never anonymous.
         """
-        try:
-            await self.dismiss_popup()
-        except Exception:
-            pass
         lua = lq.build_condemn_heretic(unit_index)
         lines = await self.conn.execute_write(lua)
         result = _action_result(lines)
@@ -797,6 +817,7 @@ class GameState:
             return f"{result} | STILL THERE: {'; '.join(still)} - re-read next turn before assuming the kill"
         return f"{result} | tile ({tx},{ty}) now empty"
 
+    @clears_blockers
     async def pillage_tile(
         self, unit_index: int, target_x: int | None = None, target_y: int | None = None
     ) -> str:
@@ -811,6 +832,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def fortify_unit(self, unit_index: int) -> str:
         lua = lq.build_fortify_unit(unit_index)
         lines = await self.conn.execute_write(lua)
@@ -819,6 +841,7 @@ class GameState:
             return "Unit is sleeping (this unit type cannot fortify)"
         return result
 
+    @clears_blockers
     async def skip_unit(self, unit_index: int) -> str:
         lua = lq.build_skip_unit(unit_index)
         lines = await self.conn.execute_read(lua)
@@ -913,6 +936,7 @@ class GameState:
             return []
         return lq.parse_loyalty_response(lines)
 
+    @clears_blockers
     async def skip_remaining_units(self, force: bool = False) -> str:
         # Look for attacks that are about to be thrown away *before* finishing moves: after
         # this call the units are fortified and the attack is gone for the turn. Seen live at
@@ -957,51 +981,61 @@ class GameState:
             )
         return report
 
+    @clears_blockers
     async def automate_explore(self, unit_index: int) -> str:
         lua = lq.build_automate_explore(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def heal_unit(self, unit_index: int) -> str:
         lua = lq.build_heal_unit(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def alert_unit(self, unit_index: int) -> str:
         lua = lq.build_alert_unit(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def sleep_unit(self, unit_index: int) -> str:
         lua = lq.build_sleep_unit(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def delete_unit(self, unit_index: int) -> str:
         lua = lq.build_delete_unit(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def improve_tile(self, unit_index: int, improvement_name: str) -> str:
         lua = lq.build_improve_tile(unit_index, improvement_name)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def remove_feature(self, unit_index: int) -> str:
         lua = lq.build_remove_feature(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def repair_improvement(self, unit_index: int) -> str:
         lua = lq.build_repair_improvement(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def remove_improvement(self, unit_index: int) -> str:
         lua = lq.build_remove_improvement(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def sacrifice_builder_charges(self, unit_index: int) -> str:
         lua = lq.build_sacrifice_builder_charges(unit_index)
         lines = await self.conn.execute_write(lua)
@@ -1012,6 +1046,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def set_city_production(
         self,
         city_id: int,
@@ -1106,6 +1141,7 @@ class GameState:
 
         return result
 
+    @clears_blockers
     async def purchase_item(
         self,
         city_id: int,
@@ -1123,6 +1159,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_city_production_response(lines)
 
+    @clears_blockers
     async def set_research(self, tech_name: str) -> str:
         lua = lq.build_set_research(tech_name)
         lines = await self.conn.execute_write(lua)
@@ -1149,6 +1186,7 @@ class GameState:
                 return _action_result(gc_lines)
         return result
 
+    @clears_blockers
     async def set_civic(self, civic_name: str) -> str:
         lua = lq.build_set_civic(civic_name)
         lines = await self.conn.execute_write(lua)
@@ -1182,6 +1220,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_diplomacy_sessions(lines)
 
+    @clears_blockers
     async def diplomacy_respond(self, other_player_id: int, response: str) -> str:
         # Capture dialogue text BEFORE response to detect goodbye phase
         pre_sessions = await self.get_diplomacy_sessions()
@@ -1244,6 +1283,7 @@ class GameState:
             dialogue_note += f'\nReason/agenda: "{post_reason}"'
         return f"OK:RESPONDED|{response.upper()}|SESSION_CONTINUES{dialogue_note}"
 
+    @clears_blockers
     async def send_diplomatic_action(self, other_player_id: int, action: str) -> str:
         if action.upper() == "OPEN_BORDERS":
             # Session-based OPEN_BORDERS causes AI turn hang.
@@ -1305,11 +1345,13 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_pending_deals_response(lines)
 
+    @clears_blockers
     async def respond_to_deal(self, other_player_id: int, accept: bool) -> str:
         lua = lq.build_respond_to_deal(other_player_id, accept)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def propose_trade(
         self,
         other_player_id: int,
@@ -1346,6 +1388,7 @@ class GameState:
         result = lq.parse_test_trade_response(lines)
         return narrate_test_trade(result)
 
+    @clears_blockers
     async def propose_peace(self, other_player_id: int) -> str:
         lua = lq.build_propose_peace(other_player_id)
         lines = await self.conn.execute_write(lua)
@@ -1363,6 +1406,7 @@ class GameState:
         else:
             return f"REJECTED|{name} rejected your peace offer"
 
+    @clears_blockers
     async def form_alliance(self, other_player_id: int, alliance_type: str) -> str:
         lua = lq.build_form_alliance(other_player_id, alliance_type.upper())
         lines = await self.conn.execute_write(lua)
@@ -1377,6 +1421,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_policies_response(lines)
 
+    @clears_blockers
     async def set_policies(self, assignments: dict[int, str]) -> str:
         # Read the slots before the change. The engine will not tell anyone that a policy which
         # halves every upgrade just left the government, and the bill for that arrives later.
@@ -1445,16 +1490,19 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_governors_response(lines)
 
+    @clears_blockers
     async def appoint_governor(self, governor_type: str) -> str:
         lua = lq.build_appoint_governor(governor_type)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def assign_governor(self, governor_type: str, city_id: int) -> str:
         lua = lq.build_assign_governor(governor_type, city_id)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def promote_governor(self, governor_type: str, promotion_type: str) -> str:
         lua = lq.build_promote_governor(governor_type, promotion_type)
         lines = await self.conn.execute_write(lua)
@@ -1492,6 +1540,7 @@ class GameState:
         lines = await self.conn.execute_read(lua)
         return lq.parse_unit_promotions_response(lines)
 
+    @clears_blockers
     async def promote_unit(self, unit_id: int, promotion_type: str) -> str:
         unit_index = unit_id % 65536
         lua = lq.build_promote_unit(unit_index, promotion_type)
@@ -1572,6 +1621,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_city_states_response(lines)
 
+    @clears_blockers
     async def send_envoy(self, city_state_player_id: int) -> str:
         lua = lq.build_send_envoy(city_state_player_id)
         lines = await self.conn.execute_write(lua)
@@ -1601,6 +1651,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_pantheon_status_response(lines)
 
+    @clears_blockers
     async def choose_pantheon(self, belief_type: str) -> str:
         lua = lq.build_choose_pantheon(belief_type)
         lines = await self.conn.execute_write(lua)
@@ -1615,6 +1666,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_religion_beliefs_response(lines)
 
+    @clears_blockers
     async def found_religion(
         self, religion_type: str, follower_belief: str, founder_belief: str
     ) -> str:
@@ -1632,6 +1684,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def upgrade_unit(self, unit_id: int) -> str:
         unit_index = unit_id % 65536
         lua = lq.build_upgrade_unit(unit_index)
@@ -1647,6 +1700,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_dedications_response(lines)
 
+    @clears_blockers
     async def choose_dedication(self, dedication_index: int) -> str:
         lua = lq.build_choose_dedication(dedication_index)
         lines = await self.conn.execute_write(lua)
@@ -1734,6 +1788,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_purchasable_tiles_response(lines)
 
+    @clears_blockers
     async def purchase_tile(self, city_id: int, x: int, y: int) -> str:
         lua = lq.build_purchase_tile(city_id, x, y)
         lines = await self.conn.execute_write(lua)
@@ -1743,6 +1798,7 @@ class GameState:
     # Government change (InGame context)
     # ------------------------------------------------------------------
 
+    @clears_blockers
     async def change_government(self, government_type: str) -> str:
         lua = lq.build_change_government(government_type)
         lines = await self.conn.execute_write(lua)
@@ -1762,11 +1818,13 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_gp_advisor_response(lines)
 
+    @clears_blockers
     async def recruit_great_person(self, individual_id: int) -> str:
         lua = lq.build_recruit_great_person(individual_id)
         lines = await self.conn.execute_write(lua)
         return lines[0] if lines else "No response"
 
+    @clears_blockers
     async def patronize_great_person(
         self, individual_id: int, yield_type: str = "YIELD_GOLD"
     ) -> str:
@@ -1778,6 +1836,7 @@ class GameState:
         lines = await self.conn.execute_write(lq.build_religion_status_query())
         return lq.parse_religion_status_response(lines)
 
+    @clears_blockers
     async def reject_great_person(self, individual_id: int) -> str:
         lua = lq.build_reject_great_person(individual_id)
         lines = await self.conn.execute_write(lua)
@@ -1801,6 +1860,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_trade_destinations_response(lines)
 
+    @clears_blockers
     async def make_trade_route(
         self, unit_index: int, target_x: int, target_y: int
     ) -> str:
@@ -1812,11 +1872,13 @@ class GameState:
     # Great Person activation (InGame context)
     # ------------------------------------------------------------------
 
+    @clears_blockers
     async def activate_great_person(self, unit_index: int) -> str:
         lua = lq.build_activate_great_person(unit_index)
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def spread_religion(self, unit_index: int) -> str:
         lua = lq.build_spread_religion(unit_index)
         lines = await self.conn.execute_write(lua)
@@ -1826,6 +1888,7 @@ class GameState:
     # Trader teleport (InGame context)
     # ------------------------------------------------------------------
 
+    @clears_blockers
     async def teleport_to_city(
         self, unit_index: int, target_x: int, target_y: int
     ) -> str:
@@ -1842,6 +1905,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lq.parse_world_congress_response(lines)
 
+    @clears_blockers
     async def vote_world_congress(
         self, resolution_hash: int, option: int, target_index: int, num_votes: int
     ) -> str:
@@ -1849,11 +1913,13 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def submit_congress(self) -> str:
         lua = lq.build_congress_submit()
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @clears_blockers
     async def queue_wc_votes(self, votes: list[dict]) -> str:
         """Store agent voting preferences and register WC event handler."""
         lua = lq.build_register_wc_voter(votes=votes)
@@ -1864,6 +1930,7 @@ class GameState:
     # City yield focus (InGame context)
     # ------------------------------------------------------------------
 
+    @clears_blockers
     async def set_city_focus(self, city_id: int, focus: str) -> str:
         lua = lq.build_set_yield_focus(city_id, focus)
         lines = await self.conn.execute_write(lua)
@@ -2144,6 +2211,23 @@ class GameState:
         from civ_mcp.game_lifecycle import dismiss_popup
 
         return await dismiss_popup(self.conn)
+
+    async def _clear_action_blockers(self) -> str:
+        """Best-effort popup clear in front of a deliberate write.
+
+        Never raises and never fails an action: a popup layer the game will not
+        let us clear is a reason to *try* the action anyway, not a reason to
+        refuse it. The reply is dropped on the floor because every caller
+        reports its own outcome, and a `No popups to dismiss.` line in front of
+        every result would be noise. What it must not do is hide a
+        `PENDING|DiplomacyActionView` - an open session is the caller's to
+        answer, and `end_turn` is what names it.
+        """
+        try:
+            return await self.dismiss_popup()
+        except Exception:
+            log.debug("Pre-action popup dismiss failed", exc_info=True)
+            return ""
 
     async def list_saves(self) -> str:
         """List available save files."""

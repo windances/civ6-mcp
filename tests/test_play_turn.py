@@ -322,3 +322,39 @@ class TestPairParsing:
 
     def test_junk_is_ignored(self):
         assert play.parse_pairs(["", "PAIR|short", None]) == []
+
+
+class TestTheProduceTileArgument:
+    """`produce <city> <ITEM> [X,Y]` - the two spellings, and the crash that started this.
+
+    Measured live T103: `play-turn.py produce Chengdu BUILDING_ETEMENANKI 53 23` - the shape a
+    hand-typed call takes - died with `ValueError: too many values to unpack` out of an inline
+    `(int(v) for v in sys.argv[4].split(","))`, printing a stack trace for a command whose problem
+    was one missing comma. Both spellings are read now, and everything else is a usage line.
+    """
+
+    def test_the_documented_comma_form(self):
+        assert play.parse_tile_args(["53,23"]) == (53, 23)
+
+    def test_the_space_separated_form_that_used_to_crash(self):
+        assert play.parse_tile_args(["53", "23"]) == (53, 23)
+
+    def test_negative_and_large_coordinates_survive(self):
+        assert play.parse_tile_args(["-3,140"]) == (-3, 140)
+
+    def test_a_single_token_with_no_comma_is_not_a_tile(self):
+        assert play.parse_tile_args(["53"]) is None
+
+    def test_three_tokens_are_not_a_tile(self):
+        assert play.parse_tile_args(["53", "23", "9"]) is None
+
+    def test_a_comma_triple_is_not_a_tile(self):
+        assert play.parse_tile_args(["53,23,9"]) is None
+
+    def test_non_numbers_are_not_a_tile(self):
+        assert play.parse_tile_args(["a,b"]) is None
+        assert play.parse_tile_args(["53", "north"]) is None
+
+    def test_no_argument_is_not_a_tile(self):
+        assert play.parse_tile_args([]) is None
+

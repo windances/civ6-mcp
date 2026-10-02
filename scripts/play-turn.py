@@ -250,6 +250,25 @@ def pick_production(options, item: str):
     return None
 
 
+def parse_tile_args(args: list[str]) -> tuple[int, int] | None:
+    """Read a tile from the tail of a command line: `X,Y`, or `X Y`.
+
+    `X,Y` is the documented form, and it is the one the tool output copies. Two tokens is what a
+    hand-typed call tends to be, and it used to crash: `produce Chengdu BUILDING_ETEMENANKI 53 23`
+    raised a bare `ValueError` out of the unpacking generator and printed a stack trace, from a
+    command the caller could see in front of them. Both spellings work now, and anything else
+    (one token with no comma, three tokens, a non-number) is `None`, which the caller reports as a
+    usage line instead. Pure, so the accepted shapes are testable without a game.
+    """
+    pieces = args[0].split(",") if len(args) == 1 else args
+    if len(pieces) != 2:
+        return None
+    try:
+        return int(pieces[0]), int(pieces[1])
+    except ValueError:
+        return None
+
+
 def parse_unused_places(lines: list[str]) -> list[tuple[str, tuple[int, int]]]:
     """`(unit_type, (x, y))` for each unused-attack line, which reads `UNIT_X@3,4 -> target`."""
     out = []
@@ -796,7 +815,12 @@ async def main() -> int:
                 return 1
             target_x = target_y = None
             if len(sys.argv) > 4:
-                target_x, target_y = (int(v) for v in sys.argv[4].split(","))
+                tile = parse_tile_args(sys.argv[4:])
+                if tile is None:
+                    print("usage: play-turn.py produce <city> <ITEM> [X,Y]  "
+                          f"(could not read a tile from {' '.join(sys.argv[4:])!r})")
+                    return 2
+                target_x, target_y = tile
             elif "DISTRICT" in str(match.item_name).upper():
                 placements = await gs.get_district_advisor(city.city_id, match.item_name)
                 spots, notes = usable_placements(placements)

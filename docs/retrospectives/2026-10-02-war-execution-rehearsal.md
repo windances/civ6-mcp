@@ -209,3 +209,20 @@ python scripts/fix-text-encoding.py --check
    `ERR:NO_WALLS|City has no walls — build Ancient Walls first`——它连停在自己港里一格的战船都打不到。
    **已修（本轮）**：`AGENTS.md` 与中文备份改为把"必须先有城墙"写成硬门。这一条是**文档缺陷**而不是
    代码缺陷：拒绝本身是对的。
+8. **弹窗层不只卡住回合，它还会无声吃掉下一条指令。** T103：成都排奇观，同一句
+   `set_city_production` 连报三次
+   `SILENT_FAILURE|... appeared to set but the game engine did not persist it
+   (NOT_SET|current=nil|expected=BUILDING_ETEMENANKI)`；先 `dismiss`（清掉 22 个弹窗——一个
+   cinematic camera、一个自然灾害屏，加 20 个 InvitePopup），再原样重发，第一次就回
+   `PRODUCING|BUILDING_ETEMENANKI|6 turns`。
+   **关键点不是"读不到"，而是"回报了成功而引擎没落盘"**：写的是同一个 Lua，弹窗把异步的
+   `RequestOperation` 吃掉了，工具的回读校验（第 1 条里那份 `SILENT_FAILURE` 设计）把它抓住了。
+   `move_unit` / `attack_unit` 早就有这条前置清理，因为它们各自被实测咬过一次；其余写法都没有，
+   于是弹窗同样能无声吃掉一次政策、一次晋升、一次购买。
+   **已修（本轮）**：新增 `clears_blockers` 装饰器 + `GameState._clear_action_blockers`，
+   给 55 个"改游戏状态"的方法统一加上前置清弹窗；空弹窗层实测一次约 0.7 秒（比一次 Lua 往返还短），
+   且它不会替你关闭外交会话或交易视图（只回 `PENDING|`）。回归测试
+   `tests/test_action_blockers.py` 逐个点名这 55 个方法，并断言任何一个**新的**非只读方法都必须被
+   归类——丢了装饰器的方法会重新开始撒谎，而没有任何测试会注意到。
+   顺带修掉同一片区域的一个易用性缺陷：`play-turn.py produce <城> <项> 53 23`（手打时最自然的写法）
+   过去会抛 `ValueError` 栈回溯；现在 `X,Y` 与 `X Y` 都接受，其他形状回一行 usage。

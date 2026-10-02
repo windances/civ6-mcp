@@ -203,6 +203,13 @@ class TestTheSkipReport:
                 self.writes += 1
                 return ["OK:SKIPPED|13 units"]
 
+        # Every deliberate write clears the popup layer first (`clears_blockers`), and that
+        # dismiss is a Lua call of its own. It must not count here: `writes` is measuring
+        # whether a safeguard fortified or finished a unit, and a popup check does neither.
+        async def _no_popups():
+            return "No popups to dismiss."
+
+        gs.dismiss_popup = _no_popups
         gs.conn = Conn()
         return gs
 

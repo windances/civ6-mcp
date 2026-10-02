@@ -525,6 +525,16 @@ engineer per turn.
   dialogs are clicked away for you. **Nothing in Lua can see a dialog outside the game** - if
   `dismiss_popup` reports nothing and the turn is still stuck, read the screen with
   `.tools/whats-on-screen.py` before concluding the game is hung (`docs/game-recovery.md`).
+- **A popup layer does not only hold the turn - it silently eats the next action.** Measured: a
+  wonder queued in Chengdu answered `SILENT_FAILURE|... appeared to set but the game engine did not
+  persist it (NOT_SET|...)` three times running, with 22 popups on the stack (a cinematic camera, a
+  disaster screen and the invites); the same call landed on the first attempt after `dismiss_popup`
+  emptied it. The write reported success and the engine did nothing - so **`SILENT_FAILURE` on a
+  production change is a popup-layer symptom before it is a queue problem**, and the retry belongs
+  after a `dismiss`, not after another identical call. This is why every state-changing tool clears
+  the layer itself (`GameState.clears_blockers`) rather than leaving it to the caller: a popup can
+  eat a policy change, a promotion or a purchase exactly the way it ate that wonder, and the tool's
+  own readback is the only thing that notices.
 
 ## Diplomacy
 
