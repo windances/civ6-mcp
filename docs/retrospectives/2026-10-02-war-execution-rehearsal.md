@@ -63,6 +63,12 @@
 | T95 | `play-turn end` → `end --force` | 守卫先拒：4 个未用攻击；`--force` 后适配器仍回 `REFUSED\|UNUSED ATTACK (4 unit(s)) ... Nothing was swept.`，但**回合照常推进**：`Turn 95 -> 96` | 无（本回合） | 用 `--force` 丢弃：两个近战对 CS 35 剑士是必亏交换，一个是打不到的战船。理由写进日记行 |
 | **T96** | `end` 结果（同上一条的输出） | 敌方回合：`Your Skirmisher (UNIT_SKIRMISHER) took 52 damage! HP: 20/100`；7 条 `THREAT:`（Anshan 2 剑士 + 2 弩手、蛮族战船 + 重装步兵、毛利重战车）；`CHECK FAILED`：`use-your-attacks`、`screen-the-siege`、`match-their-melee`、`dynasty-cycle-wonder`；`BATTLE ASSESSMENT` 列出两队各单位与"concentration: 3 of your units are within 2 tiles ... enough for a kill"；`MATCHUP: their UNIT_MAN_AT_ARMS is CS 45 against our best front-line unit at CS 25`；`SIEGE POSTURE`：两门有屏卫、**一门 EXPOSED**；三单位自愈（Warrior 42→52、Chariot 49→69、Spearman 70→80） | 见左 | 决策交给人类：Anshan 是城邦（指令说城邦不是征服目标），但它已经在我们领土里；2026-10-02 的"不是我们发起的战争就是征服"那条要不要套在城邦上 |
 | T96 | `orient --only overview,units` | `turn=96 gold=18.1 gpt=+4.4`；Skirmisher `hp20/100`；侦察兵 100/100；三门投石车 100/100 | — | 下一回合的首要动作：把 Skirmisher 撤出接触、给暴露的投石车补屏卫、用远程火力消耗 Anshan（指令：绝不一对一交换） |
+| T96 | 北口袋的纵队后撤（按地形只有一条出路）：`move 16 56 11` → `move 19 56 10` → `move 18 55 10` → `move 21 56 12` | 四次都成功，各 `read back ... mv0.0`（丘陵/森林每格 2–3 点） | 无 | 唯一出口 (56,11) 是一格宽的山口——**正是 `tactics/04` 说的"列队堵自己"**；一次只能挪一格 |
+| T96 | `attack 14 51 14`（弓手再打剑士）、`move 7 50 22`（伤兵进耶路撒冷）、`move 17 50 20`、`move 4 54 21` | 剑士 100→84→73（两回合共 27）；Warrior[7] `moved (51,20) -> (50,21) STOPPED_MID_PATH` | 无 | 远程消耗 + 近战不接战（CS 20/25 对 CS 35 是必亏交换） |
+| **T96** | **`end` 连续两次都报同一句 `Turn 95 -> 96`，而 `orient` 读到的回合在 95/96 之间摆动** | `REFUSED\|UNUSED ATTACK (3 unit(s)...)`；事件里 `Your Skirmisher took 54 damage! HP: 18/100`；`UNIT_MAN_AT_ARMS CS:45 HP:88/100` | 无（回合没有真正推进） | **发现 4**：回合被弹窗卡住。`whats-on-screen.py` 读到 `NATURAL DISASTER OCCURRING` + `CATASTROPHIC ERUPTION`；`dismiss_popup` 一次清掉 **23 个** 弹窗：`cinematic_camera, NaturalDisasterPopup, InvitePopup ×20`。路线 A 的驱动器**没有** dismiss 命令 |
+| T96 | 清完弹窗后重读 | `turn=96`（稳定），全员移动力恢复满格，位置却保留了我刚才的移动结果 | — | **发现 5**：弹窗阻塞期间的读数不一致——同一回合内 Skirmisher 的 HP 读到过 **20 / 72 / 18**，侦察兵的格子读到过 **(64,25)** 与 **(63,23)**；一次 `move 0 65 28` 被解释成"从 (63,23) 走到 (64,25)"（原地），白白花掉移动力 |
+| T96 | `attack 18 54 9`（轻骑兵打重装步兵）、`end` → `end --force` | `Est damage to attacker: ~302` / `-> WARNING: attacker likely dies!`，实际 `est damage dealt:~2`；守卫只剩 2 条**打不到**的攻击（两条都是对港内战船的近战）；`--force` 后进入 T97 | 下一回合的 `Action Required`：**Unit available for promotion / Choose a Technology / Choose Production** | 用 `--force` 结束（唯一出口），理由：剩下两条是 `MELEE_CANNOT_ATTACK_AT_SEA`，工具自己会拒绝 |
+| **T97** | `orient --only overview,units` | `turn=97 gold=17.1 gpt=+4.5 research=None`；**Skirmisher 已不在编成里**（`Unit Killed`）；Archer[14] `hp39/100`（被 Anshan 弩手 RS40 打掉）；MAA `62/100`（它杀掉轻骑兵时吃了反击）；三辆投石车 100/100、已退出北口袋 | 待读（下一回合开始） | 结论：**A+C 的第一轮代价 = 一辆轻骑兵 + 一个弓手重伤**，换来投石车全部生还、Anshan 两台剑士掉血、重装步兵掉 38 |
 
 
 要顺手留下的东西（打完之后没有它们就没法复查）：
@@ -137,7 +143,12 @@ python scripts/fix-text-encoding.py --check
   载入窗口"的清单同源。
 - 本次打法：**路线 A**（不走 MCP，直接用仓库的直连驱动器：`orient.py` / `target-report.py` /
   `staging-plan.py` / `play-turn.py`）。因此第 2 节的 **P14（`tactics/07` 有没有进顾问简报）
-  本次无法观测**，会标为"未观测"，不算通过。
+  本次无法观测**，会标为"未观测"，不算通过；**P1（`IN SIGHT`）同样观测不到**（见上表）。
+- **T97 的现场**：回合 97，金币 17.1 / 每回合 +4.5（低于 +10 底线 → `carrying-capacity` 会红），
+  科技待选（Castles 已完成），4 城 28 人口，编成 4 近战 / 3 投石车 / 3 弓手 / 1 投石手 / 1 长矛 /
+  1 重战车 / 1 侦察兵 / 1 商队。敌方：**Anshan**（城邦，交战中）2 剑士 84/100、弩手 ×2；
+  **蛮族** 重装步兵 62/100、港内战船 100/100；**毛利** 重战车（未交战）。
+  待办阻断：`Unit available for promotion`、`Choose a Technology`、`Choose Production`。
 
 
 ---
@@ -159,7 +170,18 @@ python scripts/fix-text-encoding.py --check
    只有港口）回的是 `ERR:NO_WALLS|City has no walls — build Ancient Walls first`。这条限制是对的
    （手册如此），但"最便宜的伤害"在无墙城市上不存在——措辞需要收紧，否则计划会把它算进输出。
 3. **远程攻击印的是近战估计。** 弓手与轻骑兵的 `RANGE_ATTACK` 前面都有一段
-   `Combat Estimate (Melee)`，其中"Est damage to attacker"（44 与 177）以及"attacker likely dies!"
-   对远程单位毫无意义（远程不吃反击，实测两次都只结算了 `est damage dealt`）。轻骑兵那一击
-   只打出 **3** 点伤害（对方 CS 48），却先被警告会阵亡——一个只按错误模型给出的估计，比没有估计
-   更容易误导下一条命令。
+   `Combat Estimate (Melee)`，其中"Est damage to attacker"（三次分别读到 **44 / 177 / 302**）以及
+   "attacker likely dies!" 对远程单位毫无意义（远程不吃反击，三次都只结算了 `est damage dealt`，
+   分别 13 / 11 / 2）。一个只按错误模型给出的估计，比没有估计更容易误导下一条命令。
+4. **一个弹窗栈能把整个回合卡住，而路线 A 没有任何东西去关它。** T96 的 `end` 连续两次都回同一句
+   `Turn 95 -> 96`，回合号在两次 `orient` 之间摆动；屏幕读到的是
+   `NATURAL DISASTER OCCURRING / CATASTROPHIC ERUPTION`。`dismiss_popup` 一次清掉 23 个弹窗
+   （`cinematic_camera`、`NaturalDisasterPopup`、**`InvitePopup` ×20**），清完回合号立刻稳定在 96。
+   在正常的 MCP 会话里这些由后台 watcher 顺手关掉，`play-turn.py` 里没有对应命令——**任何自然灾害、
+   邀请或过场动画都可能让一个直连会话看起来"回合不前进"**。
+5. **弹窗阻塞期间的读数是不能信的。** 同一回合内：轻骑兵 HP 读到过 **20 / 72 / 18**；侦察兵的格子读到过
+   **(64,25)** 与 **(63,23)**；一次 `move 0 65 28` 被当成"从 (63,23) 走到 (64,25)"（原地）而白白花掉
+   移动力；清完弹窗后**全员的移动力又都是满的**，位置却保留了我之前下的移动。也就是说：**在回合边界
+   被打断时，先读到的那一份快照可能是上一回合的**——计划基于它做，就会像这次一样把移动力花在空气上。
+   `AGENTS.md` 已经为城市读数写过"post-combat 读数是估计不是事实"；这一条是它在**单位与回合边界**上的
+   同族现象，值得同样写进去。
