@@ -27,15 +27,15 @@
 
 | # | 预测 | 出处 | 结果 | 差异记录 |
 |---|---|---|---|---|
-| P1 | 城市第一次可见的那次**移动回复**里出现 `IN SIGHT ... [City: 名字] ... get_target_report(x,y)` | `narrate.narrate_sight` | | |
+| P1 | 城市第一次可见的那次**移动回复**里出现 `IN SIGHT ... [City: 名字] ... get_target_report(x,y)` | `narrate.narrate_sight` | ⚠️ **路线 A 观测不到** | 不是功能坏了：`IN SIGHT` 挂在 `GameState.spatial` 上（`game_state.py:469` 的 `_revealed_seeded` 门），而 `SpatialTracker` **只在 `server.py:318` 构造**。`play-turn.py` 用 `GameState(conn)`，`spatial is None` → 整个 post-move 可见性块被跳过。T95 侦察兵移到 (64,25)、与毛利重战车相邻，移动回复里没有任何 `IN SIGHT`。要观测这条只能走 orchestrator（路线 B） |
 | P2 | 同一回合的 `end_turn` 出现**且只出现一次** `NEW TARGET (T<n>) ...` | `end_turn` 的进程内差分（首次扫描只播种） | | |
-| P3 | **未宣战**状态下 `get_target_report` 就能给出 `walls N/100`、`city HP N/200`、驻军、三格内敌军，以及每格的 `FIRE` / `FIRE?` / `NO LINE OF SIGHT` | 工具；Gate 1-3 | | |
+| P3 | **未宣战**状态下 `get_target_report` 就能给出 `walls N/100`、`city HP N/200`、驻军、三格内敌军，以及每格的 `FIRE` / `FIRE?` / `NO LINE OF SIGHT` | 工具；Gate 1-3 | ⏳ 待测 | 本轮没有可用的**外国城市**格（Anshan 城本身在雾里，见 P7），所以还没有一次真正的 target report |
 | P4 | 若目标格只是 `revealed`（已揭示但不当前可见），报告会明说"不是读数"，且**不给**墙/池/驻军 | `narrate.narrate_target_report` | | |
 | P5 | 宣战前 `get_staging_plan` / `get_pathing_estimate` 的 `arrive T+n` **已含地形代价**（`cost N mp`），但**不含敌方 ZOC 停顿** | `_marchZoc` 只扫 `IsAtWarWith` 的玩家 | | |
 | P6 | 宣战后**同一个环位**的 `arrive T+n` 可能 +1，并出现 `ZOC STOP at (x,y) on turn +k` | 同上；本轮新加的输出 | | |
-| P7 | 和平期 `SIEGE POSTURE` 报 `city_distance`（集结参照），`war_city_distance` 为 999；`SIEGE FIRE: n/m` 在宣战前不具约束力 | 本轮修复（战争门 + 敌城口径） | | |
+| P7 | 和平期 `SIEGE POSTURE` 报 `city_distance`（集结参照），`war_city_distance` 为 999；`SIEGE FIRE: n/m` 在宣战前不具约束力 | 本轮修复（战争门 + 敌城口径） | ✅ **确认（更强）** | T96 的 `SIEGE POSTURE` 三行全是 `city - (no visible enemy city)`：**连 Anshan 的城都在雾里**，所以战争状态与城市可见性是两件事。三门投石车因此既没有 `SIEGE FIRE` 也没有目标可算 |
 | P8 | 宣战前 `concentrate-the-siege`、`upgrade-the-siege`、`upgrade-the-unwatched`、`one-garrison-per-city` **静默**；宣战那一刻起可红 | 规则里的 `metric(at_war) >= 1` | | |
-| P9 | `siege-train` / `ranged-mass` / `melee-screen` / `counter-the-cavalry` 在 T90 之后**和平期也会红**（盯编制，不盯战争） | 规则的 `when` 无战争门 | | |
+| P9 | `siege-train` / `ranged-mass` / `melee-screen` / `counter-the-cavalry` 在 T90 之后**和平期也会红**（盯编制，不盯战争） | 规则的 `when` 无战争门 | ✅ 确认，且**本轮它们全安静** | T96 的红灯是 `use-your-attacks`、`screen-the-siege`、`match-their-melee`、`dynasty-cycle-wonder`。编制类没红是因为队伍本来就是满的（3 投石车 / 4 近战 / 1 长矛 / 4 远程 / 1 重战车）——**规则红不红取决于缺口，不取决于是否在打仗**，这正是 P9 想说的那一半 |
 | P10 | 和平期把单位 `move` 进对方领土会被游戏拒绝（`BLOCKED`，领土 / 开放边界），所以"宣战前集结"只能落在可合法进入的格子 | 游戏侧；实测有先例 | | |
 | P11 | 宣战回合的攻击回 `NO_ENEMY`（战斗引擎下一回合才同步）；宣战回合只做占位 | `AGENTS.md`「War declaration」 | | |
 | P12 | 宣战动作是 `send_diplomatic_action(id, "DECLARE_WAR")`，动作名由 `get_diplomacy` 的 `ACTIONS\|` 行给出；不可宣战时是 `ERR:CANNOT_DECLARE_WAR` | 工具 | | |
@@ -52,9 +52,18 @@
 
 | 回合 | 关键调用（工具 + 目标） | 工具打印的关键行（照抄） | 当回合红的规则 / 阻断 | 决定与理由（谁定的） |
 |---|---|---|---|---|
-| T | | | | |
-| T+1 | | | | |
-| T+2 | | | | |
+| **T95** | `orient --only overview,diplomacy` → 唯一已知文明 **Māori**（NEUTRAL，不战）；`units`/`cities` 读到 4 城 / 16 单位；`play-turn scan 63 23 5` → 发现 `**[Māori HEAVY_CHARIOT]**` @(63,25) | `turn=95 gold=13.7 gpt=+6.2 sci=27.4 ... unit_breakdown={'Warrior': 4, 'Catapult': 3, 'Archer': 3, ...}`；地图行 `(63,25): GRASS FLOODPLAINS_GRASSLAND River {F:3 P:0} **[Māori HEAVY_CHARIOT]**` | 未读（本轮没有取 end 结果） | 探索：侦察兵南下找毛利城市 |
+| T95 | `play-turn move 0 64 26` | `MOVING_TO\|64,26\|from:63,23\|now_at:64,25\|(moved dx:+1 dy:+2)\|STOPPED_MID_PATH (moves exhausted)`，随后 `read back: ... mv1.0` | 无 | **P1 观测不到**（见上）；`STOPPED_MID_PATH` 与"还剩 1.0 移动力"同时出现，是引擎的量化行为，不是 bug |
+| T95 | `play-turn attack 0 63 25`（打毛利） | `REFUSING: no legal attack on (63, 25) from (64, 25) ... Legal targets from here: none` | 无 | 脚本在调用引擎前先自查合法性，所以**看不到 `ERR:` 原文**；于是用适配器直调（下一条） |
+| T95 | 直调 `gs.attack_unit(0, 63, 25)` | `Error: NOT_AT_WAR\|Cannot attack UNIT_HEAVY_CHARIOT — you are at peace with Māori Empire. Declare war first or target a different unit.` | 无 | 和平期攻击的**工具级**拒绝确认；这正是指令里"和平期什么都动不了"的那一条 |
+| T95 | `play-turn attack 14 51 14`（弓手打 Anshan 剑士） | `RANGE_ATTACK\|target:UNIT_SWORDSMAN at (51,14)\|pre_hp:100/100\|range:2 dist:1\|est damage dealt:~13` → `Post-combat: ~87/100` | 无 | 远程不吃反击，安全的一击 |
+| T95 | `play-turn attack 11 59 13`（重战车打蛮族战船） | `Error: MELEE_CANNOT_ATTACK_AT_SEA\|UNIT_GALLEY is at sea ... manual:723`（脚本先印了 `- REFUSED BY THE RULES:` 说明） | 无 | **发现 1**：`unused_attacks` 把这个攻击列为"可用"，攻击路径却直接拒绝 |
+| T95 | 直调 `gs.city_attack(262147, 59, 13)`（奥克兰港里的战船） | `Error: NO_WALLS\|City has no walls — build Ancient Walls first` | 无 | **发现 2**：AGENTS.md 说"有城墙的城市"能打出最便宜的一击；奥克兰没有墙，所以这一击根本不存在 |
+| T95 | `play-turn attack 18 54 9`（轻骑兵打 Anshan 重装步兵 CS 48） | `Est damage to defender: ~3` / `Est damage to attacker: ~177` / `-> WARNING: attacker likely dies!`，然后 `RANGE_ATTACK ... est damage dealt:~3` | 无 | **发现 3**：远程攻击印的是 `Combat Estimate (Melee)`，连"攻击者可能阵亡"的警告都是错的（远程不吃反击） |
+| T95 | `play-turn end` → `end --force` | 守卫先拒：4 个未用攻击；`--force` 后适配器仍回 `REFUSED\|UNUSED ATTACK (4 unit(s)) ... Nothing was swept.`，但**回合照常推进**：`Turn 95 -> 96` | 无（本回合） | 用 `--force` 丢弃：两个近战对 CS 35 剑士是必亏交换，一个是打不到的战船。理由写进日记行 |
+| **T96** | `end` 结果（同上一条的输出） | 敌方回合：`Your Skirmisher (UNIT_SKIRMISHER) took 52 damage! HP: 20/100`；7 条 `THREAT:`（Anshan 2 剑士 + 2 弩手、蛮族战船 + 重装步兵、毛利重战车）；`CHECK FAILED`：`use-your-attacks`、`screen-the-siege`、`match-their-melee`、`dynasty-cycle-wonder`；`BATTLE ASSESSMENT` 列出两队各单位与"concentration: 3 of your units are within 2 tiles ... enough for a kill"；`MATCHUP: their UNIT_MAN_AT_ARMS is CS 45 against our best front-line unit at CS 25`；`SIEGE POSTURE`：两门有屏卫、**一门 EXPOSED**；三单位自愈（Warrior 42→52、Chariot 49→69、Spearman 70→80） | 见左 | 决策交给人类：Anshan 是城邦（指令说城邦不是征服目标），但它已经在我们领土里；2026-10-02 的"不是我们发起的战争就是征服"那条要不要套在城邦上 |
+| T96 | `orient --only overview,units` | `turn=96 gold=18.1 gpt=+4.4`；Skirmisher `hp20/100`；侦察兵 100/100；三门投石车 100/100 | — | 下一回合的首要动作：把 Skirmisher 撤出接触、给暴露的投石车补屏卫、用远程火力消耗 Anshan（指令：绝不一对一交换） |
+
 
 要顺手留下的东西（打完之后没有它们就没法复查）：
 
@@ -130,3 +139,27 @@ python scripts/fix-text-encoding.py --check
   `staging-plan.py` / `play-turn.py`）。因此第 2 节的 **P14（`tactics/07` 有没有进顾问简报）
   本次无法观测**，会标为"未观测"，不算通过。
 
+
+---
+
+## 8. 首日现场发现（T95–T96，路线 A）
+
+三条都是**工具行为与它自己的说明不一致**，不是策略问题；它们只有在对局里才会露出来，这也是
+这次预演存在的理由。
+
+1. **`unused_attacks` 会把打不到的攻击算作"可用"。** 蛮族战船停在奥克兰港 (59,13)，我们两栖
+   单位紧邻它，`end` 的守卫因此每回合拒绝结束回合（`REFUSED|UNUSED ATTACK ... UNIT_HEAVY_CHARIOT@60,14
+   -> UNIT_GALLEY@59,13`），而真正去攻击时 `attack_unit` 直接回
+   `ERR:MELEE_CANNOT_ATTACK_AT_SEA`（manual:723）。也就是说：**一个合法攻击列表里的条目，工具自己
+   永远不会执行**，而唯一的出口是 `--force`（它一次丢掉全部未用攻击，包括真正可打的那几个）。
+   修法是把 `unused_attacks` 的判据与攻击路径对齐（陆地对海上的近战目标不算），或让守卫在报告里
+   标出"这条路径会拒绝"。
+2. **城墙是城市打击的前提，而文档把它写成了普遍手段。** `AGENTS.md` 的 Wartime 段说"有城墙的城市"
+   能打 2 格内敌人（实测 43 伤害、不吃反击，是帝国里最便宜的伤害）；奥克兰（我们打下来的城邦，
+   只有港口）回的是 `ERR:NO_WALLS|City has no walls — build Ancient Walls first`。这条限制是对的
+   （手册如此），但"最便宜的伤害"在无墙城市上不存在——措辞需要收紧，否则计划会把它算进输出。
+3. **远程攻击印的是近战估计。** 弓手与轻骑兵的 `RANGE_ATTACK` 前面都有一段
+   `Combat Estimate (Melee)`，其中"Est damage to attacker"（44 与 177）以及"attacker likely dies!"
+   对远程单位毫无意义（远程不吃反击，实测两次都只结算了 `est damage dealt`）。轻骑兵那一击
+   只打出 **3** 点伤害（对方 CS 48），却先被警告会阵亡——一个只按错误模型给出的估计，比没有估计
+   更容易误导下一条命令。
