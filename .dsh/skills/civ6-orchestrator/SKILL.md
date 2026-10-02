@@ -307,6 +307,14 @@ city because the train was never staged - the phases exist because skipping one 
 like from the inside. Task files in `prompts/tasks/tmp/` add the *objective* for a target that needs
 one; they never replace a phase.
 
+- **A target nothing can reach is a target to replace, not a war to abandon** (human instruction
+  2026-10-02: change the target). "Cannot reach" is a fact about the map, not about the enemy: a
+  strait with no `TECH_SHIPBUILDING`, a chokepoint a third party holds, a path locked by a zone of
+  control nobody can break. When the pre-war analysis or the staging plan says the named city cannot
+  be entered, pick the next reachable city **of the same neighbour**, turn the assembled force toward
+  it, and say which city and why in the diary's tactical line. The war continues; only the target
+  changes, and this is the one case in which the target order is rewritten mid-war.
+
 **Development.**
 
 - Four to six cities, then stop expanding. Never train a Settler in a city of
@@ -517,6 +525,11 @@ is the binding constraint in every assault in this game.
   50 loyalty has neither a governor nor a unit on its tile. The answer is
   `assign_governor` (moving one is free) or a garrison - and if the governor is
   needed at the front, that is a decision to record, not to skip.
+- **A city that flips is retaken, not written off** (human instruction 2026-10-02: retake it). A Free
+  City that was ours is the same front and the same target order - taking it back is not a second
+  war, and the stack does it before moving on to the next city. The prevention above is still what
+  matters (`assign_governor` or a garrison the turn the city is taken); this is the answer for the
+  turn that was missed.
 - Great Wall segments along the new frontier make captured ground cheap to hold.
 - **No peace, ever.** Never call propose_peace. Refuse every offer of peace - a diplomacy
   session (get_pending_diplomacy, answered with respond_to_diplomacy NEGATIVE) or

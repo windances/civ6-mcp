@@ -798,3 +798,29 @@ class TestTheWarIsDecidedOneSiegeAtATime:
         # together and must not be edited apart.
         text = self.text()
         assert "**No peace, ever.**" in text and "Never call propose_peace." in text
+
+
+class TestTheTwoRemainingGapsAreClosed:
+    """Human instructions 2026-10-02, the last two the review left open.
+
+    A target nothing can reach, and a city that flips by loyalty: both used to be silence in the
+    directive, and both are states a session can actually be in.
+    """
+
+    DIRECTIVE = pathlib.Path("prompts/strategies/china-conquest/directive.md")
+
+    def text(self) -> str:
+        return self.DIRECTIVE.read_text(encoding="utf-8")
+
+    def test_an_unreachable_target_is_replaced_not_abandoned(self):
+        text = self.text()
+        assert "A target nothing can reach is a target to replace, not a war to abandon" in text
+        assert "of the same neighbour" in text, "the replacement is inside the same war"
+        assert "only the target\n  changes" in text or "only the target" in text
+
+    def test_a_flipped_city_is_retaken(self):
+        text = self.text()
+        assert "A city that flips is retaken, not written off" in text
+        assert "it back is not a second\n  war" in text or "not a second" in text
+        # ... and the prevention it complements is still stated
+        assert "hold-what-you-take" in text
