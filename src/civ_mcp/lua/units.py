@@ -86,6 +86,11 @@ for i, u in Players[id]:GetUnits():Members() do
         -- two tests mirror each other, so the contradiction was in this scan.
         local targets = ""
         local siegeNoRanged = (bomb > 0 and rs == 0)
+        -- A **melee land unit cannot attack a unit at sea** (manual:723), and the action path refuses
+        -- it by name (`ERR:MELEE_CANNOT_ATTACK_AT_SEA`, the same `Domain` test). Listing it here is
+        -- how a Barbarian Galley in our own harbour came back as an attackable target every turn
+        -- (measured T95-T97 on the live branch), so the hint applies the same predicate.
+        local iAmLandMelee = (rs == 0) and entry ~= nil and entry.Domain == "DOMAIN_LAND"
         if u:GetMovesRemaining() > 0 and (cs > 0 or rs > 0 or bomb > 0) and not siegeNoRanged then
             local rng = ((rs > 0 or bomb > 0) and (entry and entry.Range or 1)) or 1
             local tgtList = {}
@@ -119,6 +124,10 @@ for i, u in Players[id]:GetUnits():Members() do
                                         end)
                                         losOK = (okL and los) and true or (not okL)
                                     end
+                                    local otherInfo = GameInfo.Units[other:GetType()]
+                                    local targetAtSea = otherInfo ~= nil
+                                        and otherInfo.Domain == "DOMAIN_SEA"
+                                    if iAmLandMelee and targetAtSea then losOK = false end
                                     if losOK then
                                         local eInfo = GameInfo.Units[other:GetType()]
                                         local eName = eInfo and eInfo.UnitType or "UNKNOWN"
@@ -1372,6 +1381,14 @@ for _, unit in Players[me]:GetUnits():Members() do
         -- ...but the same Bombard value means it cannot touch a *unit*: only RangedCombat
         -- units may. Its unused shot at a city is SIEGE FIRE's business, not this scan's.
         local can_hit_units = (rs > 0) or not shoots
+        -- **A melee land unit cannot attack a unit at sea** (manual:723). The action path refuses it
+        -- by name (`ERR:MELEE_CANNOT_ATTACK_AT_SEA`, the same `Domain` test), so counting it here
+        -- makes the end-turn guard refuse a turn over an attack that can never be made - and the
+        -- only exit is `--force`, which discards the real unused attacks with it. Measured live
+        -- T95-T97: `UNIT_HEAVY_CHARIOT@60,14 -> UNIT_GALLEY@59,13` and the Warrior beside it were
+        -- listed every single turn against a Barbarian Galley sitting in our own harbour, and both
+        -- came back `MELEE_CANNOT_ATTACK_AT_SEA` when ordered.
+        local landMelee = (not shoots) and entry ~= nil and entry.Domain == "DOMAIN_LAND"
         if (cs > 0 or shoots) and can_hit_units
             and attacks_left(unit) > 0 and not unit:HasMovedIntoZOC() then
             local rng = shoots and (entry and entry.Range or 1) or 1
@@ -1398,7 +1415,10 @@ for _, unit in Players[me]:GetUnits():Members() do
                                     if losOK then
                                         local eInfo = GameInfo.Units[other:GetType()]
                                         local eHP = other:GetMaxDamage() - other:GetDamage()
-                                        table.insert(hits, (eInfo and eInfo.UnitType or "UNKNOWN") .. "@" .. tx .. "," .. ty .. "(" .. eHP .. "hp)")
+                                        local atSea = eInfo ~= nil and eInfo.Domain == "DOMAIN_SEA"
+                                        if not (landMelee and atSea) then
+                                            table.insert(hits, (eInfo and eInfo.UnitType or "UNKNOWN") .. "@" .. tx .. "," .. ty .. "(" .. eHP .. "hp)")
+                                        end
                                     end
                                 end
                             end

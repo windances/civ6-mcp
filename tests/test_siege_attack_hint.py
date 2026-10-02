@@ -55,3 +55,35 @@ class TestTheHintHasTheSiegeExclusion:
         hint = units_lua()
         assert "SIEGE_CANNOT_ATTACK_UNITS" in hint  # the predicate's name in the comment
         assert "attack cities and districts only" in hint
+
+
+class TestTheHintAlsoDropsTargetsAtSea:
+    """The second contradiction of the same claim, found live T95-T97.
+
+    `build_units_query`'s hint listed a Barbarian Galley in our own harbour as `CAN ATTACK` for the
+    Heavy Chariot and the Warrior standing beside it, and `build_unused_attack_query` listed the same
+    pair to the end-turn guard - while the action path refuses that order by name
+    (`ERR:MELEE_CANNOT_ATTACK_AT_SEA`, manual:723). The guard could not be satisfied, so the only way
+    to end a turn was `--force`, which discards the real attacks too.
+    """
+
+    def test_the_hint_applies_the_same_domain_test(self):
+        hint = units_lua()
+        action = attack_lua()
+        assert 'iAmLandMelee = (rs == 0) and entry ~= nil and entry.Domain == "DOMAIN_LAND"' in hint
+        assert "attackerIsLand" in action and 'Domain == "DOMAIN_LAND"' in action
+        assert 'Domain == "DOMAIN_SEA"' in hint and "enemyIsSea" in action
+
+    def test_the_exclusion_sits_where_the_hit_is_recorded(self):
+        hint = units_lua()
+        scan = hint.index("-- Scan for attackable enemies")
+        exclusion = hint.index("if iAmLandMelee and targetAtSea then losOK = false end", scan)
+        # It clears the same flag the LOS check uses, so the target is dropped by the existing gate
+        # rather than by a second `continue` that could drift from it.
+        assert exclusion < hint.index("if losOK then", scan)
+        assert hint.index("if losOK then", scan) < hint.index("table.insert(tgtList", scan)
+
+    def test_a_ranged_unit_is_not_affected(self):
+        # A shooter adjacent to a ship *can* fire at it (manual:725), so the exclusion is melee-only.
+        hint = units_lua()
+        assert "(rs == 0) and entry ~= nil" in hint

@@ -111,6 +111,28 @@ class TestPhantomAttacksAreNotReported:
         query = lq.build_unused_attack_query()
         assert "HasMovedIntoZOC()" in query
 
+    def test_a_melee_land_unit_is_not_offered_a_target_at_sea(self):
+        """manual:723 - the phantom this list was still handing the end-turn guard.
+
+        Measured live T95-T97 on the running branch: a Barbarian Galley sat in our own harbour
+        beside a Heavy Chariot and a Warrior, and the driver's guard refused to end the turn over
+        `UNIT_HEAVY_CHARIOT@60,14 -> UNIT_GALLEY@59,13` on every one of those turns - while both
+        orders came back `ERR:MELEE_CANNOT_ATTACK_AT_SEA`. The only way through was `--force`, and
+        `--force` discards every pending attack, including the real ones (a Skirmisher's free shot
+        at a Man-at-Arms went with it). A guard that cannot be satisfied teaches the session to
+        ignore guards, which is worse than the entry it was reporting.
+        """
+        query = lq.build_unused_attack_query()
+        # The same predicate the action path refuses on: the attacker is a land melee unit...
+        assert "landMelee" in query
+        assert 'entry.Domain == "DOMAIN_LAND"' in query
+        # ...and the target is at sea.
+        assert 'Domain == "DOMAIN_SEA"' in query
+        # The exclusion has to sit exactly where the hit is recorded, not somewhere earlier: an
+        # earlier `continue` would also drop a legal adjacency attack against a land unit.
+        assert "if not (landMelee and atSea) then" in query
+        assert query.index("if losOK then") < query.index("if not (landMelee and atSea) then")
+
     def test_the_engine_is_asked_at_every_shooting_distance(self):
         # The old gate was `if shoots and d > 1`, so a range-1 shooter was never checked.
         query = lq.build_unused_attack_query()
