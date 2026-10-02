@@ -70,3 +70,23 @@ class TestTheEstimate:
     def test_a_garrisoned_city_is_estimated_as_a_city(self):
         assert "tCityOnTile" in self.lua
         assert "if tCityOnTile == nil then" in self.lua
+
+    def test_a_point_blank_shot_is_still_a_ranged_estimate(self):
+        """manual:725 - "Ranged units always use ranged combat, even when adjacent".
+
+        This was `dist > 1`, which mirrored the *fallback* branch in `build_attack_unit` (melee after
+        a refused ranged attempt) instead of its primary test (`dist <= attRange`). Every shot at
+        distance 1 was therefore estimated as a melee attack: measured live T96-T97, an Archer and a
+        Skirmisher firing at range 1 both printed `Combat Estimate (Melee)` with "Est damage to
+        attacker: ~44" and "~302" and a "WARNING: attacker likely dies!". Both resolved as
+        `RANGE_ATTACK` and took no damage at all - the estimate's two numbers came from the wrong
+        model, and the second one is the number a session uses to decide whether to shoot.
+        """
+        assert "local attRange = (unitInfo and unitInfo.Range) or 1" in self.lua
+        assert "and dist <= attRange" in self.lua
+        assert "and dist > 1" not in self.lua, "a range-1 shot is not a melee attack"
+
+    def test_the_range_comes_from_the_unit_definition(self):
+        # ...and a unit with no Range (melee) still reads 1, so the predicate cannot admit it: the
+        # `attRS > 0` half of the test is what keeps a Warrior out of the ranged branch.
+        assert "(attRS > 0 or (attBombard > 0 and tCityOnTile ~= nil)) and dist <= attRange" in self.lua

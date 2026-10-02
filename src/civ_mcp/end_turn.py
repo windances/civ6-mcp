@@ -261,6 +261,59 @@ def _turn_regression_allowed() -> bool:
     }
 
 
+def unit_signature(units) -> tuple:
+    """A cheap fingerprint of the board: what a stale frame changes first.
+
+    Position, health and movement, per unit id, sorted - the three fields every observed stale read
+    got wrong at once. Pure, so the settling rule below can be tested without a game.
+    """
+    return tuple(
+        sorted(
+            (
+                getattr(u, "unit_id", 0),
+                getattr(u, "x", 0),
+                getattr(u, "y", 0),
+                getattr(u, "health", 0),
+                round(float(getattr(u, "moves_remaining", 0) or 0), 1),
+            )
+            for u in (units or [])
+        )
+    )
+
+
+async def _settle_after_turn(gs, attempts: int = 4, pause: float = 1.5) -> str:
+    """Wait until two consecutive unit reads agree, and say so when they never do.
+
+    Measured live T96-T97: the turn number advances before the board is readable. The first read
+    after ``end_turn`` answered with the previous turn's HP, a Scout one tile behind its real
+    position, and a move issued from it walked the unit to the tile it already stood on - while the
+    next read, minutes later, was correct. The cost is one short pause per turn; the alternative is a
+    snapshot diff built from two different turns, which is what the result's events come from.
+
+    Returns an empty string in the normal case, so the turn result carries nothing extra; a note only
+    when the board was still changing after every attempt.
+    """
+    try:
+        previous = unit_signature(await gs.get_units())
+    except Exception:
+        log.debug("Settling read failed", exc_info=True)
+        return ""
+    for _ in range(max(1, attempts)):
+        await asyncio.sleep(pause)
+        try:
+            current = unit_signature(await gs.get_units())
+        except Exception:
+            log.debug("Settling read failed", exc_info=True)
+            return ""
+        if current == previous:
+            return ""
+        previous = current
+    return (
+        f"\n(frame note: the unit list was still changing after {attempts * pause:.0f}s - re-read"
+        " `get_units` before planning from it)"
+    )
+
+
 def _turn_regression_message(previous: int, turn_after: int, latest_autosave: str) -> str:
     """Advisory text for a turn that went backwards, from previous to turn_after.
 
@@ -3949,6 +4002,14 @@ async def execute_end_turn(gs: GameState) -> str:
 
     # Take post-turn snapshot and diff
     snap_after = None
+    # **Let the frame settle before the snapshot.** The turn number moving is not the same as the
+    # board being readable: measured live T96-T97, the first unit read after `end_turn` answered with
+    # the *previous* turn's values (a Warrior 42, a Spearman 70 and a Skirmisher 72 where this turn's
+    # own event lines had just said 52 / 80 / 20), a Scout read one tile behind where it stood, and a
+    # move issued from that read "walked" to the tile it already occupied. Two identical consecutive
+    # unit fingerprints are the cheapest evidence that the frame has stopped changing; when they never
+    # agree the result says so instead of handing a stale board over as the current one.
+    settle_note = await _settle_after_turn(gs)
     try:
         snap_after = await gs._take_snapshot()
         gs._last_snapshot = snap_after
@@ -4197,7 +4258,7 @@ async def execute_end_turn(gs: GameState) -> str:
         log.debug("Save scumming check failed", exc_info=True)
 
     events.sort(key=lambda e: e.priority)
-    return gs._build_turn_report(
+    report = gs._build_turn_report(
         turn_before,
         turn_after,
         events,
@@ -4205,3 +4266,4 @@ async def execute_end_turn(gs: GameState) -> str:
         stockpiles=snap_after.stockpiles if snap_after else None,
         score=game_score,
     )
+    return report + settle_note

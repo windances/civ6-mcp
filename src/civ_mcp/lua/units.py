@@ -702,7 +702,18 @@ pcall(function()
 end)
 -- A siege unit's city attack is its Bombard strength and its RangedCombat is 0 (UNIT_CATAPULT:
 -- CS 25, RS 0, Bombard 35, Range 2), so a test on RangedCombat alone calls it melee.
-local isRanged = (attRS > 0 or (attBombard > 0 and tCityOnTile ~= nil)) and dist > 1
+--
+-- **`dist <= attRange`, not `dist > 1`** (fixed 2026-10-02). Ranged units always use ranged combat,
+-- even when adjacent (manual:725) - the attack path itself quotes that line - so a shot at distance 1
+-- is a ranged attack. The old test mirrored the *fallback* branch in `build_attack_unit` (melee after
+-- a refused ranged attempt) instead of its primary test, and every point-blank shot was estimated as
+-- a melee attack: measured live T96-T97, an Archer and a Skirmisher firing at distance 1 both printed
+-- `Combat Estimate (Melee)` with "Est damage to attacker: ~44" and "~302" and a
+-- "WARNING: attacker likely dies!". Both resolved as `RANGE_ATTACK` and took no damage at all, so the
+-- two numbers the estimate exists to give (the damage to the defender, and whether the attacker is
+-- safe) were one wrong model's.
+local attRange = (unitInfo and unitInfo.Range) or 1
+local isRanged = (attRS > 0 or (attBombard > 0 and tCityOnTile ~= nil)) and dist <= attRange
 local effAttCS = isRanged and (attRS > 0 and attRS or attBombard) or attCS
 -- Find defender
 local enemy = nil

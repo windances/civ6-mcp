@@ -1,0 +1,35 @@
+Fix the last three findings the live war produced
+
+Three separate defects, all measured on the running branch at T95-T97.
+
+**The frame is not settled when the turn number moves** (`end_turn.py`). The turn
+result's events are a snapshot diff, and the snapshot was taken the moment the turn
+advanced - which is not the moment the board is readable. Measured: the first unit
+read after `end_turn` answered with the *previous* turn's values (a Warrior at 42, a
+Spearman at 70, a Skirmisher at 72 where this turn's own event lines had just said
+52 / 80 / 20), a Scout read one tile behind where it stood, and a move issued from
+that read "walked" to the tile it already occupied while spending its movement
+points. `unit_signature` (id, position, HP, movement - the three fields every stale
+read got wrong at once) is now read twice, 1.5s apart, up to four times, and the
+snapshot is only taken once two consecutive fingerprints agree. If they never agree
+the result says so and names the read to repeat; a failed read changes nothing about
+the turn. Tests: `tests/test_turn_settle.py`.
+
+**A point-blank shot was estimated as a melee attack** (`lua/units.py`). The estimate
+query's `isRanged` test was `(...) and dist > 1`, which mirrors the *fallback* branch
+in `build_attack_unit` (melee after a refused ranged attempt) instead of its primary
+test, `dist <= attRange`. So both live shots at range 1 printed `Combat Estimate
+(Melee)` with `Est damage to attacker: ~44` and `~302` and a `WARNING: attacker
+likely dies!` - while both resolved as `RANGE_ATTACK` and took no damage at all
+(manual:725: ranged units always use ranged combat, even when adjacent). The
+predicate now matches the attack path's. Tests: `tests/test_siege_is_ranged.py`.
+
+**The city-strike claim in `AGENTS.md` was too generous** - it is a documentation
+defect, not a code one. `city_action(city_id, "attack", ...)` on a city without walls
+answers `ERR:NO_WALLS`, which is correct; a captured city-state with a Harbour and no
+Ancient Walls could not hit a Barbarian Galley one tile away in its own harbour. The
+reference now states the gate first and keeps the measured 43-damage figure for a
+walled city, with the Chinese backup updated in step.
+
+Gates: 1447 python tests pass, node --test 21 pass, npm run qualify PASS at 81 tools,
+`fix-text-encoding.py --check` exits 0.

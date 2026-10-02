@@ -375,12 +375,15 @@ turn**: declare on turn N, position that turn, attack on N+1. Do not reload or r
 answer `NO_ENEMY` on the declaration turn.
 
 ### Wartime
-A city with walls can fire at an enemy within 2 tiles (`city_action(city_id, "attack", target_x,
-target_y)`) - measured 43 damage, no retaliation, which is the cheapest damage in the empire - and a
-captured city is resolved with `city_action` (`keep`, `raze`, `liberate_founder`, `liberate_previous`)
-or the turn will not end. **Peace is the directive's business, not this reference's**: it forbids
-`propose_peace` outright, and every offer that arrives is refused, so under that strategy a war ends
-only when its cities are yours.
+**A city needs walls before it can strike, and that is a hard gate**: `city_action(city_id, "attack",
+target_x, target_y)` on a city without them answers `ERR:NO_WALLS` - measured on the live branch at
+T96, a captured city-state with a Harbour and no Ancient Walls could not hit a Barbarian Galley
+sitting one tile away in its own harbour. With walls it fires at an enemy within 2 tiles for
+measured 43 damage and no retaliation, which is the cheapest damage in the empire, so the walls are
+worth building for the strike alone. A captured city is resolved with `city_action` (`keep`, `raze`,
+`liberate_founder`, `liberate_previous`) or the turn will not end. **Peace is the directive's
+business, not this reference's**: it forbids `propose_peace` outright, and every offer that arrives
+is refused, so under that strategy a war ends only when its cities are yours.
 
 ### Military readiness
 `get_diplomacy` carries rival military strength, and a neighbor at twice your strength that is
