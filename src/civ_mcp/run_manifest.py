@@ -212,6 +212,23 @@ def touch(turn: int, data_dir: pathlib.Path | str | None = None) -> dict | None:
     return manifest
 
 
+def reset_turn(turn: int, data_dir: pathlib.Path | str | None = None) -> dict | None:
+    """Set how far this run has been played **unconditionally**, for a rollback.
+
+    `touch` only moves forward, because a turn that has been played cannot be un-played. A rollback
+    is the one thing that genuinely goes back: the game is loaded at an earlier save and the turns
+    after it did not happen. Leaving the manifest on the pre-rollback turn means the session banner
+    reports a position the run is no longer at - the same kind of quiet wrongness the manifest
+    exists to remove.
+    """
+    manifest = load(data_dir)
+    if manifest is None or not isinstance(turn, int) or turn < 0:
+        return manifest
+    manifest["last_turn"] = turn
+    save(manifest, data_dir)
+    return manifest
+
+
 def verify(
     manifest: dict | None, civ: str, seed: int
 ) -> tuple[str, str]:

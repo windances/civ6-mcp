@@ -686,6 +686,19 @@ def main() -> int:
 
     turn = verify(target)
     if turn == target:
+        # The run genuinely goes back, and the manifest has to say so: `touch` only moves forward,
+        # so without this the session banner keeps reporting the turn the abandoned branch reached.
+        try:
+            import sys as _sys
+
+            _sys.path.insert(0, str(ROOT / "src"))
+            from civ_mcp import run_manifest
+
+            manifest = run_manifest.reset_turn(target)
+            if manifest:
+                print(f"  run {manifest['run_id']}: played-to is now T{manifest['last_turn']}")
+        except Exception as exc:  # noqa: BLE001 - the rollback itself has already succeeded
+            print(f"  (could not update the run manifest: {type(exc).__name__}: {exc})")
         print(f"\nVERIFIED: the game is at turn {target}")
         return 0
     print(f"\nWARNING: expected turn {target}, the game reports turn {turn}")

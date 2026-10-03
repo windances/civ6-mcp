@@ -70,6 +70,23 @@ class TestTheManifest:
     def test_touch_without_a_manifest_is_a_no_op(self, data):
         assert rm.touch(120, data_dir=data) is None
 
+    def test_reset_turn_moves_the_manifest_backwards(self, data):
+        """A rollback is the one thing that genuinely goes back, so `touch` cannot express it."""
+        rm.init("china-a", data_dir=data)
+        rm.touch(116, data_dir=data)
+        rm.reset_turn(59, data_dir=data)
+        assert rm.load(data)["last_turn"] == 59
+
+    def test_reset_turn_is_not_limited_to_going_back(self, data):
+        """It sets the value; the forward-only rule belongs to `touch`, not to this."""
+        rm.init("china-a", data_dir=data)
+        rm.reset_turn(59, data_dir=data)
+        rm.reset_turn(60, data_dir=data)
+        assert rm.load(data)["last_turn"] == 60
+
+    def test_reset_turn_without_a_manifest_is_a_no_op(self, data):
+        assert rm.reset_turn(59, data_dir=data) is None
+
 
 class TestVerification:
     def test_no_manifest_is_not_a_mismatch(self):
