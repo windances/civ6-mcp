@@ -81,6 +81,7 @@ from civ_mcp.game_state import GameState  # noqa: E402
 from civ_mcp.lua._helpers import SENTINEL  # noqa: E402
 from civ_mcp.narrate import narrate_map  # noqa: E402
 from civ_mcp import session_info  # noqa: E402
+from civ_mcp import run_manifest  # noqa: E402
 
 
 def find(units, needle: str):
@@ -724,6 +725,19 @@ async def main() -> int:
                 civ_name, seed_value = await gs.get_game_identity()
                 overview = await gs.get_game_overview()
                 session_info.print_banner(civ_name, seed_value, getattr(overview, "turn", None))
+                # The guard. A manifest that names a different playthrough means this turn would be
+                # written into that run's diary, retired goals and saves - and the turn would look
+                # entirely normal while it happened. Measured 2026-10-03: a session played on for
+                # hours after the loaded game had been swapped underneath it, and nothing noticed.
+                state, detail = run_manifest.verify(run_manifest.load(), civ_name, seed_value)
+                if state == "mismatch" and "--force" not in sys.argv:
+                    print(f"REFUSING: {detail}")
+                    print("  this data directory belongs to another playthrough; playing on would")
+                    print("  write this turn into that run's diary, its retired goals and its saves.")
+                    print("  Load the run the manifest names, re-point it with scripts/run.py, or")
+                    print("  pass --force if you are certain this is the run you mean.")
+                    return 1
+                run_manifest.touch(getattr(overview, "turn", 0) or 0)
             except Exception as exc:  # noqa: BLE001 - the banner never blocks a turn
                 print(f"SESSION  data_dir={session_info.data_dir()}  (identity unavailable: {exc})")
 

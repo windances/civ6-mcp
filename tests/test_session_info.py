@@ -72,7 +72,9 @@ class TestTheLineItself:
     def test_no_note_when_the_diary_is_current(self, session):
         session([row(116)])
         lines = session_info.banner("china", 911679432, live_turn=116)
-        assert len(lines) == 1, "a diary that is up to date is not worth a second line"
+        assert not any(ln.startswith("NOTE") for ln in lines), (
+            "a diary that is up to date is not worth a note"
+        )
 
 
 class TestTheStalenessNote:
@@ -88,7 +90,8 @@ class TestTheStalenessNote:
     def test_without_a_live_turn_it_still_reports_the_position(self, session):
         session([row(76)])
         lines = session_info.banner("china", 911679432, live_turn=None)
-        assert len(lines) == 1 and "last_agent_turn=76" in lines[0]
+        assert "last_agent_turn=76" in lines[0]
+        assert not any(ln.startswith("NOTE") for ln in lines)
 
 
 class TestTheSplitDirectoryWarning:

@@ -35,6 +35,7 @@ import os
 import pathlib
 
 from civ_mcp import diary as diary_mod
+from civ_mcp import run_manifest
 
 
 def _home() -> pathlib.Path:
@@ -133,6 +134,11 @@ def banner(civ: str, seed: int, live_turn: int | None = None) -> list[str]:
                 f"WARNING  {other} also holds records for {key} - two data directories are in "
                 f"play, and they are NOT the same session's. Check which one wrote last."
             )
+
+    # Which playthrough, and does the loaded game actually belong to it. The data directory says
+    # where the records are; the run manifest says whose they are, and the two are not the same
+    # claim: a session can point at the right directory and the wrong game.
+    lines.extend(run_manifest.lines(civ, seed))
     return lines
 
 
