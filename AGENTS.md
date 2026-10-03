@@ -655,7 +655,14 @@ WC fires synchronously inside `end_turn()` - register votes **before** calling e
   you) - and its result names what it cast. That is a net, not a decision: the fallback is capped at
   the free vote on purpose, so when the session matters call `queue_wc_votes` yourself, because only
   you can rank the targets and only votes beyond the free one spend favor.
-- Extra votes cost 6/18/36/60/90/126... cumulative favor
+- **The price of a vote is per-match, so read it instead of remembering it.** `get_world_congress`
+  prints the game's own table - `Vote costs (cumulative): 1 vote=free, 2=..., 3=...` - and that
+  line is the authority. Two measured examples, each exact for its own match: a 6-player match
+  printed `6/18/36/60/90/126` for votes 2-7, and a 10-player one printed `10/30/60/100/150/210`.
+  Both fit `players x N(N-1)/2`, which is a reason to trust the printed line rather than the
+  formula - the free vote is always free, and only the votes beyond it spend favor. A table
+  carried over from another match is wrong for this one, and wrong in the direction that makes a
+  budget look affordable: the 6-player figures understate a 10-player congress by about 40%.
 - Keeping 50-100 favor in reserve between sessions provides flexibility for the next session
 - DVP resolutions: read what each option actually awards before voting. Concentrate favor on the
   single most impactful resolution rather than spreading thin. Verify your vote blocks the rival,
