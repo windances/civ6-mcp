@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 from civ_mcp import lua as lq
 from civ_mcp.connection import GameConnection
+from civ_mcp.localization import english_output
 from civ_mcp.narrate import (
     narrate_combat_estimate,
     narrate_move_discoveries,
@@ -169,6 +170,7 @@ class GameState:
     # Query methods
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_game_overview(self) -> lq.GameOverview:
         # InGame context needed for GetFavor() (nil in GameCore)
         lines = await self.conn.execute_write(lq.build_overview_query())
@@ -186,6 +188,7 @@ class GameState:
         lines = await self.conn.execute_write(lq.build_diary_full_query())
         return lq.parse_diary_full_response(lines)
 
+    @english_output
     async def get_rival_snapshot(self) -> list[lq.RivalSnapshot]:
         """Lightweight per-rival stats for diary entries."""
         lines = await self.conn.execute_write(lq.build_rival_snapshot_query())
@@ -211,16 +214,19 @@ class GameState:
             log.debug("Game-over check failed in GameCore too", exc_info=True)
             return None
 
+    @english_output
     async def get_units(self) -> list[lq.UnitInfo]:
         lines = await self.conn.execute_write(lq.build_units_query())
         return lq.parse_units_response(lines)
 
+    @english_output
     async def get_builder_tasks(
         self,
     ) -> tuple[list[lq.BuilderTask], list[lq.BuilderInfo]]:
         lines = await self.conn.execute_write(lq.build_builder_tasks_query())
         return lq.parse_builder_tasks(lines)
 
+    @english_output
     async def get_spies(self) -> list[lq.SpyInfo]:
         lines = await self.conn.execute_write(lq.build_get_spies_query())
         return lq.parse_spies_response(lines)
@@ -239,6 +245,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @english_output
     async def get_threat_scan(self) -> list[lq.ThreatInfo]:
         lines = await self.conn.execute_read(lq.build_threat_scan_query())
         return lq.parse_threat_scan_response(lines)
@@ -308,14 +315,17 @@ class GameState:
             building=lq.parse_reinforcement_response(lines),
         )
 
+    @english_output
     async def get_victory_progress(self) -> lq.VictoryProgress:
         lines = await self.conn.execute_write(lq.build_victory_progress_query())
         return lq.parse_victory_progress_response(lines)
 
+    @english_output
     async def get_cities(self) -> tuple[list[lq.CityInfo], list[str]]:
         lines = await self.conn.execute_write(lq.build_cities_query())
         return lq.parse_cities_response(lines)
 
+    @english_output
     async def visible_foreign_cities(self) -> list[lq.CitySighting]:
         """Every foreign city we can see right now - at war or not, city-state or major.
 
@@ -326,6 +336,7 @@ class GameState:
         lines = await self.conn.execute_write(lq.build_visible_foreign_cities_query())
         return lq.parse_visible_foreign_cities_response(lines)
 
+    @english_output
     async def get_map_area(
         self, center_x: int, center_y: int, radius: int = 2
     ) -> list[lq.TileInfo]:
@@ -334,19 +345,23 @@ class GameState:
         )
         return lq.parse_map_response(lines)
 
+    @english_output
     async def get_strategic_map(self) -> lq.StrategicMapData:
         lines = await self.conn.execute_read(lq.build_strategic_map_query())
         return lq.parse_strategic_map_response(lines)
 
+    @english_output
     async def get_diplomacy(self) -> list[lq.CivInfo]:
         # Uses InGame context for GetDiplomaticAI access
         lines = await self.conn.execute_write(lq.build_diplomacy_query())
         return lq.parse_diplomacy_response(lines)
 
+    @english_output
     async def get_tech_civics(self) -> lq.TechCivicStatus:
         lines = await self.conn.execute_read(lq.build_tech_civics_query())
         return lq.parse_tech_civics_response(lines)
 
+    @english_output
     async def get_empire_resources(
         self,
     ) -> tuple[
@@ -759,6 +774,7 @@ class GameState:
                 log.debug("Settle advisor failed: %s", e)
         return result
 
+    @english_output
     async def get_settle_advisor(self, unit_index: int) -> str:
         lua = lq.build_settle_advisor_query(unit_index)
         lines = await self.conn.execute_read(lua)
@@ -775,6 +791,7 @@ class GameState:
             log.debug("Global settle fallback failed", exc_info=True)
         return "No valid settle locations found within 5 tiles or on revealed map."
 
+    @english_output
     async def get_global_settle_scan(self) -> list[lq.SettleCandidate]:
         lua = lq.build_global_settle_scan()
         lines = await self.conn.execute_read(lua)
@@ -1153,6 +1170,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return _action_result(lines)
 
+    @english_output
     async def list_city_production(self, city_id: int) -> list[lq.ProductionOption]:
         lua = lq.build_city_production_query(city_id)
         # Must use InGame context — bq:CanProduce() throws "Not Implemented" in GameCore
@@ -1416,6 +1434,7 @@ class GameState:
     # Policy methods (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_policies(self) -> lq.GovernmentStatus:
         lua = lq.build_policies_query()
         lines = await self.conn.execute_write(lua)
@@ -1485,6 +1504,7 @@ class GameState:
     # Governor methods (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_governors(self) -> lq.GovernorStatus:
         lua = lq.build_governors_query()
         lines = await self.conn.execute_write(lua)
@@ -1534,6 +1554,7 @@ class GameState:
     # Promotion methods
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_unit_promotions(self, unit_id: int) -> lq.UnitPromotionStatus:
         unit_index = unit_id % 65536
         lua = lq.build_unit_promotions_query(unit_index)
@@ -1616,6 +1637,7 @@ class GameState:
     # City-state / Envoy methods (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_city_states(self) -> lq.EnvoyStatus:
         lua = lq.build_city_states_query()
         lines = await self.conn.execute_write(lua)
@@ -1646,6 +1668,7 @@ class GameState:
     # Pantheon methods (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_pantheon_status(self) -> lq.PantheonStatus:
         lua = lq.build_pantheon_status_query()
         lines = await self.conn.execute_write(lua)
@@ -1695,6 +1718,7 @@ class GameState:
     # Dedications / Commemorations
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_dedications(self) -> lq.DedicationStatus:
         lua = lq.build_dedications_query()
         lines = await self.conn.execute_write(lua)
@@ -1746,6 +1770,7 @@ class GameState:
             )
         return None, None
 
+    @english_output
     async def get_district_advisor(
         self, city_id: int, district_type: str
     ) -> list[lq.DistrictPlacement] | str:
@@ -1766,6 +1791,7 @@ class GameState:
         self._advisor_budget_warning = soft_warn
         return lq.parse_district_advisor_response(lines)
 
+    @english_output
     async def get_wonder_advisor(
         self, city_id: int, wonder_name: str
     ) -> list[lq.WonderPlacement] | str:
@@ -1783,6 +1809,7 @@ class GameState:
     # Tile purchase methods (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_purchasable_tiles(self, city_id: int) -> list[lq.PurchasableTile]:
         lua = lq.build_purchasable_tiles_query(city_id)
         lines = await self.conn.execute_write(lua)
@@ -1808,6 +1835,7 @@ class GameState:
     # Great People (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_great_people(self) -> list[lq.GreatPersonInfo]:
         lua = lq.build_great_people_query()
         lines = await self.conn.execute_write(lua)
@@ -1832,6 +1860,7 @@ class GameState:
         lines = await self.conn.execute_write(lua)
         return lines[0] if lines else "No response"
 
+    @english_output
     async def get_religion_status(self) -> lq.ReligionStatus:
         lines = await self.conn.execute_write(lq.build_religion_status_query())
         return lq.parse_religion_status_response(lines)
@@ -1846,6 +1875,7 @@ class GameState:
     # Trade route methods (InGame context)
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_trade_routes(self) -> lq.TradeRouteStatus:
         lua = lq.build_trade_routes_query()
         lines = await self.conn.execute_write(
@@ -1853,6 +1883,7 @@ class GameState:
         )  # InGame context (GetOutgoingRoutes is InGame-only)
         return lq.parse_trade_routes_response(lines)
 
+    @english_output
     async def get_trade_destinations(
         self, unit_index: int
     ) -> list[lq.TradeDestination]:
@@ -1940,6 +1971,7 @@ class GameState:
     # Notifications
     # ------------------------------------------------------------------
 
+    @english_output
     async def get_notifications(self) -> list[lq.GameNotification]:
         lua = lq.build_notifications_query()
         lines = await self.conn.execute_write(lua)

@@ -70,13 +70,18 @@ CIVIC_ORDER = [
     "CIVIC_GUILDS", "CIVIC_DIVINE_RIGHT", "CIVIC_MILITARY_TRAINING", "CIVIC_DEFENSIVE_TACTICS",
 ]
 # Per city, in order. `produce` resolves the category itself; a refusal moves on to the next item.
+# Keyed by ``city_id``, never by name. A city's name is **localized** - the game can be running in
+# Chinese - so a plan keyed on it is bound to the game's language: switch the language and every
+# city silently falls through to the default. The ids below are the founding order, which is the
+# same in every match (65536 is the capital, 131073 the second city), so they are stable even
+# though the names are not. Measured 2026-10-03: the previous keys were Chinese names, two of them
+# cities that are not in this match at all.
 CITY_PLAN = {
-    "西安": ["UNIT_TRADER", "UNIT_BUILDER", "DISTRICT_CAMPUS", "BUILDING_GRANARY",
-             "BUILDING_WATER_MILL", "UNIT_ARCHER"],
-    "北京": ["BUILDING_GRANARY", "UNIT_BUILDER", "DISTRICT_CAMPUS", "BUILDING_WATER_MILL"],
-    "上海": ["BUILDING_GRANARY", "UNIT_BUILDER", "BUILDING_WATER_MILL", "UNIT_ARCHER"],
-    "长沙": ["BUILDING_MONUMENT", "UNIT_BUILDER", "BUILDING_GRANARY", "DISTRICT_CAMPUS"],
+    65536: ["UNIT_TRADER", "UNIT_BUILDER", "DISTRICT_CAMPUS", "BUILDING_GRANARY",
+            "BUILDING_WATER_MILL", "UNIT_ARCHER"],
+    131073: ["BUILDING_GRANARY", "UNIT_BUILDER", "DISTRICT_CAMPUS", "BUILDING_WATER_MILL"],
 }
+DEFAULT_PLAN = ["UNIT_BUILDER", "BUILDING_GRANARY"]
 PRIORITY_RANK = {"urgent": 0, "high": 1, "normal": 2}
 NEARBY_TILES = 4  # a Builder takes the best priority inside this radius before walking further
 PANTHEON = "BELIEF_GODDESS_OF_FESTIVALS"
@@ -153,7 +158,7 @@ class Runner:
                 continue
             options = await self.gs.list_city_production(city.city_id)
             names = [str(o.item_name) for o in options]
-            plan = CITY_PLAN.get(str(city.name), ["UNIT_BUILDER", "BUILDING_GRANARY"])
+            plan = CITY_PLAN.get(city.city_id, DEFAULT_PLAN)
             for item in plan:
                 match = next((o for o in options if str(o.item_name) == item), None)
                 if match is None:

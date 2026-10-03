@@ -312,3 +312,23 @@ python scripts/fix-text-encoding.py --check
     `record-turn.py`），**另一个数据目录里也有本局记录时**补一行 `WARNING`。实测这行当场把两件事一次
     说清：日记落后 9 回合，以及 `~/.civ6-mcp` 与本目录同时在用。回归测试
     `tests/test_session_info.py` 九条。
+13. **游戏重启成了中文，而这件事先被当成显示问题、后来发现有两处会做错决策。** 实测（2026-10-03）：
+    城市名、单位名、科技/市政名、时代名、伟人名、通知正文全部变中文；**但决策层是干净的**——
+    `diary` 的 `techs`/`civics` 仍是 `TECH_POTTERY` 类型码、`unit_type` 仍是 `UNIT_*`、`city_id`
+    与 `unit_id` 都在，所以 `researched(TECH_*)` 与 `units(UNIT_*)` 照常命中。真正会错的是**拿显示名
+    做判断**的地方，只有两处，而且都是**静默**的：`auto-turns.py` 的 `CITY_PLAN` **按城市名做键**
+    （键还是上一局留下的中文名，其中两座根本不是本局的城；语言一切回英文，每座城都会静默掉到默认
+    计划）、以及 `play-turn.py` 的 `produce/purchase <城>` 按名字匹配（这个至少是**响亮失败**）。
+    **已修**：`CITY_PLAN` 改按 `city_id`（建国顺序，任何一局都一样）并删掉过期键、抽出 `DEFAULT_PLAN`；
+    `play-turn.py` 新增 `find_city`，接受 `city_id` 或名字，失败时把 `名字 (city_id=…)` 一起打出来。
+    **显示层（新增）**：`scripts/build-loc-names.py` 从游戏自己的文本文件建
+    `loc-en-names.json`（2.4 MB）——`by_type`（`UNIT_CROSSBOWMAN→Crossbowman`，**只读英文**，
+    因此与游戏语言无关）＋ `by_space`（按标签空间判唯一）。**关键教训：唯一性必须在标签空间内判断**，
+    全局判唯一会把 `毛利`/`中世纪`/`大预言家` 当成歧义丢掉，而在各自空间里它们唯一。
+    `src/civ_mcp/localization.py` 在 31 个读方法上套 `english_output`：先用同一条记录上的**类型码**，
+    再用该字段的**标签空间**，最后才用全局反查表；**任何一层没命中就原样返回，绝不猜**——插值的句子
+    （伟人能力、总督描述）因此保持中文，这是有意的。实测 `orient` 输出从 **119 个中文字段降到 9 行**，
+    剩下的全是**工具自己拼**的字符串（城市间距行、`capitals held` 那个字典）和两个确实没收录的名字。
+    回归测试 `tests/test_localization.py` 二十二条，其中一条专门钉住"没有表时一切都是空操作"，另一条
+    钉住"**兄弟类型码只能用在 `name` 类字段上**"——否则一个碰巧能解析的码会被印到整条记录的每个
+    未解析字段上，把"缺名字"变成"错名字"。

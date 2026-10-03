@@ -251,6 +251,24 @@ def pick_production(options, item: str):
     return None
 
 
+def find_city(cities, token: str):
+    """The city a command line names, by ``city_id`` or by name.
+
+    A bare number is the id the tools print (``city_id=65536``); anything else is a name substring.
+    The name is localized - the game can be running in Chinese - so the id is the form that always
+    works, and the error message below prints both so the id is discoverable from the failure.
+    """
+    wanted = token.strip()
+    if wanted.isdigit():
+        return next((c for c in cities if str(c.city_id) == wanted), None)
+    lowered = wanted.lower()
+    return next((c for c in cities if lowered in str(c.name).lower()), None)
+
+
+def city_menu(cities) -> str:
+    return ", ".join(f"{c.name} (city_id={c.city_id})" for c in cities)
+
+
 def parse_tile_args(args: list[str]) -> tuple[int, int] | None:
     """Read a tile from the tail of a command line: `X,Y`, or `X Y`.
 
@@ -815,10 +833,9 @@ async def main() -> int:
         if verb == "produce":
             city_name, item = sys.argv[2], sys.argv[3].upper()
             cities, _ = await gs.get_cities()
-            city = next((c for c in cities if city_name in str(c.name)), None)
+            city = find_city(cities, city_name)
             if city is None:
-                print(f"no city matching {city_name!r}; have: "
-                      + ", ".join(str(c.name) for c in cities))
+                print(f"no city matching {city_name!r}; have: " + city_menu(cities))
                 return 1
             options = await gs.list_city_production(city.city_id)
             match = pick_production(options, item)
@@ -927,9 +944,9 @@ async def main() -> int:
                 elif sub == "assign":
                     city_name = sys.argv[4]
                     cities, _ = await gs.get_cities()
-                    city = next((c for c in cities if city_name in str(c.name)), None)
+                    city = find_city(cities, city_name)
                     if city is None:
-                        print(f"no city matching {city_name!r}")
+                        print(f"no city matching {city_name!r}; have: " + city_menu(cities))
                         return 1
                     print(f"assign {who} -> {city.name}: "
                           f"{await gs.assign_governor(who, city.city_id)}")
@@ -1002,10 +1019,9 @@ async def main() -> int:
             item = sys.argv[3].upper() if len(sys.argv) > 3 else None
             yield_type = "YIELD_FAITH" if "--faith" in sys.argv else "YIELD_GOLD"
             cities, _ = await gs.get_cities()
-            city = next((c for c in cities if city_name in str(c.name)), None)
+            city = find_city(cities, city_name)
             if city is None:
-                print(f"no city matching {city_name!r}; have: "
-                      + ", ".join(str(c.name) for c in cities))
+                print(f"no city matching {city_name!r}; have: " + city_menu(cities))
                 return 1
             options = await gs.list_city_production(city.city_id)
             purchasable = [
