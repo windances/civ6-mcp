@@ -269,6 +269,65 @@ cities, and play through the turn.
 
 The agent will orient with `get_game_overview`, scan the map for threats, move units, set production and research, handle diplomacy, and end the turn.
 
+## Playthroughs: one data directory per run
+
+Several playthroughs can be kept side by side without sharing anything. The data root holds one
+directory per run plus a `current` pointer, and **every script resolves `current` for you** - no
+command takes a run argument.
+
+```
+.civ6-mcp-data/
+  current                        -> china-911679432-a
+  runs/
+    china-911679432-a/           run.json, diary, retired-goal state, heartbeat, saves/
+    china--1894041591/           ...
+  branches/                      rollback archives (shared)
+  loc-en-names.json              localization table (shared)
+```
+
+Each run's `run.json` names the playthrough and the `(civ, seed)` it expects. Every session start
+compares that against the loaded game, so a game that was swapped underneath a session is reported
+instead of played into the wrong run's diary:
+
+```
+SESSION  data_dir=.../runs/china-911679432-a  match=china_911679432  diary=last_agent_turn=110 ...
+RUN      china-911679432-a "China conquest, first line"  (civ/seed match, played to T110)
+```
+
+A mismatch prints `RUN MISMATCH` and `play-turn.py end` refuses to advance the turn unless
+`--force`. Nothing is checked when a directory has no manifest, so an un-named setup behaves
+exactly as it did before.
+
+```powershell
+# name this playthrough, taking civ/seed from the loaded game
+.venv\Scripts\python.exe scripts\run.py init --id china-a --label "China conquest A" --from-game
+
+.venv\Scripts\python.exe scripts\run.py status          # what this directory names vs what the game says
+.venv\Scripts\python.exe scripts\run.py touch --turn 116
+.venv\Scripts\python.exe scripts\run.py clear
+
+# organise an existing flat data directory into runs/ (plan first, then apply, then verify)
+.venv\Scripts\python.exe scripts\runs.py inventory
+.venv\Scripts\python.exe scripts\runs.py plan
+.venv\Scripts\python.exe scripts\runs.py apply --current china-911679432-a
+.venv\Scripts\python.exe scripts\runs.py verify
+```
+
+The localization table is built once per machine from the game's own text files and read by every
+run; it keeps tool output English whichever language the game is set to, and resolves names that
+have no type code next to them (city names above all). A missing table is not an error - everything
+is printed exactly as the game returned it.
+
+```powershell
+.venv\Scripts\python.exe scripts\build-loc-names.py            # build or refresh
+.venv\Scripts\python.exe scripts\build-loc-names.py --check    # report only
+```
+
+## Command reference
+
+Every script's usage is in [scripts/README.md](scripts/README.md) - the playthrough and data
+directory layout, the route-A turn loop, rollback, the diary, localization, and a line per file.
+
 ## As a benchmark
 
 Civilization VI is a compelling environment for evaluating LLM strategic reasoning. Games run 300+ turns with compounding decisions, incomplete information, and multiple competing objectives — a significant step up from single-turn or short-horizon tasks.
