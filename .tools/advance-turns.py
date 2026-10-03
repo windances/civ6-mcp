@@ -216,6 +216,13 @@ async def march(gs, orders, replies: list[str], log: list[tuple]) -> None:
             f"    {selector} -> {unit.unit_type} (unit_id {unit.unit_id}, index "
             f"{unit.unit_index}) at {start}"
         )
+        if start == (tx, ty):
+            # Already there. Re-issuing the order would ask it to move onto its own tile, which the
+            # engine refuses as STACKING_CONFLICT against itself; the verifier then records a write
+            # failure that says nothing about the map.
+            spent.add(unit.unit_index)
+            print("      already on the target - nothing to order")
+            continue
         if unit.moves_remaining <= 0:
             reply = f"NO_MOVES|{unit.unit_type} #{unit.unit_id} had none when the order was issued"
             print(f"      {reply}")
