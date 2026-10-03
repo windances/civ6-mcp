@@ -370,7 +370,11 @@ the production it is losing right now and prints, per city, the queue, the pilla
 demand, whether that power is *durable* or only a project, housing against pop, and free district
 slots. A new game, or a rollback of this one, gives every city a different name, a different
 neighbour and a different set of pillaged tiles - and a plan that carries a name forward is a plan
-for a board that no longer exists. The same rule holds for coordinates and for unit ids.
+for a board that no longer exists. The same rule holds for coordinates and for **units**: a unit id
+or index is this match's state too, so select a unit by what it *is* - `BOMBARD:28,14`, `nearest` -
+and let the tool resolve it and print which one it picked, rather than carrying an id in from a note.
+`.tools/advance-turns.py --march` takes either, and prefers the property: an id in a plan is the
+same mistake as a city name in a plan.
 
 
 **Balance between development and conquest.**

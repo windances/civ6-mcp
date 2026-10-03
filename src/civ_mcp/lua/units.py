@@ -3046,8 +3046,9 @@ for _, u in Players[me]:GetUnits():Members() do
             local ignoreZocU = _marchIgnoresZoc(u)
             -- Recon is not a front-line unit: a Scout has Combat 10, so a test that only asks
             -- "is Combat > 0" files it as melee and the plan sends it to a tile adjacent to a
-            -- city, where it dies for nothing (seen on the first live run of this query,
-            -- 2026-09-26: UNIT_SCOUT #262146 -> (58,40) d1).
+            -- city, where it dies for nothing. The unit that showed it was a Scout on the first
+            -- live run of this query; the id it carried is not repeated here, because an id is
+            -- one match's state and this file is not.
             local role = "melee"
             local ut = info and info.UnitType or "?"
             if string.find(ut, "SCOUT") or string.find(ut, "EXPLORER") then role = "recon"

@@ -120,50 +120,110 @@ async def drain_diplomacy(gs, replies: list[str]) -> int:
     return answered
 
 
+def parse_orders(specs: list[str]) -> list[tuple[str, int, int]]:
+    """`SELECTOR:X,Y` -> (selector, x, y).
+
+    The selector is **not required to be an index**. An index is one match's state: a rollback or a
+    new game renumbers every unit, so a plan written as `27:36,17` describes a unit that no longer
+    exists. A selector may instead be
+
+      `BOMBARD`   an upper-case fragment of `unit_type` - the nearest *unmoved* match to the target
+      `nearest`   the nearest unmoved military unit to the target
+      `27`        an exact `unit_index`, for when a read has just been taken and precision matters
+
+    and `resolve()` prints which unit it picked, so the operator sees the identity the tool found
+    instead of trusting one carried in from a note.
+    """
+    orders: list[tuple[str, int, int]] = []
+    for spec in specs:
+        selector, _, tile = spec.partition(":")
+        tx, ty = (int(v) for v in tile.split(","))
+        orders.append((selector.strip(), tx, ty))
+    return orders
+
+
+async def resolve(gs, selector: str, tx: int, ty: int, spent: set[int]):
+    """The unit this selector means **right now**, or None.
+
+    The distance is the game's own pathing estimate where it can give one, so the pick is the
+    nearest *reachable* unit rather than the nearest by straight-line arithmetic - this repo has
+    had hand hex distance wrong four times, and the wrap makes it worse.
+    """
+    candidates = [
+        u
+        for u in await gs.get_units()
+        if u.unit_index not in spent and (u.combat_strength or 0) > 0
+    ]
+    if selector.isdigit():
+        wanted = int(selector)
+        return next((u for u in candidates if u.unit_index == wanted), None)
+    if selector.lower() != "nearest":
+        needle = selector.upper()
+        candidates = [u for u in candidates if needle in str(u.unit_type).upper()]
+    if not candidates:
+        return None
+    best, best_cost = None, None
+    for unit in candidates:
+        try:
+            estimate = await gs.get_pathing_estimate(unit.unit_index, tx, ty)
+            cost = int(getattr(estimate, "total_cost", -1) or -1)
+        except Exception:  # noqa: BLE001
+            cost = -1
+        if cost < 0:  # unreachable, or no path to give: rank it last rather than first
+            cost = 10**6
+        if best_cost is None or cost < best_cost:
+            best, best_cost = unit, cost
+    return best
+
+
 async def march(gs, orders, replies: list[str], log: list[tuple]) -> None:
     """One move per order, re-reading the unit list between them.
 
-    `get_units` is re-read inside the loop so a unit that stopped mid-path cannot be picked twice
-    or block the one behind it, and each order's start position is recorded so the verifier can
-    tell a march leg that progressed from one that did nothing.
+    `get_units` is re-read inside the loop so a unit that stopped mid-path cannot be picked twice or
+    block the one behind it, and each order's start position is recorded so the verifier can tell a
+    march leg that progressed from one that did nothing.
     """
     spent: set[int] = set()
-    for index, tx, ty in orders:
-        for unit in await gs.get_units():
-            if unit.unit_index != index or unit.unit_index in spent:
-                continue
-            if unit.moves_remaining <= 0:
-                reply = f"NO_MOVES|[{index}] had no movement points when the order was issued"
-                print(f"    {reply}")
-                replies.append(reply)
-                log.append((index, (unit.x, unit.y), (tx, ty), reply))
-                spent.add(index)
-                break
-            start = (unit.x, unit.y)
-            reply = await gs.move_unit(unit.unit_index, tx, ty)
-            spent.add(unit.unit_index)
-            print(f"    [{index}] {unit.unit_type} {start} -> ({tx},{ty})")
+    for selector, tx, ty in orders:
+        unit = await resolve(gs, selector, tx, ty, spent)
+        if unit is None:
+            reply = f"ERR: no unmoved unit matches {selector!r} for ({tx},{ty})"
+            print(f"    {reply}")
+            replies.append(reply)
+            log.append((selector, (0, 0), (tx, ty), reply))
+            continue
+        start = (unit.x, unit.y)
+        print(
+            f"    {selector} -> {unit.unit_type} (unit_id {unit.unit_id}, index "
+            f"{unit.unit_index}) at {start}"
+        )
+        if unit.moves_remaining <= 0:
+            reply = f"NO_MOVES|{unit.unit_type} #{unit.unit_id} had none when the order was issued"
             print(f"      {reply}")
-            replies.append(str(reply))
-            log.append((index, start, (tx, ty), str(reply)))
-            break
-        else:
-            print(f"    [{index}] not found in the unit list")
-
-
-def parse_orders(specs: list[str]) -> list[tuple[int, int, int]]:
-    orders: list[tuple[int, int, int]] = []
-    for spec in specs:
-        index, _, tile = spec.partition(":")
-        tx, ty = (int(v) for v in tile.split(","))
-        orders.append((int(index), tx, ty))
-    return orders
+            replies.append(reply)
+            log.append((unit.unit_index, start, (tx, ty), reply))
+            spent.add(unit.unit_index)
+            continue
+        reply = await gs.move_unit(unit.unit_index, tx, ty)
+        spent.add(unit.unit_index)
+        print(f"      {reply}")
+        replies.append(str(reply))
+        log.append((unit.unit_index, start, (tx, ty), str(reply)))
 
 
 async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--turns", type=int, default=1)
-    ap.add_argument("--march", action="append", default=[], metavar="INDEX:X,Y")
+    ap.add_argument(
+        "--march",
+        action="append",
+        default=[],
+        metavar="SELECTOR:X,Y",
+        help="a move order; SELECTOR is a unit_type fragment (BOMBARD), 'nearest', or an exact "
+             "unit_index. A type or 'nearest' is preferred: an index is this match's state and a "
+             "rollback renumbers every unit, so a plan written with indices describes units that "
+             "no longer exist",
+    )
     ap.add_argument("--json", action="store_true", help="emit the per-turn verdicts as JSON")
     args = ap.parse_args()
 
