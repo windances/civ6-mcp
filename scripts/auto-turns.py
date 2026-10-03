@@ -47,8 +47,16 @@ from datetime import datetime, timezone
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from civ_mcp import run_manifest  # noqa: E402
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-os.environ.setdefault("CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data"))
+os.environ.setdefault(
+    "CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data")
+)
+# The data root holds one directory per playthrough plus a `current` pointer; the modules that
+# resolve stored paths must be pointed at the run, not at the root that contains it.
+os.environ["CIV_MCP_DATA_DIR"] = str(
+    run_manifest.resolve_data_dir(os.environ["CIV_MCP_DATA_DIR"])
+)
 
 from civ_mcp import diary as diary_module  # noqa: E402
 from civ_mcp import end_turn as end_turn_module  # noqa: E402

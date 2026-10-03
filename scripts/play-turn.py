@@ -65,14 +65,21 @@ import os
 import pathlib
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from civ_mcp import run_manifest  # noqa: E402
 # The diary directory is read from CIV_MCP_DATA_DIR at *import* time and the default
 # (~/.civ6-mcp) is outside this sandbox. Without this, `end` cannot read the turn's diary row and
 # reports four rules as "un-evaluable: metric(...) is not available this turn" - measured
 # 2026-09-25 - while the same rules evaluate fine. Point it at the workspace, as the DSH overlay
 # does for the MCP server.
 os.environ.setdefault(
-    "CIV_MCP_DATA_DIR", str(pathlib.Path(__file__).resolve().parents[1] / ".civ6-mcp-data")
+    "CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data")
+)
+# The data root holds one directory per playthrough plus a `current` pointer; the modules that
+# resolve stored paths must be pointed at the run, not at the root that contains it.
+os.environ["CIV_MCP_DATA_DIR"] = str(
+    run_manifest.resolve_data_dir(os.environ["CIV_MCP_DATA_DIR"])
 )
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -81,7 +88,6 @@ from civ_mcp.game_state import GameState  # noqa: E402
 from civ_mcp.lua._helpers import SENTINEL  # noqa: E402
 from civ_mcp.narrate import narrate_map  # noqa: E402
 from civ_mcp import session_info  # noqa: E402
-from civ_mcp import run_manifest  # noqa: E402
 
 
 def find(units, needle: str):

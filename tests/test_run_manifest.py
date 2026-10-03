@@ -96,6 +96,52 @@ class TestVerification:
         assert state == "unnamed" and "no civ/seed" in detail
 
 
+class TestResolvingTheRunDirectory:
+    """`CIV_MCP_DATA_DIR` points at the root; the modules must be pointed at the run inside it.
+
+    The resolution has to happen *before* the modules import, because `diary.DIARY_DIR`,
+    `heartbeat.HEARTBEAT_PATH` and `turn_checks.state_path` read the variable at import time. That
+    is why it lives in the drivers' bootstrap and not inside those modules.
+    """
+
+    def test_a_flat_directory_is_returned_unchanged(self, tmp_path):
+        """A checkout that has not been migrated must behave exactly as before."""
+        (tmp_path / "diary_china_1.jsonl").write_text("{}\n", encoding="utf-8")
+        assert rm.resolve_data_dir(tmp_path) == tmp_path
+
+    def test_the_pointer_selects_the_run(self, tmp_path):
+        (tmp_path / "runs" / "run-a").mkdir(parents=True)
+        (tmp_path / "runs" / "run-b").mkdir(parents=True)
+        (tmp_path / "current").write_text("run-b\n", encoding="utf-8")
+        assert rm.resolve_data_dir(tmp_path) == tmp_path / "runs" / "run-b"
+
+    def test_no_pointer_falls_back_to_the_root(self, tmp_path):
+        (tmp_path / "runs" / "run-a").mkdir(parents=True)
+        assert rm.resolve_data_dir(tmp_path) == tmp_path
+
+    def test_a_pointer_to_a_missing_run_falls_back(self, tmp_path):
+        (tmp_path / "runs").mkdir()
+        (tmp_path / "current").write_text("gone\n", encoding="utf-8")
+        assert rm.resolve_data_dir(tmp_path) == tmp_path
+
+    def test_it_lists_the_runs_and_reports_the_current_one(self, tmp_path):
+        (tmp_path / "runs" / "run-a").mkdir(parents=True)
+        (tmp_path / "runs" / "run-b").mkdir(parents=True)
+        (tmp_path / "current").write_text("run-a\n", encoding="utf-8")
+        assert rm.run_ids(tmp_path) == ["run-a", "run-b"]
+        assert rm.current(tmp_path) == "run-a"
+
+    def test_each_run_resolves_to_a_different_directory(self, tmp_path):
+        """The isolation claim, at the level the modules see it."""
+        for name in ("run-a", "run-b", "run-c"):
+            (tmp_path / "runs" / name).mkdir(parents=True)
+        seen = set()
+        for name in rm.run_ids(tmp_path):
+            (tmp_path / "current").write_text(name + "\n", encoding="utf-8")
+            seen.add(rm.resolve_data_dir(tmp_path))
+        assert len(seen) == 3
+
+
 class TestTheBannerLines:
     def test_unnamed_directory_says_how_to_name_it(self, data, monkeypatch):
         monkeypatch.setenv("CIV_MCP_DATA_DIR", str(data))

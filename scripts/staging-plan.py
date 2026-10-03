@@ -24,6 +24,13 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+# The data root holds one directory per playthrough plus a current pointer; resolve to the run
+# before anything imports a module that reads CIV_MCP_DATA_DIR at import time.
+import os as _os
+from civ_mcp import run_manifest as _run_manifest
+_os.environ.setdefault('CIV_MCP_DATA_DIR', str(pathlib.Path(__file__).resolve().parents[1] / '.civ6-mcp-data'))
+_os.environ['CIV_MCP_DATA_DIR'] = str(_run_manifest.resolve_data_dir(_os.environ['CIV_MCP_DATA_DIR']))
+
 for stream in (sys.stdout, sys.stderr):
     try:
         stream.reconfigure(encoding="utf-8", errors="replace")

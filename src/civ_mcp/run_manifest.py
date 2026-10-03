@@ -38,6 +38,65 @@ log = logging.getLogger(__name__)
 MANIFEST_NAME = "run.json"
 FIELDS = ("run_id", "label", "civ", "seed", "created", "last_turn", "notes")
 
+#: The root holds one directory per playthrough under this name, plus a `current` pointer.
+RUNS_DIR = "runs"
+CURRENT_NAME = "current"
+
+
+def resolve_data_dir(root: pathlib.Path | str | None = None) -> pathlib.Path:
+    """The directory a session should actually read: the **current run's**, when there is one.
+
+    ``CIV_MCP_DATA_DIR`` points at the *root* - the directory that holds ``runs/`` - because that is
+    where the pointer lives. Every module that resolves a stored path (the diary, the retired-goal
+    state, the heartbeat) then works inside one playthrough's directory and cannot see another's,
+    without any of those modules knowing that runs exist.
+
+    Falls back to the root itself when there is no ``runs/`` directory or no pointer, so a checkout
+    that has not been migrated behaves exactly as before.
+    """
+    base = pathlib.Path(
+        root
+        if root is not None
+        else os.environ.get("CIV_MCP_DATA_DIR", pathlib.Path.home() / ".civ6-mcp")
+    )
+    runs = base / RUNS_DIR
+    if not runs.is_dir():
+        return base
+    pointer = base / CURRENT_NAME
+    if not pointer.exists():
+        return base
+    try:
+        run_id = pointer.read_text(encoding="utf-8").strip()
+    except OSError:
+        return base
+    target = runs / run_id
+    return target if target.is_dir() else base
+
+
+def run_ids(root: pathlib.Path | str | None = None) -> list[str]:
+    base = pathlib.Path(
+        root
+        if root is not None
+        else os.environ.get("CIV_MCP_DATA_DIR", pathlib.Path.home() / ".civ6-mcp")
+    )
+    runs = base / RUNS_DIR
+    if not runs.is_dir():
+        return []
+    return sorted(p.name for p in runs.iterdir() if p.is_dir())
+
+
+def current(root: pathlib.Path | str | None = None) -> str:
+    base = pathlib.Path(
+        root
+        if root is not None
+        else os.environ.get("CIV_MCP_DATA_DIR", pathlib.Path.home() / ".civ6-mcp")
+    )
+    pointer = base / CURRENT_NAME
+    try:
+        return pointer.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
 
 def path(data_dir: pathlib.Path | str | None = None) -> pathlib.Path:
     if data_dir is not None:
