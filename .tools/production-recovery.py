@@ -63,6 +63,11 @@ async def main() -> int:
         metavar="CITY:DISTRICT",
         help="show the ranked tiles for a district, e.g. --place 上海:DISTRICT_INDUSTRIAL_ZONE",
     )
+    ap.add_argument(
+        "--fill",
+        action="store_true",
+        help="queue something in every idle city by rule (repair > cheapest building > builder)",
+    )
     args = ap.parse_args()
 
     conn = GameConnection()
@@ -121,6 +126,52 @@ async def main() -> int:
                     f"  ({placement.x},{placement.y})  total +{placement.total_adjacency}"
                     f"  {placement.terrain_desc}  {adj}"
                 )
+        return 0
+
+    if args.fill:
+        # The treadmill: a city that finishes its build goes idle, an idle queue blocks
+        # `end_turn`, and hand-picking one item per city costs a read and a write each time.
+        # The rule here is the directive's own order of work, applied to whatever the city is
+        # actually offered: a repair first (the tile is already ours), then the cheapest
+        # building (growth and infrastructure before units), then a Builder - which the
+        # directive calls the cheapest multiplier in the game - and only then the cheapest
+        # remaining item. Units are last on purpose: production goes to the home front first.
+        for city in sorted(cities, key=lambda c: -c.production):
+            if city.currently_building != IDLE and city.production_turns_left > 0:
+                continue
+            options = await gs.list_city_production(city.city_id)
+            if not options:
+                print(f"  {city.name}: nothing offered at all - needs a look by hand")
+                continue
+            # Every category, in the directive's order of work, so the MISSING_COORDS skip below
+            # can fall through to something that does not need a tile: an all-wonder building
+            # list (measured: 北京) used to exhaust the ranking and leave the queue empty.
+            priority = {"BUILDING": 1, "PROJECT": 2, "UNIT": 3}
+            ranked = sorted(
+                options,
+                key=lambda o: (
+                    0 if o.is_repair else priority.get(o.category, 4),
+                    o.cost,
+                    o.turns,
+                ),
+            )
+            # A wonder and a district both need a tile, and the cheapest building in a city is
+            # often a wonder - so try the ranking in order and take the first item the game
+            # accepts rather than failing the whole city on the first MISSING_COORDS.
+            for pick in ranked:
+                out = await gs.set_city_production(
+                    city.city_id,
+                    pick.category,
+                    pick.item_name,
+                    target_x=pick.repair_x,
+                    target_y=pick.repair_y,
+                )
+                if "MISSING_COORDS" in str(out):
+                    continue
+                print(f"  {city.name}: {pick.item_name} ({pick.turns}t) -> {out}")
+                break
+            else:
+                print(f"  {city.name}: every offered item wants a tile - needs a look by hand")
         return 0
 
     if args.set:

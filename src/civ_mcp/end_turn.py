@@ -235,6 +235,26 @@ def _voted_option_names(options) -> str:
     return "options " + " and ".join(names)
 
 
+def wc_gate_blocks_end_turn(n_resolutions: int) -> bool:
+    """Whether the World Congress gate must block `end_turn` so votes can be registered.
+
+    The gate exists to make sure a handler is registered *before* ACTION_ENDTURN, because the
+    session opens and closes synchronously inside it. A session with **no resolutions** has
+    nothing to register, so blocking protects nothing - and it is not harmless: the fallback
+    vote list is built from the resolutions, so with none it is empty, the handler is never set,
+    and the gate returns the same "call end_turn() again" message on every call. The turn then
+    cannot advance at all. Measured T293: 0 resolutions, `is_in_session` true, `end` printed the
+    identical block three times, `dismiss_popup` found nothing, and the screen read showed the
+    ordinary map.
+
+    `is_in_session` deliberately does **not** appear here. It is true both for a session that is
+    genuinely open with resolutions - the case the gate is for - and for a World Congress that is
+    merely opening this turn with an empty list, which is the case that used to hang it. The
+    resolution count is what separates them.
+    """
+    return n_resolutions > 0
+
+
 def build_free_vote_fallback(
     resolutions: list, local_player_id: int = 0
 ) -> list[dict]:
@@ -3107,8 +3127,10 @@ async def execute_end_turn(gs: GameState) -> str:
         wc_status = await gs.get_world_congress()
         if wc_status.turns_until_next <= 0 or wc_status.is_in_session:
             n_res = len(wc_status.resolutions) if wc_status.resolutions else 0
-            # Skip gate when WC fires with 0 resolutions — nothing to vote on
-            if n_res == 0 and not wc_status.is_in_session:
+            # Nothing to vote on means nothing to protect - see `wc_gate_blocks_end_turn`.
+            # Measured T293: blocking here returned the same message on every call and the turn
+            # could not advance, which is the failure that function documents.
+            if not wc_gate_blocks_end_turn(n_res):
                 log.info("WC fires this turn with 0 resolutions — auto-proceeding")
             else:
                 handler_lines = await gs.conn.execute_write(
