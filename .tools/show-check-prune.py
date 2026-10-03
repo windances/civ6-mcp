@@ -15,6 +15,8 @@ import asyncio
 import difflib
 import os
 import pathlib
+
+from _game import require_game_pair
 import shutil
 import sys
 import uuid
@@ -41,7 +43,7 @@ class GS:
         self._briefing_turn = None
 
     async def get_game_identity(self):
-        return ("china", -1894041591)
+        return require_game_pair()
 
     async def _take_snapshot(self):
         return self._last_snapshot

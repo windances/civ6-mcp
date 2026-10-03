@@ -54,14 +54,14 @@ async def main() -> int:
         action="append",
         default=[],
         metavar="CITY:ITEM",
-        help="queue one item in one city, e.g. --set 上海:DISTRICT_INDUSTRIAL_ZONE; repeatable",
+        help="queue one item in one city, e.g. --set <CITY>:DISTRICT_INDUSTRIAL_ZONE; repeatable",
     )
     ap.add_argument(
         "--place",
         action="append",
         default=[],
         metavar="CITY:DISTRICT",
-        help="show the ranked tiles for a district, e.g. --place 上海:DISTRICT_INDUSTRIAL_ZONE",
+        help="show the ranked tiles for a district, e.g. --place <CITY>:DISTRICT_INDUSTRIAL_ZONE",
     )
     ap.add_argument(
         "--fill",
@@ -145,7 +145,7 @@ async def main() -> int:
                 continue
             # Every category, in the directive's order of work, so the MISSING_COORDS skip below
             # can fall through to something that does not need a tile: an all-wonder building
-            # list (measured: 北京) used to exhaust the ranking and leave the queue empty.
+            # list (measured in one match) used to exhaust the ranking and leave the queue empty.
             priority = {"BUILDING": 1, "PROJECT": 2, "UNIT": 3}
             ranked = sorted(
                 options,

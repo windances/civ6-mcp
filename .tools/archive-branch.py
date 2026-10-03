@@ -29,6 +29,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / ".civ6-mcp-data"
 
 sys.path.insert(0, str(ROOT / "src"))
+from _game import require_game, require_game_pair, current_game_key
+
 from civ_mcp import run_manifest  # noqa: E402
 
 #: The game this archives. It used to be a hardcoded match key, which is wrong twice over: it named
@@ -36,7 +38,7 @@ from civ_mcp import run_manifest  # noqa: E402
 #: after the runs layout moved every diary into `runs/<run>/`, the split read a file that was not
 #: there and moved nothing, silently. It now comes from the current run's manifest and is looked for
 #: in the current run first, then every other run, then the flat root for a directory never migrated.
-_FALLBACK_GAME = "china_-1894041591"
+_FALLBACK_GAME = current_game_key()
 
 
 def _current_game() -> str:
