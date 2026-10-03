@@ -702,6 +702,17 @@ or keep playing in its session.
 `-Rollback`, `-DryRun`. It reads only passive signals, never launches and never loads, and generates
 the session's task from the facts it just read.
 
+**`-HumanMilitary` splits the command of the match**, and it is the human's switch to throw: the
+human commands the military units, the Great Generals and the Great Admirals, and the session owns
+every other unit and the cities, the economy, the wonders and the research. It appends that division
+to the task the session is launched with. **The wait it depends on is not free**: `end_turn` does not
+refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
+`_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units
+and skips the rest, so a session that ordered its own units and called `end_turn` would silently
+discard every one of the human's units. `.tools/wait-for-human.py` is the guard: it polls `get_units`
+and returns when no military unit, Great General or Great Admiral has movement left, and it runs
+**before** `end_turn`. It is read-only and exits non-zero while units are still holding.
+
 **Everything else is `docs/game-recovery.md`** - the two recovery traps, the `0_MCP_NNNN` name
 collisions across rolled-back branches, the `AutoSave_NNNN` offset, `orient.py`, `turn-of-save.py`,
 `auto-turns.py`, loading by name, the hang recovery and the save list. Read it before any recovery:

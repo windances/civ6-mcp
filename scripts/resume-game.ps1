@@ -30,7 +30,10 @@ param(
     # The human deliberately loaded an earlier save: the generated task forbids rolling
     # forward, which is the one scenario that cannot be computed from the facts.
     [switch] $Rollback,
-    [string] $TaskPath = ".civ6-mcp-data\resume-task.en.txt"
+    [string] $TaskPath = ".civ6-mcp-data\resume-task.en.txt",
+    # The human commands the military units and the Great Generals; the session owns everything
+    # else. Appends the division to the generated task - see the block further down.
+    [switch] $HumanMilitary
 )
 
 $ErrorActionPreference = 'Stop'
@@ -73,19 +76,95 @@ function Show-Verdict($state) {
     $state.text -split "`n" | ForEach-Object { Write-Host $_ }
 }
 
+function Add-DivisionOfLabour($TaskPath) {
+    # The human commands the military units and the Great Generals; the session owns every other
+    # unit, and the cities, the economy, the wonders and the research.
+    #
+    # This is a task and not a rule, so it is the weakest rung of the enforcement ladder in
+    # `docs/military-strategy-coverage.md`. Nothing mechanically stops a session that ignores it.
+    # What the appended text can do, and does, is give the session a **defined place to stop**:
+    # `.tools/wait-for-human.py` is that wait made explicit rather than improvised.
+    #
+    # The text must not claim `end_turn` refuses while a unit has movement - it does not.
+    # `src/civ_mcp/end_turn.py:3613-3643` auto-resolves an `ENDTURN_BLOCKING_UNITS` blocker via
+    # `_sweep_unmoved_units`, which fortifies combat units and skips the rest, and the turn advances.
+    # A session told the opposite would call `end_turn`, lose the human's whole turn to the sweep and
+    # never see a warning. The wait is the only guard, so the text says so.
+    #
+    # Written as ASCII on purpose. The task file is an English one and carries no BOM; this text is
+    # pure ASCII, so appending ASCII bytes cannot damage it. PowerShell 5.1's `-Encoding UTF8` is
+    # avoided because it emits a BOM on some append paths, which would land mid-file.
+    #
+    # Returns $true when it appended and $false when the task already carried the block. A real run
+    # regenerates the task from the facts first, so the append normally lands on a fresh file; but
+    # `-TaskFile` skips that regeneration, and a second run against it would otherwise append a
+    # second copy of the same text.
+    $marker = '## Division of labour: the human commands the military'
+    if (Select-String -Path $TaskPath -SimpleMatch -Pattern $marker -Quiet) { return $false }
+    $division = @'
+
+## Division of labour: the human commands the military
+
+The human directs the military units, the Great Generals and the Great Admirals. The agent is
+responsible for every other unit, and for the cities, the economy, the wonders and the research.
+
+**Do not move a military unit. Do not move a Great General or a Great Admiral.** A military unit is
+anything with a `combat_strength` above zero; a Great General or a Great Admiral is a Great Person of
+that class - and it has no combat strength, so the first test alone does not catch it. Leave them
+where they stand and say what they could do.
+
+**Everything else is yours**: builders, settlers, traders, every Great Person that is not a general,
+every city's queue, the economy, the wonders and the research. An idle worker, an empty queue and a
+treasury nobody is spending are your failures, not the human's.
+
+**`end_turn` will not wait for the human - it discards their turn.** An `ENDTURN_BLOCKING_UNITS`
+blocker is not bounced: `_sweep_unmoved_units` (`src/civ_mcp/end_turn.py`) fortifies combat units and
+skips whatever still has moves, then the turn advances. Any military unit the human has not finished
+with is fortified where it stands. There is one exception and it is not a safety net: a unit with a
+*legal attack* makes `end_turn` bounce with `UNUSED ATTACK at end_turn: ...`, which only helps while an
+attack happens to be pending.
+
+**So the wait is yours to enforce, and it comes before `end_turn`, not after.** Once every unit you own
+is ordered, run
+
+    python .tools/wait-for-human.py
+
+which polls `get_units` and returns when no military unit and no great person of that class has
+movement left - that is, when the human has ordered, skipped or fortified every one of them. Only then
+call `end_turn`. The human closes their half by skipping what they mean to leave alone; a unit nobody
+touches keeps its moves, and the tool waits rather than deciding for them.
+
+**Never call `skip_remaining_units(force=True)`, and never call `end_turn` early to get past this.**
+Both discard exactly the movement the human is using - `end_turn` does it silently, which is worse.
+Waiting here is the correct action, not a failure to act.
+
+**Gold is held for the front.** Keep the treasury ready and report when an upgrade is available and
+affordable; the human decides which unit takes it.
+'@
+    Add-Content -Path $TaskPath -Value $division -Encoding ASCII
+    return $true
+}
+
 $state = Get-Handoff
 Show-Verdict $state
 
 if ($DryRun) {
     $task = if ($TaskFile) { $TaskFile } else { $TaskPath }
+    $taskFull = Join-Path $projectRoot $task
     if (-not $TaskFile) {
         $taskArgs = @($handoff, '--task', $TaskPath, '--turns', $Turns)
         if ($Rollback) { $taskArgs += '--rollback' }
         $null = & $python @taskArgs 2>$null
     }
+    # The preview has to be the task a real run would hand over, division included - otherwise
+    # -HumanMilitary -DryRun reports a task the session would never receive.
+    if ($HumanMilitary) { $null = Add-DivisionOfLabour $taskFull }
     Write-Host ''
     Write-Host "--- the task this would hand to a session ($task) ---"
-    Get-Content (Join-Path $projectRoot $task) | ForEach-Object { Write-Host $_ }
+    Get-Content $taskFull | ForEach-Object { Write-Host $_ }
+    if ($HumanMilitary) {
+        Write-Host '--- the division of labour is in the task above ---'
+    }
     Write-Host '--- dry run: nothing launched ---'
     exit 0
 }
@@ -135,6 +214,14 @@ if (-not $TaskFile) {
 }
 $taskFull = (Resolve-Path (Join-Path $projectRoot $taskRelative)).Path
 if (-not (Test-Path $taskFull)) { throw "the task was not written: $taskFull" }
+
+if ($HumanMilitary) {
+    if (Add-DivisionOfLabour $taskFull) {
+        Write-Host 'DIVISION  the human commands the military; the task tells the session to wait for them'
+    } else {
+        Write-Host 'DIVISION  the task already carried the division; left as it was'
+    }
+}
 
 Write-Host ''
 & $launcher -TaskFile $taskFull
