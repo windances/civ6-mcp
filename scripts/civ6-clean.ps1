@@ -203,7 +203,12 @@ if ($index.ok) {
 
 $stateFiles = @()
 if (Test-Path $heartbeat) {
-    $stateFiles += $heartbeat
+    # Every playthrough keeps its own heartbeat under runs/, so cleaning the root one is not
+# enough to call the machine settled - a stale run heartbeat means a run that no longer
+# exists. The root copy is kept for the pre-runs layout.
+$stateFiles += $heartbeat
+$runHeartbeats = @(Get-ChildItem -Path (Join-Path $dataDir 'runs') -Filter 'heartbeat.json' -Recurse -File -ErrorAction SilentlyContinue)
+$stateFiles += ($runHeartbeats | ForEach-Object { $_.FullName })
 }
 
 Say ''

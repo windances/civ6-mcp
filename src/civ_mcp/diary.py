@@ -13,6 +13,20 @@ DIARY_DIR = Path(os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp"))
 _REFLECTION_FIELDS = ("tactical", "strategic", "tooling", "planning", "hypothesis")
 
 
+def data_dir() -> Path:
+    """The directory this session's diary lives in, resolved **at call time**.
+
+    Resolving here rather than at import is what makes the MCP server (route B) run-aware without
+    touching its launcher: its `CIV_MCP_DATA_DIR` names the data root, and `resolve_data_dir` turns
+    that into the current run. A driver that already resolved gets its own directory back unchanged
+    (a run has no `runs/` inside it), so both routes agree. Import-time resolution was the whole
+    reason the two routes could disagree about where a playthrough is stored.
+    """
+    from civ_mcp import run_manifest
+
+    return run_manifest.resolve_data_dir(DIARY_DIR)
+
+
 def diary_path(civ: str, seed: int, run_id: str | None = None) -> Path:
     """Per-game diary file: diary_{civ}_{seed}.jsonl
 
@@ -24,7 +38,7 @@ def diary_path(civ: str, seed: int, run_id: str | None = None) -> Path:
 
     ``run_id`` is still accepted and ignored so existing callers keep working.
     """
-    return DIARY_DIR / f"diary_{civ}_{seed}.jsonl"
+    return data_dir() / f"diary_{civ}_{seed}.jsonl"
 
 
 def merge_agent_reflections(

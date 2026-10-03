@@ -62,6 +62,19 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / ".civ6-mcp-data"
 
+
+def _diaries() -> list:
+    """Every diary, in every playthrough plus the root.
+
+    The files used to sit side by side in one directory; they belong to a run now, so a
+    glob over `DATA` alone matches nothing and the report comes out empty rather than
+    failing.
+    """
+    return sorted(DATA.glob("diary_*.jsonl")) + sorted(
+        p for run in (DATA / "runs").glob("*") if run.is_dir()
+        for p in run.glob("diary_*.jsonl")
+    )
+
 # The economy columns, in the order they are worth reading.  Every one of them is a field the diary
 # already stores per turn (see civ_mcp.diary); the list is short on purpose.
 ECONOMY = (
@@ -173,7 +186,7 @@ ROLES: dict[str, tuple[str, ...]] = {
 def games() -> list[str]:
     """Every game key that has a diary, newest first."""
     out = []
-    for path in DATA.glob("diary_*.jsonl"):
+    for path in _diaries():
         key = path.stem[len("diary_") :]
         out.append((path.stat().st_mtime, key))
     return [key for _, key in sorted(out, reverse=True)]
@@ -201,7 +214,10 @@ def diary_candidates(game: str) -> dict[int, list[dict]]:
     A game with no diary yet - a match that has just been created and not played - is not an error:
     it is an attempt with no rows, and the caller prints exactly that.
     """
-    path = DATA / f"diary_{game}.jsonl"
+    path = next(
+        (p for p in _diaries() if p.name == f"diary_{game}.jsonl"),
+        DATA / f"diary_{game}.jsonl",
+    )
     out: dict[int, list[dict]] = {}
     if not path.exists():
         return out
@@ -388,7 +404,11 @@ def log_rows(game: str, run: str | None = None) -> list[dict]:
     """
     wanted = [part.strip() for part in str(run).split(",") if part.strip()] if run else []
     rows: list[dict] = []
-    for path in sorted(DATA.glob(f"log_{game}_*.jsonl")):
+    for path in sorted(
+        [*DATA.glob(f"log_{game}_*.jsonl")]
+        + [p for run in (DATA / "runs").glob("*") if run.is_dir()
+           for p in run.glob(f"log_{game}_*.jsonl")]
+    ):
         if wanted and not any(name in path.name for name in wanted):
             continue
         with path.open(encoding="utf-8") as fh:

@@ -58,10 +58,23 @@ def _turn_number(value: object) -> int:
         return 0
 
 
+def path() -> Path:
+    """Where the heartbeat goes, resolved **at call time** so it lands in the current run.
+
+    `HEARTBEAT_PATH` is fixed at import from `CIV_MCP_DATA_DIR`, which names the data root; the
+    actual file belongs to one playthrough, so the run is resolved when it is written. A driver that
+    already resolved is unaffected - a run directory has no `runs/` inside it.
+    """
+    from civ_mcp import run_manifest
+
+    return run_manifest.resolve_data_dir(HEARTBEAT_PATH.parent) / HEARTBEAT_PATH.name
+
+
 def write(phase: str, turn: int = 0) -> None:
     """Write heartbeat.json atomically (tmp + rename)."""
     try:
-        HEARTBEAT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        target = path()
+        target.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "phase": phase,
             "turn": _turn_number(turn),
@@ -73,8 +86,8 @@ def write(phase: str, turn: int = 0) -> None:
             "model_id": _model_id,
             "scenario_id": _scenario_id,
         }
-        tmp = HEARTBEAT_PATH.with_suffix(".tmp")
+        tmp = target.with_suffix(".tmp")
         tmp.write_text(json.dumps(data))
-        tmp.replace(HEARTBEAT_PATH)
+        tmp.replace(target)
     except Exception:
         log.debug("Failed to write heartbeat", exc_info=True)

@@ -324,7 +324,12 @@ def run_checks(text: str, context: CheckContext) -> CheckRun:
 def state_path() -> Path:
     import os
 
-    return Path(os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp")) / "turn-checks-state.json"
+    from civ_mcp import run_manifest
+
+    # Resolved at call time: `CIV_MCP_DATA_DIR` names the data root, and the retired goals belong to
+    # one playthrough. A driver that already resolved gets its own directory back unchanged.
+    base = Path(os.environ.get("CIV_MCP_DATA_DIR", Path.home() / ".civ6-mcp"))
+    return run_manifest.resolve_data_dir(base) / "turn-checks-state.json"
 
 
 def load_retired(game_key: str) -> dict[str, int]:

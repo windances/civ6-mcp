@@ -148,8 +148,18 @@ def unretire_goals_after(target: int, apply: bool = True) -> list[str]:
     failure mode of forgetting one too many is a rule that nags again, while the failure mode of
     forgetting none is a rule that silently never fires.
     """
-    path = ROOT / ".civ6-mcp-data" / "turn-checks-state.json"
-    if not path.exists():
+    # The retired-goal state is per playthrough now, so it is found rather than named. The
+    # pre-runs file is the flat one from before the split, and is still read when it is there.
+    path = None
+    for candidate in (
+        sorted((ROOT / ".civ6-mcp-data").glob("runs/*/turn-checks-state.json"))
+        + [ROOT / ".civ6-mcp-data" / "turn-checks-state.pre-runs.json"]
+        + [ROOT / ".civ6-mcp-data" / "turn-checks-state.json"]
+    ):
+        if candidate.exists():
+            path = candidate
+            break
+    if path is None:
         return []
     try:
         data = json.loads(path.read_text(encoding="utf-8"))

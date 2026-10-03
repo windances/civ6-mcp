@@ -398,6 +398,10 @@ def cmd_retire(args: argparse.Namespace) -> int:
         turn, source = tt.game_turn(root)
         if turn is None:
             print("refusing: no --turn given and no save, heartbeat or diary to read one from")
+            print(
+                "  note: with the runs layout the heartbeat and the diary live in "
+                "<data-root>/runs/<run>/, not at the root - check `scripts/run.py status`"
+            )
             return 1
         print(f"game turn: {turn} (from the {source})")
     status = "done" if args.done else "expired"

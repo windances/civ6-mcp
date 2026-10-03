@@ -21,6 +21,12 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 os.environ.setdefault("CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data"))
+# The root holds one directory per playthrough plus a `current` pointer; resolve to the
+# run before importing anything that reads the variable at import time.
+from civ_mcp import run_manifest as _run_manifest  # noqa: E402
+os.environ["CIV_MCP_DATA_DIR"] = str(
+    _run_manifest.resolve_data_dir(os.environ["CIV_MCP_DATA_DIR"])
+)
 
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
