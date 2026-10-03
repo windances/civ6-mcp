@@ -33,6 +33,14 @@ from civ_mcp import run_manifest  # noqa: E402
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 
+# This names and checks **one** playthrough, so it works on the current run, not on the root that
+# contains them. It is the command the runs layout made necessary and the one place it was missing:
+# with the root here, `status` read a manifest the migration had emptied and `init --from-game` would
+# have written the root manifest again while every session kept reading `runs/<id>/run.json`. The
+# root is `runs.py`'s business - it manages the directories themselves.
+RUN_DIR = run_manifest.resolve_data_dir(ROOT / ".civ6-mcp-data")
+os.environ["CIV_MCP_DATA_DIR"] = str(RUN_DIR)
+
 
 async def read_identity() -> tuple[str, int] | None:
     conn = GameConnection()
