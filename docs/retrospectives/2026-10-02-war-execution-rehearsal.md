@@ -292,3 +292,23 @@ python scripts/fix-text-encoding.py --check
     变成整份文档。仓库里这份文件是 LF。两处写入（`write_checks` 与归档副本）现在都带
     `newline=""`，另加两条"写出来不含 `\r`"的断言。**同一个 `write_text` 一天之内咬了两次，
     两次都发生在"只是顺手写个文件"的地方。**
+12. **"这一局是谁"根本没有被记录，而数据目录本身就在分叉。** 问的是"同一个游戏可能同时开了多局，
+    我们怎么区分"——答案是我们**不区分**：日记名 `diary_{civ}_{seed}.jsonl` 与退役状态键
+    `turn-checks-state.json["{civ}_{seed}"]` 都只到 `{civ}_{seed}`，`diary_path` 收下 `run_id`
+    然后**故意丢掉**（注释写明：run id 进名字会让每次重启都开一份空日记，agent 接着瞎打）。
+    真正唯一的分区是 **`CIV_MCP_DATA_DIR`**（默认 `~/.civ6-mcp`），而这个变量**在 import 时读一次**。
+    实测（就是本轮）：路线 A 的驱动器都在 import 时 `setdefault` 到仓库的 `.civ6-mcp-data`
+    （`play-turn.py:75` / `orient.py:33` / `record-turn.py:41` / `auto-turns.py:51`），而只写
+    `sys.path.insert(0,"src")` 的临时探针落回 `~/.civ6-mcp`——于是**同一个会话的旁路记录被劈成两半**：
+    `~/.civ6-mcp` 里躺着本局的 T116 退役记录，而本局那份 6 MB 日记在 `.civ6-mcp-data`。所有**走磁盘**
+    的读者（`get_diary`、TURN START briefing、10 回合复盘）照旧读旧位置，看上去完全正常。
+    **顺带纠正我自己记错的一条**：日记并不停在 T76——那是**文件里最后一条** agent 行的回合，不是最大
+    回合；取 `max` 之后是 **T110**（文件 2094 行 / 714 agent 行）。**"最后一行"与"最大回合"不是一回事，
+    因为一行一个玩家、按玩家顺序追加。**
+    另外，**路线 A 并非不能写日记**：`scripts/record-turn.py --reflections` 就是干这个的，
+    `play-turn.py end` 只是不会自动调它——所以日记落后是**漏了一步**，不是缺能力。
+    **已做（本轮）**：新增 `src/civ_mcp/session_info.py`，在 `orient.py` 与 `play-turn.py end` 开头打一行
+    `SESSION data_dir=… match=… diary=last_agent_turn=…`；日记落后时补一行 `NOTE`（点名
+    `record-turn.py`），**另一个数据目录里也有本局记录时**补一行 `WARNING`。实测这行当场把两件事一次
+    说清：日记落后 9 回合，以及 `~/.civ6-mcp` 与本目录同时在用。回归测试
+    `tests/test_session_info.py` 九条。

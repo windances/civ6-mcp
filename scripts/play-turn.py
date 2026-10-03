@@ -80,6 +80,7 @@ from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 from civ_mcp.lua._helpers import SENTINEL  # noqa: E402
 from civ_mcp.narrate import narrate_map  # noqa: E402
+from civ_mcp import session_info  # noqa: E402
 
 
 def find(units, needle: str):
@@ -695,6 +696,18 @@ async def main() -> int:
             # checks diplomacy and deals at its own top (end_turn.py:2129-2150); this mirrors that
             # order instead of inverting it.
             from civ_mcp import end_turn as end_turn_module
+
+            # Where this session's records live, before anything irreversible: `end` is the one
+            # verb that judges the turn, and it is the point at which a wrong data directory or a
+            # diary stuck at an old turn does the most damage - the checks, the briefing and the
+            # review all read from disk. One extra overview call, on a command that already spends
+            # tens of seconds in the game.
+            try:
+                civ_name, seed_value = await gs.get_game_identity()
+                overview = await gs.get_game_overview()
+                session_info.print_banner(civ_name, seed_value, getattr(overview, "turn", None))
+            except Exception as exc:  # noqa: BLE001 - the banner never blocks a turn
+                print(f"SESSION  data_dir={session_info.data_dir()}  (identity unavailable: {exc})")
 
             blocker = await preflight_blocker(gs)
             if blocker:

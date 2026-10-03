@@ -35,6 +35,7 @@ os.environ.setdefault("CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data"))
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 from civ_mcp.narrate import narrate_map  # noqa: E402
+from civ_mcp import session_info  # noqa: E402
 
 SECTIONS: list[tuple[str, str, str]] = [
     ("overview", "GAME OVERVIEW", "get_game_overview"),
@@ -275,6 +276,15 @@ async def main() -> int:
         print(f"could not connect to FireTuner: {exc}")
         return 1
     gs = GameState(conn)
+    # Say where this session's records live before reading anything that depends on them: the data
+    # directory and the match key decide which diary and which retired-goal state are in play, and a
+    # session that guessed wrong reads a position weeks old and looks entirely normal doing it.
+    try:
+        civ_name, seed_value = await gs.get_game_identity()
+        overview = await gs.get_game_overview()
+        session_info.print_banner(civ_name, seed_value, getattr(overview, "turn", None))
+    except Exception as exc:  # noqa: BLE001 - the banner is a convenience, never a blocker
+        print(f"SESSION  data_dir={session_info.data_dir()}  (identity unavailable: {exc})")
     try:
         for key, label, method in SECTIONS:
             if wanted and key not in wanted:
