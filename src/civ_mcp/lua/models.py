@@ -303,7 +303,14 @@ class CityInfo:
     power_free: float = -1.0
     power_temporary: float = -1.0
     power_fully_powered: str = ""  # "yes" / "no" / "" when unreported
-    power_advice: str = ""  # City:GetPowerAdvice(), the game's own recommendation
+    power_advice: str = ""
+    # How many amenities this city's population *demands*, appended to the city row after the
+    # power block so a log written before the column existed parses as before. `amenities` above
+    # is gross (the game's `GetAmenities()` net plus this), so neither number means anything on
+    # its own: -1 amenities against a demand of 1 is a different city from -1 against a demand
+    # of 4. The directive's "check food and amenities every turn" needs the difference, and the
+    # difference is the only thing the per-turn check can act on.
+    amenities_needed: int = 0  # City:GetPowerAdvice(), the game's own recommendation
 
     @property
     def power_reported(self) -> bool:

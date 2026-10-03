@@ -498,7 +498,7 @@ for i, c in Players[me]:GetCities():Members() do
         pwAdvice = tostring(c:GetPowerAdvice() or "")
         pwAdvice = pwAdvice:gsub("%[NEWLINE%]", " "):gsub("|", "/"):gsub(breaks, " "):gsub("  +", " ")
     end)
-    print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit .. "|" .. loyOutcome .. "|" .. string.format("%.1f|%.1f|%.1f|%s", pwReq, pwFree, pwTemp, pwFull) .. "|" .. pwAdvice)
+    print(c:GetID() .. "|" .. nm .. "|" .. c:GetX() .. "," .. c:GetY() .. "|" .. c:GetPopulation() .. "|" .. string.format("%.1f|%.1f|%.1f|%.1f|%.1f|%.1f", c:GetYield(0), c:GetYield(1), c:GetYield(2), c:GetYield(3), c:GetYield(4), c:GetYield(5)) .. "|" .. string.format("%.1f", g:GetHousing()) .. "|" .. amTotal .. "|" .. g:GetTurnsUntilGrowth() .. "|" .. producing .. "|" .. turnsLeft .. "|" .. defStr .. "|" .. garHP .. "/" .. garMax .. "|" .. wallHP .. "/" .. wallMax .. "|" .. table.concat(cityTargets, ";") .. "|" .. table.concat(pillDistricts, ";") .. "|" .. table.concat(distLocs, ";") .. "|" .. string.format("%.1f|%.1f|%.1f|%d", loy, loyMax, loyPT, loyFlip) .. "|" .. string.format("%.1f|%.1f|%d", g:GetFoodSurplus(), g:GetFood(), g:GetGrowthThreshold()) .. "|" .. table.concat(pillBuildings, ";") .. "|" .. garrisonUnit .. "|" .. loyOutcome .. "|" .. string.format("%.1f|%.1f|%.1f|%s", pwReq, pwFree, pwTemp, pwFull) .. "|" .. pwAdvice .. "|" .. amNeed)
     if #unimproved > 0 or #pillImprov > 0 then
         print("CITYTILES|" .. c:GetID() .. "|" .. table.concat(unimproved, ",") .. "|" .. table.concat(pillImprov, ","))
     end
@@ -1191,6 +1191,13 @@ def parse_cities_response(lines: list[str]) -> tuple[list[CityInfo], list[str]]:
                 power_temporary=float(parts[33]) if len(parts) > 33 and parts[33] else -1.0,
                 power_fully_powered=parts[34] if len(parts) > 34 else "",
                 power_advice=parts[35] if len(parts) > 35 else "",
+                # Appended after the power block. `amenities` is gross, so the demand has to
+                # travel with it or the per-turn amenity check has nothing to compare against:
+                # 0 when the server did not send the column (an older log, or a build without
+                # the expansion), which reads as "net == gross" and switches the rule off.
+                amenities_needed=(
+                    int(parts[36]) if len(parts) > 36 and parts[36].lstrip("-").isdigit() else 0
+                ),
             )
         )
         city_by_id[cities[-1].city_id] = cities[-1]

@@ -71,6 +71,17 @@ _CONTACT_METRIC_KEYS = (
     "cities_over_garrison",
     "cities_guarded",
     "unexplained_stacks",
+    # What caps a city - the four checks the Development section orders before choosing
+    # production. `unpowered_cities` could see the symptom of a pillaged Industrial Zone and
+    # nothing could see the cause, which is the `pillaged_*` pair.
+    "pillaged_districts",
+    "pillaged_buildings",
+    "cities_pillaged",
+    "housing_slack",
+    "cities_housing_capped",
+    "food_stalled",
+    "amenities_floor",
+    "cities_unhappy",
     "enemies_within_1",
     "enemies_within_2",
     "enemies_within_3",
@@ -2196,6 +2207,79 @@ def _garrison_metrics(gs, units: dict | None) -> dict:
     return metrics
 
 
+def _city_health_metrics(gs) -> dict:
+    """The things that cap a city, counted from the city snapshot the turn already took.
+
+    The directive's Development section says to check what limits a city before choosing its
+    production, and until now none of it was measurable: a rule could name `pop` and `cities` and
+    nothing else about a city at all. Every number here already rode in on `get_cities`
+    (``CityInfo.housing``, ``.population``, ``.food_surplus``, ``.turns_to_grow``, ``.amenities``,
+    ``.amenities_needed``, ``.pillaged_districts``, ``.pillaged_buildings``), so this needs no new
+    Lua and no extra round trip - it reads the same ``_last_snapshot`` as ``_garrison_metrics``.
+
+    Measured T291: Xi'an sat on a pillaged Industrial Zone with a pillaged Workshop, Factory and
+    Coal Power Plant, the power-shortage warning fired four times, and the queue held a project.
+    ``unpowered_cities`` could see the symptom and nothing could see the cause, which is
+    ``pillaged_districts`` / ``pillaged_buildings`` here.
+
+    ``housing - population <= 1`` is the hard stop the reference names, and ``food_surplus <= 0``
+    (or ``turns_to_grow <= 0``, the same stagnant test ``narrate`` and the empire warnings already
+    use) is the other half of it - so both report the count *and* the worst city, because one
+    stalled city that is also the science city is the whole empire's problem, not one queue's.
+
+    ``amenities`` is gross, so only the difference against ``amenities_needed`` means anything;
+    a snapshot that never carried the demand column reads ``needed == 0``, which makes every city
+    look content and switches the amenity rules off rather than firing them on a guess. The same
+    holds for a turn with no snapshot at all: zeros, rules off.
+    """
+    snapshot = getattr(gs, "_last_snapshot", None)
+    cities = getattr(snapshot, "cities", None) or {}
+    metrics = {
+        "pillaged_districts": 0,
+        "pillaged_buildings": 0,
+        "cities_pillaged": 0,
+        "housing_slack": 0,
+        "cities_housing_capped": 0,
+        "food_stalled": 0,
+        "amenities_floor": 0,
+        "cities_unhappy": 0,
+    }
+    if not cities:
+        return metrics
+    slacks: list[float] = []
+    amenity_slacks: list[int] = []
+    for city in cities.values():
+        pills = list(getattr(city, "pillaged_districts", None) or [])
+        pill_bldgs = list(getattr(city, "pillaged_buildings", None) or [])
+        metrics["pillaged_districts"] += len(pills)
+        metrics["pillaged_buildings"] += len(pill_bldgs)
+        if pills or pill_bldgs:
+            metrics["cities_pillaged"] += 1
+        housing = getattr(city, "housing", None)
+        population = getattr(city, "population", None)
+        if isinstance(housing, (int, float)) and isinstance(population, int):
+            slacks.append(float(housing) - float(population))
+        try:
+            if (
+                float(getattr(city, "food_surplus", 0.0) or 0.0) <= 0
+                or int(getattr(city, "turns_to_grow", 0) or 0) <= 0
+            ):
+                metrics["food_stalled"] += 1
+        except (TypeError, ValueError):
+            pass
+        amenities = getattr(city, "amenities", None)
+        needed = getattr(city, "amenities_needed", None)
+        if isinstance(amenities, int) and isinstance(needed, int):
+            amenity_slacks.append(amenities - needed)
+    if slacks:
+        metrics["housing_slack"] = round(min(slacks), 1)
+        metrics["cities_housing_capped"] = sum(1 for slack in slacks if slack <= 1)
+    if amenity_slacks:
+        metrics["amenities_floor"] = min(amenity_slacks)
+        metrics["cities_unhappy"] = sum(1 for slack in amenity_slacks if slack < 0)
+    return metrics
+
+
 def _at_war_from_row(row: dict | None) -> int:
     """1 when the diary row records a war, 0 otherwise.
 
@@ -2299,6 +2383,7 @@ async def _contact_metrics(gs, turn: int, units: dict | None) -> dict:
         # Who was hit during the AI turn, and how the army is distributed across the cities.
         "damaged_this_turn": len(getattr(gs, "_damaged_last_turn", None) or []),
         **_garrison_metrics(gs, units),
+        **_city_health_metrics(gs),
         **_siege_metrics(await _siege_posture_for_checks(gs, turn)),
         **_capture_metrics(capture_readiness),
         **_siege_upgrade_metrics(units),
