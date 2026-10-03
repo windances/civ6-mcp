@@ -229,12 +229,41 @@ def collect_facts(passive: dict | None = None, inventory: dict | None = None,
     inventory = save_inventory() if inventory is None else inventory
     credential = credential_status() if credential is None else credential
     heartbeat = passive.get("heartbeat") or {}
+
+    # Which playthrough is loaded. The heartbeat was the only source and it is written by another
+    # process that may have died hours ago - measured 2026-10-03, a handoff check opened with
+    # `MATCH china/911679432, heartbeat 101.7h old (phase playing, T1, pid 26640 gone)` while the
+    # loaded game was `china_-1894041591` at T289, and the note three lines down admitted the
+    # disagreement. The run manifest is the authority now: it is read from the directory a session
+    # will actually write to, and it is checked against the game at session start. The heartbeat is
+    # still reported for the age/phase/pid it alone knows - it is just no longer asked *which* game
+    # this is when a manifest can answer.
+    manifest = None
+    try:
+        from civ_mcp import run_manifest
+
+        manifest = run_manifest.load(run_manifest.resolve_data_dir())
+    except Exception:  # noqa: BLE001 - a handoff check must not fail on this
+        manifest = None
+    if manifest and manifest.get("civ"):
+        source = "run manifest"
+        civ = manifest.get("civ")
+        seed = manifest.get("seed")
+        last_turn = manifest.get("last_turn") or heartbeat.get("turn")
+    else:
+        source = "heartbeat"
+        civ = heartbeat.get("civ")
+        seed = heartbeat.get("seed")
+        last_turn = heartbeat.get("turn")
+
     return {
         "checked_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "civ": heartbeat.get("civ"),
-        "seed": heartbeat.get("seed"),
-        "run_id": heartbeat.get("run_id"),
-        "last_turn": heartbeat.get("turn"),
+        "civ": civ,
+        "seed": seed,
+        "run_id": manifest.get("run_id") if manifest else heartbeat.get("run_id"),
+        "run_label": manifest.get("label") if manifest else None,
+        "identity_source": source,
+        "last_turn": last_turn,
         "heartbeat": heartbeat,
         "game": {"running": bool(passive.get("pids")), "pids": list(passive.get("pids") or [])},
         "window": passive.get("window"),
@@ -366,9 +395,16 @@ def render(facts: dict, result: dict) -> str:
     lines = [f"HANDOFF CHECK  {facts['checked_at']}"]
 
     match = f"{facts.get('civ') or '?'}/{facts.get('seed') or '?'}"
-    if facts.get("run_id"):
+    # Say where the identity came from: the two sources disagree exactly when the heartbeat is
+    # stale, which is when a reader most needs to know which one answered.
+    source = facts.get("identity_source")
+    if source == "run manifest":
+        match += f", from the run manifest"
+        if facts.get("run_label"):
+            match += f' ("{facts["run_label"]}")'
+    elif facts.get("run_id"):
         match += f", last run {facts['run_id']}"
-    if heartbeat:
+    if heartbeat and source != "run manifest":
         # The turn in the heartbeat is a number or nothing: a file written before 2026-09-28 can hold
         # the log line's "?" (see `_heartbeat_turn`), and a report should say "unknown", not "T?".
         beat_turn = _heartbeat_turn(heartbeat.get("turn"))
@@ -377,6 +413,11 @@ def render(facts: dict, result: dict) -> str:
             f"(phase {heartbeat.get('phase')}, "
             f"{f'T{beat_turn}' if beat_turn is not None else 'turn unknown'}, "
             f"pid {heartbeat.get('pid')} {'alive' if heartbeat.get('pid_alive') else 'gone'})"
+        )
+    elif heartbeat:
+        match += (
+            f", heartbeat {heartbeat.get('age_seconds', 0) / 3600:.1f}h old "
+            f"(pid {heartbeat.get('pid')} {'alive' if heartbeat.get('pid_alive') else 'gone'})"
         )
     lines.append(f"  MATCH      {match}")
 

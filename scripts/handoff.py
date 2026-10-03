@@ -13,11 +13,21 @@ The logic lives in ``civ_mcp.handoff`` so it can be tested without a game; this 
 
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+
+# Point at the workspace data root and then at the current run, in that order, before anything
+# imports a module that reads the variable at import time. Without it this script reads the home
+# default (`~/.civ6-mcp`), finds no `runs/` there, and reports the identity from the stale heartbeat
+# instead of from the run manifest - which is exactly the disagreement the manifest exists to settle.
+from civ_mcp import run_manifest  # noqa: E402
+
+os.environ.setdefault("CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data"))
+os.environ["CIV_MCP_DATA_DIR"] = str(run_manifest.resolve_data_dir())
 
 from civ_mcp import handoff as h  # noqa: E402
 
