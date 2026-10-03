@@ -293,3 +293,120 @@ Recorded so the next reader does not mistake absence for a fact:
 5. **Remember the district clock**: a district's price grows with your tech progress (section 3), so the
    same Campus costs more at T200 than at T50 - locking the placement in early is cheaper than waiting
    for the perfect tile.
+
+## 12. The factors, in the order they cost you production
+
+Sections 1-9 are the arithmetic and section 6 is the manual's account of the conditions. This is the
+operational list: what to check, how to check it, and what to do about it.
+
+**Measure first, and measure all of them.** `.tools/production-audit.py` reads every city, ranks them
+by the production each one is currently losing, and prints the per-city evidence for every factor
+below. Two rules learned the hard way:
+
+- **Never carry a city name, a coordinate or a unit id forward** from a previous turn, a previous
+  session or a note. A rollback or a new game renames every city and renumbers every unit, so a plan
+  that carries a name is a plan for a board that no longer exists. Name the city from the read in
+  front of you. `.tools/_game.py` resolves the run; `.tools/advance-turns.py --march` selects a unit
+  by what it *is* (`BOMBARD:28,14`) rather than by an id.
+- **A factor you did not measure is a factor you will report as fine.** An audit that examined the
+  one city it had already noticed reported "two cities unpowered"; the empire-wide read said nine,
+  and only one of the nine was unpowered for the reason the audit had found.
+
+### The six factors, and what each one actually costs
+
+**1. An empty queue.** The city produces nothing at all this turn. This is the largest single loss
+available and the only one that is free to fix. It blocks `end_turn` as well, so it costs a round
+trip whether or not you notice it.
+
+  *Do:* fill it the same turn it is noticed, with the item that answers the city's highest-ranked
+  factor. `.tools/production-audit.py --apply` does exactly that; `.tools/production-recovery.py
+  --fill` does it without the factor ranking.
+
+**2. A pillaged district.** An Industrial Zone down takes the production district *and* the power it
+was supplying, and - measured - **a pillaged building's repair is not even offered until its
+district is repaired**. So the order inside a city is forced by the game, not chosen by you.
+
+  *Do:* repair the district first, then its buildings, before anything new is built in that city. The
+  repair entry carries the tile; the fresh-build entry under the same name does not, which is why a
+  name-only lookup picks the wrong one about half the time.
+
+**3. A pillaged production building.** Workshop, Factory, Coal/Oil/Nuclear Power Plant, Shipyard,
+Seaport, Stock Exchange, and the Encampment line. A down building yields nothing.
+
+  *Do:* repair it before anything new. `.tools/production-audit.py --apply` ranks repairs ahead of
+  every other item.
+
+**4. Unpowered.** A building that needs power yields nothing while it is unpowered, so this is the
+Research Lab, the Factory and the Stock Exchange silently switched off. Three channels, from
+`City:GetPower()` as the game's own panel reads it (`CityPanelPower.lua:42-54`):
+
+    currentPower = freePower + temporaryPower
+    requiredPower == 0                -> no power needed
+    not IsFullyPowered()              -> unpowered
+    IsFullyPoweredByActiveProject()   -> powered by a project
+
+  `free` is renewable sources and dams; `temporary` is a fuel-burning plant, **and a plant's output
+  reaches neighbouring cities through `temporary` too**. The trap is the **third** channel: power
+  from a project appears in neither number, so a city can read `required > 0, free == 0,
+  temporary == 0` and still answer powered. **`IsFullyPowered()` is a statement about this turn and
+  never about durable supply** - test `free + temporary > 0` instead.
+
+  The reach is **not** the six tiles the power lens suggests. Measured in one match: a city four
+  tiles from the empire's only plant drew from it, and one five tiles away did not. Measure the reach
+  per match - build one plant, then read `temporary` in the cities around it - rather than planning a
+  cluster on a radius.
+
+  `City:GetPowerAdvice()` is **boilerplate**: the same paragraph for every city, including the
+  powered ones. It is not a diagnosis.
+
+  *Do:* repair a pillaged plant; otherwise build one, and place the next from what the read says.
+
+**5. Amenities.** `amenities - amenities_needed < 0` applies a percentage penalty to **every** yield
+in the city, so it is a production loss like any other. A duplicate luxury gives no amenities, so
+surplus copies are worth trading.
+
+  *Do:* a new luxury type, an Entertainment Complex, or a policy card.
+
+**6. Housing and food.** `housing - pop <= 1` stops growth, and `food_surplus <= 0` does the same one
+step earlier. Neither costs production today; both cost it later, because **growth is the district
+plan**: `districts <= floor(pop / 3)`, with the Government Plaza and Aqueduct exempt.
+
+  *Do:* Granary, Water Mill, farms, a domestic trade route, an Aqueduct (exempt from the cap), a
+  Neighbourhood. This is the one factor that is genuinely **deferred**.
+
+### Two more that are not "conditions" but cost the same
+
+**A free district slot** is a multiplier nobody took. `districts <= floor(pop / 3)` says how many the
+city may have; a slot under that is production, science or gold left on the table.
+
+**An unimproved or pillaged tile** is a yield that is simply absent. Builders are the cheapest
+multiplier in the game, and a Builder standing on a pillaged tile should repair it rather than start
+something new - the tile is already ours and already improved.
+
+**An idle trade route** is free yields uncollected. A domestic route pays Food and Production to its
+destination, which is a growth fix and a production fix in one.
+
+### The order of work
+
+1. **An empty queue** - same turn, always.
+2. **Repair, district before its buildings**, before anything new in that city.
+3. **Power** - repair a plant, or build one, and confirm the reach by reading `temporary` around it.
+4. **Amenities**, if any city is negative.
+5. **Housing and food** - Aqueduct first where the cap is binding, because it is exempt from the
+   district rule and lifts the cap further than a building does.
+6. **Fill a free district slot.**
+7. **Builders for unimproved and pillaged tiles**, and **traders for idle routes.**
+
+### When to replace a queue instead of waiting for it
+
+Replacing a build throws its accumulated hammers away, so it is only worth it for a factor that is
+switching yields off **right now** - **unpowered** or **pillaged** - and only while more than about
+three turns remain on the current item. Housing and food are deferred, and a Campus or a Research Lab
+is a yield in its own right: measured, an early version of the rule ranked housing above everything
+but pillage and replaced, in one call, a 3-turn Research Lab and a 3-turn Campus with Granaries and
+Sewers. That is a science loss bought with nothing. `.tools/production-audit.py --redirect` now
+applies the narrow rule.
+
+One caveat worth knowing: a **placed** district keeps its accumulated production, so putting a
+district back after a bad switch resumes at the same turn count. Losing the hammers and keeping them
+are different failures, and only the first is permanent.
