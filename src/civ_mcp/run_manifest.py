@@ -73,6 +73,37 @@ def resolve_data_dir(root: pathlib.Path | str | None = None) -> pathlib.Path:
     return target if target.is_dir() else base
 
 
+def data_root(root: pathlib.Path | str | None = None) -> pathlib.Path:
+    """The directory that holds ``runs/`` - where data **shared by every playthrough** belongs.
+
+    Two kinds of stored thing now exist and they resolve differently, which is the distinction that
+    is easy to miss when wiring a new entry point:
+
+    * **per-run** - the diary, the retired-goal state, the heartbeat. These resolve
+      ``CIV_MCP_DATA_DIR``, which points at the run (``resolve_data_dir``).
+    * **shared** - the localization table, the branch archives. These are built once for the machine
+      and belong at the root.
+
+    Measured 2026-10-03, right after the drivers started resolving to a run: `localization` looked
+    for `loc-en-names.json` inside the run, did not find it, and every English name silently stopped
+    working - the degradation is designed to be invisible, which is exactly why this needs a name.
+
+    ``CIV_MCP_DATA_ROOT`` wins when a caller sets it. Otherwise the run directory is recognised by
+    its parent being ``runs/``, so a wired driver needs no change.
+    """
+    explicit = os.environ.get("CIV_MCP_DATA_ROOT")
+    if explicit:
+        return pathlib.Path(explicit)
+    base = pathlib.Path(
+        root
+        if root is not None
+        else os.environ.get("CIV_MCP_DATA_DIR", pathlib.Path.home() / ".civ6-mcp")
+    )
+    if base.parent.name == RUNS_DIR:
+        return base.parent.parent
+    return base
+
+
 def run_ids(root: pathlib.Path | str | None = None) -> list[str]:
     base = pathlib.Path(
         root

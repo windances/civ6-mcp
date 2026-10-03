@@ -45,10 +45,16 @@ _table: dict | None = None
 
 
 def table_path() -> pathlib.Path:
-    return (
-        pathlib.Path(os.environ.get(_TABLE_ENV, pathlib.Path.home() / ".civ6-mcp"))
-        / _TABLE_NAME
-    )
+    """Where the table lives: the data **root**, not the current run.
+
+    It is built once per machine from the game install and every playthrough reads the same one, so
+    it is shared data. `CIV_MCP_DATA_DIR` points at the run now, and resolving the table from it
+    meant the table was looked for inside a run directory and never found - which degrades quietly,
+    because a missing table simply returns everything unchanged.
+    """
+    from civ_mcp import run_manifest
+
+    return run_manifest.data_root() / _TABLE_NAME
 
 
 def _tables() -> tuple[dict[str, str], dict[str, str], dict[str, dict[str, str]]]:
