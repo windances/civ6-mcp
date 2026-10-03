@@ -196,6 +196,40 @@ class TestTheTreeWalk:
         loc.englishify(overview)
         assert overview.current_research == "火药", "not a `name` field: the code must not be used"
 
+    def test_a_city_is_not_renamed_after_what_it_is_building(self, table):
+        """Measured live 2026-10-03, and the worst outcome this module can produce.
+
+        `CityInfo.name` and `CityInfo.currently_building` sit on the same record. With "any code
+        will do", `currently_building='DISTRICT_GOVERNMENT'` resolved to "Government Plaza" and the
+        city - 西安 - was renamed after its production queue. A `name` field takes a `*_type` code
+        and nothing else; `currently_building` does not say what the city *is*.
+        """
+        table(
+            by_type={"DISTRICT_GOVERNMENT": "Government Plaza", "UNIT_ARCHER": "Archer"},
+            by_space={"CITY": {"西安": "Xi'an"}},
+        )
+        city = m.CityInfo.__new__(m.CityInfo)
+        object.__setattr__(city, "name", "西安")
+        object.__setattr__(city, "currently_building", "DISTRICT_GOVERNMENT")
+        loc.englishify(city)
+        assert city.name == "Xi'an", "the city's name, not its build queue"
+
+    def test_a_unit_still_uses_its_type_because_that_is_a_type_field(self, table):
+        table(by_type={"UNIT_ARCHER": "Archer"})
+        unit = m.UnitInfo.__new__(m.UnitInfo)
+        object.__setattr__(unit, "name", "弓箭手")
+        object.__setattr__(unit, "unit_type", "UNIT_ARCHER")
+        loc.englishify(unit)
+        assert unit.name == "Archer"
+
+    def test_a_name_suffixed_field_takes_its_own_stem(self, table):
+        table(by_type={"GOVERNMENT_OLIGARCHY": "Oligarchy"})
+        gov = m.GovernmentStatus.__new__(m.GovernmentStatus)
+        object.__setattr__(gov, "government_name", "寡头政体")
+        object.__setattr__(gov, "government_type", "GOVERNMENT_OLIGARCHY")
+        loc.englishify(gov)
+        assert gov.government_name == "Oligarchy"
+
     def test_a_great_person_uses_its_own_spaces(self, table):
         table(
             by_space={

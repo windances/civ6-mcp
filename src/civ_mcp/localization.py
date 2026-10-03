@@ -166,12 +166,13 @@ def englishify(record: object) -> object:
     if not (dataclasses.is_dataclass(record) and not isinstance(record, type)):
         return record
     spaces = FIELD_SPACES.get(type(record).__name__, {})
-    codes: list[object] = []
+    # Non-CJK strings by field name: these are the candidates a code can be.
+    codes_by_field: dict[str, object] = {}
     targets: list[tuple[str, object]] = []
     for f in dataclasses.fields(record):
         value = getattr(record, f.name, None)
         if isinstance(value, str) and value and not has_cjk(value):
-            codes.append(value)
+            codes_by_field[f.name] = value
         elif isinstance(value, str) and has_cjk(value):
             targets.append((f.name, False))
         elif isinstance(value, list) and value and all(isinstance(v, str) for v in value):
@@ -182,13 +183,26 @@ def englishify(record: object) -> object:
         ):
             targets.append((f.name, "keys"))
 
+    def codes_for(field_name: str) -> list[object]:
+        """The sibling codes that are evidence for *this* field - by name, not by availability.
+
+        "Any non-CJK string on the record" is not evidence. Measured live: with that rule
+        `CityInfo.name` was overwritten by `currently_building` (`DISTRICT_GOVERNMENT` resolves to
+        "Government Plaza"), so every city took the name of what it was building - a wrong name, the
+        one outcome this module exists to avoid. A code counts only when its field name says it is
+        the type of this one: `name` takes a `*_type` field, and `x_name` takes `x` or `x_type`.
+        """
+        if field_name == "name":
+            return [v for k, v in codes_by_field.items() if k.endswith("_type")]
+        if field_name.endswith("_name"):
+            stem = field_name[: -len("_name")]
+            return [codes_by_field[k] for k in (stem, f"{stem}_type") if k in codes_by_field]
+        return []
+
     for field_name, is_list in targets:
         space = spaces.get(field_name)
         current = getattr(record, field_name)
-        # A sibling code is only evidence for a field that *is* a name. Without this, any code on the
-        # record would be tried for every unresolved string - and the first one that happened to
-        # resolve would be stamped onto all of them, which is a wrong name rather than a missing one.
-        usable = codes if (field_name == "name" or field_name.endswith("_name")) else ()
+        usable = codes_for(field_name)
         if is_list == "keys":
             # `unit_breakdown` is `{localized unit name: count}`; the keys are the data here, and
             # leaving them meant the one line printed every turn still carried Chinese.
