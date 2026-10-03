@@ -35,6 +35,7 @@ os.environ.setdefault("CIV_MCP_DATA_DIR", str(ROOT / ".civ6-mcp-data"))
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 from civ_mcp.narrate import narrate_map  # noqa: E402
+from civ_mcp import localization  # noqa: E402
 from civ_mcp import session_info  # noqa: E402
 
 SECTIONS: list[tuple[str, str, str]] = [
@@ -220,7 +221,15 @@ def compact(key: str, value) -> None:
                   f"dip_vp={p.diplomatic_vp} mil={p.military_strength} techs={p.techs_researched} "
                   f"civics={p.civics_completed} cities={p.num_cities} sci={p.science_yield} "
                   f"cul={p.culture_yield} gold={p.gold_yield}")
-        print(f"  capitals held: {value.capitals_held} | religion majority: {value.religion_majority}")
+        # Both mappings are built here out of names read earlier, so nothing upstream can resolve
+        # them: they are plain dicts of plain strings, which `englishify` does not walk either.
+        capitals = localization.english_mapping(
+            value.capitals_held, key_space="CIVILIZATION"
+        )
+        majority = localization.english_mapping(
+            value.religion_majority, key_space="CIVILIZATION", value_space="RELIGION"
+        )
+        print(f"  capitals held: {capitals} | religion majority: {majority}")
         for name, entry in (value.demographics or {}).items():
             print(f"  {name:<12} rank {entry.rank} ours {entry.value} best {entry.best} "
                   f"avg {entry.average} worst {entry.worst}")

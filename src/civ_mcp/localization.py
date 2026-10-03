@@ -243,6 +243,31 @@ def englishify_tree(value: object) -> object:
     return value
 
 
+def english_mapping(
+    mapping: object, key_space: str | None = None, value_space: str | None = None
+) -> object:
+    """A dict with its keys (and optionally its values) in English.
+
+    For the mappings a *tool* composes out of names it read earlier - ``capitals_held`` is
+    ``{civ name: bool}`` and ``religion_majority`` is ``{civ name: religion}``. They are built in a
+    printer, after ``english_output`` has already run over the records, so nothing upstream can
+    reach them; and because they are plain dicts of plain strings, ``englishify`` cannot either.
+    Anything that does not resolve is kept as it was, as everywhere else here.
+    """
+    if not isinstance(mapping, dict):
+        return mapping
+    result = {}
+    for key, value in mapping.items():
+        new_key = english(key, space=key_space) if isinstance(key, str) else key
+        new_value = (
+            english(value, space=value_space)
+            if value_space and isinstance(value, str)
+            else value
+        )
+        result[new_key] = new_value
+    return result
+
+
 def english_output(fn):
     """Wrap a read so everything it returns comes back English where a name is resolvable.
 

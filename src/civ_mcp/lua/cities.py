@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from civ_mcp import localization
 from civ_mcp.lua._helpers import (
     _ITEM_PARAM_MAP,
     _ITEM_TABLE_MAP,
@@ -1095,7 +1096,12 @@ def parse_cities_response(lines: list[str]) -> tuple[list[CityInfo], list[str]]:
         if line.startswith("DIST|"):
             p = line.split("|")
             if len(p) >= 4:
-                distances.append(f"{p[1]} <-> {p[2]}: {p[3]} tiles")
+                # The line is composed here rather than by a dataclass, so `english_output` on the
+                # reader cannot reach it: a bare string in a list is not a field. The two names come
+                # from the game and are localized, so they are resolved at the point of use.
+                a = localization.english(p[1], space="CITY")
+                b = localization.english(p[2], space="CITY")
+                distances.append(f"{a} <-> {b}: {p[3]} tiles")
             continue
         if line.startswith("CITYTILES|"):
             p = line.split("|")

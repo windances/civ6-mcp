@@ -221,6 +221,38 @@ class TestTheTreeWalk:
         assert loc.englishify_tree(value) is value
 
 
+class TestEnglishMapping:
+    """The mappings a *tool* composes - built in a printer, from names read earlier."""
+
+    def test_keys_are_resolved_and_values_are_left_alone(self, table):
+        table(by_space={"CIVILIZATION": {"中国": "China", "毛利": "Māori"}})
+        assert loc.english_mapping({"中国": True, "毛利": True}, key_space="CIVILIZATION") == {
+            "China": True,
+            "Māori": True,
+        }
+
+    def test_values_can_be_resolved_in_their_own_space(self, table):
+        table(by_space={"CIVILIZATION": {"中国": "China"}, "RELIGION": {"佛教": "Buddhism"}})
+        assert loc.english_mapping(
+            {"中国": "佛教"}, key_space="CIVILIZATION", value_space="RELIGION"
+        ) == {"China": "Buddhism"}
+
+    def test_a_key_it_cannot_resolve_keeps_its_name(self, table):
+        table(by_space={"CIVILIZATION": {"中国": "China"}})
+        assert loc.english_mapping({"中国": True, "未知": True}, key_space="CIVILIZATION") == {
+            "China": True,
+            "未知": True,
+        }
+
+    def test_a_non_dict_is_returned_unchanged(self, table):
+        table()
+        assert loc.english_mapping(["not", "a", "dict"]) == ["not", "a", "dict"]
+
+    def test_english_names_are_untouched(self, table):
+        table(by_space={"CIVILIZATION": {"中国": "China"}})
+        assert loc.english_mapping({"China": True}, key_space="CIVILIZATION") == {"China": True}
+
+
 class TestTheDecorator:
     def test_it_rewrites_what_a_read_returns(self, table):
         table(by_type={"UNIT_ARCHER": "Archer"})
