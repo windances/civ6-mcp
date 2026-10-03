@@ -296,9 +296,28 @@ class CityInfo:
     # Power (Gathering Storm). `-1` / "" is the "the server did not report it" reading - a build
     # without the expansion, or a server started before these fields existed - and the rules that
     # look at power switch off on it rather than reading a missing field as a deficit. The numbers
-    # are the same table the game's own city panel reads (`City:GetPower()`, CityPanelPower.lua):
-    # required is the load of this city's power-hungry buildings, free is what its renewable
-    # sources and dams supply, temporary is what an active project supplies.
+    # are the same table the game's own city panel reads (`City:GetPower()`, CityPanelPower.lua).
+    #
+    # What the three channels actually are, read from that panel rather than inferred
+    # (`DLC/Expansion2/UI/Additions/CityPanelPower.lua:42-54`):
+    #
+    #     currentPower = freePower + temporaryPower
+    #     requiredPower == 0                  -> LOC_POWER_STATUS_NO_POWER_NEEDED
+    #     not IsFullyPowered()                -> LOC_POWER_STATUS_UNPOWERED
+    #     IsFullyPoweredByActiveProject()     -> powered by a project
+    #
+    # So `free` and `temporary` are the two *supply* channels - free is what renewable sources and
+    # dams give, temporary is what a fuel-burning plant gives, and **a fuel plant's output reaches
+    # neighbouring cities through `temporary` too** (measured: 阿拜多斯 owns the empire's only Coal
+    # Power Plant and 底比斯, four tiles away with no plant of its own, reads temporary 3.0).
+    #
+    # **The trap is the third channel.** Power from an active project appears in *neither* number,
+    # so a city can read `required > 0, free == 0, temporary == 0` and still answer
+    # `IsFullyPowered() == true` - measured on 长沙, which is powered entirely by a project and will
+    # lose it when the project ends. `is_fully_powered` is therefore a statement about *this turn*
+    # and never about durable supply; anything reasoning about the empire's real power base has to
+    # test `free + temporary > 0` instead. An earlier version of this comment said "temporary is
+    # what an active project supplies", which is simply wrong and was read as fact.
     power_required: float = -1.0
     power_free: float = -1.0
     power_temporary: float = -1.0

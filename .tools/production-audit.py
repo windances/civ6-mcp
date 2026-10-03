@@ -127,17 +127,28 @@ def audit_city(city) -> CityAudit:
         )
         row.production_at_risk += row.production * (0.25 * lost + (0.35 if pills_d else 0.0))
 
-    # 3. Power. Only cities that demand it can lose anything to it.
+    # 3. Power. Test for a **durable** supply, not for `IsFullyPowered()`.
+    #
+    # The game's own panel (`CityPanelPower.lua:42-54`) shows currentPower = freePower +
+    # temporaryPower, and a *third* channel - `IsFullyPoweredByActiveProject()` - that appears in
+    # neither number. So a city can read `required > 0, free == 0, temporary == 0` and still answer
+    # powered=yes: 长沙 does exactly that, and it will lose the power when the project ends. Judging
+    # by `is_fully_powered` therefore reports a fragile project as if it were infrastructure.
     required = float(getattr(city, "power_required", -1) or -1)
-    if required > 0 and str(getattr(city, "power_fully_powered", "")) != "yes":
+    if required > 0:
         free = float(getattr(city, "power_free", 0) or 0)
         temp = float(getattr(city, "power_temporary", 0) or 0)
-        row.problems.append(f"unpowered: needs {required}, has free {free} + temporary {temp}")
-        # A powered building that cannot run yields nothing, so the loss scales with the demand.
-        row.production_at_risk += row.production * min(0.5, 0.08 * required)
-        row.notes.append("power")
-    elif required > 0:
-        row.notes.append(f"powered ({required})")
+        durable = free + temp
+        running_on_project = str(getattr(city, "power_fully_powered", "")) == "yes"
+        if durable <= 0:
+            tail = " - running on a project, which expires" if running_on_project else ""
+            row.problems.append(
+                f"unpowered: needs {required}, durable supply 0 (free {free} + temporary {temp}){tail}"
+            )
+            row.production_at_risk += row.production * min(0.5, 0.08 * required)
+            row.notes.append("power")
+        else:
+            row.notes.append(f"powered durably ({durable} of {required})")
 
     # 4. Amenities: a percentage penalty on every yield in the city.
     amenities = int(getattr(city, "amenities", 0) or 0)
