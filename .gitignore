@@ -62,3 +62,8 @@ scripts/mission_control.sh
 docs/agent-essays/
 mission-control/
 docs/analysis/
+
+# Editor swap files: a vim session left open beside a tracked document showed up as an
+# untracked file, one `git add -A` away from being committed.
+*.swp
+*.swo

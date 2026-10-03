@@ -80,7 +80,7 @@ npm run qualify:all
 
 ## 能力
 
-覆盖完整游戏循环的 76 个工具：
+覆盖完整游戏循环的 80 个工具：
 
 - **单位** —— 列出、移动、攻击、固守、建城、建造改良、晋升、升级
 - **城市** —— 查看、设置生产、用金币购买单位/建筑、管理侧重
@@ -340,7 +340,7 @@ MCP 接口提供了一个干净的抽象：模型收到叙述式的游戏状态�
 Claude / Any MCP Client
     |  stdio (JSON-RPC)
     v
-MCP Server (Python)    <- 70+ tools
+MCP Server (Python)    <- 80 tools
     |
     |  Generates Lua code at runtime
     |  TCP :4318

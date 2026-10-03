@@ -86,7 +86,7 @@ documents every phase, acceptance gate, fault test, and remaining milestone.
 
 ## Capabilities
 
-76 tools covering the full gameplay loop:
+80 tools covering the full gameplay loop:
 
 - **Units** — list, move, attack, fortify, found cities, build improvements, promote, upgrade
 - **Cities** — inspect, set production, purchase units/buildings with gold, manage focus
@@ -346,7 +346,7 @@ The MCP interface provides a clean abstraction: the model receives narrated game
 Claude / Any MCP Client
     |  stdio (JSON-RPC)
     v
-MCP Server (Python)    <- 70+ tools
+MCP Server (Python)    <- 80 tools
     |
     |  Generates Lua code at runtime
     |  TCP :4318
