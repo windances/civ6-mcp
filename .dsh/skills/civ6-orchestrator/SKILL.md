@@ -307,13 +307,31 @@ city because the train was never staged - the phases exist because skipping one 
 like from the inside. Task files in `prompts/tasks/tmp/` add the *objective* for a target that needs
 one; they never replace a phase.
 
-- **A target nothing can reach is a target to replace, not a war to abandon** (human instruction
-  2026-10-02: change the target). "Cannot reach" is a fact about the map, not about the enemy: a
-  strait with no `TECH_SHIPBUILDING`, a chokepoint a third party holds, a path locked by a zone of
-  control nobody can break. When the pre-war analysis or the staging plan says the named city cannot
-  be entered, pick the next reachable city **of the same neighbour**, turn the assembled force toward
-  it, and say which city and why in the diary's tactical line. The war continues; only the target
-  changes, and this is the one case in which the target order is rewritten mid-war.
+- **The target order follows the map, not the plan** (human instruction 2026-10-04: as the offensive
+  finds other cities of the target, switch to them and work inward from the border toward their
+  capital). A name written down before the army could see the ground is a guess, and it stays a guess
+  however long it is repeated. So:
+
+ - **Reconnaissance comes first, and it is continuous.** You only choose among what you have seen.
+    A force standing inside an enemy's territory that can see **one** of that enemy's seven cities has
+    not scouted, it has stumbled. Sweep with the fastest units - the ones that reach furthest per
+    turn - and reveal the cities before committing anything expensive to one of them.
+ - **The nearest takeable city is the target.** "Takeable" is read off the city's own numbers, not
+    felt: `get_target_report(x, y)` gives its walls, its pool, its defence and **whether it has a
+    garrison**. An **unwalled city with no garrison** is a different proposition from a walled one,
+    and the difference decides whether it takes three turns or twenty. A city the force is already
+    adjacent to beats a stronger one twenty tiles away, every time.
+ - **A city nothing can reach is not a target at all** - a strait with no `TECH_SHIPBUILDING`, a
+    chokepoint a third party holds, ground a zone of control locks. That is a fact about the map, not
+    about the enemy, and it is not a reason to abandon the war.
+ - **Sea and land are one front, and the navy counts.** A ship can only attack a city that **has
+    water beside it** and only from a water tile, so whether the fleet has a role is a question about
+    *which* cities are coastal - and that is arithmetic, not opinion: read the water neighbours of
+    each city. "The target is inland, so the navy is useless" is the mistake of generalising one
+    city's geography into a fact about the enemy. Send the fleet where there is water to stand on.
+ - **Rewriting the target order mid-war is normal, not exceptional.** Say in the diary which city
+    was dropped, which replaced it, and the numbers that decided it - walls, pool, defence, garrison,
+    distance - so the change reads as a decision rather than as drift.
 
 **Development.**
 
