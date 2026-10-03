@@ -92,7 +92,33 @@ The MCP interface exposes no action for this, so the agent cannot trigger it.
   walls without a siege unit, and attack only at favourable odds.
 - Heal damaged units rather than feeding them forward.
 
-**Contact on the march - engage what is in the way, with the counter unit.**
+**The human commands the military; the agent commands everything else.** (Human instruction
+2026-10-04: the human directs the military units and the Great Generals, and the agent is responsible
+for every other unit, for the cities, the economy, the wonders and the research.)
+
+So, every turn:
+
+- **Do not move a military unit, and do not move a Great General.** Their orders are the human's. A
+  military unit is anything with a `combat_strength` above zero; a Great General is a Great Person of
+  that class. Leave them where they stand and say what they could do.
+- **The report is the agent's half of that bargain.** The turn result already carries the blocks that
+  decide a fight - `BATTLE ASSESSMENT`, `UNUSED ATTACK`, `SIEGE POSTURE`, `SIEGE PROGRESS`,
+  `TAKE THE CITY`, `UPGRADE AVAILABLE` - and under this division they are the human's briefing. State
+  them plainly instead of acting on them.
+- **Everything else is the agent's**: builders, settlers, traders, every Great Person that is not a
+  general, every city's queue, the economy, the wonders and the research. An idle worker, an empty
+  queue and a treasury nobody is spending are the agent's failures, not the human's.
+- **A military unit still holding movement is the human's turn, not a blocker to route around.**
+  `end_turn` refuses while any unit has moves, and `skip_remaining_units` refuses while any unit has a
+  legal attack. Give the *non-military* units their orders, report the military ones, and wait - do
+  not fill the gap with moves nobody asked for. **`.tools/advance-turns.py` takes no `--toward` under
+  this division**: that flag sweeps un-ordered military units toward a tile, which is exactly the
+  order this rule forbids the agent to give.
+- **Gold is held for the front.** The agent keeps the treasury ready and reports when an upgrade is
+  available and affordable; **the human decides which unit takes it.** The upgrade rule
+  (`prompts/tasks/tmp/` - the save-for-upgrades task) says what may be bought ahead of it.
+
+****Contact on the march - engage what is in the way, with the counter unit.**
 
 - While the assault force is assembling or marching, **any enemy unit standing
   within two tiles of our units is dealt with this turn, before the column moves

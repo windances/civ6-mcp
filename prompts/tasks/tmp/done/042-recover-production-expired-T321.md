@@ -68,3 +68,10 @@ standing in are building.
      at: 2026-10-04T00:05:47+08:00
      chinese backup: prompts/tasks/cn/042-recover-production.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 042 --expired --turn 321
+     at: 2026-10-04T07:05:17+08:00
+     status: expired at T321
+     chinese backup: prompts/tasks/cn/042-recover-production.cn.md
+-->
