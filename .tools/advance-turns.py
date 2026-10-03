@@ -47,9 +47,25 @@ from civ_mcp import end_turn as end_turn_module  # noqa: E402
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 
-WAR_ENEMY = 5  # Phoenicia: the civ this operation declared on
 MAX_DRAIN = 6
 MAX_ATTEMPTS_PER_TURN = 4
+
+
+async def at_war_pids(gs) -> set[int]:
+    """The player ids we are at war with, **read from the game**.
+
+    Never a constant. Whom we are at war with is this match's state, and writing the id down is the
+    same mistake as writing down a city name - but this one decides doctrine rather than display:
+    the diplomacy policy below refuses peace to an enemy and accepts everything else, so a stale id
+    makes it refuse peace to a friend and accept it from the enemy. Read it every drain, because a
+    war also starts and ends inside a turn.
+    """
+    try:
+        civs = await gs.get_diplomacy()
+    except Exception as exc:  # noqa: BLE001
+        print(f"    could not read diplomacy ({type(exc).__name__}); answering every session POSITIVE")
+        return set()
+    return {int(c.player_id) for c in civs if getattr(c, "is_at_war", False)}
 
 # `end_turn` states the advance itself: "Turn 293 -> 294 | Score: ...". That statement is the
 # engine's own claim and is not subject to the read staleness below.
@@ -105,9 +121,12 @@ async def drain_diplomacy(gs, replies: list[str]) -> int:
         sessions = await gs.get_diplomacy_sessions()
         if not sessions:
             return answered
+        enemies = await at_war_pids(gs)
+        if enemies:
+            print(f"    at war with p{sorted(enemies)} - those sessions get NEGATIVE")
         for session in sessions:
             pid = int(getattr(session, "other_player_id", 0) or 0)
-            response = "NEGATIVE" if pid == WAR_ENEMY else "POSITIVE"
+            response = "NEGATIVE" if pid in enemies else "POSITIVE"
             try:
                 reply = await gs.diplomacy_respond(pid, response)
             except Exception as exc:  # noqa: BLE001
