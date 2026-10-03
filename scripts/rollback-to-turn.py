@@ -687,7 +687,17 @@ def main() -> int:
         return 0
 
     print(f"\n--- rollback: {action} ---")
-    result = asyncio.run(apply_plan(action, entry["name"], target, args.force))
+    # `game_launcher.load_save_from_menu` resolves a save by **file** name - it tests
+    # `<save_dir>/<name>.Civ6Save` and otherwise answers "Save '<name>' not found - Available: ...".
+    # The inventory's `name` is the save's **display** name, which is a different string: measured
+    # 2026-10-04, the T288 entry read `秦始皇（大一统） 288 公元1834年`, the load answered
+    # `FAILED: Save '秦始皇（大一统） 288 公元1834年' not found`, and the game was left parked on the
+    # Load Game screen with the turn unreadable - then every retry burned its whole 180 s budget
+    # waiting for a "Single Player" label that only exists on the main menu. Pass the file stem.
+    load_name = pathlib.Path(entry["path"]).stem if entry.get("path") else entry["name"]
+    if load_name != entry["name"]:
+        print(f"loading by file name {load_name!r} (the save's display name is {entry['name']!r})")
+    result = asyncio.run(apply_plan(action, load_name, target, args.force))
     print(result)
 
     turn = verify(target)
@@ -700,7 +710,12 @@ def main() -> int:
             _sys.path.insert(0, str(ROOT / "src"))
             from civ_mcp import run_manifest
 
-            manifest = run_manifest.reset_turn(target)
+            # `reset_turn(turn)` with no data dir resolves the **default** one (the environment's
+            # `CIV_MCP_DATA_DIR`, or the fallback under the repo), which is not necessarily the run
+            # this match belongs to - the same trap `scripts/run.py` was fixed for. Resolve the run
+            # the way every other caller does.
+            data_dir = run_manifest.resolve_data_dir(ROOT / ".civ6-mcp-data")
+            manifest = run_manifest.reset_turn(target, data_dir)
             if manifest:
                 print(f"  run {manifest['run_id']}: played-to is now T{manifest['last_turn']}")
         except Exception as exc:  # noqa: BLE001 - the rollback itself has already succeeded

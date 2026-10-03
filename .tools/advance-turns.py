@@ -31,7 +31,11 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
-sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+# Line buffering, not block buffering. A background run whose stdout is a pipe otherwise holds
+# every line until the process exits, so a caller watching the job sees nothing at all and can
+# only block on it - measured 2026-10-04: two 9-minute waits on a job that had already reached
+# its target and written the save to disk.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 from civ_mcp import end_turn as end_turn_module  # noqa: E402
 from civ_mcp.connection import GameConnection  # noqa: E402

@@ -188,7 +188,13 @@ async def main() -> int:
                 print(f"  {name}: no such city")
                 continue
             options = await gs.list_city_production(city.city_id)
-            match = next((o for o in options if o.item_name == item), None)
+            # A pillaged district is offered **twice** under the same item name - once as the
+            # repair (which carries the tile in `repair_x`/`repair_y`) and once as a fresh build
+            # (which carries nothing, because a new district needs a tile chosen for it). Taking
+            # the first name match therefore picks the wrong one about half the time and the call
+            # comes back MISSING_COORDS. Prefer the repair.
+            named = [o for o in options if o.item_name == item]
+            match = next((o for o in named if o.is_repair), None) or (named[0] if named else None)
             if match is None:
                 print(f"  {name}: {item} is not offerable - read --options first")
                 continue
