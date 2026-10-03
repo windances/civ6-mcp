@@ -143,47 +143,59 @@ def unretire_goals_after(target: int, apply: bool = True) -> list[str]:
     silently dropped the directive's only hard deadline (the ram/tower window that closes at
     ``CIVIC_CIVIL_ENGINEERING``) and its wonder goal (zero wonders forfeits Dynastic Cycle).
 
-    Returns one label per entry forgotten. Entries are forgotten for every game in the file: a goal
-    retired on a branch that no longer exists is not retired on the branch being returned to, and the
-    failure mode of forgetting one too many is a rule that nags again, while the failure mode of
-    forgetting none is a rule that silently never fires.
+    Returns one label per entry forgotten. **Every** playthrough's state file is processed, not
+    just one: the failure mode of forgetting one too many is a rule that nags again, while the
+    failure mode of forgetting none is a rule that silently never fires - so the safe error is to
+    forget liberally. That was the reasoning when all games shared one file, and the split did not
+    change it; it only made "the file" plural. Picking one state file would be worse than either
+    error, because it looks like a rollback happened.
     """
-    # The retired-goal state is per playthrough now, so it is found rather than named. The
-    # pre-runs file is the flat one from before the split, and is still read when it is there.
-    path = None
-    for candidate in (
+    # The retired-goal state is per playthrough now, so every one is visited. The pre-runs file is
+    # the flat one from before the split, and is still processed when it is there.
+    candidates = (
         sorted((ROOT / ".civ6-mcp-data").glob("runs/*/turn-checks-state.json"))
         + [ROOT / ".civ6-mcp-data" / "turn-checks-state.pre-runs.json"]
         + [ROOT / ".civ6-mcp-data" / "turn-checks-state.json"]
-    ):
-        if candidate.exists():
-            path = candidate
-            break
-    if path is None:
+    )
+    # The pre-runs and root files are the same file once migrated; visiting it twice would report
+    # the same entry twice.
+    state_files: list[Path] = []
+    for candidate in candidates:
+        if candidate.exists() and candidate.resolve() not in {p.resolve() for p in state_files}:
+            state_files.append(candidate)
+    if not state_files:
         return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001 - an unreadable state file is left alone
-        return []
-    if not isinstance(data, dict):
-        return []
+
     forgotten: list[str] = []
-    for game, per_game in list(data.items()):
-        if not isinstance(per_game, dict):
+    for path in state_files:
+        where = path.parent.name if path.parent.name != ".civ6-mcp-data" else "(flat)"
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - an unreadable state file is left alone
             continue
-        for check_id, turn in list(per_game.items()):
-            try:
-                when = int(turn)
-            except (TypeError, ValueError):
+        if not isinstance(data, dict):
+            continue
+        here: list[str] = []
+        for game, per_game in list(data.items()):
+            if not isinstance(per_game, dict):
                 continue
-            if when <= target:
-                continue
-            del per_game[check_id]
-            forgotten.append(f"{check_id} (retired at T{when}, forgotten so T{target} re-checks it)")
-        if not per_game:
-            data.pop(game, None)
-    if forgotten and apply:
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            for check_id, turn in list(per_game.items()):
+                try:
+                    when = int(turn)
+                except (TypeError, ValueError):
+                    continue
+                if when <= target:
+                    continue
+                del per_game[check_id]
+                here.append(f"{check_id} [{where}] (retired at T{when}, forgotten so T{target} re-checks it)")
+            if not per_game:
+                data.pop(game, None)
+        if here and apply:
+            # newline="": text mode would rewrite every \n as os.linesep on Windows.
+            path.write_text(
+                json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8", newline=""
+            )
+        forgotten.extend(here)
     return forgotten
 
 
