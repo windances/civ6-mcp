@@ -139,6 +139,56 @@ async def drain_diplomacy(gs, replies: list[str]) -> int:
     return answered
 
 
+async def sweep(gs, toward, spent: set[int], replies: list[str], log: list[tuple]) -> None:
+    """Account for every unit that still has movement after the named orders.
+
+    This is the fix for the thing that made units look lost. `end_turn` resolves the unit blocker
+    itself - its reply says `ENDTURN_BLOCKING_UNITS auto-resolved: FORTIFIED|N fortified` - so **every
+    unit a named order did not touch is parked where it stands**, every turn. A hand-written march
+    list is a subset, and a subset means the Great Generals, the Builders, the Traders, the Great
+    People and every military unit not on the list are silently frozen: no order, full movement, and
+    named by nothing.
+
+    With `--toward X,Y` every un-ordered **military** unit is sent toward that tile, so nothing is
+    left behind. Without it, they are reported instead - a list of what is about to be parked is the
+    difference between a decision and an oversight.
+    """
+    idle = []
+    for unit in await gs.get_units():
+        if unit.unit_index in spent or unit.moves_remaining <= 0:
+            continue
+        idle.append(unit)
+
+    if not idle:
+        print("    sweep: every unit with movement was ordered")
+        return
+
+    military = [u for u in idle if (u.combat_strength or 0) > 0]
+    others = [u for u in idle if (u.combat_strength or 0) == 0]
+    print(f"    sweep: {len(idle)} unit(s) had movement and no order "
+          f"({len(military)} military, {len(others)} other)")
+
+    if toward is None:
+        for u in idle:
+            print(f"      UNORDERED [{u.unit_index:>2}] {u.unit_type} ({u.x},{u.y}) "
+                  f"mv{u.moves_remaining}")
+        replies.append(f"UNORDERED {len(idle)} unit(s) with movement left - about to be parked")
+        return
+
+    tx, ty = toward
+    for unit in military:
+        reply = await gs.move_unit(unit.unit_index, tx, ty)
+        spent.add(unit.unit_index)
+        print(f"      [{unit.unit_index:>2}] {unit.unit_type} ({unit.x},{unit.y}) -> ({tx},{ty})")
+        print(f"        {reply}")
+        replies.append(str(reply))
+        log.append((unit.unit_index, (unit.x, unit.y), (tx, ty), str(reply)))
+    if others:
+        # A Builder or a Trader sent at the front is a civilian lost for nothing; say so instead.
+        print(f"      {len(others)} civilian/great unit(s) left alone: "
+              + ", ".join(f"{u.unit_type}({u.x},{u.y})" for u in others[:6]))
+
+
 def parse_orders(specs: list[str]) -> list[tuple[str, int, int]]:
     """`SELECTOR:X,Y` -> (selector, x, y).
 
@@ -235,6 +285,7 @@ async def march(gs, orders, replies: list[str], log: list[tuple]) -> None:
         print(f"      {reply}")
         replies.append(str(reply))
         log.append((unit.unit_index, start, (tx, ty), str(reply)))
+    return spent
 
 
 async def main() -> int:
@@ -250,6 +301,13 @@ async def main() -> int:
              "rollback renumbers every unit, so a plan written with indices describes units that "
              "no longer exist",
     )
+    ap.add_argument(
+        "--toward",
+        metavar="X,Y",
+        help="after the named orders, send every un-ordered MILITARY unit toward this tile; "
+             "without it they are reported instead, because end_turn parks whatever nobody "
+             "ordered and a hand-written subset always leaves some behind",
+    )
     ap.add_argument("--json", action="store_true", help="emit the per-turn verdicts as JSON")
     args = ap.parse_args()
 
@@ -261,6 +319,10 @@ async def main() -> int:
         return 1
     gs = GameState(conn)
     orders = parse_orders(args.march)
+    toward = None
+    if args.toward:
+        tx, ty = (int(v) for v in args.toward.split(","))
+        toward = (tx, ty)
 
     start = await settled_turn(gs)
     if start is None:
@@ -292,9 +354,10 @@ async def main() -> int:
                 print("  could not read the turn number")
                 break
 
-            if orders and attempt == 0:
+            if attempt == 0 and (orders or toward is not None):
                 print(f"  T{before}: march")
-                await march(gs, orders, turn_replies, turn_log)
+                ordered = await march(gs, orders, turn_replies, turn_log) if orders else set()
+                await sweep(gs, toward, ordered, turn_replies, turn_log)
             print(f"  T{before}: drain diplomacy")
             await drain_diplomacy(gs, turn_replies)
             print(f"  T{before}: end")
