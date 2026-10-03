@@ -312,10 +312,16 @@ one; they never replace a phase.
   capital). A name written down before the army could see the ground is a guess, and it stays a guess
   however long it is repeated. So:
 
- - **Reconnaissance comes first, and it is continuous.** You only choose among what you have seen.
-    A force standing inside an enemy's territory that can see **one** of that enemy's seven cities has
-    not scouted, it has stumbled. Sweep with the fastest units - the ones that reach furthest per
-    turn - and reveal the cities before committing anything expensive to one of them.
+ - **Push in from the border, and discover as you go.** You choose among what you have seen, but
+    **you do not have to have seen everything** - a city still in fog is not a reason to stand still,
+    and waiting for a complete picture is waiting for something the enemy is not obliged to give you.
+    The army's own advance is the reconnaissance: take the nearest city you can see, and the next one
+    comes into view as the column moves toward it. Scouts and fast units screen and reveal *while*
+    the column advances; they do not hold it back.
+ - **What is required is the numbers of the city you are about to attack, not of every city.**
+    `get_target_report(x, y)` gives walls, pool, defence and garrison and it works in fog, so there is
+    no excuse for committing the train to a guess - but it is read one target at a time, as the column
+    reaches it.
  - **The nearest takeable city is the target.** "Takeable" is read off the city's own numbers, not
     felt: `get_target_report(x, y)` gives its walls, its pool, its defence and **whether it has a
     garrison**. An **unwalled city with no garrison** is a different proposition from a walled one,
