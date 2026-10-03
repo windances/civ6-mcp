@@ -353,9 +353,15 @@ one; they never replace a phase.
     garrison**. An **unwalled city with no garrison** is a different proposition from a walled one,
     and the difference decides whether it takes three turns or twenty. A city the force is already
     adjacent to beats a stronger one twenty tiles away, every time.
- - **A city nothing can reach is not a target at all** - a strait with no `TECH_SHIPBUILDING`, a
-    chokepoint a third party holds, ground a zone of control locks. That is a fact about the map, not
-    about the enemy, and it is not a reason to abandon the war.
+ - **A target nothing can reach is a target to replace, not a war to abandon.** A strait with no
+    `TECH_SHIPBUILDING`, a chokepoint a third party holds, ground a zone of control locks - that is a
+    fact about the map, not about the enemy, and it costs you that city, not the war. The objective is
+    the neighbour, not the pin on the map, so drop the unreachable one and take the nearest city
+    of the same neighbour that the force can actually reach. The army, the staging and the
+    declaration all stand; only the target changes. An unreachable city is a reason to re-read
+    `get_target_report(x, y)` against the rest of that neighbour's ground, never a reason to stop
+    fighting - and it is the one case where the replacement needs no new pre-war analysis from
+    scratch, because the war it belongs to is already declared and paid for.
  - **Sea and land are one front, and the navy counts.** A ship can only attack a city that **has
     water beside it** and only from a water tile, so whether the fleet has a role is a question about
     *which* cities are coastal - and that is arithmetic, not opinion: read the water neighbours of
