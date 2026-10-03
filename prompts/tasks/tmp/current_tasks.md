@@ -114,3 +114,4 @@ Task 040 was retired as `done/040-attempt-a8-three-cities-the-third-one-an-econo
 
 Task 041 was retired as `done/041-attempt-a10-the-two-city-military-opening-done-T68.md`.
 | `042-recover-production.md` | 2026-10-04 | turn 321 | the home front's queues and pillaged districts, before any new build | `.tools/production-recovery.py` reports `0 idle queue(s)`, its pillaged list is empty (no city lists |
+| `043-save-for-upgrades.md` | 2026-10-04 | turn 341 | hold the treasury for front-line upgrades ahead of every other purchase | count == 0 units within 3 tiles of an enemy city or a visible enemy unit of the civ we are at war |
