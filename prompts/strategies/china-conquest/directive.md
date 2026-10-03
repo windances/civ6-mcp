@@ -341,6 +341,29 @@ one; they never replace a phase.
   the first cheap one up in the Classical era: waiting until T170 to build the
   Oracle throws away the ability for the whole game.
 
+**City roles.** One city, one job. A city that builds a bit of everything finishes nothing on time, and
+the empire stalls one tile at a time. Read the roles off the save and then hold them:
+
+- **Science city** - the highest `science_yield`, and the one that already has the Campus line:
+  Campus, University, Research Lab, and the power to run them. Nothing else but repairs. A Campus
+  comes before the army, always.
+- **Wonder and production city** - the highest `prod`: the wonders, and the production buildings that
+  pay for them. For China a wonder *is* a research building (Dynastic Cycle), so this city is
+  producing science and culture for the whole empire, not vanity.
+- **Food and housing city** - any city with `housing - pop <= 1` or `food_surplus <= 0`: Aqueduct,
+  Granary, Water Mill, farms, and a domestic trade route (a domestic route pays Food and Production
+  to the destination). This is a hard stop, not a queue preference. Growth is also the district plan -
+  `districts <= floor(pop / 3)` - so a stalled city is a district slot nobody can use.
+- **Military city** - the Encampment and the units, and only while a war is on.
+
+**The four caps, checked every turn before choosing production.** A city cannot out-build its
+`housing - pop`, its `food_surplus`, its amenities, or a PILLAGED district. Of those, a pillaged
+**Industrial Zone, Workshop, Factory or Power Plant is not one city's problem**: the power shortage
+it causes is a production penalty across the empire, so it is repaired before anything new is built.
+Measured T291: Xi'an sat on a pillaged Industrial Zone with a pillaged Workshop, Factory and Coal
+Power Plant while the power-shortage warning fired four times and the city queued a project instead - and Xi'an
+is both the science city and the largest single source of research in the empire.
+
 **Balance between development and conquest.**
 
 The balance point is not a ratio of peaceful turns to war turns, and it is not a
