@@ -219,7 +219,23 @@ for i, u in Players[id]:GetUnits():Members() do
             end
             if #meList > 0 then validImps = table.concat(meList, ";") end
         end
-        print(uid .. "|" .. (uid % 65536) .. "|" .. nm .. "|" .. ut .. "|" .. x .. "," .. y .. "|" .. u:GetMovesRemaining() .. "/" .. u:GetMaxMoves() .. "|" .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage() .. "|" .. cs .. "|" .. rs .. "|" .. charges .. "|" .. targets .. "|" .. promo .. "|" .. canUp .. "|" .. upName .. "|" .. upCost .. "|" .. validImps .. "|" .. relName)
+        -- What the unit is *doing*, read exactly the way the game's own unit panel reads it
+        -- (`Base/Assets/UI/Panels/UnitPanel.lua:4054-4062`): `UnitManager.GetActivityType`, compared
+        -- against the engine's own `ActivityTypes` table. Two facts make this three fields rather
+        -- than one - **fortified is not an activity at all** (it is `GetFortifyTurns() > 0` with the
+        -- activity not AWAKE), and `IsReadyToMove()` is the game's own answer for whether the unit
+        -- can still act. Without them, a **sleeping** unit is indistinguishable from a unit nobody
+        -- has ordered yet: both report full movement and neither is named by any report.
+        local actName, fortTurns, ready = "?", 0, true
+        pcall(function()
+            fortTurns = u:GetFortifyTurns() or 0
+            ready = u:IsReadyToMove() and true or false
+            local at = UnitManager.GetActivityType(u)
+            for actKey, actValue in pairs(ActivityTypes) do
+                if actValue == at then actName = actKey break end
+            end
+        end)
+        print(uid .. "|" .. (uid % 65536) .. "|" .. nm .. "|" .. ut .. "|" .. x .. "," .. y .. "|" .. u:GetMovesRemaining() .. "/" .. u:GetMaxMoves() .. "|" .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage() .. "|" .. cs .. "|" .. rs .. "|" .. charges .. "|" .. targets .. "|" .. promo .. "|" .. canUp .. "|" .. upName .. "|" .. upCost .. "|" .. validImps .. "|" .. relName .. "|" .. actName .. "|" .. fortTurns .. "|" .. (ready and 1 or 0))
     end
 end
 print("{SENTINEL}")
@@ -2391,6 +2407,13 @@ def parse_units_response(lines: list[str]) -> list[UnitInfo]:
             [v for v in valid_imps_raw.split(";") if v] if valid_imps_raw else []
         )
         religion = parts[16] if len(parts) > 16 else ""
+        # Appended after `religion`, so a log written before these columns parses as before:
+        # an absent activity reads "?" (unknown) rather than "awake", which is the safe direction.
+        activity = parts[17] if len(parts) > 17 else ""
+        fortify_turns = (
+            int(parts[18]) if len(parts) > 18 and parts[18].lstrip("-").isdigit() else 0
+        )
+        ready_to_move = (parts[19] == "1") if len(parts) > 19 else True
         units.append(
             UnitInfo(
                 unit_id=int(parts[0]),
@@ -2413,6 +2436,9 @@ def parse_units_response(lines: list[str]) -> list[UnitInfo]:
                 upgrade_cost=upgrade_cost,
                 valid_improvements=valid_imps,
                 religion=religion,
+                activity=activity,
+                fortify_turns=fortify_turns,
+                ready_to_move=ready_to_move,
             )
         )
     return units

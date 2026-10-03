@@ -230,6 +230,15 @@ class UnitInfo:
     upgrade_cost: int = 0
     valid_improvements: list[str] = field(default_factory=list)
     religion: str = ""
+    # What the unit is doing, read the way the game's own unit panel reads it
+    # (`Base/Assets/UI/Panels/UnitPanel.lua:4054-4062`): `UnitManager.GetActivityType()` compared
+    # against the engine's `ActivityTypes` table. Three fields rather than one, because
+    # **fortified is not an activity** - it is `GetFortifyTurns() > 0` with the activity not
+    # AWAKE - and `IsReadyToMove()` is the game's own answer for whether the unit can still act.
+    # Empty means the server did not report it, which reads as "unknown" and not as "awake".
+    activity: str = ""
+    fortify_turns: int = 0
+    ready_to_move: bool = True
 
 
 @dataclass
