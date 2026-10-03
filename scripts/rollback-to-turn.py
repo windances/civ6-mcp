@@ -256,7 +256,13 @@ def inventory() -> list[dict]:
                     "path": path,
                     "name": path.stem,
                     "dir": kind,
-                    "turn": turn_of_save(path),
+                    # Read the turn **from the save itself**, and keep the name only as a fallback.
+                    # The two disagree: the game's `AutoSave_NNNN` names run one ahead of the turn
+                    # they hold (`AutoSave_0289` holds T288 - `handoff.py` already reports it as
+                    # "turn from file"). Indexed by name alone this found no save for turn 288 while
+                    # the game sat on 288, and refused a rollback the human had already performed by
+                    # hand: measured 2026-10-03, `rollback-to-turn.py 288 --archive-only`.
+                    "turn": save_turn_from_file(path) or turn_of_save(path),
                     "bytes": stat.st_size,
                     "mtime": stat.st_mtime,
                 }
