@@ -8,6 +8,15 @@
         command: !!js process.cwd() + '/.tools/bin/uv'
         args:
           - run
+          # `--no-sync`: without it `uv run` re-resolves and syncs the project on every launch,
+          # which needs the network for the `evals` extra (inspect-ai) and HANGS when the network is
+          # blocked. Measured 2026-10-03: `uv run --project . python -c "print(1)"` exceeded 300s,
+          # the MCP client's `initialize` timed out at 60s, and DSH reported
+          # `plugin tree failed to load: 1 entry did not activate / mcp-client(civ6): initial
+          # connection or tool synchronization failed`. With `--no-sync` the same import takes 3.7s
+          # against the already-provisioned `.venv`, which is the environment every other entry point
+          # (the drivers, the tests, `qualify-mcp.py`) uses anyway.
+          - --no-sync
           - --project
           - !!js process.cwd()
           - civ-mcp
