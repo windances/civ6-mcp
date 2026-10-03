@@ -45,8 +45,13 @@ should, and neither was visible to any metric before this turn. They are now (`p
    (measured - Xi'an offered only `REPAIR DISTRICT_INDUSTRIAL_ZONE` until it completed).
 2. **An empty queue is filled the same turn it is noticed**, with the role the directive assigns that
    city. A city doing nothing is the largest single loss available.
-3. **Power before anything else in the two unpowered cities.** Xi'an's Coal Power Plant is a regional
-   source (range 6) and Shanghai is 4 tiles from Xi'an, so repairing Xi'an powers both.
+3. **Power first, and measure the reach rather than assuming it.** A fuel plant does supply its
+   neighbours, but **not out to the six tiles the power lens suggests**: measured, a city four tiles
+   from the empire's only plant drew from it and one five tiles away did not. So do not plan one
+   plant per cluster on a six-tile radius. Build one, then read `power_temporary` in the cities
+   around it - the tool prints that column - and place the next plant from what the read says.
+   `.tools/production-audit.py` distinguishes **durable** supply (`free + temporary > 0`) from a city
+   running on a project, which expires; only the durable half counts.
 4. **Then the other standing losses**, cheapest first: Novgorod's pillaged Campus (and the Library and
    University behind it), Memphis' Aqueduct/Theater/Neighborhood, Amsterdam's Granary.
 5. **A Builder on a pillaged tile repairs it** rather than starting a new improvement - the tile is

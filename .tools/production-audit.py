@@ -1,10 +1,10 @@
 """Every factor that is holding production down, measured across every city, ranked.
 
 `production-recovery.py` answers "which queues are empty and which districts are pillaged". That is
-two factors out of six. Measured 2026-10-04 in china--1894041591: after fixing those two the empire
-still had **9 of its 12 power-demanding cities unpowered**, and only **one** of the nine was
-unpowered because of pillage - the other eight had simply never been given a power source. A report
-that names the one city it looked at is how the other eight go unnoticed.
+two factors out of six. Measured in one live match: after fixing those two the empire still had
+**9 of its 12 power-demanding cities unpowered**, and only **one** of the nine was unpowered because
+of pillage - the other eight had simply never been given a power source. A report that names the one
+city it looked at is how the other eight go unnoticed.
 
 So this measures all six, per city, and sorts by **how much production each city is losing** rather
 than by how interesting its story is:
@@ -132,8 +132,9 @@ def audit_city(city) -> CityAudit:
     # The game's own panel (`CityPanelPower.lua:42-54`) shows currentPower = freePower +
     # temporaryPower, and a *third* channel - `IsFullyPoweredByActiveProject()` - that appears in
     # neither number. So a city can read `required > 0, free == 0, temporary == 0` and still answer
-    # powered=yes: 长沙 does exactly that, and it will lose the power when the project ends. Judging
-    # by `is_fully_powered` therefore reports a fragile project as if it were infrastructure.
+    # powered=yes: it is running on a project, and it loses the power when the project ends. Judging
+    # by `is_fully_powered` reports a fragile project as if it were infrastructure, which is why the
+    # test below is on the supply channels and the project case is called out.
     required = float(getattr(city, "power_required", -1) or -1)
     if required > 0:
         free = float(getattr(city, "power_free", 0) or 0)

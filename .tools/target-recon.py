@@ -1,10 +1,18 @@
-"""What the Tyre operation needs to know before another tile is marched.
+"""What any target operation needs to know before another tile is marched.
 
-Read-only. Prints the diplomatic state of every met civ (with the war flag and military strength),
-every foreign city we can currently see with its walls and garrison, and the map around the target.
+Read-only, and **takes the target as an argument** - it names no city, no tile and no unit of its
+own, so it is the same tool on a new game and after a rollback. The answer changes; the question
+does not, and a tool with the answer baked into its name or its defaults would be describing a board
+that no longer exists.
 
-    python .tools/tyre-recon.py
-    python .tools/tyre-recon.py --area 26,11 --radius 3
+Prints the diplomatic state of every met civ (with the war flag and military strength), every foreign
+city we can currently see, the map around a tile, the game's own staging plan for a target, and a
+per-unit pathing estimate.
+
+    python .tools/target-recon.py
+    python .tools/target-recon.py --area X,Y --radius 3
+    python .tools/target-recon.py --staging X,Y
+    python .tools/target-recon.py --path UNIT_INDEX:X,Y
 """
 
 from __future__ import annotations

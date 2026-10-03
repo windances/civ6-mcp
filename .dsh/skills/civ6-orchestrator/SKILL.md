@@ -377,9 +377,18 @@ the empire stalls one tile at a time. Read the roles off the save and then hold 
 `housing - pop`, its `food_surplus`, its amenities, or a PILLAGED district. Of those, a pillaged
 **Industrial Zone, Workshop, Factory or Power Plant is not one city's problem**: the power shortage
 it causes is a production penalty across the empire, so it is repaired before anything new is built.
-Measured T291: Xi'an sat on a pillaged Industrial Zone with a pillaged Workshop, Factory and Coal
-Power Plant while the power-shortage warning fired four times and the city queued a project instead - and Xi'an
-is both the science city and the largest single source of research in the empire.
+Measured T291: the empire's **largest single source of research** sat on a pillaged Industrial Zone
+with a pillaged Workshop, Factory and Coal Power Plant while the power-shortage warning fired four
+times and its queue held a project instead of the repair.
+
+**Never carry a city name forward from a previous turn, a previous session, or a note.** Name it
+from the read that is in front of you, every time: `.tools/production-audit.py` ranks every city by
+the production it is losing right now and prints, per city, the queue, the pillaged list, the power
+demand, whether that power is *durable* or only a project, housing against pop, and free district
+slots. A new game, or a rollback of this one, gives every city a different name, a different
+neighbour and a different set of pillaged tiles - and a plan that carries a name forward is a plan
+for a board that no longer exists. The same rule holds for coordinates and for unit ids.
+
 
 **Balance between development and conquest.**
 

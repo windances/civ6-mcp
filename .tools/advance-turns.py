@@ -36,6 +36,7 @@ import asyncio
 import importlib.util
 import json
 import pathlib
+import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -49,6 +50,29 @@ from civ_mcp.game_state import GameState  # noqa: E402
 WAR_ENEMY = 5  # Phoenicia: the civ this operation declared on
 MAX_DRAIN = 6
 MAX_ATTEMPTS_PER_TURN = 4
+
+# `end_turn` states the advance itself: "Turn 293 -> 294 | Score: ...". That statement is the
+# engine's own claim and is not subject to the read staleness below.
+TURN_CLAIM_RE = re.compile(r"Turn\s+(\d+)\s*->\s*(\d+)")
+
+
+async def settled_turn(gs, tries: int = 6, delay: float = 3.0) -> int | None:
+    """The turn number once two consecutive reads agree.
+
+    A single read straight after `end_turn` can still be the **previous** turn - the same
+    turn-boundary staleness the unit list is known for. Measured 2026-10-04: the read after the
+    first `end` still said 293, so the loop believed the turn had not advanced, called `end` again,
+    and the run advanced 293 -> 295 in one verdict (`expected T294, the turn is T295`). Two equal
+    reads is the settled-frame rule this repo already uses for unit positions.
+    """
+    last = None
+    for _ in range(tries):
+        turn = await current_turn(gs)
+        if turn is not None and turn == last:
+            return turn
+        last = turn
+        await asyncio.sleep(delay)
+    return last
 
 
 def _load_verifier():
@@ -152,54 +176,70 @@ async def main() -> int:
     gs = GameState(conn)
     orders = parse_orders(args.march)
 
-    start = await current_turn(gs)
+    start = await settled_turn(gs)
+    if start is None:
+        print("could not read the starting turn")
+        return 1
     target = start + args.turns
     print(f"starting turn: {start}  target: {target}")
     verdicts = []
 
     while True:
-        turn = await current_turn(gs)
+        turn = await settled_turn(gs)
+        if turn is None:
+            print("lost the turn number; stopping")
+            break
         if turn >= target:
             break
 
         advanced = False
+        # These belong to the *game turn*, not to the attempt: an `end` that bounces on a
+        # diplomacy round and is called again is still the same turn, and resetting them per
+        # attempt threw away every reply the turn had produced. Measured: a verdict reported
+        # `bad_writes: []` for a turn whose march had returned three STACKING_CONFLICTs, because
+        # the advance was observed on the attempt *after* the one that marched.
+        turn_replies: list[str] = []
+        turn_log: list[tuple] = []
         for attempt in range(MAX_ATTEMPTS_PER_TURN):
-            before = await current_turn(gs)
-            replies: list[str] = []
-            log: list[tuple] = []
+            before = await settled_turn(gs)
+            if before is None:
+                print("  could not read the turn number")
+                break
 
             if orders and attempt == 0:
                 print(f"  T{before}: march")
-                await march(gs, orders, replies, log)
+                await march(gs, orders, turn_replies, turn_log)
             print(f"  T{before}: drain diplomacy")
-            await drain_diplomacy(gs, replies)
+            await drain_diplomacy(gs, turn_replies)
             print(f"  T{before}: end")
             try:
                 end_text = str(await end_turn_module.execute_end_turn(gs) or "")
             except Exception as exc:  # noqa: BLE001
                 end_text = f"ERR: execute_end_turn raised {type(exc).__name__}: {exc}"
-            replies.append(end_text)
+            turn_replies.append(end_text)
             print("    " + " ".join(end_text.split())[:400])
 
-            after = await current_turn(gs)
-            if after <= before:
+            after = await settled_turn(gs)
+            if after is None or after <= before:
                 continue
 
             # The turn moved, so this is the point at which its quality can be judged.
+            claim = TURN_CLAIM_RE.search(end_text)
+            expected = int(claim.group(2)) if claim else before + 1
             cities, _ = await gs.get_cities()
             positions = {u.unit_index: (u.x, u.y) for u in await gs.get_units()}
             save_name, save_turn = await tv.newest_save_turn()
             march_rows = [
                 (index, start_pos, tgt, positions.get(index, start_pos), reply)
-                for index, start_pos, tgt, reply in log
+                for index, start_pos, tgt, reply in turn_log
             ]
             verdict = tv.verdict_from(
                 turn_before=before,
                 turn_after=after,
-                expected=before + 1,
+                expected=expected,
                 engine_turn=after,
                 cities=cities,
-                replies=replies,
+                replies=turn_replies,
                 end_text=end_text,
                 march=march_rows,
                 save_name=save_name,
@@ -215,7 +255,7 @@ async def main() -> int:
             break
         await asyncio.sleep(2)
 
-    end = await current_turn(gs)
+    end = await settled_turn(gs)
     failed = [v for v in verdicts if not v.ok]
     print(f"final turn: {end}  (asked for {target})")
     print(f"turns verified: {len(verdicts)}  failed: {len(failed)}")
