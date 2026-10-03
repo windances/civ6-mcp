@@ -104,24 +104,6 @@ def data_root(root: pathlib.Path | str | None = None) -> pathlib.Path:
     return base
 
 
-def find_files(pattern: str, root: pathlib.Path | str | None = None) -> list[pathlib.Path]:
-    """Every file matching ``pattern`` in **any** run, plus the root, sorted.
-
-    For the tools that predate the layout and used to glob one flat directory: a report over "all
-    diaries" or "this game's logs" has to look inside every run now. Kept here so those scripts do
-    not each invent a glob, and so the shared root is searched too - a file that was never migrated
-    is still found rather than silently skipped.
-    """
-    base = data_root(root)
-    found: list[pathlib.Path] = []
-    found.extend(sorted(base.glob(pattern)))
-    runs = base / RUNS_DIR
-    if runs.is_dir():
-        for run_dir in sorted(p for p in runs.iterdir() if p.is_dir()):
-            found.extend(sorted(run_dir.glob(pattern)))
-    return found
-
-
 def run_ids(root: pathlib.Path | str | None = None) -> list[str]:
     base = pathlib.Path(
         root
