@@ -19,7 +19,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
 
-from civ_mcp import agent_half, game_launcher, heartbeat, knowledge
+from civ_mcp import agent_half, game_launcher, heartbeat, knowledge, stop_request
 from civ_mcp import strategy_directive
 from civ_mcp.game_over_watchdog import GameOverWatchdog
 from civ_mcp import narrate as nr
@@ -510,6 +510,12 @@ async def _logged(
     # The same fact in the run manifest, and for the same reason: it is what the next session is
     # told about this position, and nothing else in the session path writes it.
     _record_played_turn(turn)
+    # A stop request rides every successful result. The session reads its own tool output, so this is
+    # the one channel that cannot be missed - and the delivery is stamped into the request file here,
+    # which is what lets `scripts/stop-agent.py` tell "not yet told" from "told and did not stop".
+    stop = stop_request.note(turn)
+    if stop:
+        result = f"{result}\n{stop}"
     ms = int((time.monotonic() - start) * 1000)
     log.info(
         "[T%s] %s(%s) OK %dms: %s",

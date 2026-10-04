@@ -140,6 +140,21 @@ the turn is waiting on the human. **`nothing is holding the turn` is the third s
 proof the human has played**: a unit parked by a `skip` looks exactly like one the game's own
 end-of-turn sweep parked, so it means only that no unit on either side can act right now.
 
+**A stop request rides your tool results as well, and honouring it is how you exit.** If the human
+wants the session to stop, `scripts\stop-agent.py` writes `stop-request.json` beside the heartbeat;
+from then on every successful tool result ends with a `STOP REQUESTED|` line, and the file records when
+it reached you, so "told and did not stop" is visible from outside rather than guessed. When you see
+it: finish your own half, then
+
+  * **if nothing is holding the turn**, `end_turn` with the five diary reflections, and stop;
+  * **if the human's units are still holding it**, leave the turn exactly where it is - do not end it
+    and do not order their units - and say in your closing message that this turn's reflections could
+    not be written, because `end_turn` is what writes them.
+
+Either way: start no new turn, and leave a closing report. A request you do not honour is cleaned up
+for you by `scripts\stop-agent.py --wait`, which runs `civ6-clean.ps1 -KeepGame` - and that is a kill,
+so the difference between the two paths is exactly the diary entry and the report.
+
 **`end_turn` will not wait for the human - it discards their turn.** An `ENDTURN_BLOCKING_UNITS`
 blocker is not bounced: `_sweep_unmoved_units` (`src/civ_mcp/end_turn.py`) fortifies combat units and
 skips whatever still has moves, then the turn advances. Any military unit the human has not finished

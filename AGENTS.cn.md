@@ -420,7 +420,7 @@ military unit moving onto its tile destroys it"、Spearmen 是反骑兵的，以
 
 | 其他单位工具 | |
 |--------|--------|
-| `skip_remaining_units` | 跳过所有还有剩余移动力的单位（外交之后有用）。**只要有任何一个单位还有合法攻击，它就拒绝并点名那些单位**——传 `force=True` 来有意放弃它们 |
+| `skip_remaining_units` | 跳过所有还有剩余移动力的单位（外交之后有用）。**只要有任何一个单位还有合法攻击，它就拒绝并点名那些单位**——传 `force=True` 来有意放弃它们。**分工（`-HumanMilitary`）生效期间不要用**：它是全局的，会把人类的单位也一起扫掉——见 Game Recovery |
 | `upgrade_unit(unit_id)` | 升级到下一类型（需要科技 + 资源 + 金币） |
 
 ## 结束回合的阻塞项
@@ -622,7 +622,10 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 **`get_notifications` 会报告此刻是哪一半还占着回合**：每次调用都追加一行 `WHOSE MOVE|`，把"还能行动"
 的单位分成人类的和会话自己的，并把同一份判断写进 run 目录里 `heartbeat.json` 旁边的 `agent-half.txt`
 ——人类就是读这个文件知道自己该动了。`agent working` 表示占着回合的是会话自己的单位，需要它去下单或者
-跳过；`your move` 表示它那半已经做完、回合正在等人类。它会把这套分工追加到启动会话时用的任务文件里。**它所依赖的那个等待不是白来的**：`end_turn` 在还有单位有余力时**并不会**拒绝——`ENDTURN_BLOCKING_UNITS`
+跳过；`your move` 表示它那半已经做完、回合正在等人类。**`nothing is holding the turn` 是第三种状态，它
+并不能证明人类已经走过这一回合**：被 `skip` 停下的单位和被游戏自己的回合结束清扫停下的单位，在游戏里
+长得一模一样，所以它只说明此刻双方都没有单位能行动。它会把这套分工追加到启动会话时用的任务文件里。
+**它所依赖的那个等待不是白来的**：`end_turn` 在还有单位有余力时**并不会**拒绝——`ENDTURN_BLOCKING_UNITS`
 这个阻塞会被 `_sweep_unmoved_units`（`src/civ_mcp/end_turn.py`，第 3613-3643 行）自动解决掉，它会把战斗单位
 设防、把其余单位跳过，于是回合照常推进；一个按分工做完了自己的单位、然后调用 `end_turn` 的会话，
 会**悄无声息地**把人类这边的每一个单位都丢掉。这道闸就是一个等待，而且**信号要问游戏本身**：只要还有任何
@@ -641,6 +644,19 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 （`src/civ_mcp/server.py:290-369` 在整个 lifespan 里只保留一个 `GameConnection`），所以第二个客户端能
 连上、随后就死于 `ConnectionError: GameCore_Tuner/InGame states not found`——这是在有人持续占着连接、
 空闲与忙碌两种状态下都实测过的。两次轮询之间用一个 shell 的 `Start-Sleep` 就行，不花钱也不需要 tuner。
+
+**分工生效期间，`skip_remaining_units` 不是会话该调的东西。** 这个工具是全局的——它会让战斗单位设防、
+把其余一切跳过，人类的单位也在其中——所以会话要逐个给自己的单位下单或 `skip`。2026-10-04 实测：一个会话
+还是调了它（非 force，因为当时没有任何合法攻击），拿回 `FORTIFIED|1 fortified, 2 healing; SKIPPED|12`，
+其中两个是人类单位。`SKILL.md` 里那句"结束前无条件调用它"也带了同样的例外。
+
+**停止请求是一个文件，它经由会话的工具结果送达。** `scripts/stop-agent.py` 会把 `stop-request.json`
+写进 run 目录（就在心跳旁边）；从那一刻起，每一个成功的工具结果都会带上 `STOP REQUESTED|` 这一行，而
+MCP 会在第一次送出时把 `delivered_at` 与 `delivered_turn` 记进该文件——于是"已经告诉过它、它却没停"
+是外面读得到的事实，而不是猜测。会话要做完自己那半，然后**只有在无人在占着回合时**才 `end_turn` 并写入
+日记；如果人类的单位还占着回合，就把回合原样留着、不开始新回合，并写一份收尾报告。没有被执行的请求由
+`scripts/stop-agent.py --wait N` 兜底清理，它跑的是 `civ6-clean.ps1 -KeepGame`——那次 kill 是请求下面的
+地板，不是计划本身。
 
 **其余一切都在 `docs/game-recovery.md`**——那两种恢复陷阱、跨回滚分支的 `0_MCP_NNNN` 文件名冲突、
 `AutoSave_NNNN` 偏移、`orient.py`、`turn-of-save.py`、`auto-turns.py`、按名字加载、挂起恢复和存档

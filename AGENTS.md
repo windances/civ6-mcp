@@ -482,7 +482,7 @@ engineer per turn.
 
 | Other unit tools | |
 |--------|--------|
-| `skip_remaining_units` | Skip all units with remaining moves (useful after diplomacy). **Refuses and names the units while any has a legal attack** - pass `force=True` to discard them deliberately |
+| `skip_remaining_units` | Skip all units with remaining moves (useful after diplomacy). **Refuses and names the units while any has a legal attack** - pass `force=True` to discard them deliberately. **Not while `-HumanMilitary` is in force**: the tool is empire-wide, so it sweeps the human's units too - see Game Recovery |
 | `upgrade_unit(unit_id)` | Upgrade to next type (requires tech + resources + gold) |
 
 ## End Turn Blockers
@@ -705,15 +705,18 @@ the session's task from the facts it just read.
 **`-HumanMilitary` splits the command of the match**, and it is the human's switch to throw: the
 human commands the military units, the Great Generals and the Great Admirals, and the session owns
 every other unit - the Great Scientists and the Great Merchants included - together with the cities,
-the economy, the wonders and the research. **The order inside a turn is fixed: the session moves
-first**, ordering every unit and every city queue it owns, and the human commands their half
+the economy, the wonders and the research. It appends that division to the task the session is
+launched with. **The order inside a turn is fixed: the session moves first**, ordering every unit and
+every city queue it owns, and the human commands their half
 afterwards - so the units blocker being up as a turn opens is not a reason to wait before doing the
 session's own work. **`get_notifications` reports whose half is still holding the turn**: every call
 appends a `WHOSE MOVE|` line that splits the units which can still act into the human's and the
 session's own, and writes the same split to `agent-half.txt` in the run directory beside
 `heartbeat.json`, which is what the human reads to know it is their move. `agent working` means the
 units holding the turn are the session's own to order or skip; `your move` means its half is done and
-the turn is waiting on the human. It appends that division to the task the session is launched with.
+the turn is waiting on the human. **`nothing is holding the turn` is the third state, and it is not
+proof the human has played**: a unit parked by a `skip` and one parked by the game's own end-of-turn
+sweep look identical, so it says only that no unit on either side can act right now.
 **The wait it depends on is not free**: `end_turn` does not
 refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units
@@ -737,6 +740,23 @@ FireTuner serves one client and the session's own MCP server holds it (one `Game
 `src/civ_mcp/server.py`, held for the whole lifespan, lines 290-369), so a second client connects and
 then dies with `ConnectionError: GameCore_Tuner/InGame states not found` - measured with a connection
 held open, idle and busy. Between polls a shell `Start-Sleep` costs nothing and needs no tuner.
+
+**`skip_remaining_units` is not the session's to call while the division is in force.** The tool is
+empire-wide - it fortifies combat units and skips everything else, the human's units included - so the
+session orders and `skip`s its own units one at a time. Measured 2026-10-04: a session that called it
+anyway (non-force, because nothing had a legal attack) got back `FORTIFIED|1 fortified, 2 healing;
+SKIPPED|12`, and two of the twelve were the human's. `SKILL.md`'s "call it unconditionally before
+ending" carries the same carve-out.
+
+**A stop request is a file, and it arrives in the session's tool results.** `scripts/stop-agent.py`
+writes `stop-request.json` into the run directory beside the heartbeat; from then on every successful
+tool result carries a `STOP REQUESTED|` line, and the MCP stamps `delivered_at` and `delivered_turn`
+into the file the first time it sends one - so "told and did not stop" is readable from outside rather
+than guessed. The session finishes its own half, then `end_turn`s with the diary **only if nothing is
+holding the turn**; if the human's units still hold it, it leaves the turn exactly where it is, starts
+no new turn, and writes a closing report. A request left unhonoured is cleaned up by
+`scripts/stop-agent.py --wait N`, which runs `civ6-clean.ps1 -KeepGame` - that kill is the floor under
+the request, not the plan.
 
 **Everything else is `docs/game-recovery.md`** - the two recovery traps, the `0_MCP_NNNN` name
 collisions across rolled-back branches, the `AutoSave_NNNN` offset, `orient.py`, `turn-of-save.py`,

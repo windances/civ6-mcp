@@ -125,10 +125,14 @@ scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback]
 
 python scripts\handoff.py [--json] [--task <path>]
 scripts\civ6-clean.ps1 [-DryRun] [-KeepGame] [-Force] [-PID N] [-TunerPort N] [-WebGuiPort N]
+scripts\stop-agent.py [--status | --cancel] [--wait N] [--no-clean] [--note "..."]
 scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
 ```
 
 `civ6-clean.ps1` counts a stale heartbeat under `runs/` as "not settled", not just the root one.
+`stop-agent.py` asks a running session to stop the gentle way - it writes the request file the session
+reads in its tool results, records when the request reached it, and falls back to
+`civ6-clean.ps1 -KeepGame` when it is not honoured.
 
 ## Tasks and document gates
 
@@ -201,6 +205,7 @@ python scripts\analyze.py <subcommand> [--game-id ...] [--model ...] [...]
 | `bootstrap.ps1` / `bootstrap.sh` | offline | one-time environment setup |
 | `build-loc-names.py` | offline | build the localization table from the game install |
 | `civ6-clean.ps1` | offline | stop the game, the tuner listener and stale heartbeats |
+| `stop-agent.py` | offline | ask a running session to stop, and clean up if it will not |
 | `civbench_data.py` | offline | data access library for notebooks and collaborators |
 | `convex_sync.py` | offline | sync JSONL telemetry to Convex |
 | `dump-dsh-config.sh` | offline | print the DSH overlay configuration |
