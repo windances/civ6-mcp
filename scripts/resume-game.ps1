@@ -38,8 +38,8 @@ param(
     # forward, which is the one scenario that cannot be computed from the facts.
     [switch] $Rollback,
     [string] $TaskPath = ".civ6-mcp-data\resume-task.en.txt",
-    # The human commands the military units and the Great Generals; the session owns everything
-    # else. Appends the division to the generated task - see the block further down.
+    # The human commands the military units, the Great Generals and the Great Admirals; the session
+    # owns everything else. Appends the division to the generated task - see the block further down.
     [switch] $HumanMilitary
 )
 
@@ -84,8 +84,8 @@ function Show-Verdict($state) {
 }
 
 function Add-DivisionOfLabour($TaskPath) {
-    # The human commands the military units and the Great Generals; the session owns every other
-    # unit, and the cities, the economy, the wonders and the research.
+    # The human commands the military units, the Great Generals and the Great Admirals; the session
+    # owns every other unit, and the cities, the economy, the wonders and the research.
     #
     # This is a task and not a rule, so it is the weakest rung of the enforcement ladder in
     # `docs/military-strategy-coverage.md`. Nothing mechanically stops a session that ignores it.
@@ -139,12 +139,14 @@ while any unit still has moves the game raises
 
 and it drops that entry the moment the turn can end. **That entry is the test** - when it is gone, the
 turn can end, so call `end_turn`. While it is there, wait, and re-read; between reads a shell
-`Start-Sleep -Seconds 30` costs nothing and needs no tuner. Re-reading `get_units` is still worth doing
-to see *which* units are left, but it must not be the test: a unit parked by a `skip`
-(`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an operation all keep
-their movement for the rest of the turn and across turns while being unable to act, so a movement count
-waits on units the human has already dealt with (measured: 10 military units had movement and 9 of them
-could not act).
+`Start-Sleep -Seconds 30` costs nothing and needs no tuner. Re-reading `get_units` is still worth doing,
+because that entry covers the human's units **and yours**, and the two need opposite answers: the
+human's is waited for, and one of yours is yours to order. `get_units` now marks the units that cannot
+act - `[HOLD]` (a `skip`, `ACTIVITY_HOLD`), `[SENTRY]` (`alert`, `ACTIVITY_SENTRY`), `[OPERATION]` (a
+route or an improvement), `[fortified n]`, `[cannot act]` - and prints the engine's own `ready_to_move`,
+so a unit holding movement is not by itself a unit with something to do. Measured on turn 346: 39 units
+held movement and only 14 could still act, so a movement count waits on units that are already
+finished.
 
 **Do not use `UI.CanEndTurn()` as the test.** It is true *while* the units blocker is up - measured on
 turn 337, three consecutive reads all read `CANEND|true` with `ENDTURN_BLOCKING_UNITS` raised - because
