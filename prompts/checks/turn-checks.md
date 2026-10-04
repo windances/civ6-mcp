@@ -340,6 +340,31 @@ require: metric(gold_per_turn) >= 10
 message: gold/turn is below +10 with the army counted. The directive's ceiling is measurable: military 596 at -0.1 gold/turn is not stronger than 156 at +19.8, it is slower.
 -->
 
+## Spending the Great People we own
+
+Human instruction 2026-10-04: the Great Scientists and the Great Merchants are the agent's, like
+every other unit that is not a military unit, a Great General or a Great Admiral.
+
+`units()` counts the live unit list, so "is one of ours still unspent?" needs no new metric - but it
+is a **proxy**, and the honest reading of it is narrower than it looks: it cannot tell an *activated*
+Great Person from a *deleted* one, and nothing in the engine can. The message therefore names
+deletion as the failure mode, and a Great Person who genuinely cannot be placed belongs in the diary,
+not in a deletion.
+
+**The second term of `require` is a read gate, not a condition about builders.** An empty unit list is
+missing data, not an army of zero (`src/civ_mcp/end_turn.py:1150-1160`: the engine falls back to the
+diary row's composition and otherwise logs `no unit list available ... at all`). A `once: true` goal
+that trusted it would record itself achieved on the turn a snapshot read failed, be pruned from this
+file and restored only under a new id - a false achievement is permanent, which is why this goal waits
+for evidence that the list it is reading is real.
+
+<!-- check
+id: use-the-great-scientist
+require: units(GREAT_SCIENTIST) == 0 and units(BUILDER, TRADER, SETTLER) > 0
+message: A Great Scientist of ours still holds her charge. The game names the requirement when she is asked to activate: a city that holds an Artifact. Walk her to one and activate her there. Deleting her clears this line as well and is the one outcome that wastes her - if she cannot be placed, say so in the diary instead. The two Great Merchants are the same question behind a harder door (their activation tile belongs to a city-state) and they are not a goal here for the reason above: their metric would be satisfied by deleting them.
+once: true
+-->
+
 ## Per-turn habits
 
 Deliberately empty of trade routes: `end_turn`'s own empire warnings already report
