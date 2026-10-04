@@ -723,7 +723,13 @@ true while the blocker is still up (measured on turn 337). **A unit with movemen
 too**: when the engine reports a unit as not ready to move while its activity is unset and it is not
 fortified, neither side's work list covers it, so the report lists it under the session's own - the
 measured case is a builder standing on an antiquity site, which a builder cannot work and which the
-builder-task list used to propose as `build UNKNOWN`.
+builder-task list used to propose as `build UNKNOWN`. **A unit under a whole movement point is judged as
+skipped** (human instruction 2026-10-04): a fraction of a point buys no tile, so it sits in neither
+half's list and does not hold the turn open - the rule is `MIN_MOVES_TO_ACT` in
+`src/civ_mcp/agent_half.py`, and it is measured on this match, where a Mechanized Infantry at 0.2
+moves kept the report answering `YOUR MOVE` after the game's own units blocker had already dropped. A
+unit below one point that still has a legal attack is not silently lost: `end_turn`'s `UNUSED ATTACK`
+guard is a separate check and bounces the turn.
 **The wait it depends on is not free**: `end_turn` does not
 refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units
@@ -787,6 +793,7 @@ five minutes (measured 2026-09-30). `.tools/click-continue.py` without `--click`
 wait", held longer than that, is not waited out. `end_turn` waits at most `AI_TURN_STALL_REPORT_S`
 (120 s) and then answers `HANG:<turn>:<save>| ... Waited <n>s ... it needs a restart`, and the MCP no
 longer kills and relaunches the game itself - a reload throws away everything the running turn has
-already done (measured T354), and `CIV_MCP_HANG_SELF_RESTART=1` is the only way back to that. So on a
+already done (measured on this match: the reload reset a whole turn's work), and
+`CIV_MCP_HANG_SELF_RESTART=1` is the only way back to that. So on a
 `HANG`: finish nothing new, stop the session with `scripts\stop-agent.py` (the human restarts the game),
 and resume from the save the message names.

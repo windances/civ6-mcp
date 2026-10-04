@@ -45,6 +45,18 @@ REPORT_NAME = "agent-half.txt"
 #: off the screen. The count is always stated, so nothing is hidden by the cap.
 MAX_ROWS = 20
 
+#: Less than a whole movement point buys no tile, so a unit holding a fraction of one is **judged as
+#: if it had been skipped** (human instruction 2026-10-04: 对于不足1行动力的，直接判定为skip - a unit
+#: below one movement point is simply judged as skipped). It is then in neither side's work list and
+#: no longer holds the turn open.
+#:
+#: Measured T352: `UNIT_MECHANIZED_INFANTRY` id 10420260 at (20,32) read `moves 0.2/4`, activity
+#: empty, `ready_to_move` **true** - the game had already dropped the units blocker for it, and this
+#: report was still saying `YOUR MOVE` and holding the turn on a unit that could not enter a tile.
+#: The blunt rule is the human's; a unit that can still *attack* is protected by a different check,
+#: `end_turn`'s `UNUSED ATTACK` guard, which bounces the turn instead of discarding the attack.
+MIN_MOVES_TO_ACT = 1.0
+
 #: One line, in the same InGame context as everything else read here (`get_units` and the
 #: notifications query both go through `execute_write`; `Game.GetCurrentGameTurn()` is happy in
 #: either, and reading it here costs one round trip on a call that is already making one).
@@ -75,8 +87,11 @@ def can_still_act(unit: Any) -> bool:
     the turn *and across turns* while being unable to act - measured on the live match, 10 military
     units had movement and 9 of them could not act, so a count of movement waits on units that are
     already finished. `ready_to_move` is the engine's own answer, and it is the one used here.
+
+    Below `MIN_MOVES_TO_ACT` the answer is no whatever the engine says: a fraction of a movement
+    point cannot pay for a tile, so the unit is judged as skipped (human instruction 2026-10-04).
     """
-    if (getattr(unit, "moves_remaining", 0) or 0) <= 0:
+    if (getattr(unit, "moves_remaining", 0) or 0) < MIN_MOVES_TO_ACT:
         return False
     if not str(getattr(unit, "activity", "") or ""):
         return True
@@ -90,7 +105,7 @@ def split(units: Iterable[Any]) -> tuple[list[Any], list[Any]]:
 
 
 def unclaimed(unit: Any) -> bool:
-    """Has movement, is not parked or busy, and the engine still says it is not ready to move.
+    """Has a whole movement point, is not parked or busy, and the engine says it is not ready to move.
 
     This is the case no list covered. `can_still_act` is false for it, so it is in neither side's work
     in the whose-move split, and it raises no units blocker - a unit with a job and no owner. Measured
@@ -102,9 +117,12 @@ def unclaimed(unit: Any) -> bool:
     The predicate reports the *reading*, not a diagnosis: the engine's own `IsReadyToMove()` plus "not
     parked, not busy" is what is known. A unit like this is either somewhere it cannot work - so it
     needs moving - or it is waiting to be told, and in both cases somebody has to decide.
+
+    Below `MIN_MOVES_TO_ACT` there is no such question to ask: the unit is judged as skipped, so it is
+    not claimed here either (human instruction 2026-10-04).
     """
-    if (getattr(unit, "moves_remaining", 0) or 0) <= 0:
-        return False
+    if (getattr(unit, "moves_remaining", 0) or 0) < MIN_MOVES_TO_ACT:
+        return False  # under a whole movement point: judged as skipped, so nothing to claim
     if str(getattr(unit, "activity", "") or ""):
         return False  # parked (HOLD), asleep (SLEEP) or running an operation: not this case
     if getattr(unit, "fortify_turns", 0):

@@ -181,6 +181,11 @@ so a unit holding movement is not by itself a unit with something to do. Measure
 held movement and only 14 could still act, so a movement count waits on units that are already
 finished.
 
+**A unit under a whole movement point is judged as skipped** (human instruction 2026-10-04): a fraction
+of a point buys no tile, so it is in neither half's list and does not hold the turn open. Measured T352,
+a `UNIT_MECHANIZED_INFANTRY` at 0.2 moves kept the report saying `YOUR MOVE` after the game's own units
+blocker had already dropped - the fraction is the whole reason it looked like somebody's pending work.
+
 **Do not use `UI.CanEndTurn()` as the test.** It is true *while* the units blocker is up - measured on
 turn 337, three consecutive reads all read `CANEND|true` with `ENDTURN_BLOCKING_UNITS` raised - because
 it means "the End Turn button is pressable", not "no unit has moves". The MCP's own `end_turn` depends

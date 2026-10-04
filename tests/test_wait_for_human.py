@@ -173,8 +173,10 @@ def test_the_live_ten_unit_reading_lists_one_unit_not_ten() -> None:
              activity="ACTIVITY_HOLD"),
     ]
     assert sum(1 for u in units if u.moves_remaining > 0) == 10, "the old, wrong predicate"
-    waiting = holding(units)
-    assert [u.unit_type for u in waiting] == ["UNIT_SPEC_OPS"]
+    # The SPEC OPS with 0.5 moves used to be the one listed unit. Since 2026-10-04 a unit below a
+    # whole movement point is judged as skipped (human instruction: 对于不足1行动力的，直接判定为skip),
+    # so this live reading now lists nobody - and the reading is the one that held a real turn open.
+    assert holding(units) == []
 
 
 def test_a_unit_that_can_still_act_is_listed() -> None:

@@ -205,6 +205,38 @@ def test_the_summary_tells_the_session_to_end_the_turn() -> None:
     assert "end_turn with the diary" in line
 
 
+# --- under a whole movement point is judged as skipped --------------------------------------------
+
+
+def test_a_fraction_of_a_movement_point_is_judged_as_skipped() -> None:
+    """Human instruction 2026-10-04: 对于不足1行动力的，直接判定为skip.
+
+    Measured T352: `UNIT_MECHANIZED_INFANTRY` id 10420260 at (20,32) read `moves 0.2/4` with an empty
+    activity and `ready_to_move` true, and the game's units blocker was already down for it - while
+    this report still answered `YOUR MOVE` and held the turn open. A fraction of a point buys no tile.
+    """
+    stuck = armor(moves_remaining=0.2, ready_to_move=True, activity="")
+    assert agent_half.can_still_act(stuck) is False
+    assert agent_half.unclaimed(stuck) is False, "not claimed by the other list either"
+    assert agent_half.split([stuck]) == ([], [])
+    assert agent_half.verdict(*agent_half.split([stuck])) == "turn can end"
+
+    for moves in (0.01, 0.5, 0.75, 0.99):
+        assert agent_half.can_still_act(armor(moves_remaining=moves, ready_to_move=True)) is False, (
+            f"{moves} movement buys no tile, so the unit is judged as skipped"
+        )
+    text = agent_half.render(352, [stuck], when=0)
+    assert text.startswith("T352  READY TO END")
+    assert "UNIT_MECHANIZED_INFANTRY" not in text, "a skipped unit is not the human's pending work"
+    assert agent_half.summary(352, [stuck]).startswith("WHOSE MOVE|ready to end|")
+
+
+def test_one_whole_movement_point_can_still_act() -> None:
+    """Exactly 1.0 pays for a flat tile, so the rule is < 1 and not <= 1."""
+    assert agent_half.can_still_act(armor(moves_remaining=1.0, ready_to_move=True)) is True
+    assert agent_half.can_still_act(builder(moves_remaining=1.0, ready_to_move=True)) is True
+
+
 # --- the unit nobody's work list covers -----------------------------------------------------------
 
 
