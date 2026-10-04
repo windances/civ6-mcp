@@ -215,6 +215,23 @@ def narrate_units(
         upgrade_flag = ""
         if u.can_upgrade:
             upgrade_flag = f" **CAN UPGRADE to {u.upgrade_target} ({u.upgrade_cost}g)**"
+        # What the unit is doing, when that is not "waiting for an order". `activity`,
+        # `fortify_turns` and `ready_to_move` exist for exactly this (`units.py:224-228`: without
+        # them "a sleeping unit is indistinguishable from a unit nobody has ordered yet"), and
+        # until now nothing outside `.tools/sleeping-units.py` read them - the roster printed
+        # neither, so the one question they answer ("why is this unit not moving?") could not be
+        # answered from `get_units` at all. Printed only when they differ from the default, the way
+        # `charges` and the HP flag already are, so a healthy roster stays quiet.
+        dormant_flag = ""
+        activity_name = (u.activity or "").replace("ACTIVITY_", "")
+        if activity_name and activity_name != "AWAKE":
+            dormant_flag += f" [{activity_name}]"
+        if u.fortify_turns:
+            dormant_flag += f" [fortified {u.fortify_turns}]"
+        # Having moves and still being unable to act is the interesting case; a unit with no moves
+        # already says so, and flagging both would double up.
+        if not u.ready_to_move and u.moves_remaining > 0:
+            dormant_flag += " [cannot act]"
         moves_disp = (
             f"{int(u.moves_remaining)}/{int(u.max_moves)}"
             if u.moves_remaining == int(u.moves_remaining)
@@ -223,7 +240,7 @@ def narrate_units(
         lines.append(
             f"  {u.name} ({u.unit_type}) at ({u.x},{u.y}) —{strength} "
             f"moves {moves_disp}{charges}{religion_flag}{status}{route_flag}{promo_flag}{upgrade_flag}"
-            f"{city_flag} "
+            f"{dormant_flag}{city_flag} "
             f"[id:{u.unit_id}, idx:{u.unit_index}]"
         )
         if u.targets:
