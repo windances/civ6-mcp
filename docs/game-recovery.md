@@ -231,17 +231,19 @@ opposite, the same loaded position played on with no memory of how it got there,
   session with `resume-game.ps1 -Wait`.
 
 **Why a note is re-armed rather than simply deleted.** The check file's contract, and the suite that
-holds it, is that a retired goal is **either live or traceable**: `test_every_retirement_trace_still_resolves_to_its_archived_block` asserts the traces are not empty, and `..._wonder_obligation_is_live_or_recoverable` asserts the wonder goal is live or recoverable. So "the achieved note goes" has to mean "the rule is live again" - which is also the plain reading of the human's instruction (the note goes, the rule body stays). Measured 2026-10-05: stripping the two notes without re-arming turned seven tests red (the two above, the ram-tower pair that reads the restored file, and three that read the shipped file for a goal to achieve).
+holds it, is that a retired goal is **either live or traceable**: `test_every_retirement_trace_still_resolves_to_its_archived_block` asserts the traces are not empty, and `..._wonder_obligation_is_live_or_recoverable` asserts the wonder goal is live or recoverable. So "the achieved note goes" has to mean "the rule is live again" - which is also the plain reading of the human's instruction (the note goes, the rule body stays). Measured 2026-10-05: stripping the two notes without re-arming turned seven tests red (the two above, the ram-tower pair that reads the restored file, and three that read the shipped file for a goal to achieve). One consequence is worth naming: after a fresh start the file can hold **no trace at all** - every goal this match retired is live again - and that first guard is a `pytest.skip` for exactly that state, so a real orphan is still caught while a correct empty file is not reported as a failure.
 
 Measured 2026-10-05: a rollback to T352 had left the session waiting on one 0.2-movement unit, and the
 fresh start cleared the diary (turns 1..287 in the run copy, 289..354 in the legacy root one), removed
 two achieved notes and re-armed their rule bodies - one note keyed to this match, one un-keyed, and an
 un-keyed note counts as this match's exactly as `turn_checks.restore_foreign_games` reads it - and left
-the three temporary tasks in force. Two defects were found by doing it: the first version flattened the
-backup, so two same-named diary files collided and only the last survived (the backup now mirrors the
-tree, and a test pins it); and its test suite called `main()` with no argument, so a test run forgot
-the real match's memory instead of a temporary copy's (`main()` takes its root now, and a test pins
-that too). The diary segments it removed are still recoverable: the copy taken before the run is in
-`branches\fresh-start-20261005-001335\files\`, and older archives
+the three temporary tasks in force. The first real run, on the deliberate `fresh-start.py 352 --apply`,
+found one note left and re-armed it (`dynasty-cycle-wonder`), reset the manifest to T352, and left the
+check file with no trace at all - the state the skip above covers. Two defects were found while building
+it: the first version flattened the backup, so two same-named diary files collided and only the last
+survived (the backup now mirrors the tree, and a test pins it); and its test suite called `main()` with
+no argument, so a test run forgot the real match's memory instead of a temporary copy's (`main()` takes
+its root now, and a test pins that too). The diary segments it removed are still recoverable: the copy
+taken before each run is in `branches\fresh-start-<stamp>\files\`, and older archives
 (`branches\abandoned-*\backup-*\diary_china_-1894041591.jsonl`) hold the match's diary as it stood on
 2026-09-20 through 2026-09-28.
