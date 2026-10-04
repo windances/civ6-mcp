@@ -125,14 +125,21 @@ with is fortified where it stands. There is one exception and it is not a safety
 attack happens to be pending.
 
 **So the wait is yours to enforce, and it comes before `end_turn`, not after.** Once every unit you own
-is ordered, run
+is ordered, **poll your own `get_units`** and call `end_turn` only when no military unit, Great General
+or Great Admiral **can still act**. A unit counts as the human's while `ready_to_move` is true and it
+has movement left; the activity is the test and a raw movement count is not, because a unit parked by a
+`skip` (`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep (`ACTIVITY_SLEEP`) and one
+running an operation keep their movement for the rest of the turn and across turns while being unable
+to act. Between polls, sleep - a shell `Start-Sleep -Seconds 30` costs nothing and needs no tuner.
+The human closes their half by ordering, skipping or alerting what they mean to leave alone; a unit
+nobody touches stays awake and movable, and you wait on it rather than deciding for them.
 
-    python .tools/wait-for-human.py
-
-which polls `get_units` and returns when no military unit, Great General or Great Admiral **can still
-act** - the engine's own `IsReadyToMove()`, not a movement count. A unit the human parks with `skip`,
-`fortify` or `alert` stops counting the moment they do it; a unit left untouched and awake does not,
-and the tool waits on it rather than deciding for them. Only then call `end_turn`.
+**Do not try to run the wait as a script.** `.tools/wait-for-human.py` exists for the human and for an
+observer, and it **cannot** run inside your session: FireTuner serves one client and your own MCP
+server holds it, so a second client connects and then dies with `ConnectionError:
+GameCore_Tuner/InGame states not found` (measured, with a connection held open in both an idle and a
+busy state). Reading `get_units` through your own tools is the only view you have of the game, and it is
+the one that works.
 
 **Never call `skip_remaining_units(force=True)`, and never call `end_turn` early to get past this.**
 Both discard exactly the movement the human is using - `end_turn` does it silently, which is worse.

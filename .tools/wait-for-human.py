@@ -31,6 +31,15 @@ activity is the test and a raw movement count is not.
 
 Read-only: it orders nothing at all. It exists so that a session under the division of labour has a
 defined place to stop, rather than filling the gap with moves the human did not ask for.
+
+**It cannot be run by the session that is playing.** FireTuner serves one client, and a live
+session's own MCP server holds that client for the length of the session
+(`src/civ_mcp/server.py:290-369` keeps one `GameConnection` for the lifespan). A second client
+connects and then dies - measured with a connection deliberately held open, in both an idle and a
+busy state: `ConnectionError: GameCore_Tuner/InGame states not found. Make sure a game is in
+progress (not at the main menu)`. The session is told to poll its **own** `get_units` instead; this
+script is for the human, or for an observer with no session attached. It exits 2, with that
+explanation, when the tuner refuses it.
 """
 
 from __future__ import annotations
@@ -96,11 +105,23 @@ async def main() -> int:
     conn = GameConnection()
     try:
         await conn.connect()
-    except Exception as exc:  # noqa: BLE001
-        print(f"could not connect to FireTuner: {exc}")
-        return 1
-    gs = GameState(conn)
+        return await _wait(conn, GameState(conn), args)
+    except ConnectionError as exc:
+        # On a connection refused because a game is not running, `connect()` itself is usually what
+        # raises; when another client holds the tuner the connect succeeds and the first *read*
+        # raises instead, so the guard has to cover the whole wait and not just the connect.
+        print(f"the tuner refused this client: {exc}")
+        print(
+            "FireTuner serves one client at a time, and a playing session's own MCP server holds it\n"
+            "for the whole session. Run this only when no session is attached - a session that must\n"
+            "wait for the human has to poll its own get_units, not call this script."
+        )
+        return 2
+    finally:
+        await conn.disconnect()
 
+
+async def _wait(conn, gs, args) -> int:
     deadline = time.time() + args.timeout
     last_sig = None
     while True:
@@ -109,7 +130,6 @@ async def main() -> int:
             print(
                 "the human's half is done: no military unit, great general or admiral can still act"
             )
-            await conn.disconnect()
             return 0
 
         # Print the list when it changes and keep quiet while it does not, so a 30 minute wait is a
@@ -132,11 +152,9 @@ async def main() -> int:
 
         if args.once:
             print("--once: reporting only, not waiting")
-            await conn.disconnect()
             return 1
         if time.time() >= deadline:
             print(f"timed out after {args.timeout}s with {len(waiting)} unit(s) still able to act")
-            await conn.disconnect()
             return 1
         await asyncio.sleep(args.interval)
 

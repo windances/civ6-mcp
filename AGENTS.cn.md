@@ -620,11 +620,15 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 文件里。**它所依赖的那个等待不是白来的**：`end_turn` 在还有单位有余力时**并不会**拒绝——`ENDTURN_BLOCKING_UNITS`
 这个阻塞会被 `_sweep_unmoved_units`（`src/civ_mcp/end_turn.py`，第 3613-3643 行）自动解决掉，它会把战斗单位
 设防、把其余单位跳过，于是回合照常推进；一个按分工做完了自己的单位、然后调用 `end_turn` 的会话，
-会**悄无声息地**把人类这边的每一个单位都丢掉。`.tools/wait-for-human.py` 就是那道闸：它轮询
-`get_units`，直到没有任何军事单位、大军事家或大海军统帅**还能行动**才返回——判据是引擎自己的
+会**悄无声息地**把人类这边的每一个单位都丢掉。这道闸就是一个等待，而且**要靠会话自己轮询 `get_units`**：
+只要还有任何军事单位、大军事家或大海军统帅**还能行动**，就绝不能调 `end_turn`——判据是引擎自己的
 `IsReadyToMove()`（读作 `ready_to_move`），**刻意不用移动力判断**，因为被 `skip` 停下的单位
-（`ACTIVITY_HOLD`）、处于 `alert` 的单位（`ACTIVITY_SENTRY`）以及正在执行操作的单位，整个回合乃至跨回合
-都保留着移动力，却已经无法行动。它在 `end_turn` **之前**跑，只读，只要还有单位能行动就以非零退出。
+（`ACTIVITY_HOLD`）、处于 `alert` 的单位（`ACTIVITY_SENTRY`）、休眠的单位以及正在执行操作的单位，
+整个回合乃至跨回合都保留着移动力，却已经无法行动。**`.tools/wait-for-human.py` 是给人类或旁观者用的，
+不是给会话用的**：FireTuner 只服务一个客户端，而会话自己的 MCP server 一直占着它
+（`src/civ_mcp/server.py:290-369` 在整个 lifespan 里只保留一个 `GameConnection`），所以第二个客户端能
+连上、随后就死于 `ConnectionError: GameCore_Tuner/InGame states not found`——这是在有人持续占着连接、
+空闲与忙碌两种状态下都实测过的。两次轮询之间用一个 shell 的 `Start-Sleep` 就行，不花钱也不需要 tuner。
 
 **其余一切都在 `docs/game-recovery.md`**——那两种恢复陷阱、跨回滚分支的 `0_MCP_NNNN` 文件名冲突、
 `AutoSave_NNNN` 偏移、`orient.py`、`turn-of-save.py`、`auto-turns.py`、按名字加载、挂起恢复和存档
