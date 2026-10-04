@@ -203,13 +203,17 @@ if ($index.ok) {
 
 $stateFiles = @()
 if (Test-Path $heartbeat) {
-    # Every playthrough keeps its own heartbeat under runs/, so cleaning the root one is not
-# enough to call the machine settled - a stale run heartbeat means a run that no longer
-# exists. The root copy is kept for the pre-runs layout.
-$stateFiles += $heartbeat
+    $stateFiles += $heartbeat
+}
+# Every playthrough keeps its own heartbeat under runs/, and the root copy is only the pre-runs
+# layout: the run-scoped files are collected **whatever the root one says**. Gating this on
+# `Test-Path $heartbeat` meant the current layout - which has only the run-scoped file - skipped the
+# whole branch, so a cleanup left `phase: playing, turn: N` naming a pid that was already gone,
+# which is exactly the state this script exists to remove (measured 2026-10-04: the dry run printed
+# `heartbeat none (already clean)` with a live run heartbeat on disk, and the handoff check then
+# refused to hand over because that file said a session was playing).
 $runHeartbeats = @(Get-ChildItem -Path (Join-Path $dataDir 'runs') -Filter 'heartbeat.json' -Recurse -File -ErrorAction SilentlyContinue)
 $stateFiles += ($runHeartbeats | ForEach-Object { $_.FullName })
-}
 
 Say ''
 Say 'state'
@@ -291,7 +295,10 @@ while ($true) {
         ((Get-Cmdline $_.Id) -match 'civ_mcp|civ6-mcp' -or $after.established.ContainsKey($_.Id))
     })
 
-    $settled = ($KeepGame -or $stillGame.Count -eq 0) -and $stillMcp.Count -eq 0 -and -not (Test-Path $heartbeat)
+    # The documented rule (`scripts/README.md`: "counts a stale heartbeat under `runs/` as not
+    # settled, not just the root one") - so the test is every heartbeat this cleanup knows about.
+    $stillPresent = @($stateFiles | Where-Object { Test-Path $_ })
+    $settled = ($KeepGame -or $stillGame.Count -eq 0) -and $stillMcp.Count -eq 0 -and $stillPresent.Count -eq 0
     if ($settled -or (Get-Date) -ge $deadline) { break }
     Start-Sleep -Milliseconds 500
 }
@@ -308,7 +315,7 @@ foreach ($port in $TunerPort) {
     }
 }
 if ($stillMcp.Count -gt 0) { $leftover += "mcp still running: $($stillMcp.Id -join ', ')" }
-if (Test-Path $heartbeat) { $leftover += 'heartbeat.json still present' }
+if ($stillPresent.Count -gt 0) { $leftover += "heartbeat still present: $($stillPresent -join ', ')" }
 
 if ($leftover.Count -eq 0) {
     Say '  clean: no game, no tuner listener, no mcp, no heartbeat' 'Green'
