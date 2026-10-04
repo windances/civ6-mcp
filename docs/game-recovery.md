@@ -206,3 +206,42 @@ limit, and past that point it does not recover by waiting: it needs a restart.`
 - **What the diagnosis file holds** is unchanged (`hang_diagnosis.jsonl`: window rect, focus,
   foreground window, first OCR lines), and with the self-restart off it is now the *only* thing that
   touches the game on a stall - which is the point: the evidence survives.
+
+**A rollback can also be taken as a fresh start (2026-10-05).** `rollback-to-turn.py` deliberately
+*restores the past* - the diary up to the boundary, the tasks already in force, the rules met before
+it - because that history is what makes the replayed turns make sense. When the human wants the
+opposite, the same loaded position played on with no memory of how it got there, that is
+`scripts\fresh-start.py <turn>`:
+
+- it forgets this match's diary (the run's copy **and** the legacy root copy under `.civ6-mcp-data\`),
+  the achieved-goal state (`runs\<run>\turn-checks-state.json` and the legacy root one), the run's
+  session scratch (`heartbeat.json`, `agent-half.txt`, `stop-request.json`), and the `achieved T...`
+  notes in `prompts/checks/turn-checks.md` **that belong to this match** - and for each note it puts
+  the rule body back from `prompts/checks/archive/`;
+- it resets the manifest's played-to turn to the turn being resumed at, so the handoff banner and the
+  turn-regression check start from there;
+- it **keeps** every rule body (the re-armed ones included), the notes keyed to *another* match (the
+  check file is shared by every match in this checkout), the temporary tasks in force (print, do not
+  silently withdraw - the `temp-task.py retire` command is in the plan), and every archive under
+  `branches/`;
+- everything it forgets is copied first, tree and all, to `branches\fresh-start-<stamp>\files\...`
+  with a `manifest.json` and a `README.txt`, so the operation is reversible by copying the tree back;
+- **it refuses while a session is playing** (`stop-agent.py`'s own liveness rule), because that session
+  rewrites the diary and the heartbeat within one turn - stop it first, then forget, then start the
+  session with `resume-game.ps1 -Wait`.
+
+**Why a note is re-armed rather than simply deleted.** The check file's contract, and the suite that
+holds it, is that a retired goal is **either live or traceable**: `test_every_retirement_trace_still_resolves_to_its_archived_block` asserts the traces are not empty, and `..._wonder_obligation_is_live_or_recoverable` asserts the wonder goal is live or recoverable. So "the achieved note goes" has to mean "the rule is live again" - which is also the plain reading of the human's instruction (the note goes, the rule body stays). Measured 2026-10-05: stripping the two notes without re-arming turned seven tests red (the two above, the ram-tower pair that reads the restored file, and three that read the shipped file for a goal to achieve).
+
+Measured 2026-10-05: a rollback to T352 had left the session waiting on one 0.2-movement unit, and the
+fresh start cleared the diary (turns 1..287 in the run copy, 289..354 in the legacy root one), removed
+two achieved notes and re-armed their rule bodies - one note keyed to this match, one un-keyed, and an
+un-keyed note counts as this match's exactly as `turn_checks.restore_foreign_games` reads it - and left
+the three temporary tasks in force. Two defects were found by doing it: the first version flattened the
+backup, so two same-named diary files collided and only the last survived (the backup now mirrors the
+tree, and a test pins it); and its test suite called `main()` with no argument, so a test run forgot
+the real match's memory instead of a temporary copy's (`main()` takes its root now, and a test pins
+that too). The diary segments it removed are still recoverable: the copy taken before the run is in
+`branches\fresh-start-20261005-001335\files\`, and older archives
+(`branches\abandoned-*\backup-*\diary_china_-1894041591.jsonl`) hold the match's diary as it stood on
+2026-09-20 through 2026-09-28.

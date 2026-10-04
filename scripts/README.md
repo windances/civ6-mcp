@@ -117,6 +117,27 @@ bring back temporary tasks retired after it, restore the `once: true` rules it r
 them in the persisted goal state, then restart the game the right way for the state it is in. It also
 moves the run's recorded progress back to the target turn.
 
+**The other choice is to forget the past instead of restoring it** - the same match, played on from
+the loaded position with no memory of how it got there:
+
+```powershell
+python scripts\fresh-start.py 352               # plan only: what would be forgotten, what is kept
+python scripts\fresh-start.py 352 --apply       # forget it (refuses while a session is playing)
+python scripts\fresh-start.py 352 --apply --force
+```
+
+`fresh-start.py` forgets this match's diary (the run's copy **and** the legacy root copy), the
+achieved-goal state, and the `achieved T...` notes in `prompts/checks/turn-checks.md` that belong to
+this match (another match's notes are left alone - the file is shared) - and for each note it puts the
+rule body back from `prompts/checks/archive/`, because the check file's own contract is that a goal is
+either live or traceable, so "the note goes, the rule stays". It also resets the manifest's played-to
+turn, and clears the run's session scratch. It keeps the temporary tasks in force - it prints the
+`temp-task.py retire` command to withdraw one deliberately rather than doing it silently - and every
+archive under `branches/`, including the backup it writes first: the whole tree it forgot, under
+`branches/fresh-start-<stamp>/files/`, so the operation is reversible. Stop the session first
+(`stop-agent.py --wait`); the script refuses otherwise, because a live session writes the diary
+straight back.
+
 ## Handing a match to a fresh session
 
 ```powershell
@@ -212,6 +233,7 @@ python scripts\analyze.py <subcommand> [--game-id ...] [--model ...] [...]
 | `experiment-report.py` | offline | one experiment's numbers, read from the raw record |
 | `extract_tool_docs.py` | offline | extract MCP tool metadata for the docs site |
 | `fix-text-encoding.py` | offline | the mandatory BOM / mojibake gate |
+| `fresh-start.py` | offline | forget this match's past and resume from the loaded position |
 | `generate_sas_token.py` | offline | read-only SAS token for collaborator data access |
 | `handoff.py` | offline | can a fresh session take this match over, and from which save |
 | `install-hooks.py` | offline | install or revert the repository's git hooks |
