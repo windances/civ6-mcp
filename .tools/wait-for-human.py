@@ -63,6 +63,7 @@ import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from civ_mcp import lua as lq  # noqa: E402
+from civ_mcp.agent_half import can_still_act, is_the_humans  # noqa: E402,F401
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 
@@ -103,29 +104,11 @@ print("{lq.SENTINEL}")
 """
 
 
-def is_the_humans(unit) -> bool:
-    """A military unit, or a Great General or Great Admiral - the units the human commands.
-
-    A Great General or Admiral has no combat strength, so the combat test alone would have left the
-    human's own commanders movable by the session.
-    """
-    if (unit.combat_strength or 0) > 0:
-        return True
-    kind = str(unit.unit_type).upper()
-    return "GENERAL" in kind or "ADMIRAL" in kind
-
-
-def can_still_act(unit) -> bool:
-    """Whether the human can still give this unit an order this turn.
-
-    Only used for the *detail* line under the units blocker - naming what the human still has. The
-    decision comes from the game's own blocker, never from this count.
-    """
-    if unit.moves_remaining <= 0:
-        return False
-    if not str(getattr(unit, "activity", "") or ""):
-        return True
-    return bool(unit.ready_to_move)
+# `is_the_humans` and `can_still_act` are the division written as a predicate, and they live in
+# `civ_mcp.agent_half` rather than here: the server recomputes the same split on every
+# `get_notifications` (it appends a `WHOSE MOVE|` line and writes `agent-half.txt` for the human),
+# and two copies of "whose unit is this" would drift exactly where the whole division turns on it.
+# They are imported above and re-exported, which is what `tests/test_wait_for_human.py` exercises.
 
 
 async def game_state(conn) -> tuple[bool | None, dict[str, int]]:

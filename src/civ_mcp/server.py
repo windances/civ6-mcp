@@ -19,7 +19,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Optional
 import uvicorn
 from mcp.server.fastmcp import Context, FastMCP
 
-from civ_mcp import game_launcher, heartbeat, knowledge
+from civ_mcp import agent_half, game_launcher, heartbeat, knowledge
 from civ_mcp import strategy_directive
 from civ_mcp.game_over_watchdog import GameOverWatchdog
 from civ_mcp import narrate as nr
@@ -1101,14 +1101,23 @@ async def get_notifications(ctx: Context) -> str:
     notifications. Action-required items include which MCP tool to use
     to resolve them. Call this to check what needs attention without
     ending the turn.
+
+    The answer also carries a `WHOSE MOVE|` line: the split of the units that can still act into
+    the human's (military units, Great Generals, Great Admirals) and your own, derived from the
+    board. While the division is in force the agent moves first every turn, so `agent working` means
+    the units holding the turn are yours to order, and `your move` means your half is finished and
+    the turn is waiting on the human. The same split is written for the human to read, as
+    `agent-half.txt` in the run directory beside `heartbeat.json`.
     """
     gs = _get_game(ctx)
-    return await _logged(
+    text = await _logged(
         ctx,
         "get_notifications",
         {},
         lambda: _narrate(gs.get_notifications, nr.narrate_notifications),
     )
+    whose_move = await agent_half.report_for(gs)
+    return f"{text}\n{whose_move}" if whose_move else text
 
 
 @mcp.tool(annotations={"readOnlyHint": True})

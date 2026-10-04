@@ -130,6 +130,13 @@ wait for the human's military units and commanders. Do not wait first and act af
 you sat on the gate while the human had not moved yet is a turn of yours thrown away. The human's orders
 come after yours, so your half has to be finished before you start watching the gate.
 
+**`get_notifications` answers "is my half done?" for you.** Every call appends a `WHOSE MOVE|` line:
+the units that can still act, split into the human's (military units, Great Generals, Great Admirals)
+and your own. It also writes the same split to `agent-half.txt` in the run directory beside the
+heartbeat, which is what the human reads to know when it is their turn. `agent working` means the units
+still holding the turn are yours - order or `skip` them. `your move` means your half is finished and
+the turn is waiting on the human.
+
 **`end_turn` will not wait for the human - it discards their turn.** An `ENDTURN_BLOCKING_UNITS`
 blocker is not bounced: `_sweep_unmoved_units` (`src/civ_mcp/end_turn.py`) fortifies combat units and
 skips whatever still has moves, then the turn advances. Any military unit the human has not finished
