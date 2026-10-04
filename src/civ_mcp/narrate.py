@@ -2432,13 +2432,26 @@ def narrate_notifications(notifs: list[lq.GameNotification]) -> str:
     action_required = [n for n in notifs if n.is_action_required]
     info_notifs = [n for n in notifs if not n.is_action_required]
 
+    def detail(n) -> str:
+        """What the notification names beyond its banner line.
+
+        The summary is the game's own sentence, and for the city-scoped notifications it is the only
+        thing that says *which* city: `message` is the generic banner and the location is the
+        sentinel `-9999,-9999`. Printed when it adds anything the message does not already say, so
+        an ordinary notification is unchanged.
+        """
+        summary = " ".join((getattr(n, "summary", "") or "").split())
+        if not summary or summary == n.message:
+            return ""
+        return f"\n      {summary}"
+
     lines = []
     if action_required:
         lines.append(f"== Action Required ({len(action_required)}) ==")
         for n in action_required:
             hint = f"  -> Use: {n.resolution_hint}" if n.resolution_hint else ""
             loc = f" at ({n.x},{n.y})" if n.x >= 0 else ""
-            lines.append(f"  * {n.message}{loc}{hint}")
+            lines.append(f"  * {n.message}{loc}{hint}{detail(n)}")
 
     if info_notifs:
         if lines:
@@ -2447,7 +2460,7 @@ def narrate_notifications(notifs: list[lq.GameNotification]) -> str:
         for n in info_notifs:
             hint = f"  -> {n.resolution_hint}" if n.resolution_hint else ""
             loc = f" at ({n.x},{n.y})" if n.x >= 0 else ""
-            lines.append(f"  - {n.message}{loc}{hint}")
+            lines.append(f"  - {n.message}{loc}{hint}{detail(n)}")
 
     return "\n".join(lines)
 

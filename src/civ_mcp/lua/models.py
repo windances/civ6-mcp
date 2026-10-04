@@ -615,6 +615,15 @@ class GameNotification:
     y: int
     is_action_required: bool = False
     resolution_hint: str | None = None
+    # The game's own sentence for this notification (`NotificationEntry:GetSummary()`). It is where
+    # the *city* lives for the notifications that are about one city and carry no location:
+    # `GetMessage()` is the generic banner ("need more amenities") and `GetLocation()` returns the
+    # sentinel -9999,-9999 for `NOTIFICATION_CITY_LOW_AMENITIES`, `NOTIFICATION_CITY_UNPOWERED`
+    # and `NOTIFICATION_HOUSING_PREVENTING_GROWTH`. The summary names the city - measured live,
+    # three low-amenity notifications reading "Amsterdam needs more Amenities ...", "Sidon ...",
+    # "Lagash ..." - and for the power one it also carries the numbers ("needs 3 power, has 2").
+    # Empty when the server did not send the column.
+    summary: str = ""
 
 
 @dataclass

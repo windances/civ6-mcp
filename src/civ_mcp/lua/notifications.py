@@ -92,7 +92,18 @@ if list then
                 pcall(function() x, y = entry:GetLocation() end)
                 if x == nil then x = -1 end
                 if y == nil then y = -1 end
-                print("NOTIF|" .. typeName .. "|" .. msg .. "|" .. turn .. "|" .. x .. "," .. y)
+                -- `GetMessage()` is the generic banner line and `GetLocation()` is the sentinel
+                -- (-9999,-9999) for exactly the notifications that are *about* one city:
+                -- NOTIFICATION_CITY_LOW_AMENITIES, NOTIFICATION_CITY_UNPOWERED and
+                -- NOTIFICATION_HOUSING_PREVENTING_GROWTH. `GetSummary()` is the sentence the game's
+                -- own panel shows, and it names the city - measured live, three low-amenity
+                -- notifications whose summaries read "Amsterdam needs more Amenities ...",
+                -- "Sidon needs ...", "Lagash needs ...". Appended as a sixth column so a log
+                -- written before it parses as before.
+                local summary = ""
+                pcall(function() summary = (entry:GetSummary() or ""):gsub("|", "/") end)
+                print("NOTIF|" .. typeName .. "|" .. msg .. "|" .. turn .. "|" .. x .. "," .. y
+                      .. "|" .. summary)
                 emitted = emitted + 1
             end
         end)
@@ -125,6 +136,10 @@ def parse_notifications_response(lines: list[str]) -> list[GameNotification]:
                 y=int(y_str),
                 is_action_required=is_action,
                 resolution_hint=hint,
+                # The game's own sentence for this notification, which is where the *city* lives
+                # for the notifications `GetLocation()` cannot place. Empty when the server did
+                # not send the column (an older log).
+                summary=(parts[5] if len(parts) > 5 else ""),
             )
         )
     return notifs
