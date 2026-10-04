@@ -3820,9 +3820,9 @@ for _, city in pCities:Members() do
                             elseif resClass == "RESOURCECLASS_BONUS" then priority = "high"
                             end
                             -- Find valid improvement via resource lookup table
-                            local validImp = resImpMap[resInfo.ResourceType] or "UNKNOWN"
-                            -- Check tech prerequisite
-                            if validImp ~= "UNKNOWN" then
+                            local validImp = resImpMap[resInfo.ResourceType]
+                            if validImp then
+                                -- Check tech prerequisite
                                 local impInfo = GameInfo.Improvements[validImp]
                                 if impInfo and impInfo.PrereqTech then
                                     local techInfo = GameInfo.Technologies[impInfo.PrereqTech]
@@ -3830,18 +3830,24 @@ for _, city in pCities:Members() do
                                         validImp = validImp .. "_LOCKED"
                                     end
                                 end
+                                -- Find nearest builder
+                                local nearId, nearDist = -1, 999
+                                for _, b in ipairs(builders) do
+                                    local d = Map.GetPlotDistance(b.x, b.y, px, py)
+                                    if d < nearDist then nearDist = d; nearId = b.id end
+                                end
+                                local classShort = "bonus"
+                                if resClass == "RESOURCECLASS_STRATEGIC" then classShort = "strategic"
+                                elseif resClass == "RESOURCECLASS_LUXURY" then classShort = "luxury"
+                                end
+                                print("TASK|" .. priority .. "|" .. px .. "," .. py .. "|" .. validImp .. "|" .. resName .. "|" .. classShort .. "|" .. cityName .. "|" .. nearId .. "|" .. nearDist)
                             end
-                            -- Find nearest builder
-                            local nearId, nearDist = -1, 999
-                            for _, b in ipairs(builders) do
-                                local d = Map.GetPlotDistance(b.x, b.y, px, py)
-                                if d < nearDist then nearDist = d; nearId = b.id end
-                            end
-                            local classShort = "bonus"
-                            if resClass == "RESOURCECLASS_STRATEGIC" then classShort = "strategic"
-                            elseif resClass == "RESOURCECLASS_LUXURY" then classShort = "luxury"
-                            end
-                            print("TASK|" .. priority .. "|" .. px .. "," .. py .. "|" .. validImp .. "|" .. resName .. "|" .. classShort .. "|" .. cityName .. "|" .. nearId .. "|" .. nearDist)
+                            -- A resource with no mapped improvement is not builder work. The antiquity
+                            -- sites are the case that shows up - they are resources with no `resImpMap`
+                            -- entry, and an Archaeologist digs them, not a builder. Printing `build
+                            -- UNKNOWN` for one read as a job, which is how a builder ends up parked on a
+                            -- tile it cannot touch: measured 2026-10-04, T354, builder 13107256 stood on
+                            -- an antiquity site at (36,22) flagged `[cannot act]`, in no work list at all.
                         end
                     -- Check for empty tiles that could use standard improvements (capped)
                     -- Uses terrain heuristics instead of CanStartOperation (which corrupts

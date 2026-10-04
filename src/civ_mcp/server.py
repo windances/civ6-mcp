@@ -1119,7 +1119,10 @@ async def get_notifications(ctx: Context) -> str:
     human's half finished too, because any unit that can still act raises the units blocker, so its
     absence is the human saying they have finished the turn. That is the signal to call `end_turn`
     with the diary. `UI.CanEndTurn()` is not it: it is true while the blocker is still up (measured).
-    The same split is written for the human to read, as
+    **A unit with movement and no work is named too**: when the engine reports a unit as not ready to
+    move while its activity is unset and it is not fortified, neither side's work list covers it - the
+    measured case is a builder standing on an antiquity site, which a builder cannot work - so it is
+    listed under your own. The same split is written for the human to read, as
     `agent-half.txt` in the run directory beside `heartbeat.json`.
     """
     gs = _get_game(ctx)

@@ -20,6 +20,7 @@ The vocabulary is the game's own, from its unit panel (`UnitPanel.lua:4054-4062`
 from __future__ import annotations
 
 import argparse
+import asyncio
 import pathlib
 import sys
 from collections import Counter

@@ -49,6 +49,7 @@ class Unit:
         unit_index: int = 1,
         x: int = 5,
         y: int = 5,
+        fortify_turns: int = 0,
     ) -> None:
         self.unit_type = unit_type
         self.combat_strength = combat_strength
@@ -58,6 +59,7 @@ class Unit:
         self.unit_index = unit_index
         self.x = x
         self.y = y
+        self.fortify_turns = fortify_turns
 
 
 class FakeConn:
@@ -201,6 +203,49 @@ def test_the_summary_tells_the_session_to_end_the_turn() -> None:
     assert line.startswith("WHOSE MOVE|ready to end|")
     assert "the human's half finished" in line
     assert "end_turn with the diary" in line
+
+
+# --- the unit nobody's work list covers -----------------------------------------------------------
+
+
+def stuck_builder(**over) -> Unit:
+    """Measured T354: builder 13107256 on an antiquity site at (36,22), 2/2 moves, 2 charges."""
+    kwargs = {"moves_remaining": 2.0, "ready_to_move": False, "activity": "", "x": 36, "y": 22}
+    kwargs.update(over)
+    return Unit("UNIT_BUILDER", **kwargs)
+
+
+def test_an_unclaimed_unit_is_not_ready_to_move_and_neither_parked_nor_busy() -> None:
+    assert agent_half.unclaimed(stuck_builder()) is True
+    assert agent_half.unclaimed(stuck_builder(activity="ACTIVITY_HOLD")) is False, "parked by a skip"
+    assert agent_half.unclaimed(stuck_builder(activity="ACTIVITY_OPERATION")) is False, "busy"
+    assert agent_half.unclaimed(stuck_builder(fortify_turns=3)) is False, "fortified on purpose"
+    assert agent_half.unclaimed(stuck_builder(ready_to_move=True)) is False, "able to act"
+    assert agent_half.unclaimed(stuck_builder(moves_remaining=0.0)) is False, "no movement left"
+
+
+def test_a_unit_with_no_work_and_no_owner_is_reported_as_the_agents() -> None:
+    """The measured case: a stuck builder must not let the turn report `ready to end`."""
+    unit = stuck_builder()
+    text = agent_half.render(354, [unit], when=0)
+    assert text.startswith("T354  AGENT STILL WORKING"), (
+        "a unit with movement that nobody's list covers must not read as 'the turn can end'"
+    )
+    assert "not ready to move" in text and "UNIT_BUILDER" in text and "( 36, 22)" in text
+    line = agent_half.summary(354, [unit])
+    assert line.startswith("WHOSE MOVE|agent working|")
+    assert "UNIT_BUILDER at (36,22)" in line
+
+
+def test_a_stuck_military_unit_belongs_to_the_human_not_the_agent() -> None:
+    unit = Unit(
+        "UNIT_MACHINE_GUN", combat_strength=70, moves_remaining=2.0, ready_to_move=False, activity=""
+    )
+    agent, human = agent_half.unclaimed_split([unit])
+    assert agent == [] and len(human) == 1
+    text = agent_half.render(354, [unit], when=0)
+    assert text.startswith("T354  YOUR MOVE")
+    assert "that is theirs" in text
 
 
 def test_the_summary_is_one_line_for_the_session() -> None:

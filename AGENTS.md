@@ -719,7 +719,11 @@ signal** (human decision 2026-10-04: the game being ready to advance is what "th
 means - there is no separate marker): no unit on either side can act, so the units blocker is down,
 and any unit that can still act raises it, so its absence is the human's own "I have finished this
 turn". That is the call for `end_turn` with the diary. **`UI.CanEndTurn()` is not this fact** - it is
-true while the blocker is still up (measured on turn 337).
+true while the blocker is still up (measured on turn 337). **A unit with movement and no work is named
+too**: when the engine reports a unit as not ready to move while its activity is unset and it is not
+fortified, neither side's work list covers it, so the report lists it under the session's own - the
+measured case is a builder standing on an antiquity site, which a builder cannot work and which the
+builder-task list used to propose as `build UNKNOWN`.
 **The wait it depends on is not free**: `end_turn` does not
 refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units

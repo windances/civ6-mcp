@@ -89,6 +89,35 @@ def split(units: Iterable[Any]) -> tuple[list[Any], list[Any]]:
     return [u for u in live if not is_the_humans(u)], [u for u in live if is_the_humans(u)]
 
 
+def unclaimed(unit: Any) -> bool:
+    """Has movement, is not parked or busy, and the engine still says it is not ready to move.
+
+    This is the case no list covered. `can_still_act` is false for it, so it is in neither side's work
+    in the whose-move split, and it raises no units blocker - a unit with a job and no owner. Measured
+    2026-10-04, T354: builder 13107256 stood on an antiquity site at (36,22) with 2/2 moves and 2
+    charges, activity AWAKE, no fortify, `ready_to_move` false, flagged `[cannot act]` - and **no order
+    in the whole run named it**. It had been sent there by the builder-task list, which proposed
+    `build UNKNOWN` on the tile (an antiquity site is an Archaeologist's, not a builder's).
+
+    The predicate reports the *reading*, not a diagnosis: the engine's own `IsReadyToMove()` plus "not
+    parked, not busy" is what is known. A unit like this is either somewhere it cannot work - so it
+    needs moving - or it is waiting to be told, and in both cases somebody has to decide.
+    """
+    if (getattr(unit, "moves_remaining", 0) or 0) <= 0:
+        return False
+    if str(getattr(unit, "activity", "") or ""):
+        return False  # parked (HOLD), asleep (SLEEP) or running an operation: not this case
+    if getattr(unit, "fortify_turns", 0):
+        return False  # fortified on purpose, and end_turn fortifies by design
+    return not bool(getattr(unit, "ready_to_move", False))
+
+
+def unclaimed_split(units: Iterable[Any]) -> tuple[list[Any], list[Any]]:
+    """`(unclaimed units the agent owns, unclaimed units the human's)`."""
+    stuck = [u for u in units if unclaimed(u)]
+    return [u for u in stuck if not is_the_humans(u)], [u for u in stuck if is_the_humans(u)]
+
+
 def verdict(agent: Sequence[Any], human: Sequence[Any]) -> str:
     """`"your move"`, `"agent working"` or `"turn can end"` - the whole answer, in one place."""
     if agent:
@@ -120,12 +149,33 @@ def _rows(units: Sequence[Any]) -> list[str]:
     return rows
 
 
+def _unclaimed_lines(stuck_agent: Sequence[Any], stuck_human: Sequence[Any]) -> list[str]:
+    """The units no work list covers - which is the whole reason this report exists."""
+    out: list[str] = []
+    if stuck_agent:
+        out += [
+            "",
+            f"{len(stuck_agent)} unit(s) have movement and the engine says they are not ready to move,",
+            "with no activity set - neither side's work list covers them, so they are yours:",
+            *_rows(stuck_agent),
+            "look at each one and move it to a job or bring it home. A builder standing on an antiquity",
+            "site is the measured case: a builder cannot work one, and the builder-task list used to",
+            "propose `build UNKNOWN` there.",
+        ]
+    if stuck_human:
+        out += ["", f"{len(stuck_human)} of the human's units are in that same state - that is theirs."]
+    return out
+
+
 def render(turn: int | None, units: Iterable[Any], when: float | None = None) -> str:
     """The file the human reads: whose move, at what time, and what each side still holds."""
     agent, human = split(units)
+    stuck_agent, stuck_human = unclaimed_split(units)
     head = f"T{turn}" if turn else "T?"
     stamp = time.strftime("%H:%M:%S", time.localtime(time.time() if when is None else when))
-    kind = verdict(agent, human)
+    # The unclaimed units count: a session that reads "READY TO END" while one of its own builders has
+    # movement and nowhere to work has been told the turn can end while its own work is outstanding.
+    kind = verdict(agent or stuck_agent, human or stuck_human)
 
     if kind == "your move":
         lines = [
@@ -149,29 +199,39 @@ def render(turn: int | None, units: Iterable[Any], when: float | None = None) ->
             "too. Any unit that can still act raises that blocker, so its absence is the human's own",
             "'I have finished this turn': end the turn with the five diary reflections.",
         ]
+    lines += _unclaimed_lines(stuck_agent, stuck_human)
     return "\n".join(lines) + "\n"
 
 
 def summary(turn: int | None, units: Iterable[Any]) -> str:
     """The one line appended to `get_notifications`, for the session rather than the human."""
     agent, human = split(units)
+    stuck_agent, stuck_human = unclaimed_split(units)
     head = f"T{turn}" if turn else "T?"
-    kind = verdict(agent, human)
 
+    def where(rows: Sequence[Any]) -> str:
+        named = ", ".join(f"{getattr(u, 'unit_type', '?')} at ({u.x},{u.y})" for u in rows[:3])
+        return named + (f" and {len(rows) - 3} more" if len(rows) > 3 else "")
+
+    kind = verdict(agent or stuck_agent, human or stuck_human)
     if kind == "your move":
         return (
             f"WHOSE MOVE|your move|{head}: the agent's half is done - {len(human)} unit(s) can still "
             "act and all of them are the human's; wait for them"
         )
     if kind == "agent working":
-        named = ", ".join(
-            f"{getattr(u, 'unit_type', '?')} at ({u.x},{u.y})" for u in agent[:3]
-        )
-        more = f" and {len(agent) - 3} more" if len(agent) > 3 else ""
-        return (
-            f"WHOSE MOVE|agent working|{head}: {len(agent)} of your own units can still act - "
-            f"{named}{more}; order or skip them, the turn cannot end until you do"
-        )
+        parts: list[str] = []
+        if agent:
+            parts.append(
+                f"{len(agent)} of your own units can still act - {where(agent)}; order or skip them, "
+                "the turn cannot end until you do"
+            )
+        if stuck_agent:
+            parts.append(
+                f"{len(stuck_agent)} more have movement but are not ready to move with no activity set "
+                f"({where(stuck_agent)}) - no work list covers those, so bring them to a job or park them"
+            )
+        return f"WHOSE MOVE|agent working|{head}: " + "; ".join(parts)
     return (
         f"WHOSE MOVE|ready to end|{head}: nothing can act on either side, so the units blocker is "
         "down - that is the human's half finished too; end_turn with the diary"
