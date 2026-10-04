@@ -704,8 +704,17 @@ the session's task from the facts it just read.
 
 **`-HumanMilitary` splits the command of the match**, and it is the human's switch to throw: the
 human commands the military units, the Great Generals and the Great Admirals, and the session owns
-every other unit and the cities, the economy, the wonders and the research. It appends that division
-to the task the session is launched with. **The wait it depends on is not free**: `end_turn` does not
+every other unit - the Great Scientists and the Great Merchants included - together with the cities,
+the economy, the wonders and the research. **The order inside a turn is fixed: the session moves
+first**, ordering every unit and every city queue it owns, and the human commands their half
+afterwards - so the units blocker being up as a turn opens is not a reason to wait before doing the
+session's own work. **`get_notifications` reports whose half is still holding the turn**: every call
+appends a `WHOSE MOVE|` line that splits the units which can still act into the human's and the
+session's own, and writes the same split to `agent-half.txt` in the run directory beside
+`heartbeat.json`, which is what the human reads to know it is their move. `agent working` means the
+units holding the turn are the session's own to order or skip; `your move` means its half is done and
+the turn is waiting on the human. It appends that division to the task the session is launched with.
+**The wait it depends on is not free**: `end_turn` does not
 refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units
 and skips the rest, so a session that ordered its own units and called `end_turn` would silently
