@@ -507,6 +507,9 @@ async def _logged(
     except Exception:
         log.debug("move-stop count failed", exc_info=True)
     heartbeat.write("playing", turn=turn)
+    # The same fact in the run manifest, and for the same reason: it is what the next session is
+    # told about this position, and nothing else in the session path writes it.
+    _record_played_turn(turn)
     ms = int((time.monotonic() - start) * 1000)
     log.info(
         "[T%s] %s(%s) OK %dms: %s",
@@ -2416,6 +2419,9 @@ async def end_turn(
             _get_logger(ctx).set_turn(new_turn)
             _get_spatial(ctx).set_turn(new_turn)
             heartbeat.write("playing", turn=new_turn)
+            # `_logged` records the turn the call was made in; this is the turn it advanced to, so a
+            # session that dies straight after ending a turn still leaves the played-to turn exact.
+            _record_played_turn(new_turn)
         # Map capture —record terrain (first turn) + ownership delta
         if _diary_civ_type and _diary_seed:
             try:
@@ -3303,6 +3309,34 @@ async def restart_and_load(ctx: Context, save_name: str | None = None, force: bo
             log.debug("Post-load identity check failed", exc_info=True)
 
     return result
+
+
+def _record_played_turn(turn: Any) -> None:
+    """Record how far this run has been played, in the run's own manifest.
+
+    The manifest's `last_turn` is the authority the handoff check reads for "how far has this run
+    been played" - `handoff.py:252` prefers it to the heartbeat - and it is what the *next* session is
+    told: `the previous session stopped at T288 ... the notes in the diary belong to another
+    position`. Measured 2026-10-04: the manifest still read T288 while the match stood at T354 and the
+    diary ran to T347, and the fresh session's first reasoning step was "read the diary as history,
+    not the plan" - it discounted sixty turns of its own record.
+
+    Nothing in the session path wrote that field: only the drivers under `scripts/` did, so a run
+    played entirely by sessions kept whatever the migration or the last driver left (T288 here, from
+    the 2026-10-03 run migration). It is the same fact the heartbeat is written with, which is why it
+    is recorded in the same two places.
+
+    `touch` moves the field forward only and is a no-op without a manifest or with a turn that is not
+    a positive int - the log's `?` placeholder reaches this on some calls - and a rollback sets the
+    field through `reset_turn` instead, so this cannot fight one. Never raises: it is bookkeeping, and
+    bookkeeping must not turn a working tool call into a failure.
+    """
+    try:
+        from civ_mcp import run_manifest
+
+        run_manifest.touch(turn, run_manifest.resolve_data_dir())
+    except Exception:  # noqa: BLE001
+        log.debug("could not record the played turn", exc_info=True)
 
 
 async def _narrate(

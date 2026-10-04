@@ -38,6 +38,15 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 # because "the game is not showing its main menu" covers four different situations.
 NOT_RUNNING = "not_running"
 TUNER_BUSY = "tuner_busy"
+
+#: How many turns the run's played-to record may lag the loaded game before the handoff calls it a
+#: different position. A turn or two is bookkeeping: the record names the last turn a *session acted
+#: in*, and the human can end a turn from the game's own UI afterwards, so a fresh handoff routinely
+#: sees a one-turn gap. The case this warning was measured on was 56 turns wide - the manifest read
+#: T288 against a loaded T344 on 2026-10-04, because no session had ever written the field - and the
+#: cost of treating a one-turn lag as a different position is that a fresh session is told to
+#: discount its own diary.
+POSITION_LAG = 2
 TUNER_SILENT = "tuner_silent"
 NO_MATCH = "no_match"
 IN_GAME = "in_game"
@@ -359,10 +368,12 @@ def verdict(facts: dict) -> dict:
         out["ready"] = True
         out["turn"] = int(probe["turn"])
         out["next_command"] = "scripts\\resume-game.ps1"
-        if facts.get("last_turn") and _heartbeat_turn(facts["last_turn"]) not in (None, out["turn"]):
+        played = _heartbeat_turn(facts.get("last_turn"))
+        if played is not None and abs(played - out["turn"]) > POSITION_LAG:
             out["warnings"].append(
-                f"the last session's heartbeat says T{facts['last_turn']}, the loaded game "
-                f"says T{out['turn']}: the notes in the diary belong to another position"
+                f"the run's played-to turn is T{played}, the loaded game says T{out['turn']} - "
+                f"{abs(played - out['turn'])} turns apart, so the notes in the diary belong to "
+                "another position"
             )
         return out
 
@@ -524,12 +535,27 @@ def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = Fals
             f"   that was played before this point has been abandoned on purpose."
         )
     elif (last_turn := _heartbeat_turn(facts.get("last_turn"))) is not None:
-        parts.append(
-            f"   The previous session stopped at T{last_turn}. If the game reports a\n"
-            f"   **lower** turn, a rollback happened: take the position from the game and treat\n"
-            f"   the diary's plan as belonging to another branch. If it reports a higher turn, the\n"
-            f"   game was played on past the session - read the diary as history, not as the plan."
-        )
+        gap = abs(last_turn - expected) if isinstance(expected, int) else None
+        if gap is None:
+            parts.append(
+                f"   The previous session stopped at T{last_turn}. Take the position from the game,\n"
+                f"   and read the diary as this run's own history."
+            )
+        elif gap > POSITION_LAG:
+            parts.append(
+                f"   The previous session stopped at T{last_turn}, and the game reports T{expected} -\n"
+                f"   {gap} turns apart, so this is not the position the diary was written at. If the\n"
+                f"   **lower** turn is the one loaded, a rollback happened: take the position from the\n"
+                f"   game and treat the diary's plan as belonging to another branch. If the higher one\n"
+                f"   is loaded, the game was played on past the session - read the diary as history,\n"
+                f"   not as the plan."
+            )
+        else:
+            parts.append(
+                f"   The previous session stopped at T{last_turn}, and the game stands at T{expected}:\n"
+                f"   the same position. The diary is this run's own history - read it as yours, and\n"
+                f"   note that a turn or two of difference here is only the record lagging the game."
+            )
     parts += [
         "0b. `get_diary` - the history you left yourself: the intent, the plans, the\n"
         "   judgements. Take the position from the game, never from the notes.",

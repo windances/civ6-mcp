@@ -155,6 +155,30 @@ class TestVerdict:
         assert result["ready"] is True
         assert any("T142" in note and "T150" in note for note in result["warnings"])
 
+    def test_a_one_turn_lag_is_not_another_position(self):
+        """A turn or two is bookkeeping, not a different position.
+
+        The record names the last turn a *session acted in*, and the human can end a turn from the
+        game's own UI afterwards, so a one-turn gap is the ordinary case. Measured 2026-10-04: the
+        warning it matters for was 56 turns wide (the manifest read T288 against a loaded T344,
+        because no session had ever written the field), and calling a one-turn lag "another position"
+        told a fresh session to discount its own diary.
+        """
+        result = h.verdict(
+            facts(probe={"connected": True, "ingame": True, "turn": 355}, last_turn=354)
+        )
+        assert result["ready"] is True
+        assert result["warnings"] == [], "a one-turn lag is bookkeeping, not a different position"
+
+    def test_the_task_calls_a_one_turn_lag_the_same_position(self):
+        result = h.verdict(
+            facts(probe={"connected": True, "ingame": True, "turn": 355}, last_turn=354)
+        )
+        text = h.task_text(facts(last_turn=354), result)
+        assert "The previous session stopped at T354" in text
+        assert "the same position" in text
+        assert "another branch" not in text, "a one-turn lag must not be read as a rollback"
+
     def test_a_heartbeat_turn_that_is_not_a_number_is_unknown_not_a_crash(self):
         # The measured failure of 2026-09-28: server.py wrote the log line's "?" placeholder into
         # the heartbeat, this verdict did int("?") on it, and scripts/resume-game.ps1 died with a

@@ -185,3 +185,49 @@ class TestTheBannerLines:
         monkeypatch.setattr(session_info, "_home", lambda: data / "home")
         rm.init("china-a", "A line", "china", 911679432, data_dir=data)
         assert any(ln.startswith("RUN") for ln in session_info.banner("china", 911679432))
+
+
+class TestTheSessionKeepsTheManifestCurrent:
+    """`last_turn` is what the *next* session is told about this position.
+
+    Measured 2026-10-04: the manifest still read T288 while the match stood at T354 and the diary ran
+    to T347, because only the drivers under `scripts/` ever wrote the field - a run played entirely by
+    sessions kept whatever the 2026-10-03 migration left. The next session was therefore handed
+    "the previous session stopped at T288 ... the notes in the diary belong to another position", and
+    its first reasoning step was to discount sixty turns of its own record.
+
+    `server._record_played_turn` is the session's writer, called wherever the session already records
+    a real turn for the heartbeat: in `_logged` on every successful tool call, and on the turn an
+    `end_turn` advanced to.
+    """
+
+    def test_it_records_the_turn_in_the_runs_own_manifest(self, monkeypatch, tmp_path):
+        from civ_mcp import server
+
+        run = tmp_path / "runs" / "china--1"
+        run.mkdir(parents=True)
+        (tmp_path / "current").write_text("china--1", encoding="utf-8")
+        rm.init("china--1", "A line", "china", 1, data_dir=run)
+        monkeypatch.setenv("CIV_MCP_DATA_DIR", str(tmp_path))
+
+        server._record_played_turn(354)
+
+        assert rm.load(run)["last_turn"] == 354, (
+            "the data root must resolve to the run the pointer names, not be written beside it"
+        )
+
+    def test_a_turn_it_cannot_use_is_a_no_op(self, monkeypatch, tmp_path):
+        from civ_mcp import server
+
+        monkeypatch.setenv("CIV_MCP_DATA_DIR", str(tmp_path))
+        server._record_played_turn("?")  # the log's placeholder reaches this on some calls
+        server._record_played_turn(0)
+        assert not (tmp_path / "run.json").exists(), "a turn it cannot use must write nothing"
+
+    def test_it_never_raises(self, monkeypatch, tmp_path):
+        from civ_mcp import server
+
+        blocker = tmp_path / "not-a-dir"
+        blocker.write_text("x", encoding="utf-8")
+        monkeypatch.setenv("CIV_MCP_DATA_DIR", str(blocker / "under-a-file"))
+        server._record_played_turn(354)  # bookkeeping must not fail the tool call that made it
