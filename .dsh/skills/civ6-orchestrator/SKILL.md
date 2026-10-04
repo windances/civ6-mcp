@@ -957,11 +957,17 @@ rule vanishing from it means it was done, not that the check broke.
    adapter will otherwise bounce the turn and ask you to vote.
 
 Then, as the last action before ending, **call `skip_remaining_units()`
-unconditionally.** It fortifies combat units and then skips whatever still has
-moves, so it costs nothing, and it closes the one omission that reliably costs ten
-minutes. A unit left with moves does not merely bounce the turn: the game refuses
-to advance, and `end_turn` then polls until its roughly nine-minute budget is
-exhausted.
+unconditionally - unless the match is split and the human commands the military.**
+It fortifies combat units and then skips whatever still has moves, so it costs
+nothing, and it closes the one omission that reliably costs ten minutes. A unit
+left with moves does not merely bounce the turn: the game refuses to advance, and
+`end_turn` then polls until its roughly nine-minute budget is exhausted.
+
+**Under `-HumanMilitary` it is not yours to call.** The tool is empire-wide - it
+sweeps the human's units too - so with the division in force, order and `skip` your
+own units one at a time and leave the rest to the human. Measured 2026-10-04: a
+session that called it non-force (nothing had a legal attack) reported
+`FORTIFIED|1 fortified, 2 healing; SKIPPED|12`, and two of those were the human's.
 
 Then prepare all five non-empty diary reflections - tactical, strategic,
 tooling, planning, and hypothesis - and call `mcp__civ6__end_turn` **once**.

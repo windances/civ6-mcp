@@ -136,7 +136,9 @@ the units that can still act, split into the human's (military units, Great Gene
 and your own. It also writes the same split to `agent-half.txt` in the run directory beside the
 heartbeat, which is what the human reads to know when it is their turn. `agent working` means the units
 still holding the turn are yours - order or `skip` them. `your move` means your half is finished and
-the turn is waiting on the human.
+the turn is waiting on the human. **`nothing is holding the turn` is the third state, and it is not
+proof the human has played**: a unit parked by a `skip` looks exactly like one the game's own
+end-of-turn sweep parked, so it means only that no unit on either side can act right now.
 
 **`end_turn` will not wait for the human - it discards their turn.** An `ENDTURN_BLOCKING_UNITS`
 blocker is not bounced: `_sweep_unmoved_units` (`src/civ_mcp/end_turn.py`) fortifies combat units and
@@ -178,8 +180,12 @@ GameCore_Tuner/InGame states not found` (measured, with a connection held open i
 busy state). The reads through your own tools are the only view you have of the game, and they are the
 ones that work.
 
-**Never call `skip_remaining_units(force=True)`, and never call `end_turn` early to get past this.**
-Both discard exactly the movement the human is using - `end_turn` does it silently, which is worse.
+**Under this division, never call `skip_remaining_units()` at all - not even without `force=True` -
+and never call `end_turn` while a commander can still act.** The tool is empire-wide: it fortifies
+combat units and skips everything else, and the human's half is not yours to close. Measured
+2026-10-04, a session that called it anyway (non-force, because nothing had a legal attack) got back
+`FORTIFIED|1 fortified, 2 healing; SKIPPED|12` - and two of those were the human's units. Order and
+`skip` your own units one at a time instead. `end_turn` discards movement silently, which is worse.
 Waiting here is the correct action, not a failure to act.
 
 **Gold is held for the front.** Keep the treasury ready and report when an upgrade is available and

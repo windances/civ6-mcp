@@ -144,8 +144,10 @@ def render(turn: int | None, units: Iterable[Any], when: float | None = None) ->
         ]
     else:
         lines = [
-            f"{head}  THE TURN CAN END  {stamp}",
-            "no unit on either side can still act: the units blocker is down.",
+            f"{head}  NOTHING IS HOLDING THE TURN  {stamp}",
+            "no unit on either side can still act, so the units blocker is down and the turn can end.",
+            "if you have not played this turn, wake a unit: a parked unit looks the same whether you",
+            "parked it or the game's end-of-turn sweep did, so this is not proof that you moved.",
         ]
     return "\n".join(lines) + "\n"
 
@@ -170,7 +172,11 @@ def summary(turn: int | None, units: Iterable[Any]) -> str:
             f"WHOSE MOVE|agent working|{head}: {len(agent)} of your own units can still act - "
             f"{named}{more}; order or skip them, the turn cannot end until you do"
         )
-    return f"WHOSE MOVE|the turn can end|{head}: no unit on either side can still act"
+    return (
+        f"WHOSE MOVE|nothing is holding the turn|{head}: no unit on either side can still act, so the "
+        "turn can end - which is not proof the human has played: a unit parked by a skip looks "
+        "exactly like one the game's own end-of-turn sweep parked"
+    )
 
 
 def write(text: str) -> pathlib.Path | None:
