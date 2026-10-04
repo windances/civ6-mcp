@@ -39,6 +39,20 @@ def load_module():
 rb = load_module()
 
 
+def test_the_archive_branch_module_loads_with_its_own_siblings():
+    """`.tools/archive-branch.py` imports `_game` from its own directory at import time.
+
+    Loading a module *by path* does not put its directory on `sys.path`, so this died with
+    `ModuleNotFoundError: No module named '_game'`. The diary split is the first phase **after** the
+    plan, so `--apply` and `--archive-only` crashed before writing anything while the plan printed
+    normally - measured 2026-10-04, two operator runs that reported failure and left no trace to
+    diagnose from (no archive folder, unchanged tree, the game never touched).
+    """
+    module = rb.load_archive_branch_module()
+    assert module is not None, ".tools/archive-branch.py could not be loaded"
+    assert hasattr(module, "archive_boundary"), "the sibling import did not complete"
+
+
 def state(**over) -> dict:
     base = {
         "running": True,

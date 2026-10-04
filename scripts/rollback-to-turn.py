@@ -225,13 +225,29 @@ def save_turn_from_file(path: Path) -> int | None:
 
 
 def load_archive_branch_module():
-    """Import .tools/archive-branch.py (hyphenated name, so by path)."""
+    """Import .tools/archive-branch.py (hyphenated name, so by path).
+
+    Its own directory goes on ``sys.path`` for the import: the module pulls in its sibling
+    ``_game.py`` at import time (``from _game import require_game, ...``), and loading a module by
+    path does not put its directory on the path. Measured 2026-10-04 - the first ``--apply`` and
+    ``--archive-only`` run from this checkout both died here with ``ModuleNotFoundError: No module
+    named '_game'``. The diary split is the first phase *after* the plan, so the run crashed before
+    writing anything: the plan printed, the command appeared to do nothing, and no half-applied
+    state was left to diagnose from.
+
+    ``append`` rather than ``insert(0, ...)`` so a ``.tools`` module sharing a name with something
+    already importable cannot shadow it, and the entry is left in place afterwards because ``_game``
+    may import siblings of its own later and this is a short-lived CLI.
+    """
     path = ROOT / ".tools" / "archive-branch.py"
     spec = importlib.util.spec_from_file_location("archive_branch", path)
     if spec is None or spec.loader is None:
         return None
     module = importlib.util.module_from_spec(spec)
     sys.modules["archive_branch"] = module
+    tools_dir = str(path.parent)
+    if tools_dir not in sys.path:
+        sys.path.append(tools_dir)
     spec.loader.exec_module(module)
     return module
 
