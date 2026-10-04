@@ -136,9 +136,11 @@ the units that can still act, split into the human's (military units, Great Gene
 and your own. It also writes the same split to `agent-half.txt` in the run directory beside the
 heartbeat, which is what the human reads to know when it is their turn. `agent working` means the units
 still holding the turn are yours - order or `skip` them. `your move` means your half is finished and
-the turn is waiting on the human. **`nothing is holding the turn` is the third state, and it is not
-proof the human has played**: a unit parked by a `skip` looks exactly like one the game's own
-end-of-turn sweep parked, so it means only that no unit on either side can act right now.
+the turn is waiting on the human. **`ready to end` is the third state, and it means the human is done
+- end the turn.** No unit on either side can act, so the units blocker is down; any unit that *can*
+still act raises that blocker, so its absence is the human's own "I have finished this turn". Call
+`end_turn` with the five diary reflections. **`UI.CanEndTurn()` is not this fact**: it is true while
+the blocker is still up, so read the blocker.
 
 **A stop request rides your tool results as well, and honouring it is how you exit.** If the human
 wants the session to stop, `scripts\stop-agent.py` writes `stop-request.json` beside the heartbeat;

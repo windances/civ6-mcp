@@ -1114,11 +1114,12 @@ async def get_notifications(ctx: Context) -> str:
     The answer also carries a `WHOSE MOVE|` line: the split of the units that can still act into
     the human's (military units, Great Generals, Great Admirals) and your own, derived from the
     board. While the division is in force the agent moves first every turn, so `agent working` means
-    the units holding the turn are yours to order, and `your move` means your half is finished and
-    the turn is waiting on the human. `nothing is holding the turn` is the third state, and it is
-    **not proof the human has played**: a unit parked by a `skip` and one parked by the game's own
-    end-of-turn sweep are indistinguishable, so it says only that no unit on either side can act
-    right now. The same split is written for the human to read, as
+    the units holding the turn are yours to order, `your move` means your half is finished and the
+    turn is waiting on the human, and `ready to end` means neither side can act - which is the
+    human's half finished too, because any unit that can still act raises the units blocker, so its
+    absence is the human saying they have finished the turn. That is the signal to call `end_turn`
+    with the diary. `UI.CanEndTurn()` is not it: it is true while the blocker is still up (measured).
+    The same split is written for the human to read, as
     `agent-half.txt` in the run directory beside `heartbeat.json`.
     """
     gs = _get_game(ctx)

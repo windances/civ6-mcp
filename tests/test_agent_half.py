@@ -185,20 +185,22 @@ def test_the_file_says_the_agent_is_still_working_and_names_its_own_unit() -> No
     assert "nothing is waiting on you yet" in text
 
 
-def test_the_file_says_nothing_is_holding_the_turn_when_nobody_can_act() -> None:
+def test_the_file_says_ready_to_end_when_nobody_can_act() -> None:
     text = agent_half.render(351, [armor(moves_remaining=0.0)], when=0)
-    assert "NOTHING IS HOLDING THE TURN" in text
+    assert "READY TO END" in text
     assert "the units blocker is down" in text
-    assert "not proof that you moved" in text, (
-        "the third state must not read as 'the human has played': a unit parked by a skip and one "
-        "parked by the end-of-turn sweep are indistinguishable to the game"
+    assert "the human's half is done" in text, (
+        "the third state is the human-done signal: any unit that can act raises the blocker, so its "
+        "absence is the human saying they have finished the turn"
     )
+    assert "end the turn" in text
 
 
-def test_the_summary_says_the_third_state_is_not_proof_the_human_moved() -> None:
+def test_the_summary_tells_the_session_to_end_the_turn() -> None:
     line = agent_half.summary(351, [armor(moves_remaining=0.0)])
-    assert line.startswith("WHOSE MOVE|nothing is holding the turn|")
-    assert "not proof the human has played" in line
+    assert line.startswith("WHOSE MOVE|ready to end|")
+    assert "the human's half finished" in line
+    assert "end_turn with the diary" in line
 
 
 def test_the_summary_is_one_line_for_the_session() -> None:

@@ -714,9 +714,12 @@ appends a `WHOSE MOVE|` line that splits the units which can still act into the 
 session's own, and writes the same split to `agent-half.txt` in the run directory beside
 `heartbeat.json`, which is what the human reads to know it is their move. `agent working` means the
 units holding the turn are the session's own to order or skip; `your move` means its half is done and
-the turn is waiting on the human. **`nothing is holding the turn` is the third state, and it is not
-proof the human has played**: a unit parked by a `skip` and one parked by the game's own end-of-turn
-sweep look identical, so it says only that no unit on either side can act right now.
+the turn is waiting on the human. **`ready to end` is the third state and it *is* the human-done
+signal** (human decision 2026-10-04: the game being ready to advance is what "the human has finished"
+means - there is no separate marker): no unit on either side can act, so the units blocker is down,
+and any unit that can still act raises it, so its absence is the human's own "I have finished this
+turn". That is the call for `end_turn` with the diary. **`UI.CanEndTurn()` is not this fact** - it is
+true while the blocker is still up (measured on turn 337).
 **The wait it depends on is not free**: `end_turn` does not
 refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units

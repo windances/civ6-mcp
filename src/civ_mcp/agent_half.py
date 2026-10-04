@@ -144,10 +144,10 @@ def render(turn: int | None, units: Iterable[Any], when: float | None = None) ->
         ]
     else:
         lines = [
-            f"{head}  NOTHING IS HOLDING THE TURN  {stamp}",
-            "no unit on either side can still act, so the units blocker is down and the turn can end.",
-            "if you have not played this turn, wake a unit: a parked unit looks the same whether you",
-            "parked it or the game's end-of-turn sweep did, so this is not proof that you moved.",
+            f"{head}  READY TO END  {stamp}",
+            "no unit on either side can act, so the units blocker is down - the human's half is done",
+            "too. Any unit that can still act raises that blocker, so its absence is the human's own",
+            "'I have finished this turn': end the turn with the five diary reflections.",
         ]
     return "\n".join(lines) + "\n"
 
@@ -173,9 +173,8 @@ def summary(turn: int | None, units: Iterable[Any]) -> str:
             f"{named}{more}; order or skip them, the turn cannot end until you do"
         )
     return (
-        f"WHOSE MOVE|nothing is holding the turn|{head}: no unit on either side can still act, so the "
-        "turn can end - which is not proof the human has played: a unit parked by a skip looks "
-        "exactly like one the game's own end-of-turn sweep parked"
+        f"WHOSE MOVE|ready to end|{head}: nothing can act on either side, so the units blocker is "
+        "down - that is the human's half finished too; end_turn with the diary"
     )
 
 
