@@ -710,8 +710,11 @@ refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is 
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units
 and skips the rest, so a session that ordered its own units and called `end_turn` would silently
 discard every one of the human's units. `.tools/wait-for-human.py` is the guard: it polls `get_units`
-and returns when no military unit, Great General or Great Admiral has movement left, and it runs
-**before** `end_turn`. It is read-only and exits non-zero while units are still holding.
+and returns when no military unit, Great General or Great Admiral **can still act** - the engine's own
+`IsReadyToMove()`, read as `ready_to_move`, and deliberately not a movement count, because a unit
+parked by a `skip` (`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`) or one running an operation
+keeps its movement for the rest of the turn and across turns while being unable to act. It runs
+**before** `end_turn`, is read-only, and exits non-zero while units can still act.
 
 **Everything else is `docs/game-recovery.md`** - the two recovery traps, the `0_MCP_NNNN` name
 collisions across rolled-back branches, the `AutoSave_NNNN` offset, `orient.py`, `turn-of-save.py`,

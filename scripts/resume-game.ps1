@@ -129,10 +129,10 @@ is ordered, run
 
     python .tools/wait-for-human.py
 
-which polls `get_units` and returns when no military unit and no great person of that class has
-movement left - that is, when the human has ordered, skipped or fortified every one of them. Only then
-call `end_turn`. The human closes their half by skipping what they mean to leave alone; a unit nobody
-touches keeps its moves, and the tool waits rather than deciding for them.
+which polls `get_units` and returns when no military unit, Great General or Great Admiral **can still
+act** - the engine's own `IsReadyToMove()`, not a movement count. A unit the human parks with `skip`,
+`fortify` or `alert` stops counting the moment they do it; a unit left untouched and awake does not,
+and the tool waits on it rather than deciding for them. Only then call `end_turn`.
 
 **Never call `skip_remaining_units(force=True)`, and never call `end_turn` early to get past this.**
 Both discard exactly the movement the human is using - `end_turn` does it silently, which is worse.

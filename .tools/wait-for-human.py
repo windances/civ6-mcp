@@ -12,13 +12,18 @@ so it is not a guard.
 
 That makes this wait the guard rather than a convenience, and it runs **before** `end_turn`.
 
-It knows by reading, not by being told: **the human is finished when every military unit has no
-movement left.** A unit the human means to leave alone is still a unit they will `skip` or `fortify`
-to close their half, and that sets its movement to zero like any other order. The same goes for the
-Great Generals and Great Admirals, which are the human's too but carry no combat strength. A unit
-nobody touches keeps its moves, so the tool waits rather than deciding for them. So this polls
-`get_units` and reports, and it is the one place where waiting is the correct action rather than a
-failure to act.
+**The human is finished when no military unit can still act** - the engine's own answer,
+`IsReadyToMove()`, surfaced as `ready_to_move`. Movement alone is the wrong test, and it deadlocks
+the wait rather than merely misreporting it: a unit parked by a skip (`ACTIVITY_HOLD`), one on sentry
+(`ACTIVITY_SENTRY`) and one running an operation (`ACTIVITY_OPERATION`) all keep their movement for
+the rest of the turn *and across turns*, while the engine reports that they cannot act. Waiting on
+`moves_remaining > 0` therefore waits forever on units the human has already dealt with. Measured on
+the live match when this was fixed: 10 military units had movement and **9 of them could not act**, so
+the first version of this tool would never have returned 0 at all.
+
+A unit the human means to leave alone is one they will `skip`, `fortify` or `alert` to close their
+half, and any of those sets an activity the engine reports as unable to act - which is why the
+activity is the test and a raw movement count is not.
 
     python .tools/wait-for-human.py                 # up to 30 min, poll every 10 s
     python .tools/wait-for-human.py --timeout 900 --interval 5
@@ -37,36 +42,51 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
-sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
 
 
-def is_military(unit) -> bool:
-    return (unit.combat_strength or 0) > 0
+def is_the_humans(unit) -> bool:
+    """A military unit, or a Great General or Great Admiral - the units the human commands.
+
+    A Great General or Admiral has no combat strength, so the combat test alone would have left the
+    human's own commanders movable by the session. The live match had both at once: a general and an
+    admiral, each with a move in hand.
+    """
+    if (unit.combat_strength or 0) > 0:
+        return True
+    kind = str(unit.unit_type).upper()
+    return "GENERAL" in kind or "ADMIRAL" in kind
+
+
+def can_still_act(unit) -> bool:
+    """Whether the human can still give this unit an order this turn.
+
+    Three cases, in order. No movement left is done whatever else is true. A server started before
+    the activity column existed reports every unit as `ready_to_move` (the field's default), so when
+    the activity is absent the movement is all there is to go on - the old behaviour, which waits
+    rather than advancing and is therefore the safe direction. Otherwise the engine's own
+    `IsReadyToMove()` decides, which is what keeps a held, sentried or operating unit out of the
+    wait.
+    """
+    if unit.moves_remaining <= 0:
+        return False
+    if not str(getattr(unit, "activity", "") or ""):
+        return True
+    return bool(unit.ready_to_move)
 
 
 async def holding(gs) -> list:
-    """The military units the human has not finished with, plus any great general or admiral moving.
-
-    A Great General is included on purpose: it commands the army, so it is the human's like the units
-    it leads. It has no combat strength, which is exactly why a filter on `combat_strength` alone
-    would have let the session end the turn while the human was still placing one - matched here by
-    its unit type instead. The Great Admiral is the same case at sea, and it is not hypothetical: the
-    live match had one at (31,22) with a move in hand the first time this ran.
-    """
-    waiting = []
-    for unit in await gs.get_units():
-        if unit.moves_remaining <= 0:
-            continue
-        kind = str(unit.unit_type).upper()
-        if is_military(unit) or "GENERAL" in kind or "ADMIRAL" in kind:
-            waiting.append(unit)
-    return waiting
+    """The units the human can still act with: military, plus the Great Generals and Admirals."""
+    return [u for u in await gs.get_units() if is_the_humans(u) and can_still_act(u)]
 
 
 async def main() -> int:
+    # Reconfigured here rather than at import so the module can be imported by a test without
+    # touching the process's stdout.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--timeout", type=int, default=1800, help="seconds to wait (default 30 min)")
     ap.add_argument("--interval", type=int, default=10, help="seconds between reads")
@@ -87,22 +107,22 @@ async def main() -> int:
         waiting = await holding(gs)
         if not waiting:
             print(
-                "the human's half is done: no military unit, great general or admiral has movement left"
+                "the human's half is done: no military unit, great general or admiral can still act"
             )
             await conn.disconnect()
             return 0
 
         # Print the list when it changes and keep quiet while it does not, so a 30 minute wait is a
-        # readable log rather than the same twelve rows every ten seconds. The heartbeat is a
-        # timestamp, so silence still says the tool is alive.
-        sig = tuple(sorted((u.unit_index, u.x, u.y, u.moves_remaining) for u in waiting))
+        # readable log rather than the same rows every ten seconds. The heartbeat is a timestamp, so
+        # silence still says the tool is alive.
+        sig = tuple(sorted((u.unit_index, u.x, u.y, u.moves_remaining, u.activity) for u in waiting))
         if sig != last_sig:
             stamp = time.strftime("%H:%M:%S")
-            print(f"{stamp}  {len(waiting)} unit(s) still with the human:")
+            print(f"{stamp}  {len(waiting)} unit(s) the human can still act with:")
             for unit in waiting[:12]:
                 print(
-                    f"  [{unit.unit_index:>2}] {unit.unit_type:<24} ({unit.x},{unit.y}) "
-                    f"mv{unit.moves_remaining}"
+                    f"  [{unit.unit_index:>2}] {unit.unit_type:<24} ({unit.x:>3},{unit.y:>3}) "
+                    f"mv{unit.moves_remaining:<5} {unit.activity or '?'}"
                 )
             if len(waiting) > 12:
                 print(f"  ... and {len(waiting) - 12} more")
@@ -115,7 +135,7 @@ async def main() -> int:
             await conn.disconnect()
             return 1
         if time.time() >= deadline:
-            print(f"timed out after {args.timeout}s with {len(waiting)} unit(s) still holding moves")
+            print(f"timed out after {args.timeout}s with {len(waiting)} unit(s) still able to act")
             await conn.disconnect()
             return 1
         await asyncio.sleep(args.interval)

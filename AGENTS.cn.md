@@ -621,8 +621,10 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 这个阻塞会被 `_sweep_unmoved_units`（`src/civ_mcp/end_turn.py`，第 3613-3643 行）自动解决掉，它会把战斗单位
 设防、把其余单位跳过，于是回合照常推进；一个按分工做完了自己的单位、然后调用 `end_turn` 的会话，
 会**悄无声息地**把人类这边的每一个单位都丢掉。`.tools/wait-for-human.py` 就是那道闸：它轮询
-`get_units`，直到没有任何军事单位、大军事家或大海军统帅还有余力才返回，而且它在 `end_turn` **之前**跑。
-它只读，不写，只要还有单位留着余力就以非零退出。
+`get_units`，直到没有任何军事单位、大军事家或大海军统帅**还能行动**才返回——判据是引擎自己的
+`IsReadyToMove()`（读作 `ready_to_move`），**刻意不用移动力判断**，因为被 `skip` 停下的单位
+（`ACTIVITY_HOLD`）、处于 `alert` 的单位（`ACTIVITY_SENTRY`）以及正在执行操作的单位，整个回合乃至跨回合
+都保留着移动力，却已经无法行动。它在 `end_turn` **之前**跑，只读，只要还有单位能行动就以非零退出。
 
 **其余一切都在 `docs/game-recovery.md`**——那两种恢复陷阱、跨回滚分支的 `0_MCP_NNNN` 文件名冲突、
 `AutoSave_NNNN` 偏移、`orient.py`、`turn-of-save.py`、`auto-turns.py`、按名字加载、挂起恢复和存档
