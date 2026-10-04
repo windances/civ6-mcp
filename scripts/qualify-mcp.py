@@ -8,9 +8,11 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import queue
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 
@@ -75,11 +77,38 @@ def _request(
             return response["result"]
 
 
+def scratch_data_dir() -> str:
+    """A data root of the smoke test's own - never the workspace's.
+
+    The child stamps ``heartbeat.write("starting")`` at startup, and ``heartbeat.path()`` resolves
+    ``CIV_MCP_DATA_DIR`` through ``run_manifest.resolve_data_dir``, which follows the ``current``
+    pointer into the playthrough that is being played. Handing the child the workspace root
+    therefore aimed a protocol smoke test at the live match's own heartbeat. Measured 2026-10-04,
+    with a session playing: running this gate replaced
+
+        {"phase": "playing", "turn": 347, "pid": 40216, "run_id": "swift-ebony-requiem-96",
+         "civ": "china", "seed": -1894041591}
+
+    with
+
+        {"phase": "starting", "turn": 0, "civ": "", "seed": 0, "run_id": "<a fresh name>"}
+
+    and the pid it named was gone a moment later, because the process that wrote it is the
+    throwaway one this function exists to keep away. Two readers take that file as fact -
+    ``handoff.verdict``, which ``scripts/resume-game.ps1`` is built on, and ``temp_tasks.status``
+    - and it is the passive signal that says a session is playing, so the smoke test gets a
+    directory that belongs to nobody.
+    """
+    scratch = pathlib.Path(tempfile.gettempdir()) / f"civ-mcp-qualify-{os.getpid()}"
+    scratch.mkdir(parents=True, exist_ok=True)
+    return str(scratch)
+
+
 def qualify() -> None:
     child_env = dict(os.environ)
     child_env["CIV_MCP_DISABLE_LUA"] = "1"
     child_env["CIV_MCP_DISABLE_WEB_API"] = "1"
-    child_env["CIV_MCP_DATA_DIR"] = os.path.join(os.getcwd(), ".civ6-mcp-data")
+    child_env["CIV_MCP_DATA_DIR"] = scratch_data_dir()
     # The adapter speaks JSON-RPC, which is UTF-8 by definition. Without this the
     # child inherits a non-UTF-8 locale (e.g. cp936) on Windows.
     child_env["PYTHONUTF8"] = "1"
