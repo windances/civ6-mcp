@@ -416,11 +416,23 @@ def narrate_cities(
                 f" | Power {c.power_available:.0f}/{c.power_required:.0f}"
                 + ("" if not c.unpowered else " !! UNPOWERED")
             )
+        # Amenities: the city row carries the gross figure and the demand, and only the
+        # difference means anything - the demand scales with population, so 12 against a demand
+        # of 9 is a healthy city and 12 against 14 is not. Print both and name the shortfall,
+        # because nothing else in the turn result surfaces it (`mind-the-amenities` is staged in
+        # `prompts/checks/pending/`, and without this the reader sees a bare gross number the
+        # model comment itself calls meaningless on its own).
+        amenity_str = f"{c.amenities}"
+        if c.amenities_needed:
+            slack = c.amenities - c.amenities_needed
+            amenity_str = f"{c.amenities}/{c.amenities_needed}"
+            if slack < 0:
+                amenity_str += f" !! SHORT {slack}"
         lines.append(
             f"  {c.name} (pop {c.population}) at ({c.x},{c.y}) — "
             f"Food {c.food:.0f} Prod {c.production:.0f} Gold {c.gold:.0f} "
             f"Sci {c.science:.0f} Cul {c.culture:.0f} | "
-            f"Housing {c.housing:.0f} Amenities {c.amenities} | "
+            f"Housing {c.housing:.0f} Amenities {amenity_str} | "
             f"Growth: {growth_str} | {prod_str}{defense}{loyalty_str}{power_str} "
             f"[id:{c.city_id}]"
         )

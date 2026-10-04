@@ -340,7 +340,7 @@ class CityInfo:
     # its own: -1 amenities against a demand of 1 is a different city from -1 against a demand
     # of 4. The directive's "check food and amenities every turn" needs the difference, and the
     # difference is the only thing the per-turn check can act on.
-    amenities_needed: int = 0  # City:GetPowerAdvice(), the game's own recommendation
+    amenities_needed: int = 0  # City:GetGrowth():GetAmenitiesNeeded(); 0 when unreported
 
     @property
     def power_reported(self) -> bool:
