@@ -443,8 +443,14 @@ def narrate_cities(
         if c.amenities_needed:
             slack = c.amenities - c.amenities_needed
             amenity_str = f"{c.amenities}/{c.amenities_needed}"
+            # `slack == 0` is the boundary the game acts on, not a healthy city: measured live at
+            # T344, Sidon read `2/2` and drew no marker while the game's own notification named it
+            # as needing more amenities. A deficit is unambiguous; exactly at the demand is the
+            # state to look at first.
             if slack < 0:
                 amenity_str += f" !! SHORT {slack}"
+            elif slack == 0:
+                amenity_str += " !! AT LIMIT"
         lines.append(
             f"  {c.name} (pop {c.population}) at ({c.x},{c.y}) — "
             f"Food {c.food:.0f} Prod {c.production:.0f} Gold {c.gold:.0f} "

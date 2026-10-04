@@ -65,6 +65,19 @@ def test_a_server_that_did_not_report_the_demand_prints_the_bare_number() -> Non
     assert "SHORT" not in text
 
 
+def test_an_exactly_met_demand_is_flagged_as_the_limit_not_as_healthy() -> None:
+    """`slack == 0` is the boundary the game acts on.
+
+    Measured live at T344: Sidon read `2/2` and drew no marker, while the game's own notification
+    named Sidon among the cities needing more amenities. A surplus above the demand is healthy;
+    sitting exactly on it is the first thing to look at.
+    """
+    text = line(city(amenities=2, amenities_needed=2))
+    assert "Amenities 2/2" in text
+    assert "!! AT LIMIT" in text
+    assert "SHORT" not in text
+
+
 def test_the_two_numbers_are_not_the_same_number() -> None:
     """A gross reading of 20 must not be reported as a surplus when the demand is 22."""
     text = line(city(amenities=20, amenities_needed=22))
