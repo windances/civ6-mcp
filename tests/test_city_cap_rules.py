@@ -28,6 +28,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from civ_mcp import end_turn  # noqa: E402
+from civ_mcp import turn_checks  # noqa: E402
 from civ_mcp.lua.cities import parse_cities_response  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -66,8 +67,12 @@ CAP_METRICS = (
 STAGED_RULES = (
     "repair-the-pillaged-district",
     "mind-the-housing-cap",
-    "mind-the-amenities",
 )
+
+# Promoted at T344, once a server started after the commit that added the amenity-demand column
+# could compute `amenities_floor` and `cities_unhappy`. This is the other half of the staged
+# assertion below: the file is gone from `pending/` and the id is live in `turn-checks.md`.
+PROMOTED_RULES = ("mind-the-amenities",)
 
 
 def _gs(*rows: str):
@@ -149,3 +154,22 @@ def test_the_rule_is_staged_and_not_yet_live(rule_id: str):
     assert f"id: {rule_id}" not in LIVE.read_text(encoding="utf-8-sig"), (
         f"{rule_id} is live while its staged file still exists"
     )
+
+
+@pytest.mark.parametrize("rule_id", PROMOTED_RULES)
+def test_the_promoted_rule_is_live_and_no_longer_staged(rule_id: str):
+    """The flip side: a promoted rule must be in the live file and gone from `pending/`.
+
+    Otherwise the two halves could both pass while the rule is in neither place, or in both.
+    """
+    live = LIVE.read_text(encoding="utf-8-sig")
+    assert f"id: {rule_id}" in live, f"{rule_id} is not live"
+    assert not (PENDING / f"{rule_id}.md").exists(), (
+        f"{rule_id} is live and its staged file still exists"
+    )
+    # A promoted block without a `message:` is dropped by the parser at log.debug level, so it would
+    # sit in the live file, read as in force, and never fire - the failure `pending/README.md` exists
+    # to prevent. Check the parsed object rather than the text.
+    parsed = {c.check_id: c for c in turn_checks.parse_checks(live)}
+    assert rule_id in parsed, f"{rule_id} did not survive parsing"
+    assert parsed[rule_id].message, f"{rule_id} has no message and would never fire"

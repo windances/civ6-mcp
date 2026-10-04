@@ -353,6 +353,13 @@ require: metric(improvements) >= metric(cities) * 3
 message: Fewer than three improvements per city. Unimproved tiles are the usual reason an empire stalls, and builders are the cheapest multiplier in the game - if gold is above ~300, buy one instead of saving.
 -->
 
+<!-- check
+id: mind-the-amenities
+when: metric(cities_unhappy) >= 1
+require: metric(amenities_floor) >= 0
+message: A city is short of amenities (`amenities - amenities_needed < 0`), which cuts its growth and its yields and eventually spawns rebels. `amenities` alone says nothing - the demand scales with population, so -1 against a demand of 1 is a different city from -1 against a demand of 4, and the metric that matters is the difference. Fix the worst city this turn: a new luxury type (each new type is +1 amenity to four cities, so duplicates beyond the first are worth trading, not keeping), an Entertainment Complex or its buildings, or a policy card. Read `amenities_floor` for the worst gap and `metric(cities_unhappy)` for how many cities are short. **The city names come from `get_notifications`, not from `get_cities`**: the low-amenity notification carries no location, and its `GetSummary()` sentence is what names the city.
+-->
+
 ## Activated 2026-09-26 (staged in `pending/` until a server computed their metrics)
 
 A rule that names a metric the running server does not compute reports itself `un-evaluable` every
