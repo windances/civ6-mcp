@@ -1986,6 +1986,28 @@ async def set_research(ctx: Context, tech_or_civic: str, category: str = "tech")
     )
 
 
+def _hang_self_restart_enabled() -> bool:
+    """May the MCP kill and relaunch the game by itself when a turn hangs?
+
+    **Off by default since 2026-10-04** (human decision: report the stall early rather than
+    self-restart). `end_turn` spends at most `AI_TURN_STALL_REPORT_S` waiting for the AI and then
+    answers `HANG:<turn>:<save>`, and that answer is what the session and the human act on: the
+    session stops (`scripts/stop-agent.py`), the game is restarted by the human, and the match
+    resumes from the named save.
+
+    The old behaviour restarted the game up to three times before anyone was told, and a reload
+    throws away everything the current turn had already done - measured T354, where a reload reset
+    the whole turn (Korolev's activation, Xi'an's launch, the builder orders). It also did that
+    while nobody was watching. `CIV_MCP_HANG_SELF_RESTART=1` restores it for unattended runs.
+    """
+    return os.environ.get("CIV_MCP_HANG_SELF_RESTART", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 async def _diagnose_hang(turn: int) -> dict:
     """Record what the screen looked like when end_turn gave up.
 
@@ -2227,11 +2249,14 @@ async def end_turn(
     result = await _logged(ctx, "end_turn", {}, gs.end_turn)
 
     # ---------------------------------------------------------------
-    # Auto-recover from AI turn hangs (transparent to agent).
-    # end_turn returns "HANG:{turn}:{save}|..." when AI processing is
-    # stuck after ~39s of polling with no blockers found.
-    # Recovery: restart_and_load the MCP autosave, reconnect, retry
-    # up to _MAX_HANG_RETRIES times with escalating waits.
+    # AI turn hangs (transparent to the agent, unless recovery is off).
+    # end_turn returns "HANG:{turn}:{save}|..." when the AI-processing state outlives
+    # `AI_TURN_STALL_REPORT_S` (120s) with no blocker, no diplomacy session and no popup.
+    #
+    # Since 2026-10-04 the self-restart is off (see `_hang_self_restart_enabled`): the message is
+    # returned to the session, which stops and lets the human restart the game. With
+    # CIV_MCP_HANG_SELF_RESTART=1 the old recovery runs - restart_and_load the autosave, reconnect,
+    # retry up to _MAX_HANG_RETRIES times with escalating waits.
     # ---------------------------------------------------------------
     _MAX_HANG_RETRIES = 3
     _HANG_EXTRA_WAIT = [0, 15, 30]  # extra seconds before retry per attempt
@@ -2268,7 +2293,26 @@ async def end_turn(
             except Exception:
                 log.error("HANG DIAGNOSIS T%s: refocus retry failed", _diag_turn, exc_info=True)
 
-    if result.startswith("HANG:") and not gs._hang_retry_active:
+    if (
+        result.startswith("HANG:")
+        and not gs._hang_retry_active
+        and not _hang_self_restart_enabled()
+    ):
+        # Report early rather than self-restart (human decision 2026-10-04). The game is left
+        # exactly as it is - a kill/relaunch here would throw away the turn's work and pre-empt the
+        # human's own restart. The message from `end_turn` already names the flow the session and
+        # the human follow, so this branch only records that the recovery did not run.
+        log.error(
+            "HANG %s: self-restart recovery is off (CIV_MCP_HANG_SELF_RESTART) - reporting the "
+            "stall to the session and leaving the game running for a human restart",
+            result.split("|", 1)[0],
+        )
+
+    if (
+        result.startswith("HANG:")
+        and not gs._hang_retry_active
+        and _hang_self_restart_enabled()
+    ):
         parts = result.split("|", 1)
         hang_info = parts[
             0

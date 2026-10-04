@@ -21,6 +21,32 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
+# How long `end_turn` waits for the AI to hand the turn back before it reports the turn as stuck.
+#
+# Human rule 2026-10-04: the game sitting in the AI-processing state (the screen reads "other
+# players are taking their turn, please wait") for more than two minutes means it needs a restart,
+# so the call must report at that mark rather than burn the old ten-minute budget and hide the
+# stall from whoever is watching. The count is the *whole* wait, Phase 1 included.
+#
+# The InGame probes inside the budget (diplomacy, World Congress, popup layer) still run: they were
+# already single probes rather than loops, and repeated InGame queries during AI processing are what
+# stalled the AI in Games 1-5. Shortening the wait does not change how many of them are sent.
+#
+# A stall is not the same thing as a slow AI - a real AI turn takes seconds, and the only case this
+# budget ever truncated legitimately was a turn that was waiting for an answer nobody gave.
+AI_TURN_STALL_REPORT_S = 120.0
+
+
+def next_poll_delay(
+    delay: float, waited: float, budget: float = AI_TURN_STALL_REPORT_S
+) -> float:
+    """The next sleep in the stall loop, trimmed so the loop cannot overshoot its budget.
+
+    Returns 0.0 once the budget is spent, which is the loop's signal to stop and report. The
+    cadence table above the loop stays a cadence table: the budget is what ends it.
+    """
+    return max(0.0, min(delay, budget - waited))
+
 # Metrics that describe the live battlefield rather than the stored diary row. A historical
 # row cannot be asked about them, so `_context_from_row` fills them with zeros (the rules
 # that use them are gated on `>= 1`, so zero means "rule not applicable to this row" - and a
@@ -853,7 +879,7 @@ async def _sweep_unmoved_units(gs) -> tuple[bool, str]:
     """Resolve the "a unit still has moves" blocker - unless an attack would be lost.
 
     Returns ``(resolved, message)``. The sweep exists because one forgotten unit used to
-    freeze the turn for the whole ~9 minute poll budget, so it is not removed - but a unit
+    freeze the turn for the whole poll budget, so it is not removed - but a unit
     with a legal attack is not forgotten, and sweeping it is how four attacks died over the
     T139-T152 Russian war without anyone seeing them go. When one is pending this returns
     ``(False, ...)`` and nothing is touched: the caller bounces the turn with the attack
@@ -3615,7 +3641,7 @@ async def execute_end_turn(gs: GameState) -> str:
                     try:
                         # Upstream treats leftover unit moves as a hard blocker and
                         # hands the turn back, which is safe in principle but cost
-                        # the full ~9 minute poll budget every time it happened: the
+                        # the full poll budget every time it happened: the
                         # agent has already finished its plan when it calls
                         # end_turn, so one forgotten unit froze the turn instead of
                         # costing one round trip. Resolve it exactly as the
@@ -3805,7 +3831,10 @@ async def execute_end_turn(gs: GameState) -> str:
     # one blocker with no other trace in the result, so its answer rides in the failure message.
     popup_note: str = ""
 
-    # Phase 1: Quick check (4s) — turn sometimes advances within 1-2s
+    # Phase 1: Quick check (4s) — turn sometimes advances within 1-2s.
+    # The stall clock starts here, not at Phase 2: the reported wait has to be the wait the caller
+    # actually experienced, and the message quotes it against the two-minute rule.
+    stall_started = time.monotonic()
     for _ in range(8):
         await asyncio.sleep(0.5)
         turn_after = await _get_turn_number(gs)
@@ -3817,11 +3846,12 @@ async def execute_end_turn(gs: GameState) -> str:
             advanced = True
             break
 
-    # Phase 2: Slow polling (5 min) — AI can take 1-5 min on large maps,
-    # especially during wars with many units. GameCore-only queries.
+    # Phase 2: Slow polling, bounded by `AI_TURN_STALL_REPORT_S` — AI can take a minute or
+    # two on large maps, especially during wars with many units. GameCore-only queries.
     if not advanced:
-        # 10 min total: AI can take several minutes on large maps with wars.
-        # Quick polls early (catch fast turns), then escalate to 30s intervals.
+        # The cadence stays fine early (to catch a fast turn) and coarsens later. The budget, not
+        # the table, is the deadline: the last sleep is trimmed so the loop cannot overshoot it by
+        # a whole interval, and a table that outlives the budget simply stops early.
         diplomacy_probed = False
         wc_probe_at = 90.0  # first World Congress probe, then every 120s
         cumulative_wait = 4.0  # Phase 1 already waited ~4s
@@ -3831,33 +3861,19 @@ async def execute_end_turn(gs: GameState) -> str:
             3.0,
             3.0,
             5.0,
-            5.0,  # 20s: catch fast turns
+            5.0,  # 24s: catch fast turns
             10.0,
             10.0,
             10.0,
-            10.0,
-            10.0,
-            10.0,  # 80s: mid wait
+            10.0,  # 64s: mid wait
             15.0,
             15.0,
-            15.0,
-            15.0,  # 140s
-            20.0,
-            20.0,
-            20.0,
-            20.0,  # 220s
-            30.0,
-            30.0,
-            30.0,
-            30.0,
-            30.0,
-            30.0,
-            30.0,  # 430s
-            30.0,
-            30.0,
-            30.0,
-            30.0,  # 550s (~9 min)
+            15.0,  # 109s: the last probes get their chance
+            20.0,  # trimmed to the budget
         ]:
+            delay = next_poll_delay(delay, cumulative_wait)
+            if delay <= 0:
+                break
             await asyncio.sleep(delay)
             cumulative_wait += delay
             turn_after = await _get_turn_number(gs)
@@ -3870,7 +3886,7 @@ async def execute_end_turn(gs: GameState) -> str:
                 break
             # Check for game-over during longer polling intervals.
             # An opponent victory (Science, Culture, etc.) fires during
-            # their turn — without this we'd wait the full 9-min timeout.
+            # their turn — without this we'd wait out the whole stall budget.
             if delay >= 10.0:
                 gameover = await gs.check_game_over()
                 if gameover is not None:
@@ -3922,7 +3938,7 @@ async def execute_end_turn(gs: GameState) -> str:
                     wc_mid_turn_note = note
                     log.warning("Mid-turn World Congress: %s", note)
 
-    # Phase 3: After ~5 min, now safe to check InGame state.
+    # Phase 3: Once the budget is spent, now safe to check InGame state.
     # AI processing either completed (blocker is on our side) or is
     # truly hung.  Do ONE round of InGame checks, not a loop.
     if not advanced:
@@ -4077,14 +4093,26 @@ async def execute_end_turn(gs: GameState) -> str:
             from .autosave import get_autosave_for_turn
 
             hang_save = get_autosave_for_turn(turn_num)
+            elapsed = time.monotonic() - stall_started
+            # The two-minute rule rides in the message, not only in the docs: this string is the
+            # only thing that reaches the session, and the human rule (2026-10-04) is that waiting
+            # longer than this does not fix the game - it has to be restarted. `stop-agent.py`
+            # comes first so the session does not retry into the restart, and the save named here
+            # is where the match resumes.
             return (
                 f"HANG:{turn_num}:{hang_save}|"
                 f"End turn requested (turn is still {turn_num}). "
-                f"AI turn processing appears stuck.{popup_clause}"
+                f"AI turn processing appears stuck.{popup_clause} "
+                f"Waited {elapsed:.0f}s. The game has held the AI-processing state past the "
+                f"two-minute limit, and past that point it does not recover by waiting: it needs a "
+                f"restart. Stop this session first (scripts\\stop-agent.py), have the game "
+                f"restarted, then resume with load_game_save(\"{hang_save}\") to come back to "
+                f"turn {turn_num}."
             )
         return (
             f"End turn requested (turn is still {turn_num}). Check get_pending_diplomacy or"
-            f" dismiss_popup.{popup_clause}"
+            f" dismiss_popup.{popup_clause} The game has held the AI-processing state past the "
+            f"two-minute limit, and past that point it needs a restart."
         )
 
     # Turn advanced — clear the pending flag

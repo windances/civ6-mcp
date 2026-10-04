@@ -71,3 +71,11 @@ get_game_overview                 # verify load
 - 而在这一切过程中，游戏一直停在**已加载游戏的领袖开场**（`CHINESE EMPIRE`、`QIN (UNIFIER)`、一个 CONTINUE 按钮）——一个 **Lua 看不见**的画面，所以上面每个工具都在回答一个游戏早已离开的状态。
 
 **什么都没做它就好了**：下一次 `get_game_overview` 读到 `Turn 6 | China (Qin (Unifier))`，游玩继续。所以**那四条消息并不能证明恢复失败** - 那是领袖开场的窗口，也是唯一一个读屏幕不是后备方案而是唯一仪器的状态。`.tools/click-continue.py` **不带 `--click`** 是安全的检查：它用 `PIL.ImageGrab` 抓取像素（不给游戏发送任何东西），从不调用 `SetForegroundWindow`，报告游戏是否停在 CONTINUE 上，并且不改变任何东西。只有当它找到按钮且游戏是前台窗口时才传 `--click`。**而且优先选择先等待**：这个窗口大约五分钟后自己关闭了，所以一个活着且正在恢复中的会话应该让它自己走下去——这个辅助脚本是给它已经停住的情形用的，不是给它很慢的情形用的。
+
+**AI 回合停摆在两分钟时就上报，而且 MCP 不再自己重启游戏（2026-10-04）。** 这个状态就是屏幕上显示的“其他玩家正在操作，请稍后”；`end_turn` 在这段时间里轮询，既没有 blocker、没有外交会话、也没有弹窗，而从 2026-10-04 起它在 `AI_TURN_STALL_REPORT_S` = **120 秒**后放弃，而不是过去的约 590 秒，并回答 `HANG:<turn>:<save>|... Waited <n>s. The game has held the AI-processing state past the two-minute limit, and past that point it does not recover by waiting: it needs a restart.`
+
+- **人的规则（2026-10-04）：在这个状态超过两分钟就重启游戏，由人来重启。** T354 实测：两次停摆（`22:13:34`、`22:56:21`）各烧掉了整个旧预算，而回答在游戏明显停住几分钟之后才到，里面还没有说该做什么。
+- **早报告，而不是自己重启。** MCP 过去会在通知任何人之前最多三次杀掉并重新拉起游戏（`server.py` 的 `HANG RECOVERY`）。现在默认关闭：重载会丢掉当前回合已经做完的一切——T354 那次重载把科罗廖夫的启用、西安的发射和建造者指令全部重置了——而且是在没人看着的时候做的。这条分支仍然留在 `CIV_MCP_HANG_SELF_RESTART=1` 后面，供无人值守的运行使用。
+- **顺序是固定的：先停会话，再重启，再读档。** 会话不会在重启期间继续重试。收到 `HANG` 消息时：`scripts\stop-agent.py`（它写停止请求，`--wait N` 会兜底执行 `civ6-clean.ps1 -KeepGame`），然后由人重启游戏，再用 `load_game_save("<save>")` 从消息里点名的存档继续。
+- **把后台窗口拉回前台仍然会先发生，而那不是重启**：Civ VI 的窗口在后台时不推进 AI 回合，所以 `server.py` 会重新聚焦并重试一次。T354 `22:56:20` 实测：窗口被 Chrome 压在后面（见 `hang_diagnosis.jsonl`），这正是让那次停摆看起来和 AI 卡死一模一样的原因。
+- **诊断文件记录的内容没有变**（`hang_diagnosis.jsonl`：窗口矩形、焦点、前台窗口、前若干行 OCR 文本），而在自我重启关闭之后，它现在是停摆时*唯一*会碰游戏的东西——这正是重点：证据留下来了。

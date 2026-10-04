@@ -295,7 +295,9 @@ Symptoms when it is absent (both observed on 2026-09-20, T109 and T111):
 - `end_turn` returns `HANG:<turn>:<save>` and the built-in auto-recovery answers
   `HANG RECOVERY FAILED at T<turn>: restart_and_load threw an exception` —the
   `winrt` import inside `_ocr_winrt()` raises, and the running agent is then left
-  to hand-recover.
+  to hand-recover. (Observed 2026-09-20. Since 2026-10-04 the self-restart is off
+  by default — see "The stall reports at two minutes" below — so this particular
+  message needs `CIV_MCP_HANG_SELF_RESTART=1` to appear at all.)
 - The game is relaunched but lands on the **main menu** with the save never
   loaded, so the turn never advances.
 
@@ -330,6 +332,32 @@ first:
 
 Read the next hang from `hang_diagnosis.jsonl` rather than re-deriving it from a
 ten-minute silence.
+
+### The stall reports at two minutes, and the MCP does not restart the game itself (2026-10-04)
+
+The old poll budget was ~590 s and the old recovery killed and relaunched the game up
+to three times before anyone was told. Both are gone, on a human decision: **the game
+sitting in the AI-processing state ("other players are taking their turn, please
+wait") for more than two minutes is restarted by the human**, with the session stopped
+first, so nothing legitimate is ever truncated by the shorter wait and the restart is
+never a surprise.
+
+- `end_turn` waits at most `AI_TURN_STALL_REPORT_S` (120 s, Phase 1's 4 s included) and
+  then answers `HANG:<turn>:<save>|... Waited <n>s. The game has held the AI-processing
+  state past the two-minute limit, and past that point it does not recover by waiting:
+  it needs a restart.` The same message names the flow: stop the session
+  (`scripts\stop-agent.py`), restart the game, resume with `load_game_save("<save>")`.
+- The kill/relaunch recovery is **off by default** (`server.py::_hang_self_restart_enabled`).
+  A reload throws away everything the running turn had already done — measured T354,
+  where the reload reset Korolev's activation, Xi'an's launch and the builder orders —
+  and it did so while nobody was watching. `CIV_MCP_HANG_SELF_RESTART=1` restores the
+  old behaviour for an unattended run.
+- The **diagnosis** (`_diagnose_hang`) and the **re-focus retry**
+  (`_hang_window_unfocused`) are unchanged and still run first: they cost no restart,
+  and a backgrounded window genuinely does not advance an AI turn. Measured T354
+  `22:56:20`, the window was behind Chrome.
+- `tests/test_end_turn_stall_budget.py` holds the budget, the message and the
+  switched-off recovery; the operating rule is `docs/game-recovery.md`.
 
 ### The launcher only read an English main menu —FIXED 2026-09-20
 

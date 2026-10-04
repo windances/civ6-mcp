@@ -179,3 +179,30 @@ is parked on CONTINUE, and changes nothing. Pass `--click` only when it finds th
 the foreground window. **And prefer waiting first**: this window closed by itself in about five minutes,
 so a session that is alive and mid-recovery should be left to it - the helper is for the case where it
 has stopped, not for the case where it is slow.
+
+**The AI-turn stall is reported at two minutes, and the MCP no longer restarts the game by itself
+(2026-10-04).** The state is the one the screen shows as "other players are taking their turn, please
+wait"; `end_turn` polls through it with no blocker, no diplomacy session and no popup, and from
+2026-10-04 it gives up after `AI_TURN_STALL_REPORT_S` = **120 s** instead of the old ~590 s, answering
+`HANG:<turn>:<save>|... Waited <n>s. The game has held the AI-processing state past the two-minute
+limit, and past that point it does not recover by waiting: it needs a restart.`
+
+- **Human rule (2026-10-04): two minutes in that state and the game is restarted, by the human.**
+  Measured T354: two stalls (`22:13:34`, `22:56:21`) each burned the whole old budget, and the answer
+  arrived minutes after the game had visibly stopped with nothing in it saying what to do.
+- **Report early rather than self-restart.** The MCP used to kill and relaunch the game up to three
+  times before anyone was told (`server.py`, `HANG RECOVERY`). That is off by default now: a reload
+  throws away everything the running turn had already done - the T354 reload reset Korolev's
+  activation, Xi'an's launch and the builder orders - and it did so while nobody was watching. The
+  branch is still there behind `CIV_MCP_HANG_SELF_RESTART=1` for an unattended run.
+- **The order is fixed: stop the session first, then restart, then reload.** The session does not
+  retry into a restart. On the `HANG` message: `scripts\stop-agent.py` (it writes the stop request,
+  and `--wait N` falls back to `civ6-clean.ps1 -KeepGame`), then the game is restarted, then the match
+  resumes from the save the message names with `load_game_save("<save>")`.
+- **Re-focusing a backgrounded window still happens before any of this**, and it is not a restart:
+  Civ VI does not advance an AI turn while its window is in the background, so `server.py`
+  re-focuses and retries once. Measured T354 `22:56:20`: the window was behind Chrome
+  (`hang_diagnosis.jsonl`), which is what made that stall look identical to a hung AI.
+- **What the diagnosis file holds** is unchanged (`hang_diagnosis.jsonl`: window rect, focus,
+  foreground window, first OCR lines), and with the self-restart off it is now the *only* thing that
+  touches the game on a stall - which is the point: the evidence survives.

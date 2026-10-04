@@ -781,3 +781,12 @@ returns. Verify the position from outside with `.tools/whats-on-screen.py`, whic
 is parked on the loaded game's **leader intro**, which Lua cannot see - it resolved by itself in about
 five minutes (measured 2026-09-30). `.tools/click-continue.py` without `--click` is the safe check, and
 `--click` only when it finds the button.
+
+**A real AI-turn stall is reported at two minutes, and restarting the game is the human's move**
+(human decision 2026-10-04): the state the screen shows as "other players are taking their turn, please
+wait", held longer than that, is not waited out. `end_turn` waits at most `AI_TURN_STALL_REPORT_S`
+(120 s) and then answers `HANG:<turn>:<save>| ... Waited <n>s ... it needs a restart`, and the MCP no
+longer kills and relaunches the game itself - a reload throws away everything the running turn has
+already done (measured T354), and `CIV_MCP_HANG_SELF_RESTART=1` is the only way back to that. So on a
+`HANG`: finish nothing new, stop the session with `scripts\stop-agent.py` (the human restarts the game),
+and resume from the save the message names.

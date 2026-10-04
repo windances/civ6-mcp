@@ -677,3 +677,10 @@ MCP 会在第一次送出时把 `delivered_at` 与 `delivered_turn` 记进该文
 所加载对局的**领袖开场界面**上——那是 Lua 看不见的东西。它自己在大约五分钟内就恢复了（2026-09-30
 实测）。`.tools/click-continue.py` 不带 `--click` 是安全的核对方式；只有在它确实找到按钮时才加
 `--click`。
+
+**真正的 AI 回合停摆会在两分钟时上报，而重启游戏是人的动作**（2026-10-04 人的决定）：屏幕上显示
+"其他玩家正在操作，请稍后"的那个状态，超过这个时间就不再等下去。`end_turn` 最多等
+`AI_TURN_STALL_REPORT_S`（120 秒），然后回答 `HANG:<turn>:<save>| ... Waited <n>s ... it needs a
+restart`，而且 MCP 不再自己杀掉并重新拉起游戏——重载会丢掉当前回合已经做完的一切（T354 实测），
+要回到那种行为只有设 `CIV_MCP_HANG_SELF_RESTART=1`。所以收到 `HANG` 时：不要再做新的决定，用
+`scripts\stop-agent.py` 停掉会话（游戏由人来重启），再从消息里点名的存档继续。
