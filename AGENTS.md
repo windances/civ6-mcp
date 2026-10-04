@@ -712,14 +712,18 @@ and skips the rest, so a session that ordered its own units and called `end_turn
 discard every one of the human's units. The guard is a wait, and **the signal is the game's own**:
 while any unit still has moves the game raises `ENDTURN_BLOCKING_UNITS`, which `get_notifications`
 prints as `Command Units -> Units have moves remaining`, and it drops that entry the moment the turn
-can end - the same fact `UI.CanEndTurn()` reports, and the one the MCP's own `end_turn` already reads
-(`src/civ_mcp/end_turn.py`, lines 3689-3702). So the session polls `get_notifications` and calls
-`end_turn` when the entry is gone. **Counting movement is the wrong test**: a unit parked by a `skip`
-(`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an operation keep
-their movement for the rest of the turn and across turns while being unable to act - measured, 10
-military units had movement and 9 of them could not act, so a movement count waits on units the human
-has already dealt with. Other `Action Required` entries are the agent's own work and waiting cannot
-clear them. **`.tools/wait-for-human.py` is for the human or an observer, not for the session**:
+can end. **That entry is the test**: the session polls `get_notifications` and calls `end_turn` when
+it is gone. **Counting movement is the wrong test**: a unit parked by a `skip` (`ACTIVITY_HOLD`), one
+on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an operation keep their movement for the
+rest of the turn and across turns while being unable to act - measured, 10 military units had
+movement and 9 of them could not act, so a movement count waits on units the human has already dealt
+with. **And `UI.CanEndTurn()` is not the test either**: it is true *while* the units blocker is up -
+measured on turn 337, three consecutive reads all `CANEND|true` with `ENDTURN_BLOCKING_UNITS` raised -
+because it means "the End Turn button is pressable", not "no unit has moves". The MCP's own
+`end_turn` depends on that (`end_turn.py:3697` logs `UI.CanEndTurn()=true despite blockers ...
+proceeding`), so a wait built on it releases at once and hands back the silent sweep. Other
+`Action Required` entries are the agent's own work and waiting cannot clear them. **`.tools/wait-for-human.py`
+is for the human or an observer, not for the session**:
 FireTuner serves one client and the session's own MCP server holds it (one `GameConnection` in
 `src/civ_mcp/server.py`, held for the whole lifespan, lines 290-369), so a second client connects and
 then dies with `ConnectionError: GameCore_Tuner/InGame states not found` - measured with a connection

@@ -137,14 +137,20 @@ while any unit still has moves the game raises
 
     Command Units  ->  Units have moves remaining
 
-and it drops that entry the moment the turn can end. That is the same fact `UI.CanEndTurn()` reports,
-and the MCP's own `end_turn` already reads it. **When the entry is gone, the turn can end - call
-`end_turn`.** While it is there, wait, and re-read; between reads a shell `Start-Sleep -Seconds 30`
-costs nothing and needs no tuner. Re-reading `get_units` is still worth doing to see *which* units are
-left, but it must not be the test: a unit parked by a `skip` (`ACTIVITY_HOLD`), one on `alert`
-(`ACTIVITY_SENTRY`), one asleep and one running an operation all keep their movement for the rest of the
-turn and across turns while being unable to act, so a movement count waits on units the human has
-already dealt with (measured: 10 military units had movement and 9 of them could not act).
+and it drops that entry the moment the turn can end. **That entry is the test** - when it is gone, the
+turn can end, so call `end_turn`. While it is there, wait, and re-read; between reads a shell
+`Start-Sleep -Seconds 30` costs nothing and needs no tuner. Re-reading `get_units` is still worth doing
+to see *which* units are left, but it must not be the test: a unit parked by a `skip`
+(`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an operation all keep
+their movement for the rest of the turn and across turns while being unable to act, so a movement count
+waits on units the human has already dealt with (measured: 10 military units had movement and 9 of them
+could not act).
+
+**Do not use `UI.CanEndTurn()` as the test.** It is true *while* the units blocker is up - measured on
+turn 337, three consecutive reads all read `CANEND|true` with `ENDTURN_BLOCKING_UNITS` raised - because
+it means "the End Turn button is pressable", not "no unit has moves". The MCP's own `end_turn` depends
+on exactly that (`UI.CanEndTurn()=true despite blockers ... proceeding`). A wait built on it releases
+immediately and hands you back the silent sweep. The notification is the signal; that boolean is not.
 
 **Other entries under Action Required are yours, not the human's** - an empty queue, an unspent
 promotion, a governor point. Fix them or the turn will not end, and waiting will not clear them.

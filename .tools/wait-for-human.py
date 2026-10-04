@@ -9,13 +9,25 @@ advances. A session that follows the division, orders its own units and calls `e
 forfeits every military unit's turn to the sweep, silently.
 
 **Ask the game, do not count units.** The signal is the game's own: it raises an
-`ENDTURN_BLOCKING_UNITS` notification while any unit still has moves, and stops raising it the moment
-the turn can end. That is the same fact `UI.CanEndTurn()` reports, and the MCP already relies on it
-(`src/civ_mcp/end_turn.py:3689-3702`). Counting movement is the wrong test twice over: a unit parked
-by a `skip` (`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an
-operation all keep their movement for the rest of the turn *and across turns* while being unable to
-act - so a movement count waits forever on units the human has already dealt with. Measured on the
-live match: 10 military units had movement and 9 of them could not act.
+`ENDTURN_BLOCKING_UNITS` notification while any unit still has moves, and stops raising it the
+moment the turn can end. That is what `get_notifications` prints as
+`Command Units -> Units have moves remaining`. Counting movement is the wrong test twice over: a
+unit parked by a `skip` (`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one
+running an operation all keep their movement for the rest of the turn *and across turns* while being
+unable to act - so a movement count waits forever on units the human has already dealt with.
+Measured on the live match: 10 military units had movement and 9 of them could not act.
+
+**`UI.CanEndTurn()` is NOT this signal, and must not be used as one.** Measured on turn 337, three
+consecutive reads, all identical:
+
+    TURN|337
+    CANEND|ok=true|value=true
+    BLOCKERS|count=1|ENDTURN_BLOCKING_UNITS
+
+It is true *while* the units blocker is up. It means "the End Turn button is pressable", not "no
+unit has moves" - the MCP's own code depends on that, logging `UI.CanEndTurn()=true despite blockers
+... proceeding` (`src/civ_mcp/end_turn.py:3697`). So it cannot tell the human's half from anyone
+else's, and a wait built on it would release immediately. This script reads it only to report it.
 
     python .tools/wait-for-human.py                 # up to 30 min, poll every 10 s
     python .tools/wait-for-human.py --timeout 900 --interval 5
@@ -57,9 +69,10 @@ from civ_mcp.game_state import GameState  # noqa: E402
 # The blocker that means "a unit still has moves". Every other blocker is the agent's own work.
 UNITS_BLOCKER = "ENDTURN_BLOCKING_UNITS"
 
-# Ask the game two ways at once, because they answer different halves of the question: UI.CanEndTurn()
-# is the boolean the game's own End Turn button is driven by, and the notification pass names *which*
-# blocker is up, which is what tells the human's half from the agent's.
+# Ask the game two things at once, and be clear about which one decides. The notification pass names
+# the blockers, and that is the whole basis of the decision. UI.CanEndTurn() is read only to report
+# it: it is true even while the units blocker is up (measured, turn 337), because it means "the End
+# Turn button is pressable" rather than "no unit has moves".
 STATE_LUA = f"""
 local out = {{}}
 local me = Game.GetLocalPlayer()
@@ -171,8 +184,11 @@ async def _wait(conn, gs, args) -> int:
         action = decide(blockers)
 
         if action == "go":
-            note = "" if can_end is not False else " (UI.CanEndTurn disagrees, but no blocker is up)"
-            print(f"the turn can end: no EndTurnBlocking remains{note}")
+            print("the turn can end: no EndTurnBlocking remains")
+            if can_end is not None:
+                # Reported, not used. It is true on both sides of the answer, which is the point.
+                print(f"  (UI.CanEndTurn()={str(can_end).lower()} - the button is pressable either")
+                print("   way, which is why the blocker list is the test and this is not)")
             return 0
 
         if action == "agent":

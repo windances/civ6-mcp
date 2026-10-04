@@ -14,11 +14,24 @@ Two wrong versions came before this one, and both are pinned below:
    never have returned.
 
 2. It waited on a *recomputed* predicate at all. The game raises `ENDTURN_BLOCKING_UNITS` while any
-   unit still has moves and drops it the moment the turn can end - the same fact `UI.CanEndTurn()`
-   reports, and what the MCP's own `end_turn` already reads (`end_turn.py:3689-3702`). Measured live
-   on turn 335: the same session's first `get_notifications` carried `Command Units -> Units have
-   moves remaining` and its second did not, so the state is readable and flips exactly when the
-   human finishes. `decide()` is that rule, and it is the only thing that decides.
+   unit still has moves and drops it the moment the turn can end - what `get_notifications` prints
+   as `Command Units -> Units have moves remaining`. Measured live on turn 335: the same session's
+   first `get_notifications` carried that entry and its second did not, so the state is readable and
+   flips exactly when the human finishes. `decide()` is that rule, and it is the only thing that
+   decides.
+
+**`UI.CanEndTurn()` looks like the same signal and is not.** Measured on turn 337, three consecutive
+reads, all identical:
+
+    TURN|337
+    CANEND|ok=true|value=true
+    BLOCKERS|count=1|ENDTURN_BLOCKING_UNITS
+
+It is true *while* the units blocker is up, because it means "the End Turn button is pressable"
+rather than "no unit has moves" - the MCP's own `end_turn` depends on that, logging
+`UI.CanEndTurn()=true despite blockers ... proceeding` (`src/civ_mcp/end_turn.py:3697`). A wait built
+on it would release immediately and hand the session back the silent sweep. The script reads it only
+to report it, which is why `decide()` takes the blocker set and nothing else.
 """
 
 from __future__ import annotations

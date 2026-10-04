@@ -622,12 +622,15 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 设防、把其余单位跳过，于是回合照常推进；一个按分工做完了自己的单位、然后调用 `end_turn` 的会话，
 会**悄无声息地**把人类这边的每一个单位都丢掉。这道闸就是一个等待，而且**信号要问游戏本身**：只要还有任何
 单位有余力，游戏就会抛出 `ENDTURN_BLOCKING_UNITS`，`get_notifications` 把它印成
-`Command Units -> Units have moves remaining`；一旦回合可以结束，这一条就消失——这正是 `UI.CanEndTurn()`
-报告的那个事实，也是 MCP 自己的 `end_turn` 已经在读的（`src/civ_mcp/end_turn.py`，第 3689-3702 行）。
-所以会话应该轮询 `get_notifications`，那条消失时再调 `end_turn`。**用移动力去数单位是错的判据**：被
+`Command Units -> Units have moves remaining`；一旦回合可以结束，这一条就消失。**判据就是这一条**：会话
+轮询 `get_notifications`，那条消失时再调 `end_turn`。**用移动力去数单位是错的判据**：被
 `skip` 停下的单位（`ACTIVITY_HOLD`）、处于 `alert` 的单位（`ACTIVITY_SENTRY`）、休眠的单位以及正在执行
 操作的单位，整个回合乃至跨回合都保留着移动力，却已经无法行动——实测 10 个军事单位有余力，其中 9 个都无法
-行动，所以按移动力去等会一直等那些人类早就处理完的单位。`Action Required` 里的其他条目是 agent 自己的活，
+行动，所以按移动力去等会一直等那些人类早就处理完的单位。**`UI.CanEndTurn()` 也不是判据**：units blocker
+还在的时候它就是 true——第 337 回合连续三次读取都是 `CANEND|true` 配 `ENDTURN_BLOCKING_UNITS`——因为它
+表达的是「结束回合按钮可以按」，而不是「没有单位有余力」。MCP 自己的 `end_turn` 正是依赖这一点
+（`end_turn.py:3697` 打的是 `UI.CanEndTurn()=true despite blockers ... proceeding`），所以建立在
+这个布尔值上的等待会立刻放行，等于把静默清扫还回去。`Action Required` 里的其他条目是 agent 自己的活，
 等是等不掉的。**`.tools/wait-for-human.py` 是给人类或旁观者用的，
 不是给会话用的**：FireTuner 只服务一个客户端，而会话自己的 MCP server 一直占着它
 （`src/civ_mcp/server.py:290-369` 在整个 lifespan 里只保留一个 `GameConnection`），所以第二个客户端能
