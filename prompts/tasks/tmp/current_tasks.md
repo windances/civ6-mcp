@@ -117,3 +117,4 @@ Task 041 was retired as `done/041-attempt-a10-the-two-city-military-opening-done
 Task 042 was retired as `done/042-recover-production-expired-T321.md`.
 
 Task 043 was retired as `done/043-save-for-upgrades-done-T339.md`.
+| `044-schedule-three-modern-armor.md` | 2026-10-04 | turn 374 | schedule three Modern Armor without cancelling what a city is already building | count == 3 units of type UNIT_MODERN_ARMOR exist on the map, as read by get_units. The empire held 0 |
