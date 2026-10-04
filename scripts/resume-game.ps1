@@ -120,9 +120,10 @@ anything with a `combat_strength` above zero; a Great General or a Great Admiral
 that class - and it has no combat strength, so the first test alone does not catch it. Leave them
 where they stand and say what they could do.
 
-**Everything else is yours**: builders, settlers, traders, every Great Person that is not a general,
-every city's queue, the economy, the wonders and the research. An idle worker, an empty queue and a
-treasury nobody is spending are your failures, not the human's.
+**Everything else is yours**: builders, settlers, traders, every Great Person that is not a Great
+General or a Great Admiral - the Great Scientists and the Great Merchants included - every city's
+queue, the economy, the wonders and the research. An idle worker, an empty queue and a treasury nobody
+is spending are your failures, not the human's.
 
 **You move first, every turn; the human moves after you.** The turn opens with your half: read the
 board, order every unit and every city queue you own, satisfy the rules that are yours, and only then
