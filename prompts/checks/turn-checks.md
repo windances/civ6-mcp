@@ -48,7 +48,13 @@ This rule was a **goal** (`once: true`) and it retired at T99. **The ram is no l
 the plan at all** (human instruction 2026-09-26: no ram, use the Catapult): the Catapult breaks the
 walls, and the assault train is siege / melee / ranged / cavalry.
 
-<!-- achieved T99: ram-tower-before-civil-engineering (original in archive/turn-checks-20260926-012524.md) -->
+<!-- check
+id: ram-tower-before-civil-engineering
+when: not researched(CIVIC_CIVIL_ENGINEERING)
+once: true
+require: units(BATTERING_RAM, SIEGE_TOWER) >= 1
+message: No Battering Ram or Siege Tower exists and CIVIC_CIVIL_ENGINEERING is not yet adopted - the window is still open and closes for good. Build one (Ram 65, Tower 100) and give it to the melee; it helps melee only and must stand on the tile adjacent to the target city.
+-->
 
 ## Contact on the march (engage what is in the way)
 
@@ -324,7 +330,13 @@ how the programme read this obligation - as a status line rather than as work. T
 corrected 60% -> 50% to match `Expansion2_Civilizations.xml:73` and the directive's own correction;
 the archived copy still says 60%.
 -->
-<!-- achieved T99: dynasty-cycle-wonder (game: china_-1894041591) (original in archive/turn-checks-20261003-182343.md) -->
+<!-- check
+id: dynasty-cycle-wonder
+when: turn() >= 25
+once: true
+require: metric(wonders) >= 1
+message: No wonder built. For China a wonder is a research building (Dynastic Cycle grants a Eureka AND an Inspiration from that era, and Chinese boosts are worth 50%). Zero wonders forfeits half the civilisation ability for the whole game - and it is the half that costs no extra unit production, because a second city builds it while the war city builds the army (tactics/08).
+-->
 
 <!-- check
 id: idle-district-slot
