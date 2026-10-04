@@ -709,17 +709,21 @@ to the task the session is launched with. **The wait it depends on is not free**
 refuse while a unit still has movement - an `ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by
 `_sweep_unmoved_units` in `src/civ_mcp/end_turn.py` (lines 3613-3643), which fortifies combat units
 and skips the rest, so a session that ordered its own units and called `end_turn` would silently
-discard every one of the human's units. The guard is a wait, and **it is the session's own
-`get_units` polling**: `end_turn` must not be called while any military unit, Great General or Great
-Admiral **can still act** - the engine's own `IsReadyToMove()`, read as `ready_to_move`, and
-deliberately not a movement count, because a unit parked by a `skip` (`ACTIVITY_HOLD`), one on
-`alert` (`ACTIVITY_SENTRY`), one asleep and one running an operation keep their movement for the rest
-of the turn and across turns while being unable to act. **`.tools/wait-for-human.py` is for the human
-or an observer, not for the session**: FireTuner serves one client and the session's own MCP server
-holds it (one `GameConnection` in `src/civ_mcp/server.py`, held for the whole lifespan, lines
-290-369), so a second client connects and then dies with `ConnectionError: GameCore_Tuner/InGame
-states not found` - measured with a connection held open, idle and busy. Between polls a shell
-`Start-Sleep` costs nothing and needs no tuner.
+discard every one of the human's units. The guard is a wait, and **the signal is the game's own**:
+while any unit still has moves the game raises `ENDTURN_BLOCKING_UNITS`, which `get_notifications`
+prints as `Command Units -> Units have moves remaining`, and it drops that entry the moment the turn
+can end - the same fact `UI.CanEndTurn()` reports, and the one the MCP's own `end_turn` already reads
+(`src/civ_mcp/end_turn.py`, lines 3689-3702). So the session polls `get_notifications` and calls
+`end_turn` when the entry is gone. **Counting movement is the wrong test**: a unit parked by a `skip`
+(`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an operation keep
+their movement for the rest of the turn and across turns while being unable to act - measured, 10
+military units had movement and 9 of them could not act, so a movement count waits on units the human
+has already dealt with. Other `Action Required` entries are the agent's own work and waiting cannot
+clear them. **`.tools/wait-for-human.py` is for the human or an observer, not for the session**:
+FireTuner serves one client and the session's own MCP server holds it (one `GameConnection` in
+`src/civ_mcp/server.py`, held for the whole lifespan, lines 290-369), so a second client connects and
+then dies with `ConnectionError: GameCore_Tuner/InGame states not found` - measured with a connection
+held open, idle and busy. Between polls a shell `Start-Sleep` costs nothing and needs no tuner.
 
 **Everything else is `docs/game-recovery.md`** - the two recovery traps, the `0_MCP_NNNN` name
 collisions across rolled-back branches, the `AutoSave_NNNN` offset, `orient.py`, `turn-of-save.py`,

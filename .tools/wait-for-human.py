@@ -1,45 +1,43 @@
-"""Wait until the human has finished with the military, then hand the turn back.
+"""Wait until the game says the turn can end, then hand it back.
 
-The division of labour says the human commands the military units and the Great Generals, and the
-agent commands everything else. The mechanical problem is the turn boundary, and it is worse than it
-looks: **`end_turn` does not refuse while a unit still has movement.** An `ENDTURN_BLOCKING_UNITS`
-blocker is auto-resolved by `_sweep_unmoved_units` (`src/civ_mcp/end_turn.py:3613-3643`), which
-fortifies combat units and skips whatever still has moves, and the turn advances. A session that
-follows the division, orders its own units and calls `end_turn` therefore forfeits every military
-unit's turn to the sweep, silently. The single exception is a unit with a *legal attack*, which makes
-`end_turn` bounce with `UNUSED ATTACK at end_turn: ...` - that only helps while an attack is pending,
-so it is not a guard.
+The division of labour says the human commands the military units, the Great Generals and the Great
+Admirals, and the agent commands everything else. The turn boundary is the problem, and it is worse
+than it looks: **`end_turn` does not refuse while a unit still has movement.** An
+`ENDTURN_BLOCKING_UNITS` blocker is auto-resolved by `_sweep_unmoved_units`
+(`src/civ_mcp/end_turn.py:3613-3643`), which fortifies combat units and skips the rest, and the turn
+advances. A session that follows the division, orders its own units and calls `end_turn` therefore
+forfeits every military unit's turn to the sweep, silently.
 
-That makes this wait the guard rather than a convenience, and it runs **before** `end_turn`.
-
-**The human is finished when no military unit can still act** - the engine's own answer,
-`IsReadyToMove()`, surfaced as `ready_to_move`. Movement alone is the wrong test, and it deadlocks
-the wait rather than merely misreporting it: a unit parked by a skip (`ACTIVITY_HOLD`), one on sentry
-(`ACTIVITY_SENTRY`) and one running an operation (`ACTIVITY_OPERATION`) all keep their movement for
-the rest of the turn *and across turns*, while the engine reports that they cannot act. Waiting on
-`moves_remaining > 0` therefore waits forever on units the human has already dealt with. Measured on
-the live match when this was fixed: 10 military units had movement and **9 of them could not act**, so
-the first version of this tool would never have returned 0 at all.
-
-A unit the human means to leave alone is one they will `skip`, `fortify` or `alert` to close their
-half, and any of those sets an activity the engine reports as unable to act - which is why the
-activity is the test and a raw movement count is not.
+**Ask the game, do not count units.** The signal is the game's own: it raises an
+`ENDTURN_BLOCKING_UNITS` notification while any unit still has moves, and stops raising it the moment
+the turn can end. That is the same fact `UI.CanEndTurn()` reports, and the MCP already relies on it
+(`src/civ_mcp/end_turn.py:3689-3702`). Counting movement is the wrong test twice over: a unit parked
+by a `skip` (`ACTIVITY_HOLD`), one on `alert` (`ACTIVITY_SENTRY`), one asleep and one running an
+operation all keep their movement for the rest of the turn *and across turns* while being unable to
+act - so a movement count waits forever on units the human has already dealt with. Measured on the
+live match: 10 military units had movement and 9 of them could not act.
 
     python .tools/wait-for-human.py                 # up to 30 min, poll every 10 s
     python .tools/wait-for-human.py --timeout 900 --interval 5
     python .tools/wait-for-human.py --once          # report only, do not wait
 
-Read-only: it orders nothing at all. It exists so that a session under the division of labour has a
-defined place to stop, rather than filling the gap with moves the human did not ask for.
+Exit codes:
+
+    0   the turn can end - no EndTurnBlocking remains. The human's half is done; call end_turn.
+    1   still waiting (the units blocker is up), or the timeout expired, or --once found one.
+    2   the tuner refused this client (see below).
+    3   blocked, but NOT by units - an empty queue, an unspent promotion or similar. That is the
+        agent's own work and waiting will not clear it, so it does not wait.
 
 **It cannot be run by the session that is playing.** FireTuner serves one client, and a live
 session's own MCP server holds that client for the length of the session
 (`src/civ_mcp/server.py:290-369` keeps one `GameConnection` for the lifespan). A second client
 connects and then dies - measured with a connection deliberately held open, in both an idle and a
-busy state: `ConnectionError: GameCore_Tuner/InGame states not found. Make sure a game is in
-progress (not at the main menu)`. The session is told to poll its **own** `get_units` instead; this
-script is for the human, or for an observer with no session attached. It exits 2, with that
-explanation, when the tuner refuses it.
+busy state: `ConnectionError: GameCore_Tuner/InGame states not found`. The session is told to read
+`get_notifications` itself instead; this script is for the human, or for an observer with no session
+attached. It exits 2, with that explanation, when the tuner refuses it.
+
+Read-only: it orders nothing at all.
 """
 
 from __future__ import annotations
@@ -52,16 +50,51 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
+from civ_mcp import lua as lq  # noqa: E402
 from civ_mcp.connection import GameConnection  # noqa: E402
 from civ_mcp.game_state import GameState  # noqa: E402
+
+# The blocker that means "a unit still has moves". Every other blocker is the agent's own work.
+UNITS_BLOCKER = "ENDTURN_BLOCKING_UNITS"
+
+# Ask the game two ways at once, because they answer different halves of the question: UI.CanEndTurn()
+# is the boolean the game's own End Turn button is driven by, and the notification pass names *which*
+# blocker is up, which is what tells the human's half from the agent's.
+STATE_LUA = f"""
+local out = {{}}
+local me = Game.GetLocalPlayer()
+local ok, can = pcall(function() return UI.CanEndTurn() end)
+out[#out+1] = "CANEND|" .. tostring(ok) .. "|" .. tostring(can)
+local seen = {{}}
+local list = NotificationManager.GetList(me)
+if list then
+  for _, nid in ipairs(list) do
+    pcall(function()
+      local e = NotificationManager.Find(me, nid)
+      if e and not e:IsDismissed() then
+        local bt = e:GetEndTurnBlocking()
+        if bt and bt ~= 0 then
+          local nm = "UNKNOWN"
+          for k, v in pairs(EndTurnBlockingTypes) do
+            if v == bt then nm = k end
+          end
+          seen[nm] = (seen[nm] or 0) + 1
+        end
+      end
+    end)
+  end
+end
+for k, v in pairs(seen) do out[#out+1] = "BLOCK|" .. k .. "|" .. v end
+for _, l in ipairs(out) do print(l) end
+print("{lq.SENTINEL}")
+"""
 
 
 def is_the_humans(unit) -> bool:
     """A military unit, or a Great General or Great Admiral - the units the human commands.
 
     A Great General or Admiral has no combat strength, so the combat test alone would have left the
-    human's own commanders movable by the session. The live match had both at once: a general and an
-    admiral, each with a move in hand.
+    human's own commanders movable by the session.
     """
     if (unit.combat_strength or 0) > 0:
         return True
@@ -72,12 +105,8 @@ def is_the_humans(unit) -> bool:
 def can_still_act(unit) -> bool:
     """Whether the human can still give this unit an order this turn.
 
-    Three cases, in order. No movement left is done whatever else is true. A server started before
-    the activity column existed reports every unit as `ready_to_move` (the field's default), so when
-    the activity is absent the movement is all there is to go on - the old behaviour, which waits
-    rather than advancing and is therefore the safe direction. Otherwise the engine's own
-    `IsReadyToMove()` decides, which is what keeps a held, sentried or operating unit out of the
-    wait.
+    Only used for the *detail* line under the units blocker - naming what the human still has. The
+    decision comes from the game's own blocker, never from this count.
     """
     if unit.moves_remaining <= 0:
         return False
@@ -86,9 +115,99 @@ def can_still_act(unit) -> bool:
     return bool(unit.ready_to_move)
 
 
+async def game_state(conn) -> tuple[bool | None, dict[str, int]]:
+    """`(can_end_turn, blockers)` straight from the game.
+
+    `can_end_turn` is None when the UI call itself failed, in which case the blocker list is still
+    what the decision is made on.
+    """
+    can_end: bool | None = None
+    blockers: dict[str, int] = {}
+    for line in await conn.execute_write(STATE_LUA):
+        line = (line or "").strip()
+        if line.startswith("CANEND|"):
+            parts = line.split("|")
+            if len(parts) >= 3 and parts[1] == "true":
+                can_end = parts[2].strip().lower() == "true"
+        elif line.startswith("BLOCK|"):
+            _, name, count = (line.split("|") + ["", ""])[:3]
+            blockers[name] = int(count) if count.isdigit() else 1
+    return can_end, blockers
+
+
 async def holding(gs) -> list:
-    """The units the human can still act with: military, plus the Great Generals and Admirals."""
+    """The units the human can still act with - detail only, never the decision."""
     return [u for u in await gs.get_units() if is_the_humans(u) and can_still_act(u)]
+
+
+def render(blockers: dict[str, int]) -> str:
+    return ", ".join(f"{k} x{v}" for k, v in sorted(blockers.items())) or "none"
+
+
+def decide(blockers: dict[str, int]) -> str:
+    """What the blocker set means: `"go"`, `"wait"` or `"agent"`.
+
+    The whole rule, in one place, so it can be tested without a game:
+
+      * no blocker at all          -> the turn can end; the human's half is done.
+      * the units blocker is up    -> the human still has units. Wait. Other blockers may be up at
+                                      the same time; they are shown but do not change the answer,
+                                      because the units blocker is the gate.
+      * blockers but no units one  -> the agent's own work (empty queue, unspent promotion, ...).
+                                      Waiting cannot clear it, so this must not consume the timeout.
+    """
+    if not blockers:
+        return "go"
+    if UNITS_BLOCKER in blockers:
+        return "wait"
+    return "agent"
+
+
+async def _wait(conn, gs, args) -> int:
+    deadline = time.time() + args.timeout
+    last_sig = None
+    while True:
+        can_end, blockers = await game_state(conn)
+        action = decide(blockers)
+
+        if action == "go":
+            note = "" if can_end is not False else " (UI.CanEndTurn disagrees, but no blocker is up)"
+            print(f"the turn can end: no EndTurnBlocking remains{note}")
+            return 0
+
+        if action == "agent":
+            # Not the human's half. Waiting cannot clear it, so say so and stop.
+            print(f"blocked, but not by units: {render(blockers)}")
+            print("this is the agent's own work - an empty queue, an unspent promotion, a governor")
+            print("point. Waiting will not clear it, so the wait ends here and does not consume the")
+            print("timeout.")
+            return 3
+
+        sig = tuple(sorted(blockers.items()))
+        stamp = time.strftime("%H:%M:%S")
+        if sig != last_sig:
+            waiting = await holding(gs)
+            print(f"{stamp}  the human still has units: {render(blockers)}")
+            if waiting:
+                print(f"  {len(waiting)} unit(s) can still act:")
+                for unit in waiting[:12]:
+                    print(
+                        f"    [{unit.unit_index:>2}] {unit.unit_type:<24} "
+                        f"({unit.x:>3},{unit.y:>3}) mv{unit.moves_remaining:<5} {unit.activity or '?'}"
+                    )
+                if len(waiting) > 12:
+                    print(f"    ... and {len(waiting) - 12} more")
+            last_sig = sig
+        else:
+            print(f"{stamp}  still waiting: {render(blockers)}")
+
+        if args.once:
+            print("--once: reporting only, not waiting")
+            return 1
+        if time.time() >= deadline:
+            print(f"timed out after {args.timeout}s with {render(blockers)} still up")
+            return 1
+        await asyncio.sleep(args.interval)
 
 
 async def main() -> int:
@@ -107,56 +226,17 @@ async def main() -> int:
         await conn.connect()
         return await _wait(conn, GameState(conn), args)
     except ConnectionError as exc:
-        # On a connection refused because a game is not running, `connect()` itself is usually what
-        # raises; when another client holds the tuner the connect succeeds and the first *read*
-        # raises instead, so the guard has to cover the whole wait and not just the connect.
+        # When another client holds the tuner the connect succeeds and the first *read* raises
+        # instead, so the guard has to cover the whole wait and not just the connect.
         print(f"the tuner refused this client: {exc}")
         print(
             "FireTuner serves one client at a time, and a playing session's own MCP server holds it\n"
             "for the whole session. Run this only when no session is attached - a session that must\n"
-            "wait for the human has to poll its own get_units, not call this script."
+            "wait for the human reads get_notifications itself, not this script."
         )
         return 2
     finally:
         await conn.disconnect()
-
-
-async def _wait(conn, gs, args) -> int:
-    deadline = time.time() + args.timeout
-    last_sig = None
-    while True:
-        waiting = await holding(gs)
-        if not waiting:
-            print(
-                "the human's half is done: no military unit, great general or admiral can still act"
-            )
-            return 0
-
-        # Print the list when it changes and keep quiet while it does not, so a 30 minute wait is a
-        # readable log rather than the same rows every ten seconds. The heartbeat is a timestamp, so
-        # silence still says the tool is alive.
-        sig = tuple(sorted((u.unit_index, u.x, u.y, u.moves_remaining, u.activity) for u in waiting))
-        if sig != last_sig:
-            stamp = time.strftime("%H:%M:%S")
-            print(f"{stamp}  {len(waiting)} unit(s) the human can still act with:")
-            for unit in waiting[:12]:
-                print(
-                    f"  [{unit.unit_index:>2}] {unit.unit_type:<24} ({unit.x:>3},{unit.y:>3}) "
-                    f"mv{unit.moves_remaining:<5} {unit.activity or '?'}"
-                )
-            if len(waiting) > 12:
-                print(f"  ... and {len(waiting) - 12} more")
-            last_sig = sig
-        else:
-            print(f"{time.strftime('%H:%M:%S')}  still waiting on {len(waiting)} unit(s)")
-
-        if args.once:
-            print("--once: reporting only, not waiting")
-            return 1
-        if time.time() >= deadline:
-            print(f"timed out after {args.timeout}s with {len(waiting)} unit(s) still able to act")
-            return 1
-        await asyncio.sleep(args.interval)
 
 
 if __name__ == "__main__":
