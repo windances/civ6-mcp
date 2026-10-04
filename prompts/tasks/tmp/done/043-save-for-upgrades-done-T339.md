@@ -65,3 +65,10 @@ a turn of waiting.
      at: 2026-10-04T05:55:56+08:00
      chinese backup: prompts/tasks/cn/043-save-for-upgrades.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 043 --done --turn 339
+     at: 2026-10-04T15:07:38+08:00
+     status: done at T339
+     chinese backup: prompts/tasks/cn/043-save-for-upgrades.cn.md
+-->

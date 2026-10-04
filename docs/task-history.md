@@ -827,3 +827,22 @@ this turn" line and every 10-TURN REVIEW window over T60-T110 mixes the two runs
 city list matches the live one, and prefer the run-filtered report); and a flood can re-pillage a
 repaired district building within two turns, because repairing a district repairs the district only -
 Beijing's Market was pillaged twice in four turns for exactly that reason.
+
+**Task 043 (`save-for-upgrades`) retired at T339**, four turns before its own `expires:` of T341,
+because its `done when:` held. The retirement was earned by one call: `upgrade_unit(8257579)` took the
+Artillery at (22,27) to Rocket Artillery for 255g out of a 781g treasury - the only unit inside the
+task's three-tile radius that a read of `get_units` showed `CAN UPGRADE`. After it, no remaining unit
+within three tiles of a Sumerian city carried an upgrade the treasury covered: the two Field Cannons
+sit four and five tiles from Bad-Tibira at (34,16) and (33,15), the Ranger at (24,26) sits four from
+Nippur, and the Rocket Artillery already in contact at (32,17) is the top of its line. What the task
+bought over its two days: one front-line siege upgrade, and the two trades it did not forbid (COCOA to
+India for 7 gold/turn, JADE to Georgia for 8). What it measured, and what is worth carrying to the next
+upgrade task: **`can_upgrade` is gated by affordability**, so at T337 with 116g no unit in the empire
+showed the flag and at T338 with 323g five did - a `done when:` phrased as "count == 0 ... with an
+`upgrade_cost` the treasury covers" therefore reads satisfied by being poor, which is why the file was
+deliberately NOT retired on the T337 read and why that sentence is the wrong test for "the front is
+caught up". The second measurement is the tool's: at T338 the same unit that `get_units` flagged
+`CAN UPGRADE to UNIT_ROCKET_ARTILLERY (255g)` was refused twice by `upgrade_unit` with
+`ERR:CANNOT_UPGRADE|UNIT_ARTILLERY -> UNIT_ROCKET_ARTILLERY | cost:255g have:323g` and no reason
+string from the game's own failure table, then upgraded on the first attempt at T339 - a transient
+refusal, so retry before replanning.

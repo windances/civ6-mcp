@@ -113,6 +113,7 @@ Task 039 was retired as `done/039-attempt-a7-continued-to-t110-as-the-matched-ho
 Task 040 was retired as `done/040-attempt-a8-three-cities-the-third-one-an-economy-city-done-T110.md`: A8's claim is CONFIRMED on its numbers and only partly on its cause. The second UNIT_CATAPULT was bought at T59 for 320g from a 446g treasury against the deadline max(T58, F+25) = T60, with the first produced in Xi'an the same turn; the T60 gold floor read +12.0 against A7's 4.1; and at T110 science 60.9 v 57.6, pop 28 v 25 and gold_per_turn 71.0 v 60.0 all beat A7. But the settled third city (founded T35) reached its Market only at T76, after the floor it was meant to move: the gold came from trade routes, Reyna's Tax Collector and two policy cards worth +24/turn, and the science column was closed by a 200-faith patronized Isaac Newton worth +10 science. Total gold spent on purchases in the run: 1730g.
 
 Task 041 was retired as `done/041-attempt-a10-the-two-city-military-opening-done-T68.md`.
-| `043-save-for-upgrades.md` | 2026-10-04 | turn 341 | hold the treasury for front-line upgrades ahead of every other purchase | count == 0 units within 3 tiles of an enemy city or a visible enemy unit of the civ we are at war |
 
 Task 042 was retired as `done/042-recover-production-expired-T321.md`.
+
+Task 043 was retired as `done/043-save-for-upgrades-done-T339.md`.
