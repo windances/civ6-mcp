@@ -2778,7 +2778,8 @@ _NEXT_COMMAND = {
     "already in a queue",
     "use-your-attacks": "fire with every unit that has a legal attack, before any other order",
     "cut-the-supply": "the ring is partially cut and the pool is falling - accepting that is a diary "
-    "line, not a unit walked off the firing line (哈勒姆: 3/6, pool 200 -> 20 in five turns)",
+    "line, not a unit walked off the firing line (a precedent, measured T266-T270 and NOT a reading "
+    "of this turn: Haarlem then held a 3/6 cut while its pool fell 200 -> 20)",
     "carrying-capacity": "gold/turn is under the floor: fewer units or a shorter war, not another buy",
     "hold-what-you-take": "a governor or a garrison into the city this turn - moving a governor is free",
     "one-garrison-per-city": "move the surplus unit off the city tile and to the front",
