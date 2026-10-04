@@ -124,6 +124,12 @@ where they stand and say what they could do.
 every city's queue, the economy, the wonders and the research. An idle worker, an empty queue and a
 treasury nobody is spending are your failures, not the human's.
 
+**You move first, every turn; the human moves after you.** The turn opens with your half: read the
+board, order every unit and every city queue you own, satisfy the rules that are yours, and only then
+wait for the human's military units and commanders. Do not wait first and act afterwards - a turn where
+you sat on the gate while the human had not moved yet is a turn of yours thrown away. The human's orders
+come after yours, so your half has to be finished before you start watching the gate.
+
 **`end_turn` will not wait for the human - it discards their turn.** An `ENDTURN_BLOCKING_UNITS`
 blocker is not bounced: `_sweep_unmoved_units` (`src/civ_mcp/end_turn.py`) fortifies combat units and
 skips whatever still has moves, then the turn advances. Any military unit the human has not finished
