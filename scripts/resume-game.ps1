@@ -12,9 +12,16 @@
 #   powershell -NoProfile -File scripts\resume-game.ps1 -Wait          # wait for the load
 #   powershell -NoProfile -File scripts\resume-game.ps1 -Turns 30 -DryRun
 #   powershell -NoProfile -File scripts\resume-game.ps1 -TaskFile prompts\tasks\continue-current.en.txt
+#   powershell -NoProfile -File scripts\resume-game.ps1 -HumanMilitary
 #
 # -DryRun prints the check and the task it would use, and launches nothing, so it is safe
 # while a game is being played.
+#
+# -HumanMilitary appends the division of labour to the task: the human commands the military
+# units, the Great Generals and the Great Admirals, and the session owns every other unit and
+# the cities, the economy, the wonders and the research. It is a task, not a rule - see
+# AGENTS.md ("-HumanMilitary splits the command of the match") for what actually enforces the
+# wait, and why the wait cannot be a script the session runs itself.
 
 [CmdletBinding()]
 param(
