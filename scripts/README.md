@@ -141,7 +141,7 @@ straight back.
 ## Handing a match to a fresh session
 
 ```powershell
-scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback]
+scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback] [-HumanMilitary]
 #   also: -TaskFile <f> -TaskPath <f> -Turns N -TimeoutSeconds N -PollSeconds N
 
 python scripts\handoff.py [--json] [--task <path>]
@@ -154,6 +154,17 @@ scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
 `stop-agent.py` asks a running session to stop the gentle way - it writes the request file the session
 reads in its tool results, records when the request reached it, and falls back to
 `civ6-clean.ps1 -KeepGame` when it is not honoured.
+
+**`-HumanMilitary` splits the command of the match.** It appends a division-of-labour block to the task
+the session is launched with: the human commands the military units, the Great Generals and the Great
+Admirals, and the session owns every other unit - the Great Scientists and the Great Merchants included
+- plus the cities, the economy, the wonders and the research, and moves first every turn. The block is
+appended on **both** paths, so `-DryRun` previews the task a session would actually receive (it prints
+`--- the division of labour is in the task above ---`), and the append is idempotent: a task file that
+already carries the marker is left as it is. It is a *task*, not a rule - nothing mechanically stops a
+session that ignores it. What enforces it is the per-turn report (`get_notifications` appends the
+`WHOSE MOVE|` split and writes `agent-half.txt` beside the heartbeat), `SKILL.md`'s carve-out on
+`skip_remaining_units`, and the fact that the wait for the human is the session's own to keep.
 
 ## Tasks and document gates
 

@@ -107,6 +107,13 @@ function Add-DivisionOfLabour($TaskPath) {
     # `-TaskFile` skips that regeneration, and a second run against it would otherwise append a
     # second copy of the same text.
     $marker = '## Division of labour: the human commands the military'
+    # Guard the path before `Select-String` sees it: with `$ErrorActionPreference='Stop'` a missing
+    # file there is a terminating error from inside the function, so `-DryRun -HumanMilitary
+    # -TaskFile <missing>` died with a raw "Select-String : cannot find path" and printed no preview
+    # at all (measured 2026-10-05). The real path already refuses earlier, at `Resolve-Path`.
+    if (-not (Test-Path $TaskPath)) {
+        throw "no task file to append the division to: $TaskPath (check -TaskFile / -TaskPath)"
+    }
     if (Select-String -Path $TaskPath -SimpleMatch -Pattern $marker -Quiet) { return $false }
     $division = @'
 

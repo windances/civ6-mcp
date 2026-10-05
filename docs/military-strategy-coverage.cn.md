@@ -45,6 +45,7 @@
 | **宗教**（谴责异端、杀死传教士、攻击信仰收入） | 指令 | 和平时期 `condemn` 回答 `ERR:REQUIRES_WAR`、`attack` 回答 `ERR:NOT_AT_WAR`（1 级）；自 2026-10-01 起 `FOREIGN RELIGIOUS UNITS` 块会点名三格以内的每个单位并给出对应情形的学说（4 级），`religious_at_war_within_2` 是一条暂存规则（提升后为 3 级），而 `unit_action(action="pillage")` 已存在——那正是"攻击信仰收入"一直以来的意思 | 和平时期 **1**，战时 **3/4** |
 | **和平**（绝不提出，拒绝每一份提议） | 指令 | `propose_peace` 在编排器的 `FORBIDDEN_TOOLS` 里（`dsh/orchestrator/contracts.mjs`），所以 sole writer 拿到的是 `forbidden_tool`，而不是和平（1 级）；拒绝一份送来的提议仍然需要 agent 自己选择 `respond_to_*` | **1/5** |
 | **移动与交通**（一格一单位、ZOC、移动力、呼叫顺序） | `tactics/04`、`AGENTS.md` | `STACKING_CONFLICT`、`ZOC`、`NO_MOVES`、`OUT_OF_RANGE`（1）；`STOPPED_SHORT` 警告 + `MOVE JAMS` + `issue-the-calls-furthest-first`（3/4） | **1/3** |
+| **指挥权分工**（人类指挥军事，会话负责其余一切） | `resume-game.ps1 -HumanMilitary` 追加到任务里的那段分工文本 | 追加的任务文本（5 级）；每回合的"轮到谁"划分——`get_notifications` 追加 `WHOSE MOVE`，并把 `agent-half.txt` 写进心跳文件旁边（4 级）；`SKILL.md` 里对 `skip_remaining_units` 的例外条款（5 级） | **4/5** |
 
 ## 4. 这些测量说明了什么
 

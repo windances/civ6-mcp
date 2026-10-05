@@ -117,15 +117,27 @@ python scripts\turn-of-save.py "<路径>.Civ6Save"       # 单个存档，不载
 ## 把一局交给新会话
 
 ```powershell
-scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback]
+scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback] [-HumanMilitary]
 #   还有：-TaskFile <f> -TaskPath <f> -Turns N -TimeoutSeconds N -PollSeconds N
 
 python scripts\handoff.py [--json] [--task <路径>]
 scripts\civ6-clean.ps1 [-DryRun] [-KeepGame] [-Force] [-PID N] [-TunerPort N] [-WebGuiPort N]
+scripts\stop-agent.py [--status | --cancel] [--wait N] [--no-clean] [--note "..."]
 scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
 ```
 
 `civ6-clean.ps1` 现在把 `runs/` 下的过期心跳也算作"未干净"，不再只看根目录那一个。
+`stop-agent.py` 用温和的方式请正在跑的会话停下——它在会话的工具结果里写请求文件、记录请求何时送达，
+在会话不予理会时兜底执行 `civ6-clean.ps1 -KeepGame`。
+
+**`-HumanMilitary` 把这一局的指挥权分成两半。** 它会把一段"分工"文本追加到启动会话所用的任务里：人类
+指挥军事单位、大军事家和大海军统帅，会话负责其余所有单位（**包括大科学家和大商人**）以及城市、经济、
+奇观和研究，而且**每回合先动**。这段文本在**两条路径**上都会追加，所以 `-DryRun` 预览的就是会话真正
+会收到的任务（它会打印 `--- the division of labour is in the task above ---`），而且追加是幂等的：任务
+文件里已经有标记时原样不动。它是*任务*，不是规则——没有任何机制能机械地阻止一个无视它的会话。真正在
+约束它的是每回合的报告（`get_notifications` 会追加 `WHOSE MOVE|` 那份划分，并把 `agent-half.txt` 写在
+心跳文件旁边）、`SKILL.md` 里对 `skip_remaining_units` 的例外条款，以及"等人类操作"这件事本来就要由
+会话自己守住。
 
 ## 任务与文档门禁
 
