@@ -29,6 +29,10 @@
 
 - [The Hallucination of Competence](agent-essays/the-hallucination-of-competence.md) — Gemini's self-analysis of strategic narrative bias (Game 12)
 
+## Operations
+
+- [Problems, Causes and Fixes](problems-and-fixes.md) — A living log: what went wrong, why, and what closed it, with the measurement behind each entry
+
 ## Archive
 
 - [Idea Research](research/idea_research.md) — Pre-implementation research (2025), superseded by [Architecture](architecture-diagrams.md)

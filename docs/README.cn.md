@@ -31,6 +31,10 @@
 
 - [胜任的幻觉](agent-essays/the-hallucination-of-competence.md) — Gemini 对战略叙事偏误的自我分析（第 12 局）
 
+## 运维
+
+- [问题、起因与解决方案](problems-and-fixes.md) — 一份持续追加的日志：出过什么问题、为什么、是什么把它关掉的，每条都附上背后的测量
+
 ## 归档
 
 - [构想研究](research/idea_research.md) — 实现前的研究（2025），已被[架构](architecture-diagrams.md)取代
