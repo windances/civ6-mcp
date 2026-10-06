@@ -103,21 +103,36 @@ def _run(cmd: list[str], cwd: pathlib.Path) -> tuple[int, str]:
     return done.returncode, (done.stdout or "") + (done.stderr or "")
 
 
+def _interpreter(root: pathlib.Path) -> str:
+    """The interpreter that has this checkout's dependencies.
+
+    `sys.executable` is whatever ran *this* script, and `python` on PATH is often the system one,
+    which has no `pytest` - so the protocol suite goes red for a reason that has nothing to do with
+    the task (measured 2026-10-06: a session's retirement reported red that way and `21 passed` under
+    `.venv\\Scripts\\python.exe`). The checkout's own virtualenv is the interpreter meant here.
+    """
+    for candidate in (root / ".venv" / "Scripts" / "python.exe", root / ".venv" / "bin" / "python"):
+        if candidate.exists():
+            return str(candidate)
+    return sys.executable
+
+
 def _gates(root: pathlib.Path, no_gate: bool) -> list[str]:
     """Run the mandatory text gate and the protocol suite. Returns the failures, empty when green."""
     failures: list[str] = []
     if no_gate:
         print("  gates: skipped (--no-gate)")
         return failures
+    python = _interpreter(root)
     script = root / "scripts" / "fix-text-encoding.py"
     if script.exists():
-        code, out = _run([sys.executable, str(script)], root)
+        code, out = _run([python, str(script)], root)
         print(f"  text gate: {out.strip().splitlines()[-1] if out.strip() else 'no output'}")
         if code != 0:
             failures.append("fix-text-encoding.py reported a problem (see its output above)")
     else:
         failures.append("scripts/fix-text-encoding.py is missing")
-    code, out = _run([sys.executable, "-m", "pytest", "tests/test_temp_tasks.py", "-q"], root)
+    code, out = _run([python, "-m", "pytest", "tests/test_temp_tasks.py", "-q"], root)
     tail = [l for l in out.strip().splitlines() if l.strip()][-1:] or ["no output"]
     print(f"  protocol suite: {tail[0]}")
     if code != 0:

@@ -470,3 +470,34 @@ class TestTheInForceLineStaysGameAgnostic:
         output = (done.stdout or "") + (done.stderr or "")
         assert done.returncode == 1, f"the script accepted a coordinate in --why: {output}"
         assert "tile coordinates" in output
+
+class TestTheInterpreterItUses:
+    """The gate has to run under the interpreter that has the dependencies, not the one on PATH.
+
+    Measured 2026-10-06: a session retired a task with `python scripts/temp-task.py retire ...`, where
+    `python` was the system interpreter with no `pytest`, so the protocol suite reported red and the
+    retirement looked broken (re-run under `.venv\\Scripts\\python.exe` it is `21 passed`). The
+    script used `sys.executable` - the interpreter it was *invoked* with - for its own gates.
+    """
+
+    @staticmethod
+    def _script():
+        import importlib.util
+
+        path = ROOT / "scripts" / "temp-task.py"
+        spec = importlib.util.spec_from_file_location("temp_task_script", path)
+        assert spec and spec.loader, f"cannot load {path}"
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_it_prefers_the_checkout_virtualenv(self, tmp_path):
+        module = self._script()
+        venv = tmp_path / ".venv" / "Scripts" / "python.exe"
+        venv.parent.mkdir(parents=True)
+        venv.write_text("", encoding="utf-8")
+        assert module._interpreter(tmp_path) == str(venv)
+
+    def test_it_falls_back_to_the_running_interpreter(self, tmp_path):
+        module = self._script()
+        assert module._interpreter(tmp_path) == sys.executable

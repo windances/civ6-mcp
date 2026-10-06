@@ -3859,15 +3859,23 @@ for _, city in pCities:Members() do
                         local terrInfo = terrIdx >= 0 and GameInfo.Terrains[terrIdx] or nil
                         local terrName = terrInfo and terrInfo.TerrainType or ""
                         local bestImp = nil
-                        if plot:IsHills() then
-                            bestImp = "IMPROVEMENT_MINE"
-                        elseif featureIdx >= 0 then
+                        -- The feature decides before the terrain does. Checking `IsHills()` first
+                        -- recommended `IMPROVEMENT_MINE` for a FORESTED hill, which the engine
+                        -- refuses: measured T353-T361 at (61,35), a `build MINE` task that stood for
+                        -- eight turns while a builder walked seven tiles to it, answered twice with
+                        -- `CANNOT_IMPROVE|... tile has FEATURE_FOREST (use remove_feature first).
+                        -- can build here: IMPROVEMENT_LUMBER_MILL`. A Lumber Mill needs no feature
+                        -- removal, so it is the improvement for the tile as it stands - and it is
+                        -- what the builder ended up building both times.
+                        if featureIdx >= 0 then
                             local fInfo = GameInfo.Features[featureIdx]
                             local fName = fInfo and fInfo.FeatureType or ""
                             if fName == "FEATURE_FOREST" then
                                 bestImp = "IMPROVEMENT_LUMBER_MILL"
                             end
                             -- Jungle/marsh need removal first, skip
+                        elseif plot:IsHills() then
+                            bestImp = "IMPROVEMENT_MINE"
                         elseif terrName == "TERRAIN_DESERT" or terrName == "TERRAIN_SNOW" or terrName == "TERRAIN_TUNDRA" then
                             -- Low-yield terrain, skip
                         else

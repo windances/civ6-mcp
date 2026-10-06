@@ -754,3 +754,28 @@ T60-T110 上的每一个 10-TURN REVIEW 窗口都把两轮运行混在一起（�
 被 `get_units` 标为 `CAN UPGRADE to UNIT_ROCKET_ARTILLERY (255g)` 的单位，被 `upgrade_unit` 拒绝了两次，
 回的是 `ERR:CANNOT_UPGRADE|UNIT_ARTILLERY -> UNIT_ROCKET_ARTILLERY | cost:255g have:323g`，而且游戏
 自己的失败表没有给出原因字符串；到 T339 第一次尝试就成功了 —— 这是一次**暂时性拒绝**，所以重试优先于重新规划。
+
+**任务 047（`re-order the three builders that could not start on their tile`）在 T362 退役**，比它自己的
+`expires:`（T365）早三个回合，因为它的 `done when:` 成立了。T360 的那三次拒绝都是
+`CANNOT_IMPROVE|Builder has no moves remaining this turn`，分别落在 `IMPROVEMENT_MINE`（id:12648465）、
+`IMPROVEMENT_CAMP`（id:13172742）与 `IMPROVEMENT_FARM`（id:13238329）上。T362 的一次 `get_map_area` 读数
+settle 了其中两处、也解释清了第三处：**(28,9) 带着被下令的 CAMP**、**(79,18) 带着被下令的 FARM**，而
+**(61,35) 带着一块本来就在那里的 LUMBER_MILL** —— 那块地是 PLAINS_HILLS / 丘陵 / 森林，伐木场在那里合法，
+而不先移除既有改良就压不上矿场，所以那一条指令在那块地上从来不可建造，重下多少次都不会落地。
+`get_builder_tasks` 在 T362 不再点名这三块地，三名建造者也不再闲置，这正是该任务自己的另一条完成线。
+这个文件所替代的规则比它活得久，也是值得带走的部分：**下 `improve` 之前先看 `moves`** ——
+`moves >= 1` 时指令当回合就能开工，而 `moves 0` 的建造者若正站在自己的地块上，那就是一次必然的
+`CANNOT_IMPROVE` 拒绝，所以这条指令属于下一回合的派工，而不是这一回合的。退役过程还留下一条工具侧笔记：
+它的协议套件第一次报红，只是因为 `python` 解析到了没有 `pytest` 的系统解释器；改用
+`.venv\Scripts\python.exe` 重跑就是 `21 passed`。文件是用 `--no-commit` 写下的，所以移入 `done/`、
+登记册行与 `IN FORCE NOW` 行当时都在磁盘上、尚未提交。
+
+**T362 无法结束，而这个回合仍然停在那里。** 上一个会话（`shadow-olive-siege-58`，它自己的日志里 seq 73 记着
+`queue_wc_votes -> WC_VOTER_REGISTERED`，紧接着 seq 87 是 `end_turn -> HANG:362:0_MCP_0362`）和这一个
+会话，都在同一回合被同一个调用卡住，所以这次停摆是 T362 自身的性质，而不是"世界议会投票没排队"。
+这个回合停在 `ready to end` —— `get_notifications` 仍然回答 `WHOSE MOVE|ready to end|T362` —— 而 AI 处理
+始终不完成。既定的答案是：由人类重启游戏，然后 `load_game_save("0_MCP_0362")`；**那个存档写在 T362 的开始
+处**，所以这一回合里做过的事都不在它里面，必须在游戏里重做。因此这个会话在 T362 的那一半只记录在这里、
+别处没有：`set_city_production(65536, PROJECT, PROJECT_LAUNCH_MARS_BASE)` 读回
+`PRODUCING|PROJECT_LAUNCH_MARS_BASE|2 turns`（西安有已建成的太空港，当时在生产开拓者），还有一个免费使者
+派给了梵蒂冈城。

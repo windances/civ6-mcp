@@ -48,6 +48,9 @@
 | TL-04 | `GameCore_Tuner/InGame states not found` 通常意味着另一个客户端占着 tuner | 设计如此，未关闭 |
 | TL-05 | 一次重载会把整个回合重置 | 设计如此，未关闭 |
 | TL-06 | route-A 驱动去数据根目录找 run 清单 | 已关闭 |
+| TL-07 | `get_builder_tasks` 连续八回合在森林丘陵上提议开矿 | 已关闭 |
+| TL-08 | `temp-task.py` 用它被调用的那个解释器跑自己的门禁 | 已关闭 |
+| TL-09 | 拉回前台的重试从未走到 `SetForegroundWindow`，而且一声不响 | 已关闭 |
 | PT-01 | 分工被说了三次，一次比一次窄 | 已关闭 |
 | PT-02 | "人类做完了"这个信号需要的是定义，而不是新标记 | 已关闭 |
 | PT-03 | 几个五五开的选择属于人类，而每一个都塑造了一件工具 | 已关闭 |
@@ -374,6 +377,49 @@
   回合；另一局的清单仍然是响亮的 mismatch），以及实测横幅——它现在读作
   `RUN china--1894041591 "migrated from china_-1894041591"  (civ/seed match, played to T352)`，
   而此前是 `RUN no run manifest`。
+
+### TL-07 `get_builder_tasks` 连续八回合在森林丘陵上提议开矿
+
+- **症状** 从 T353 到 T361，建造者任务表一直挂着 `(61,35): build MINE [city: Yerevan]`，而最近的
+  空闲建造者朝它走了七个地块（八回合里距离依次是 7、8、7、3、3、2、1、1、0）。当它终于站上那块地时，
+  引擎两次——T359 从 (61,34)、T361 从 (61,35)——回答
+  `CANNOT_IMPROVE|unknown reason. tile has FEATURE_FOREST (use remove_feature first). can build here:
+  IMPROVEMENT_LUMBER_MILL.` 四次 `improve` 调用花在了一块永远接受不了这个改良的地块上。
+- **起因** `build_builder_tasks_query`（`src/civ_mcp/lua/units.py`）的"空地启发式"分支顺序问题：
+  `plot:IsHills()` 排在特征之前判断，于是"森林+丘陵"落进了开矿分支。矿必须先砍掉森林；伐木场不用，
+  这正是会话改下伐木场后两次都成功的原因。
+- **解决** 让特征先于地形决定——森林→伐木场，丛林与沼泽跳过，然后丘陵→矿，再按地形→农场。该函数
+  docstring 里自己写下的警告（T60 硝石那次："不可建造的任务比没有任务更糟，因为它会调动建造者"）
+  正是旧顺序破坏的规则。
+- **证据** `tests/test_builder_tasks.py`（3 项，对查询字符串钉住判断顺序——套件里没有别的东西会注意到
+  这种重排）、上面那两条 `CANNOT_IMPROVE` 结果，以及 T361 的
+  `IMPROVING|IMPROVEMENT_LUMBER_MILL|61,35` 作为反证。
+
+### TL-08 `temp-task.py` 用它被调用的那个解释器跑自己的门禁
+
+- **症状** 某个会话的 `temp-task.py retire ...` 打印出红色的协议套件，看起来退役失败了；改用
+  `.venv\Scripts\python.exe` 重跑就是 `21 passed`，文件本身没问题。
+- **起因** `_gates` 用的是 `sys.executable`，也就是**调用**这个脚本的解释器——在这里
+  `python scripts/temp-task.py ...` 是系统解释器，而它没有 `pytest`。
+- **解决** `_interpreter(root)` 优先用本 checkout 自己的虚拟环境
+  （`.venv\Scripts\python.exe`、`.venv/bin/python`），找不到才退回 `sys.executable`；文本门禁与
+  协议套件都用它。
+- **证据** `tests/test_temp_tasks.py::TestTheInterpreterItUses`（虚拟环境存在时选它，否则用当前
+  解释器）。
+
+### TL-09 拉回前台的重试从未走到 `SetForegroundWindow`，而且一声不响
+
+- **症状** `end_turn` 停摆上报时，`.civ6-mcp-data/hang_diagnosis.jsonl` 记录着
+  `"foreground": false`，尽管服务器刚刚尝试过把窗口拉到前台——同一个会话里有四次
+  `HANG:352:0_MCP_0352`。
+- **起因** `game_launcher._bring_to_front_win32` 调的是 `user32.GetCurrentThreadId()`。这个函数由
+  **kernel32** 导出，所以每次尝试都在 `try` 里抛 `AttributeError`，被 `except Exception` 吞成一条
+  `log.debug`，函数在 `win32gui.SetForegroundWindow` 之前就返回了——也就是说这段重试从来没做过任何事。
+- **解决** 改用 `kernel32.GetCurrentThreadId()`，并让这个捕获以 **warning** 级记下异常类型与消息：
+  那条 debug 行是它唯一可能出现的地方，而没人会开着 debug 跑。
+- **证据** `tests/test_game_launcher.py`（3 项；用变异验证过——把旧写法放回去，
+  `assert 'kernel32.GetCurrentThreadId' in [...]` 就会失败，而新警告会打印
+  `AttributeError: module 'user32' has no attribute 'GetCurrentThreadId'`，正是 T352 那次调查缺的答案）。
 
 ## PT —— 与人类协作
 

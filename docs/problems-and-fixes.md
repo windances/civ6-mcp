@@ -47,6 +47,9 @@ same four lines, and a line that cannot be filled in is a line that has not been
 | TL-04 | `GameCore_Tuner/InGame states not found` usually means another client holds the tuner | open by design |
 | TL-05 | A reload resets the whole turn | open by design |
 | TL-06 | The run manifest was looked up in the data root by the route-A drivers | closed |
+| TL-07 | `get_builder_tasks` proposed a mine on a forested hill for eight turns | closed |
+| TL-08 | `temp-task.py` ran its own gate under whichever interpreter invoked it | closed |
+| TL-09 | The re-focus retry never reached `SetForegroundWindow`, and said nothing | closed |
 | PT-01 | The division of labour was stated three times, each time narrower | closed |
 | PT-02 | The human-done signal needed a definition, not a new marker | closed |
 | PT-03 | Several 50/50 calls were the human's, and each one shaped a tool | closed |
@@ -406,6 +409,55 @@ same four lines, and a line that cannot be filled in is a line that has not been
   played-to turn, and another match's manifest is still a loud mismatch), plus the live banner, which
   now reads `RUN china--1894041591 "migrated from china_-1894041591"  (civ/seed match, played to
   T352)` where it used to read `RUN no run manifest`.
+
+### TL-07 `get_builder_tasks` proposed a mine on a forested hill for eight turns
+
+- **symptom** From T353 to T361 the builder-task list carried
+  `(61,35): build MINE [city: Yerevan]`, and the nearest idle builder walked seven tiles towards it
+  (7, 8, 7, 3, 3, 2, 1, 1, 0 tiles over the eight turns). When the builder finally stood on the tile
+  the engine answered twice - T359 from (61,34) and T361 from (61,35) -
+  `CANNOT_IMPROVE|unknown reason. tile has FEATURE_FOREST (use remove_feature first). can build here:
+  IMPROVEMENT_LUMBER_MILL.` Four `improve` calls went into an improvement that tile can never take.
+- **cause** Branch order in the empty-tile heuristic of `build_builder_tasks_query`
+  (`src/civ_mcp/lua/units.py`): `plot:IsHills()` was tested **before** the feature, so a forested hill
+  fell into the mine branch. A Mine needs the forest removed first; a Lumber Mill does not, which is
+  what the builder built on both attempts once the session ordered it.
+- **fix** The feature decides before the terrain - forest to Lumber Mill, jungle and marsh skipped,
+  then the hill to a Mine, then the terrain-based Farm. The docstring's own warning ("an unbuildable
+  task is worse than no task, because it moves a Builder", from the T60 Niter case) is the rule the
+  old order broke.
+- **evidence** `tests/test_builder_tasks.py` (3 tests pinning the decision order against the query
+  string, since nothing else in the suite would notice a reorder), the two `CANNOT_IMPROVE` results
+  above, and `IMPROVING|IMPROVEMENT_LUMBER_MILL|61,35` at T361 as the counterfactual.
+
+### TL-08 `temp-task.py` ran its own gate under whichever interpreter invoked it
+
+- **symptom** A session's `temp-task.py retire ...` printed a red protocol suite, so the retirement
+  looked broken; re-run under `.venv\Scripts\python.exe` it was `21 passed` and the files were fine.
+- **cause** `_gates` used `sys.executable`, which is the interpreter the script was **invoked** with -
+  `python scripts/temp-task.py ...` is the system interpreter here, and it has no `pytest`.
+- **fix** `_interpreter(root)` prefers the checkout's own virtualenv
+  (`.venv\Scripts\python.exe`, `.venv/bin/python`) and falls back to `sys.executable`. Both the text
+  gate and the protocol suite use it.
+- **evidence** `tests/test_temp_tasks.py::TestTheInterpreterItUses` (the virtualenv is chosen when it
+  exists, the running interpreter otherwise).
+
+### TL-09 The re-focus retry never reached `SetForegroundWindow`, and said nothing
+
+- **symptom** `end_turn` stalls were reported with `.civ6-mcp-data/hang_diagnosis.jsonl` recording
+  `"foreground": false` even though the server had just tried to bring the window forward - four
+  `HANG:352:0_MCP_0352` results in one session.
+- **cause** `game_launcher._bring_to_front_win32` asked `user32.GetCurrentThreadId()`. That function
+  is exported by **kernel32**, so every attempt raised `AttributeError` inside the `try`, the
+  `except Exception` swallowed it into a `log.debug`, and the function returned before
+  `win32gui.SetForegroundWindow`. The retry had therefore never done anything.
+- **fix** `kernel32.GetCurrentThreadId()`, and the swallow now logs at **warning** with the exception
+  type and message: the debug line was the only place this could have shown up, and nobody runs with
+  debug on.
+- **evidence** `tests/test_game_launcher.py` (3 tests; checked by mutation - restoring the old
+  spelling fails `assert 'kernel32.GetCurrentThreadId' in [...]`, and the new warning prints
+  `AttributeError: module 'user32' has no attribute 'GetCurrentThreadId'`, which is the answer the
+  T352 investigation was missing).
 
 ## PT - working with the human
 
