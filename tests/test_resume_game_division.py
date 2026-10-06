@@ -115,6 +115,19 @@ class TestTheTextItAppends:
         assert "`agent working`" in block and "`your move`" in block and "`ready to end`" in block
         assert "`UI.CanEndTurn()` is not this fact" in block
 
+    def test_the_wait_for_the_human_is_a_fixed_thirty_seconds(self):
+        """Human instruction 2026-10-06: while it is the human's move, the cadence is fixed at 30 s.
+
+        A cadence rather than a habit, because the two failure modes are both real: a tight loop
+        spends the context the rest of the turn needs, and a longer wait only delays a turn both
+        sides are playing.
+        """
+        block = division_block()
+        assert "wait **exactly 30 seconds between reads**" in block
+        assert "`Start-Sleep -Seconds 30`" in block
+        assert "fixed 30-second cadence, not a" in block
+        assert "human\ninstruction 2026-10-06" in block or "instruction 2026-10-06" in block
+
     def test_it_carries_the_two_later_corrections(self):
         block = division_block()
         assert "A unit under a whole movement point is judged as skipped" in block, (

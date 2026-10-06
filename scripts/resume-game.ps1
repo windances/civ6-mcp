@@ -178,8 +178,11 @@ while any unit still has moves the game raises
     Command Units  ->  Units have moves remaining
 
 and it drops that entry the moment the turn can end. **That entry is the test** - when it is gone, the
-turn can end, so call `end_turn`. While it is there, wait, and re-read; between reads a shell
-`Start-Sleep -Seconds 30` costs nothing and needs no tuner. Re-reading `get_units` is still worth doing,
+turn can end, so call `end_turn`. While it is there, wait **exactly 30 seconds between reads** (human
+instruction 2026-10-06): call `get_notifications`, then `Start-Sleep -Seconds 30` in a shell - it costs
+nothing and needs no tuner - then call it again, and repeat. That is a fixed 30-second cadence, not a
+tighter loop: polling faster buys no information and spends the context this turn still needs, and
+waiting longer only delays a turn you are both playing. Re-reading `get_units` is still worth doing,
 because that entry covers the human's units **and yours**, and the two need opposite answers: the
 human's is waited for, and one of yours is yours to order. `get_units` now marks the units that cannot
 act - `[HOLD]` (a `skip`, `ACTIVITY_HOLD`), `[SENTRY]` (`alert`, `ACTIVITY_SENTRY`), `[OPERATION]` (a

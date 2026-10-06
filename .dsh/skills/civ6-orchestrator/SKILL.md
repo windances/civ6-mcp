@@ -959,15 +959,22 @@ rule vanishing from it means it was done, not that the check broke.
 Then, as the last action before ending, **call `skip_remaining_units()`
 unconditionally - unless the match is split and the human commands the military.**
 It fortifies combat units and then skips whatever still has moves, so it costs
-nothing, and it closes the one omission that reliably costs ten minutes. A unit
+nothing, and it closes the one omission that reliably costs a whole turn's wait. A unit
 left with moves does not merely bounce the turn: the game refuses to advance, and
-`end_turn` then polls until its roughly nine-minute budget is exhausted.
+`end_turn` then waits out its stall budget before reporting the turn as stuck
+(`AI_TURN_STALL_REPORT_S`, 120 s).
 
 **Under `-HumanMilitary` it is not yours to call.** The tool is empire-wide - it
 sweeps the human's units too - so with the division in force, order and `skip` your
 own units one at a time and leave the rest to the human. Measured 2026-10-04: a
 session that called it non-force (nothing had a legal attack) reported
 `FORTIFIED|1 fortified, 2 healing; SKIPPED|12`, and two of those were the human's.
+
+**Waiting for the human is a fixed 30-second cadence** (human instruction 2026-10-06):
+`get_notifications` says whose half is holding the turn, and while it is the human's, read it,
+`Start-Sleep -Seconds 30`, read it again, and repeat - not a tighter loop, which buys no
+information and spends the context the rest of the turn needs. `ready to end` is the signal to
+call `end_turn` with the diary.
 
 Then prepare all five non-empty diary reflections - tactical, strategic,
 tooling, planning, and hypothesis - and call `mcp__civ6__end_turn` **once**.
@@ -986,8 +993,9 @@ answer "was the process actually followed, or did one session do everything itse
 
 Then wait. Do not poll the turn number yourself, and do not call `end_turn` a
 second time while the first call is still in flight. `end_turn` already waits for
-the other civilisations by polling the turn number until it advances - on a slow
-turn that is several minutes, with a budget of roughly nine.
+the other civilisations by polling the turn number until it advances - a slow turn is
+seconds, and the call is bounded by its stall budget (`AI_TURN_STALL_REPORT_S`, 120 s),
+after which it reports the stall instead of blocking for ten minutes.
 
 Read the result to learn which of four things happened, and only the first one
 means you may begin the new turn:
@@ -996,8 +1004,8 @@ means you may begin the new turn:
 |---|---|---|
 | Turn result text | the turn advanced - the other civilisations finished | begin the new turn from Phase 1 |
 | Blocker text | something still needs a choice | resolve it, then call `end_turn` again **with the same reflections** |
-| `HANG:` | the turn never advanced within the budget | the server auto-recovers; verify state before acting |
-| `HANG RECOVERY FAILED` | the automatic restart-and-reload threw an exception | the game has been relaunched but no save is loaded. **Call `restart_and_load('<save named in the message>')` yourself.** This is recovery, not rewinding: the save named is the one written at the start of the *current* turn, so loading it restores the position you were already in. A standing instruction not to load saves does not forbid this - it forbids going back to an earlier turn. |
+| `HANG:` | the turn never advanced within the two-minute stall budget | **the game needs a restart, and restarting it is the human's act**: stop this session (`scripts\stop-agent.py`), have the game restarted, then resume from the save the message names. Do not restart or reload it from here. |
+| `HANG RECOVERY FAILED` | only reachable with `CIV_MCP_HANG_SELF_RESTART=1`: the automatic restart-and-reload threw an exception | the game has been relaunched but no save is loaded. **Call `restart_and_load('<save named in the message>')` yourself.** This is recovery, not rewinding: the save named is the one written at the start of the *current* turn, so loading it restores the position you were already in. A standing instruction not to load saves does not forbid this - it forbids going back to an earlier turn. |
 | `GAME OVER` | victory or defeat | stop |
 
 When it advanced, treat the returned events as the beginning of the next turn's

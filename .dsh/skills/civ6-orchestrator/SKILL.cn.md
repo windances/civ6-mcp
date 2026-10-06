@@ -714,12 +714,17 @@ from ..."），要么直接阻断（"Cannot end turn: diplomacy encounter pendin
 
 然后，作为结束之前的最后一个动作，**无条件调用 `skip_remaining_units()`——除非这一局的指挥权被
 拆分了、军事归人类。** 它会让战斗单位设防，然后跳过一切仍然有移动力的单位，所以它不花任何代价，
-并且它堵上了那个稳定地花掉十分钟的疏漏。一个留着移动力的单位不只是把回合弹回来：游戏会拒绝推进，
-然后 `end_turn` 会一直轮询，直到它大约九分钟的预算耗尽。
+并且它堵上了那个稳定地花掉整整一个回合等待的疏漏。一个留着移动力的单位不只是把回合弹回来：游戏会拒绝推进，
+然后 `end_turn` 会先耗完它的停摆预算再把回合报成卡住（`AI_TURN_STALL_REPORT_S`，120 秒）。
 
 **在 `-HumanMilitary` 之下，这个调用不属于你。** 它是全局的——连人类的单位一起扫——所以分工生效时，
 你要逐个给自己的单位下单或 `skip`，把其余留给人类。2026-10-04 实测：一个会话在没有任何合法攻击的
 情况下调用了它，得到 `FORTIFIED|1 fortified, 2 healing; SKIPPED|12`，其中两个是人类单位。
+
+**等待人类是固定 30 秒的节奏**（2026-10-06 人类指令）：`get_notifications` 会说明这个回合还握在哪一半
+手里，而当它握在人类手里时，读一次、`Start-Sleep -Seconds 30`、再读一次，如此往复——不是更紧的循环，
+那样买不到任何信息，还会花掉这个回合其余部分需要的上下文。`ready to end` 就是该带着日记调用 `end_turn`
+的信号。
 
 然后准备好全部五条非空日记反思——tactical、strategic、tooling、planning 和 hypothesis——并调用
 `mcp__civ6__end_turn` **一次**。
@@ -737,7 +742,8 @@ unit not in the snapshot); economy-cities not called (no economy decision this t
 东西。
 
 然后等待。不要自己去轮询回合数，也不要在第一次调用仍在进行时第二次调用 `end_turn`。`end_turn`
-已经会通过轮询回合数来等待其他文明，直到回合推进——在慢回合里那是好几分钟，预算大约是九分钟。
+已经会通过轮询回合数来等待其他文明，直到回合推进——慢回合只是几秒钟，而这个调用被它的停摆预算
+（`AI_TURN_STALL_REPORT_S`，120 秒）封顶，超过之后它会报告停摆，而不是阻塞十分钟。
 
 阅读结果，弄清四件事中发生了哪一件，而只有第一件意味着你可以开始新的回合：
 
@@ -745,8 +751,8 @@ unit not in the snapshot); economy-cities not called (no economy decision this t
 |---|---|---|
 | 回合结果文本 | 回合已推进——其他文明完成了 | 从 Phase 1 开始新回合 |
 | Blocker text | 还有东西需要做选择 | 解决它，然后**带着同样的反思**再次调用 `end_turn` |
-| `HANG:` | 回合在预算内从未推进 | 服务器会自动恢复；行动前先核实状态 |
-| `HANG RECOVERY FAILED` | 自动的 restart-and-reload 抛出了异常 | 游戏已经被重新启动，但没有载入任何存档。**由你自己调用 `restart_and_load('<save named in the message>')`。** 这是恢复，不是回退：被点名的那个存档是在*当前*回合开始时写入的，所以载入它恢复的是你本来就处在的局面。一条不许载入存档的常备指令并不禁止这件事——它禁止的是回到更早的回合。 |
+| `HANG:` | 回合在两分钟的停摆预算内从未推进 | **游戏需要重启，而重启是人类的动作**：先停掉本会话（`scripts\stop-agent.py`），让人重启游戏，再从消息里点名的存档继续。不要从这里重启或读档。 |
+| `HANG RECOVERY FAILED` | 只有在 `CIV_MCP_HANG_SELF_RESTART=1` 时才可能出现：自动的 restart-and-reload 抛出了异常 | 游戏已经被重新启动，但没有载入任何存档。**由你自己调用 `restart_and_load('<save named in the message>')`。** 这是恢复，不是回退：被点名的那个存档是在*当前*回合开始时写入的，所以载入它恢复的是你本来就处在的局面。一条不许载入存档的常备指令并不禁止这件事——它禁止的是回到更早的回合。 |
 | `GAME OVER` | 胜利或失败 | 停止 |
 
 当它推进了，就把返回的事件当作下一个回合观察的开始。遇到游戏结束、身份不匹配、回合倒退或恢复

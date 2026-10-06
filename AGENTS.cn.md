@@ -653,7 +653,10 @@ WC 在 `end_turn()` 内部同步触发——要在调用 end_turn **之前**登�
 不是给会话用的**：FireTuner 只服务一个客户端，而会话自己的 MCP server 一直占着它
 （`src/civ_mcp/server.py:290-369` 在整个 lifespan 里只保留一个 `GameConnection`），所以第二个客户端能
 连上、随后就死于 `ConnectionError: GameCore_Tuner/InGame states not found`——这是在有人持续占着连接、
-空闲与忙碌两种状态下都实测过的。两次轮询之间用一个 shell 的 `Start-Sleep` 就行，不花钱也不需要 tuner。
+空闲与忙碌两种状态下都实测过的。两次轮询之间用一个 shell 的 `Start-Sleep` 就行，不花钱也不需要 tuner；而
+等人类这一半时是**固定 30 秒的节奏**（2026-10-06 人类指令）：`get_notifications`，`Start-Sleep -Seconds 30`，
+再 `get_notifications`，如此往复。更快的轮询买不到任何信息，还会花掉这个回合仍然需要的上下文；等得更久只会
+拖慢双方都在打的这一回合。
 
 **分工生效期间，`skip_remaining_units` 不是会话该调的东西。** 这个工具是全局的——它会让战斗单位设防、
 把其余一切跳过，人类的单位也在其中——所以会话要逐个给自己的单位下单或 `skip`。2026-10-04 实测：一个会话

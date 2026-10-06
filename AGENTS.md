@@ -752,7 +752,10 @@ is for the human or an observer, not for the session**:
 FireTuner serves one client and the session's own MCP server holds it (one `GameConnection` in
 `src/civ_mcp/server.py`, held for the whole lifespan, lines 290-369), so a second client connects and
 then dies with `ConnectionError: GameCore_Tuner/InGame states not found` - measured with a connection
-held open, idle and busy. Between polls a shell `Start-Sleep` costs nothing and needs no tuner.
+held open, idle and busy. Between polls a shell `Start-Sleep` costs nothing and needs no tuner, and the
+wait for the human is a **fixed 30-second cadence** (human instruction 2026-10-06): `get_notifications`,
+`Start-Sleep -Seconds 30`, `get_notifications` again, and so on. Faster polling buys no information and
+spends the context the turn still needs; a longer wait only delays a turn both sides are playing.
 
 **`skip_remaining_units` is not the session's to call while the division is in force.** The tool is
 empire-wide - it fortifies combat units and skips everything else, the human's units included - so the
