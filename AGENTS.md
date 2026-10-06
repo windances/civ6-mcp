@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `044-schedule-three-modern-armor.md` (schedule three Modern Armor without cancelling what a city is already building) and `045-two-carriers-with-aircraft.md` (two carriers and their full complement of aircraft, scheduled without cancelling any queue) and `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md` (use the two Great Merchants we already own, or record why this match cannot).
+**IN FORCE NOW:** `045-two-carriers-with-aircraft.md` (two carriers and their full complement of aircraft, scheduled without cancelling any queue) and `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md` (use the two Great Merchants we already own, or record why this match cannot) and `047-re-order-the-three-builders-that-could-not-start-on-their-tile.md` (re-order the builders that arrived with no movement and could not start their improvement).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
@@ -357,6 +357,14 @@ to be discovered - measured, T228-T299 recorded 232 `STOPPED_MID_PATH` results.
 nearest idle builder for each: call it once per turn and dispatch top-down. A builder 3-4 tiles away
 is still worth the walk, and map tiles print movement cost (`[mv:2]`, `[mv:3]`) and roads, so route
 along them.
+
+**Check `moves` before ordering `improve`** (measured on this match): a builder that spent both of its
+movement points walking onto its tile cannot start an improvement that turn, and the engine refuses
+the order with `CANNOT_IMPROVE|Builder has no moves remaining this turn` - the tile stays bare and the
+builder looks idle although nothing is wrong with it. `moves >= 1` starts the improvement the turn it
+is ordered. `moves 0` means either it is still walking (leave it; it arrives with movement next turn)
+or it is already standing on the tile, which that turn's `get_builder_tasks` names at 0 tiles - order
+it then, not now.
 
 ### Growth and settling
 The thresholds, which are hard stops rather than warnings: **food surplus <= 0** is worth fixing

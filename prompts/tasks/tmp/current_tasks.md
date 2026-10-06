@@ -117,6 +117,8 @@ Task 041 was retired as `done/041-attempt-a10-the-two-city-military-opening-done
 Task 042 was retired as `done/042-recover-production-expired-T321.md`.
 
 Task 043 was retired as `done/043-save-for-upgrades-done-T339.md`.
-| `044-schedule-three-modern-armor.md` | 2026-10-04 | turn 374 | schedule three Modern Armor without cancelling what a city is already building | count == 3 units of type UNIT_MODERN_ARMOR exist on the map, as read by get_units. The empire held 0 |
 | `045-two-carriers-with-aircraft.md` | 2026-10-04 | turn 424 | two carriers and their full complement of aircraft, scheduled without cancelling any queue | count == 2 units of type UNIT_AIRCRAFT_CARRIER and count == 4 aircraft (UNIT_JET_FIGHTER, |
 | `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md` | 2026-10-04 | turn 372 | use the two Great Merchants we already own, or record why this match cannot | count == 0 of our UNIT_GREAT_MERCHANT units still hold an unspent charge (`charges:1` in the |
+| `047-re-order-the-three-builders-that-could-not-start-on-their-tile.md` | 2026-10-06 | turn 365 | re-order the builders that arrived with no movement and could not start their improvement | a MINE at (61,35), a CAMP at (28,9) and a FARM at (79,18) as read by get_map_area, or |
+
+Task 044 was retired as `done/044-schedule-three-modern-armor-done-T356.md`.

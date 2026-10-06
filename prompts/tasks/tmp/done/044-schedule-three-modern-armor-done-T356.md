@@ -80,3 +80,10 @@ cities built them and what each queue gave up for it.
      at: 2026-10-04T16:52:25+08:00
      chinese backup: prompts/tasks/cn/044-schedule-three-modern-armor.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 044 --done --turn 356
+     at: 2026-10-06T21:00:03+08:00
+     status: done at T356
+     chinese backup: prompts/tasks/cn/044-schedule-three-modern-armor.cn.md
+-->
