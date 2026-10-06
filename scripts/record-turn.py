@@ -33,7 +33,9 @@ import pathlib
 import sys
 from datetime import datetime, timezone
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(ROOT / "src"))
 from civ_mcp import run_manifest  # noqa: E402
 # The directory is read from CIV_MCP_DATA_DIR at *import* time. Default it to the workspace copy
 # the DSH overlay uses, so a script-driven session cannot silently write the diary to ~/.civ6-mcp
