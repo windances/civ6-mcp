@@ -118,6 +118,7 @@ Task 042 was retired as `done/042-recover-production-expired-T321.md`.
 
 Task 043 was retired as `done/043-save-for-upgrades-done-T339.md`.
 | `045-two-carriers-with-aircraft.md` | 2026-10-04 | turn 424 | two carriers and their full complement of aircraft, scheduled without cancelling any queue | count == 2 units of type UNIT_AIRCRAFT_CARRIER and count == 4 aircraft (UNIT_JET_FIGHTER, |
+| `048-four-assault-corps-built-and-assembled-at-the-front.md` | 2026-10-07 | turn 393 | build four assault corps and assemble them at the front | get_units counts >= 12 UNIT_ROCKET_ARTILLERY, >= 4 UNIT_MODERN_AT and >= 8 of |
 
 Task 044 was retired as `done/044-schedule-three-modern-armor-done-T356.md`.
 
