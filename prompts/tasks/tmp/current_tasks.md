@@ -118,8 +118,9 @@ Task 042 was retired as `done/042-recover-production-expired-T321.md`.
 
 Task 043 was retired as `done/043-save-for-upgrades-done-T339.md`.
 | `045-two-carriers-with-aircraft.md` | 2026-10-04 | turn 424 | two carriers and their full complement of aircraft, scheduled without cancelling any queue | count == 2 units of type UNIT_AIRCRAFT_CARRIER and count == 4 aircraft (UNIT_JET_FIGHTER, |
-| `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md` | 2026-10-04 | turn 372 | use the two Great Merchants we already own, or record why this match cannot | count == 0 of our UNIT_GREAT_MERCHANT units still hold an unspent charge (`charges:1` in the |
 
 Task 044 was retired as `done/044-schedule-three-modern-armor-done-T356.md`.
 
 Task 047 was retired as `done/047-re-order-the-three-builders-that-could-not-start-on-their-tile-done-T362.md`: CAMP at (28,9) and FARM at (79,18) verified on the map; (61,35) had carried a LUMBER_MILL so the ordered MINE was never buildable; get_builder_tasks names none of the three
+
+Task 046 was retired as `done/046-use-the-two-great-merchants-or-record-why-this-match-cannot-done-T369.md`.

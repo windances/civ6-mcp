@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `045-two-carriers-with-aircraft.md` (two carriers and their full complement of aircraft, scheduled without cancelling any queue) and `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md` (use the two Great Merchants we already own, or record why this match cannot).
+**IN FORCE NOW:** `045-two-carriers-with-aircraft.md` (two carriers and their full complement of aircraft, scheduled without cancelling any queue).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and

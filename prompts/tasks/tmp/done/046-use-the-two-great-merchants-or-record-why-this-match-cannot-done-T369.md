@@ -56,3 +56,10 @@ can reach it is the open question.
      at: 2026-10-04T20:07:36+08:00
      chinese backup: prompts/tasks/cn/046-use-the-two-great-merchants-or-record-why-this-match-cannot.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 046 --done --turn 369
+     at: 2026-10-07T00:27:04+08:00
+     status: done at T369
+     chinese backup: prompts/tasks/cn/046-use-the-two-great-merchants-or-record-why-this-match-cannot.cn.md
+-->

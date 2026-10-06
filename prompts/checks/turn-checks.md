@@ -249,11 +249,17 @@ require: units(CATAPULT, TREBUCHET, BOMBARD, ARTILLERY) >= 1
 message: No siege unit at all. Ranged fire is not a substitute for siege - a Trebuchet breaks walls far faster than any Crossbowman, and that gap turned a 170-turn campaign into cities that took ten turns each. **One is the floor; the number is a judgement, not a quota** (human instruction 2026-09-30): two or three guns when the walls are thick, the ring is open and the city heals faster than the ranged line can chip it, and one when the ground or the ranged line already covers it. Decide with the arithmetic - wall pool divided by the wall damage each gun does per turn, against the city's ~20 HP/turn heal and what the shooters add - and write the number you chose and why in the diary's tactical line. tactics/01 and tactics/06 carry the same rule.
 -->
 
+<!-- The type list has to follow the era or the rule measures a museum: the ranged line upgrades
+Field Cannon -> Artillery -> Rocket Artillery, and by T369 (Atomic era, 77 techs) the older
+frames are no longer buildable at all, so a list that stops at FIELD_CANNON/CROUCHING_TIGER
+can never be satisfied again by any army that upgraded. ARTILLERY and ROCKET_ARTILLERY are
+added at the modern tier (2026-10-07, T369) - the intent of the rule is "at least 4 ranged
+units", and Rocket Artillery is the modern descendant of the Field Cannon. -->
 <!-- check
 id: ranged-mass
 when: turn() >= 90
-require: units(SLINGER, ARCHER, CROSSBOWMAN, FIELD_CANNON, CROUCHING_TIGER) >= 4
-message: Fewer than 4 ranged units. Machinery unlocks both the Crossbowman (range 2) and China's Crouching Tiger (range 1); every Tiger needs a melee unit holding the tile in front of it.
+require: units(SLINGER, ARCHER, CROSSBOWMAN, FIELD_CANNON, CROUCHING_TIGER, ARTILLERY, ROCKET_ARTILLERY) >= 4
+message: Fewer than 4 ranged units. Machinery unlocks both the Crossbowman (range 2) and China's Crouching Tiger (range 1); every Tiger needs a melee unit holding the tile in front of it. Late in the tree the same slot is filled by Artillery and Rocket Artillery.
 -->
 
 <!-- check
