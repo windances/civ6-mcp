@@ -57,3 +57,10 @@ with a 0-tile idle builder.
      at: 2026-10-06T22:16:30+08:00
      chinese backup: prompts/tasks/cn/047-re-order-the-three-builders-that-could-not-start-on-their-tile.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 047 --done --turn 362 --note "CAMP at (28,9) and FARM at (79,18) verified on the map; (61,35) had carried a LUMBER_MILL so the ordered MINE was never buildable; get_builder_tasks names none of the three" --no-commit
+     at: 2026-10-06T22:44:20+08:00
+     status: done at T362
+     chinese backup: prompts/tasks/cn/047-re-order-the-three-builders-that-could-not-start-on-their-tile.cn.md
+-->

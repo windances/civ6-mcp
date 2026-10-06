@@ -846,3 +846,33 @@ caught up". The second measurement is the tool's: at T338 the same unit that `ge
 `ERR:CANNOT_UPGRADE|UNIT_ARTILLERY -> UNIT_ROCKET_ARTILLERY | cost:255g have:323g` and no reason
 string from the game's own failure table, then upgraded on the first attempt at T339 - a transient
 refusal, so retry before replanning.
+
+**Task 047 (`re-order the three builders that could not start on their tile`) retired at T362**, three
+turns before its own `expires:` of T365, because its `done when:` held. The three T360 refusals were all
+`CANNOT_IMPROVE|Builder has no moves remaining this turn`, on `IMPROVEMENT_MINE` (id:12648465),
+`IMPROVEMENT_CAMP` (id:13172742) and `IMPROVEMENT_FARM` (id:13238329). A `get_map_area` read at T362
+settles two of the three and explains the third: **(28,9) carries the ordered CAMP** and **(79,18) the
+ordered FARM**, while **(61,35) carries a LUMBER_MILL that was already on it** - the tile is
+PLAINS_HILLS / Hills / FOREST, a Lumber Mill is legal there, and a Mine cannot be placed over an existing
+improvement without first removing it, so that particular order was never buildable on that tile and no
+re-issue could have landed. `get_builder_tasks` named none of the three tiles at T362 and none of the
+three builders was idle any more, which is the task's own alternative finish line. The rule the file was
+standing in for outlives it and is the part worth carrying: **check `moves` before ordering `improve`** -
+`moves >= 1` starts the improvement the turn it is ordered, and `moves 0` on a builder that is standing
+on its tile is a guaranteed `CANNOT_IMPROVE` refusal, so the order belongs in the next turn's dispatch
+rather than in this one's. One tooling note from the retirement: its protocol suite reported red on the
+first run only because `python` resolved to the system interpreter, which has no `pytest`; re-run under
+`.venv\Scripts\python.exe` it is `21 passed`. The files were written with `--no-commit`, so the move to
+`done/`, the register row and the `IN FORCE NOW` line are on disk and uncommitted.
+
+**T362 could not be ended, and the turn is still standing there.** Both the previous session
+(`shadow-olive-siege-58`, whose own log records `queue_wc_votes -> WC_VOTER_REGISTERED` at seq 73
+followed by `end_turn -> HANG:362:0_MCP_0362` at seq 87) and this one were wedged by the same call on
+the same turn, so the stall is a property of T362 and not of an unqueued World Congress vote. The turn
+sits `ready to end` - `get_notifications` still answers `WHOSE MOVE|ready to end|T362` - and the AI
+processing never completes. The documented answer is a game restart by the human, then
+`load_game_save("0_MCP_0362")`; **that save was written at the start of T362**, so anything done during
+the turn is not in it and has to be redone in game. This session's T362 half is therefore on the record
+here and nowhere else: `set_city_production(65536, PROJECT, PROJECT_LAUNCH_MARS_BASE)` read back
+`PRODUCING|PROJECT_LAUNCH_MARS_BASE|2 turns` (Xi'an had a completed Spaceport and was building a
+Settler), and one free envoy went to 梵蒂冈城.
