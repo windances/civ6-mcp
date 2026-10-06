@@ -20,13 +20,19 @@ the loaded position, with no memory of how it got there.** It forgets, for this 
   - the run's session scratch: a stale ``heartbeat.json``, ``agent-half.txt`` and
     ``stop-request.json``.
 
+With ``--tasks`` it also withdraws the **temporary tasks in force** - and that is the one thing here
+a session would otherwise still read and act on, because a task is an instruction rather than a
+memory. The withdrawal goes through ``scripts/temp-task.py``'s own ``retire --expired`` path, so the
+task file moves to ``done/``, the register row goes and ``AGENTS.md``'s ``IN FORCE NOW`` line is
+rebuilt with them; ``--no-commit --no-gate`` because the commit belongs to whoever ran the fresh
+start. Without the flag they are kept and the plan prints the command to withdraw one deliberately.
+
 It keeps what is an *instruction* rather than a memory, because withdrawing one silently is the
 failure this repository keeps re-learning:
 
   - ``prompts/checks/turn-checks.md``'s rule bodies - every one of them, including the re-armed
     ones;
-  - the temporary tasks in force (``prompts/tasks/tmp/``) - they are reported, with the exact
-    ``temp-task.py retire`` command to withdraw any of them deliberately;
+  - the temporary tasks in force (``prompts/tasks/tmp/``) unless ``--tasks`` was passed;
   - ``AGENTS.md``, the orchestrator skill and the strategy directive;
   - every archive: ``.civ6-mcp-data/branches/**``, including the backup this script writes.
 
@@ -34,8 +40,9 @@ Nothing is deleted without a copy: everything forgotten is first written to
 ``.civ6-mcp-data/branches/fresh-start-<stamp>/`` with a manifest of what it held.
 
 Usage:
-  .venv\\Scripts\\python.exe scripts\\fresh-start.py 352            # plan only
-  .venv\\Scripts\\python.exe scripts\\fresh-start.py 352 --apply    # forget it
+  .venv\\Scripts\\python.exe scripts\\fresh-start.py 352                 # plan only
+  .venv\\Scripts\\python.exe scripts\\fresh-start.py 352 --apply         # forget it
+  .venv\\Scripts\\python.exe scripts\\fresh-start.py 352 --apply --tasks # ...and withdraw the tasks
   .venv\\Scripts\\python.exe scripts\\fresh-start.py 352 --apply --force
 """
 
@@ -210,7 +217,58 @@ def session_live(run: pathlib.Path) -> tuple[bool, str]:
     return (not module.stopped(state)), module.describe(state)
 
 
-def build_plan(root: pathlib.Path, turn: int) -> dict:
+def load_temp_task():
+    """`scripts/temp-task.py` by path, so a withdrawal goes through the blessed retirement path.
+
+    That path is what keeps the task file, the register (`current_tasks.md`) and `AGENTS.md`'s
+    `IN FORCE NOW` line in step with each other; a fresh start that moved the files itself would be a
+    second implementation of a rule the suite tests, which is how the two drift apart.
+    """
+    here = pathlib.Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("fresh_start_temp_task", here / "temp-task.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - only on a damaged checkout
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def withdraw_tasks(root: pathlib.Path, names: list[str], turn: int) -> list[tuple[str, int]]:
+    """Retire every named task as **withdrawn**, through `temp-task.py`'s own `cmd_retire`.
+
+    Returns ``(name, exit code)`` per task. The tool's default is to keep them, because a task is an
+    instruction and withdrawing one silently is the failure the register and the suite exist to
+    prevent; `--tasks` is the human asking for the opposite, and this is how that request is carried
+    out - `done/<stem>-expired-T<turn>.md`, the register row dropped with a retirement note, and the
+    `IN FORCE NOW` line rebuilt. `--no-commit --no-gate` because the commit belongs to whoever ran
+    the fresh start, not to this loop.
+    """
+    module = load_temp_task()
+    if module is None:  # pragma: no cover - only on a damaged checkout
+        return [(name, 1) for name in names]
+    results: list[tuple[str, int]] = []
+    for name in names:
+        number = name.split("-", 1)[0]
+        args = argparse.Namespace(
+            root=str(root),
+            number=number,
+            turn=turn,
+            done=False,
+            note=(
+                "Withdrawn by scripts/fresh-start.py: the match was restarted from the loaded "
+                "position, with no memory of the branch before it."
+            ),
+            dry_run=False,
+            no_gate=True,
+            no_commit=True,
+            # The retired file's audit block records the equivalent, re-runnable command.
+            argv=["retire", number, "--expired", "--turn", str(turn), "--no-commit"],
+        )
+        results.append((name, module.cmd_retire(args)))
+    return results
+
+
+def build_plan(root: pathlib.Path, turn: int, tasks: bool = False) -> dict:
     """What exists, what would be forgotten, and what is deliberately kept."""
     data = data_root(root)
     run = run_dir(root)
@@ -274,7 +332,7 @@ def build_plan(root: pathlib.Path, turn: int) -> dict:
     _src_on_path()
     from civ_mcp import temp_tasks
 
-    tasks = temp_tasks.task_files(root / TASKS_REL) if (root / TASKS_REL).is_dir() else []
+    in_force = temp_tasks.task_files(root / TASKS_REL) if (root / TASKS_REL).is_dir() else []
 
     return {
         "turn": turn,
@@ -288,7 +346,8 @@ def build_plan(root: pathlib.Path, turn: int) -> dict:
         "traces_rearmed": rearmed_turns,
         "goals_rearmed": rearmed_ids,
         "traces_foreign": foreign,
-        "tasks_in_force": [p.name for p in tasks],
+        "tasks_in_force": [p.name for p in in_force],
+        "tasks_to_withdraw": [p.name for p in in_force] if tasks else [],
         "playing_to": manifest.get("last_turn"),
     }
 
@@ -318,12 +377,20 @@ def show_plan(plan: dict) -> None:
         )
     print("keep                 every rule body in the file, and every archive it cites")
     print(f"keep                 every archive under .civ6-mcp-data/branches/")
-    if plan["tasks_in_force"]:
+    if plan["tasks_to_withdraw"]:
+        print(
+            f"withdraw             {len(plan['tasks_to_withdraw'])} temporary task(s), through "
+            "temp-task.py retire --expired (the register and AGENTS.md are rebuilt with them):"
+        )
+        for name in plan["tasks_to_withdraw"]:
+            print(f"                       {name}")
+    elif plan["tasks_in_force"]:
         print(f"keep                 {len(plan['tasks_in_force'])} temporary task(s) in force:")
         for name in plan["tasks_in_force"]:
             print(f"                       {name}")
         print("                       withdraw one deliberately with: "
               f"scripts\\temp-task.cmd retire <nnn> --expired --turn {plan['turn']}")
+        print("                       (or run this again with --tasks to withdraw all of them)")
 
 
 def apply_plan(root: pathlib.Path, plan: dict, stamp: str) -> dict:
@@ -357,6 +424,19 @@ def apply_plan(root: pathlib.Path, plan: dict, stamp: str) -> dict:
         # newline="": text mode would rewrite every \n as os.linesep on Windows.
         checks.write_text(plan["checks_text"], encoding="utf-8", newline="")
 
+    # Withdrawn tasks are copied into the same backup first, so this run's undo is one directory.
+    withdrawn: list[tuple[str, int]] = []
+    if plan["tasks_to_withdraw"]:
+        for name in plan["tasks_to_withdraw"]:
+            source = root / TASKS_REL / name
+            if not source.exists():
+                continue
+            destination = backup / "files" / TASKS_REL / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            copied.append(f"{TASKS_REL}\\{name}")
+        withdrawn = withdraw_tasks(root, plan["tasks_to_withdraw"], plan["turn"])
+
     _src_on_path()
     from civ_mcp import run_manifest
 
@@ -366,6 +446,9 @@ def apply_plan(root: pathlib.Path, plan: dict, stamp: str) -> dict:
         f"  {item['path']}  -  {item['what']} ({item['detail']})" for item in plan["forgets"]
     ) or "  (nothing was left to forget)"
     tasks_text = "\n".join(f"  {name}" for name in plan["tasks_in_force"]) or "  (none)"
+    withdrawn_text = "\n".join(
+        f"  {name}  -  withdrawn (exit {code})" for name, code in withdrawn
+    )
     (backup / "README.txt").write_text(
         f"Fresh start for {plan['game_key']} at T{plan['turn']}, written {stamp}.\n"
         f"Run {plan['run_id']}.\n\n"
@@ -382,8 +465,13 @@ def apply_plan(root: pathlib.Path, plan: dict, stamp: str) -> dict:
             else ""
         )
         + f"\nThe run manifest's played-to turn was reset to T{plan['turn']}.\n\n"
-        f"Kept in force (withdraw deliberately with temp-task.py retire):\n{tasks_text}\n"
-        "\nTo put the memory back: copy files/ over the checkout again, keeping the tree shape.\n",
+        + (
+            f"Withdrawn through temp-task.py (they were instructions, so this path is the one that\n"
+            f"keeps the register and AGENTS.md in step):\n{withdrawn_text}\n"
+            if withdrawn
+            else f"Kept in force (withdraw deliberately with temp-task.py retire):\n{tasks_text}\n"
+        )
+        + "\nTo put the memory back: copy files/ over the checkout again, keeping the tree shape.\n",
         encoding="utf-8",
     )
     (backup / "manifest.json").write_text(
@@ -400,6 +488,8 @@ def apply_plan(root: pathlib.Path, plan: dict, stamp: str) -> dict:
                 "goals_rearmed": plan["goals_rearmed"],
                 "traces_foreign_kept": plan["traces_foreign"],
                 "tasks_kept": plan["tasks_in_force"],
+                "tasks_withdrawn": [name for name, code in withdrawn if code == 0],
+                "tasks_withdraw_failed": [name for name, code in withdrawn if code != 0],
                 "checks_copied": bool(plan["checks_changed"]),
             },
             ensure_ascii=False,
@@ -412,6 +502,7 @@ def apply_plan(root: pathlib.Path, plan: dict, stamp: str) -> dict:
         "copied": copied,
         "removed": removed,
         "manifest": manifest,
+        "withdrawn": withdrawn,
     }
 
 
@@ -428,9 +519,17 @@ def main(root: pathlib.Path | None = None) -> int:
         action="store_true",
         help="even while a session looks live (it will rewrite what this forgets)",
     )
+    parser.add_argument(
+        "--tasks",
+        action="store_true",
+        help=(
+            "also withdraw the temporary tasks in force, through scripts/temp-task.py, so the "
+            "register and AGENTS.md's IN FORCE NOW line stay in step"
+        ),
+    )
     args = parser.parse_args()
 
-    plan = build_plan(root, args.turn)
+    plan = build_plan(root, args.turn, tasks=args.tasks)
     show_plan(plan)
 
     live, why = session_live(plan["run"])
@@ -454,6 +553,12 @@ def main(root: pathlib.Path | None = None) -> int:
     print(f"\nbackup               {result['backup'].relative_to(root)}")
     print(f"                     {len(result['copied'])} file(s) copied before forgetting")
     print(f"forgotten            {len(result['removed'])} file(s)")
+    if result["withdrawn"]:
+        ok = [name for name, code in result["withdrawn"] if code == 0]
+        bad = [name for name, code in result["withdrawn"] if code != 0]
+        print(f"withdrawn            {len(ok)} task(s) -> prompts/tasks/tmp/done/")
+        for name in bad:
+            print(f"  ! NOT withdrawn    {name} (temp-task.py refused it - see its output above)")
     if result["manifest"]:
         print(f"manifest             run {result['manifest']['run_id']}: played-to is now "
               f"T{result['manifest']['last_turn']}")
@@ -463,7 +568,8 @@ def main(root: pathlib.Path | None = None) -> int:
         "\nnext: make sure the game is loaded at T"
         f"{args.turn}, then start a fresh session:\n"
         "    scripts\\resume-game.ps1 -Wait -HumanMilitary\n"
-        "The new session reads an empty diary, no achieved goals, and the rules as they stand."
+        "The new session reads an empty diary, no achieved goals, the rules as they stand"
+        + (", and no temporary tasks." if result["withdrawn"] else ".")
     )
     return 0
 

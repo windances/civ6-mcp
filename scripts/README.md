@@ -123,6 +123,7 @@ the loaded position with no memory of how it got there:
 ```powershell
 python scripts\fresh-start.py 352               # plan only: what would be forgotten, what is kept
 python scripts\fresh-start.py 352 --apply       # forget it (refuses while a session is playing)
+python scripts\fresh-start.py 352 --apply --tasks   # ...and withdraw the temporary tasks in force
 python scripts\fresh-start.py 352 --apply --force
 ```
 
@@ -131,12 +132,14 @@ achieved-goal state, and the `achieved T...` notes in `prompts/checks/turn-check
 this match (another match's notes are left alone - the file is shared) - and for each note it puts the
 rule body back from `prompts/checks/archive/`, because the check file's own contract is that a goal is
 either live or traceable, so "the note goes, the rule stays". It also resets the manifest's played-to
-turn, and clears the run's session scratch. It keeps the temporary tasks in force - it prints the
-`temp-task.py retire` command to withdraw one deliberately rather than doing it silently - and every
-archive under `branches/`, including the backup it writes first: the whole tree it forgot, under
-`branches/fresh-start-<stamp>/files/`, so the operation is reversible. Stop the session first
-(`stop-agent.py --wait`); the script refuses otherwise, because a live session writes the diary
-straight back.
+turn, and clears the run's session scratch. By default it keeps the temporary tasks in force (a task is
+an instruction, not a memory) and prints the `temp-task.py retire` command to withdraw one deliberately;
+**`--tasks` withdraws them all** through that same command, so the task files move to
+`prompts/tasks/tmp/done/`, the register row goes and `AGENTS.md`'s `IN FORCE NOW` line is rebuilt with
+them. Every archive under `branches/` is kept, including the backup this script writes first: the whole
+tree it forgot, under `branches/fresh-start-<stamp>/files/`, so the operation is reversible. Stop the
+session first (`stop-agent.py --wait`); the script refuses otherwise, because a live session writes the
+diary straight back.
 
 ## Handing a match to a fresh session
 

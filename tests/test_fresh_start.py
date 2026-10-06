@@ -27,6 +27,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 sys.path.insert(0, str(ROOT / "src"))
 
+from civ_mcp import temp_tasks as tt  # noqa: E402
+
 KEY = "china_-1894041591"
 
 
@@ -179,9 +181,30 @@ def fake_checkout(tmp_path: pathlib.Path, *, live: bool = False) -> pathlib.Path
     (directory / "turn-checks.md").write_text(CHECKS, encoding="utf-8")
     tmp = tmp_path / fs.TASKS_REL
     tmp.mkdir(parents=True)
-    (tmp / "044-a-task.md").write_text("added: 2026-10-04\n", encoding="utf-8")
-    (tmp / "current_tasks.md").write_text("| task |\n", encoding="utf-8")
+    (tmp / "044-a-task.md").write_text(
+        "# TEMP TASK 044 - a task\n\nadded:     2026-10-04 (human instruction)\n"
+        "expires:   turn 374\ndone when: count == 3 units exist\n"
+        "overrides: nothing\nscope:     this task only\n",
+        encoding="utf-8",
+    )
     (tmp / "README.md").write_text("read me\n", encoding="utf-8")
+    (tmp / "done").mkdir()
+    # A register row and an AGENTS.md line, built with the module's own helpers: `temp-task.py
+    # retire` rewrites both, so the fixture has to hold the shapes it expects.
+    row = tt.Row(
+        file="044-a-task.md",
+        added="2026-10-04",
+        expires="turn 374",
+        why="do the thing",
+        done="count == 3 units exist",
+    )
+    register = (
+        "# Temporary tasks\n\n| task file | added | expires | why | done when |\n|---|---|---|---|---|\n"
+    )
+    (tmp / "current_tasks.md").write_text(tt.register_with_row(register, row), encoding="utf-8")
+    (tmp_path / "AGENTS.md").write_text(
+        f"# AGENTS\n\n{tt.in_force_line([row])}\n", encoding="utf-8"
+    )
     (data / "branches" / "rollback-to-T352-from-T353-T354-x").mkdir(parents=True)
     return tmp_path
 
@@ -191,8 +214,10 @@ def checkout(tmp_path):
     return fake_checkout(tmp_path)
 
 
-def run_apply(root: pathlib.Path, turn: int = 352, stamp: str = "20261005-000000") -> dict:
-    plan = fs.build_plan(root, turn)
+def run_apply(
+    root: pathlib.Path, turn: int = 352, stamp: str = "20261005-000000", tasks: bool = False
+) -> dict:
+    plan = fs.build_plan(root, turn, tasks=tasks)
     return fs.apply_plan(root, plan, stamp)
 
 
@@ -290,6 +315,57 @@ class TestTheApply:
         )
         plan = fs.build_plan(checkout, 352)
         assert plan["tasks_in_force"] == ["044-a-task.md"]
+
+
+class TestWithdrawingTheTasks:
+    """`--tasks` is the human asking for "no previous information" all the way down.
+
+    A task is an instruction rather than a memory, so the default keeps it; withdrawing one has to
+    go through `temp-task.py retire --expired`, which is the only thing that keeps the task file, the
+    register and `AGENTS.md`'s `IN FORCE NOW` line in step with each other.
+    """
+
+    def test_the_plan_says_which_tasks_will_be_withdrawn(self, checkout):
+        plan = fs.build_plan(checkout, 352, tasks=True)
+        assert plan["tasks_to_withdraw"] == ["044-a-task.md"]
+
+    def test_without_the_flag_nothing_is_scheduled_for_withdrawal(self, checkout):
+        plan = fs.build_plan(checkout, 352)
+        assert plan["tasks_to_withdraw"] == []
+        assert plan["tasks_in_force"] == ["044-a-task.md"]
+
+    def test_it_moves_the_file_to_done_and_rebuilds_the_register_and_agents(self, checkout):
+        result = run_apply(checkout, tasks=True)
+        assert result["withdrawn"] == [("044-a-task.md", 0)]
+        tmp = checkout / fs.TASKS_REL
+        assert not (tmp / "044-a-task.md").exists()
+        retired = tmp / "done" / "044-a-task-expired-T352.md"
+        assert retired.exists()
+        assert "status: expired at T352" in retired.read_text(encoding="utf-8")
+        assert tt.register_rows((tmp / "current_tasks.md").read_text(encoding="utf-8")) == []
+        agents = (checkout / "AGENTS.md").read_text(encoding="utf-8")
+        assert tt.IN_FORCE_EMPTY in agents
+        assert "044-a-task.md" not in agents, "the withdrawn task must leave the IN FORCE NOW line"
+
+    def test_the_task_file_is_backed_up_before_it_moves(self, checkout):
+        result = run_apply(checkout, tasks=True)
+        assert (result["backup"] / "files" / fs.TASKS_REL / "044-a-task.md").exists()
+
+    def test_a_refused_withdrawal_is_reported_and_leaves_the_task_in_force(
+        self, checkout, monkeypatch, capsys
+    ):
+        class Refusing:
+            @staticmethod
+            def cmd_retire(args):  # noqa: ANN001 - mirrors the real signature
+                print(f"refusing: simulated refusal for {args.number}")
+                return 1
+
+        monkeypatch.setattr(fs, "load_temp_task", lambda: Refusing)
+        monkeypatch.setattr(sys, "argv", ["fresh-start.py", "352", "--apply", "--tasks"])
+        assert fs.main(checkout) == 0
+        out = capsys.readouterr().out
+        assert "NOT withdrawn" in out
+        assert (checkout / fs.TASKS_REL / "044-a-task.md").exists()
 
 
 class TestTheRefusal:

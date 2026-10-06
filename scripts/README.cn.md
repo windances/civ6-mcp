@@ -114,6 +114,26 @@ python scripts\turn-of-save.py "<路径>.Civ6Save"       # 单个存档，不载
 把被退休的 `once: true` 规则放回来**并且**在持久目标状态里遗忘它们，然后按游戏当前状态选正确的重启方式。
 它还会把该 run 记录的进度**退回到目标回合**。
 
+**另一种选择是遗忘过去，而不是把它恢复回来**——同一局，从载入的位置继续打，完全不带着"怎么走到这里的
+记忆"：
+
+```powershell
+python scripts\fresh-start.py 352               # 只出计划：会忘掉什么、保留什么
+python scripts\fresh-start.py 352 --apply       # 执行（会话在跑时拒绝）
+python scripts\fresh-start.py 352 --apply --tasks   # 同时撤掉正在生效的临时任务
+python scripts\fresh-start.py 352 --apply --force
+```
+
+`fresh-start.py` 会忘掉本局的日记（run 副本**以及**遗留根副本）、达成状态，以及
+`prompts/checks/turn-checks.md` 里属于本局的 `achieved T...` 注释（标着别的对局的注释不动——这个文件是
+共用的）——并且对每条注释把规则本体从 `prompts/checks/archive/` 装回去，因为规则文件的契约就是"一条退役
+规则要么活着、要么可追溯"，即"注释走、规则留"。它还会把清单里"已打到第几回合"重置、清掉 run 的会话残留。
+默认**保留**正在生效的临时任务（任务是指令，不是记忆），并打印 `temp-task.py retire` 命令让你有意地撤掉
+某一条；**`--tasks` 会把它们全部撤掉**，走的正是同一条命令：任务文件移入 `prompts/tasks/tmp/done/`、登记册
+行删掉、`AGENTS.md` 的 `IN FORCE NOW` 行随之重建。`branches/` 下的全部归档都保留，包括它自己先写下的那份
+备份：被忘掉的整棵树在 `branches/fresh-start-<stamp>/files/` 下，所以操作可撤销。先停会话
+（`stop-agent.py --wait`）；否则脚本会拒绝，因为活着的会话一个回合内就会把日记写回来。
+
 ## 把一局交给新会话
 
 ```powershell

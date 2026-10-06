@@ -36,6 +36,7 @@ same four lines, and a line that cannot be filled in is a line that has not been
 | RB-05 | Removing the achieved notes alone broke the check file's contract | closed |
 | RB-06 | The first fresh-start backup flattened the tree and lost a diary segment | closed |
 | RB-07 | The fresh-start test suite wiped the real match | closed |
+| RB-08 | A fresh start still carried the temporary tasks in force | closed |
 | EN-01 | The agent's own editor strips the BOM a Chinese document needs | open by design |
 | EN-02 | An English edit goes stale in its Chinese backup | open by design |
 | EN-03 | AGENTS.md may cite at most four turns, and a new entry can push it over | open by design |
@@ -45,6 +46,7 @@ same four lines, and a line that cannot be filled in is a line that has not been
 | TL-03 | `stop-agent.py` wrote its request into the wrong data directory | closed |
 | TL-04 | `GameCore_Tuner/InGame states not found` usually means another client holds the tuner | open by design |
 | TL-05 | A reload resets the whole turn | open by design |
+| TL-06 | The run manifest was looked up in the data root by the route-A drivers | closed |
 | PT-01 | The division of labour was stated three times, each time narrower | closed |
 | PT-02 | The human-done signal needed a definition, not a new marker | closed |
 | PT-03 | Several 50/50 calls were the human's, and each one shaped a tool | closed |
@@ -272,6 +274,27 @@ same four lines, and a line that cannot be filled in is a line that has not been
   `branches/fresh-start-20261005-001335/files/`. Commit `026381e`.
 - **evidence** `tests/test_fresh_start.py::test_main_defaults_to_the_checkout_root_and_is_never_given_it_by_accident`.
 
+### RB-08 A fresh start still carried the temporary tasks in force
+
+- **symptom** After `fresh-start.py 352 --apply` the new session still had three temporary tasks to
+  read and act on - `044-schedule-three-modern-armor.md`, `045-two-carriers-with-aircraft.md` and
+  `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md`, each `added: 2026-10-04`, with
+  deadlines counted from T344 or T352 and bodies naming this match's cities, counts and coordinates.
+  "No previous information" was true of the diary and the achieved state, and not of the orders.
+- **cause** The tool kept them on purpose: a task is an **instruction** rather than a memory, and
+  withdrawing one silently is the failure the register, `AGENTS.md` and `tests/test_temp_tasks.py`
+  exist to prevent. The only way out was the operator running three `temp-task.py retire` commands by
+  hand, which is the one thing a "start again" button should not require.
+- **fix** `fresh-start.py --tasks` withdraws them all through `scripts/temp-task.py`'s own
+  `cmd_retire` (`--expired --turn <resume> --no-commit`), so each file moves to
+  `prompts/tasks/tmp/done/<stem>-expired-T<n>.md`, its register row is dropped with a retirement note
+  and `AGENTS.md`'s `IN FORCE NOW` line is rebuilt with the rest. Each task file is copied into the
+  run's backup before it moves, a refusal is printed as `! NOT withdrawn` rather than swallowed, and
+  the default still keeps them.
+- **evidence** `tests/test_fresh_start.py::TestWithdrawingTheTasks` (5 tests: the plan, the default,
+  the move plus register and `AGENTS.md`, the backup, and a simulated refusal that leaves the task in
+  force).
+
 ## EN - encoding and the document gates
 
 ### EN-01 The agent's own editor strips the BOM a Chinese document needs
@@ -363,6 +386,26 @@ same four lines, and a line that cannot be filled in is a line that has not been
 - **fix** Treat a restart as the human's decision, and stop the session first
   (`scripts/stop-agent.py --wait`); the MCP no longer restarts the game on a stall by itself.
 - **evidence** The T354 reload, and `2e836ba`.
+
+### TL-06 The run manifest was looked up in the data root by the route-A drivers
+
+- **symptom** `orient.py` and `play-turn.py end` printed
+  `RUN no run manifest - this session is unlabelled, so nothing checks which playthrough the game
+  belongs to (scripts/run.py init --id <name> --label <text>)` for a run that had a manifest - and
+  with it the `RUN MISMATCH` guard, the only thing that stops a turn being written into another
+  playthrough's diary, retired goals and saves, never fired.
+- **cause** `run_manifest.path()` and `load()` default to `CIV_MCP_DATA_DIR` **itself**, while the
+  manifest lives in the resolved run directory (`runs/<run>/run.json`). `session_info.banner` and
+  `play-turn.py` called them with no argument; `play-turn.py`'s `run_manifest.touch(...)` was a silent
+  no-op for the same reason. Every caller that resolves the run first (`handoff.py`, `server.py`,
+  `fresh-start.py`, `rollback-to-turn.py`) was already correct, which is why only these two showed it.
+- **fix** Resolve the run directory before asking for the manifest, the way `diary_path` and
+  `turn_checks.state_path` already do: `run_manifest.resolve_data_dir()` in `session_info.banner`, and
+  a local `run_dir` in `play-turn.py` for both the `verify` and the `touch`.
+- **evidence** `tests/test_session_info.py::TestTheRunLineFindsTheManifest` (the run is named with its
+  played-to turn, and another match's manifest is still a loud mismatch), plus the live banner, which
+  now reads `RUN china--1894041591 "migrated from china_-1894041591"  (civ/seed match, played to
+  T352)` where it used to read `RUN no run manifest`.
 
 ## PT - working with the human
 

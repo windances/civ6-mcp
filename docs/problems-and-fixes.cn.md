@@ -37,6 +37,7 @@
 | RB-05 | 只删掉达成注释，破坏了规则文件的契约 | 已关闭 |
 | RB-06 | 第一版 fresh-start 备份把目录拍平，丢了一段日记 | 已关闭 |
 | RB-07 | fresh-start 的测试套件把真实对局清了 | 已关闭 |
+| RB-08 | 全新开始仍然带着正在生效的临时任务 | 已关闭 |
 | EN-01 | agent 自己的编辑器会把中文文档需要的 BOM 去掉 | 设计如此，未关闭 |
 | EN-02 | 英文改动会让它的中文备份过期 | 设计如此，未关闭 |
 | EN-03 | AGENTS.md 最多只能引用四个回合，新条目可能把它顶超 | 设计如此，未关闭 |
@@ -46,6 +47,7 @@
 | TL-03 | `stop-agent.py` 把请求写进了错误的数据目录 | 已关闭 |
 | TL-04 | `GameCore_Tuner/InGame states not found` 通常意味着另一个客户端占着 tuner | 设计如此，未关闭 |
 | TL-05 | 一次重载会把整个回合重置 | 设计如此，未关闭 |
+| TL-06 | route-A 驱动去数据根目录找 run 清单 | 已关闭 |
 | PT-01 | 分工被说了三次，一次比一次窄 | 已关闭 |
 | PT-02 | "人类做完了"这个信号需要的是定义，而不是新标记 | 已关闭 |
 | PT-03 | 几个五五开的选择属于人类，而每一个都塑造了一件工具 | 已关闭 |
@@ -249,6 +251,24 @@
   checkout。事故删掉的一切都在 `branches/fresh-start-20261005-001335/files/` 里。提交 `026381e`。
 - **证据** `tests/test_fresh_start.py::test_main_defaults_to_the_checkout_root_and_is_never_given_it_by_accident`。
 
+### RB-08 全新开始仍然带着正在生效的临时任务
+
+- **症状** `fresh-start.py 352 --apply` 之后，新会话仍要读并执行三个临时任务——
+  `044-schedule-three-modern-armor.md`、`045-two-carriers-with-aircraft.md` 与
+  `046-use-the-two-great-merchants-or-record-why-this-match-cannot.md`，每个都写着
+  `added: 2026-10-04`，截止回合按 T344 或 T352 计算，正文里带本局的城市、计数与坐标。"不带任何过往信息"
+  对日记和达成状态成立，对这些**指令**并不成立。
+- **起因** 工具是**故意**保留它们的：任务是指令而不是记忆，而静默撤令正是登记册、`AGENTS.md` 与
+  `tests/test_temp_tasks.py` 存在的意义。于是唯一的出路是操作者手工敲三条 `temp-task.py retire`
+  命令——而这恰恰是"重新开始"这个动作不该要求的。
+- **解决** `fresh-start.py --tasks` 会通过 `scripts/temp-task.py` 自己的 `cmd_retire`
+  （`--expired --turn <resume> --no-commit`）把它们全部撤掉：每个文件移入
+  `prompts/tasks/tmp/done/<stem>-expired-T<n>.md`，它在登记册里的行被删掉并留下退役说明，
+  `AGENTS.md` 的 `IN FORCE NOW` 行随之重建。每个任务文件在移动之前先复制进本 run 的备份；被拒绝的
+  撤令会打印成 `! NOT withdrawn` 而不是被吞掉；默认行为仍然是保留。
+- **证据** `tests/test_fresh_start.py::TestWithdrawingTheTasks`（5 项：计划、默认行为、移动加登记册与
+  `AGENTS.md`、备份、以及一次模拟拒绝后任务仍在生效）。
+
 ## EN —— 编码与文档门禁
 
 ### EN-01 agent 自己的编辑器会把中文文档需要的 BOM 去掉
@@ -335,6 +355,25 @@
 - **解决** 把重启当作人类的决定，并先停会话（`scripts/stop-agent.py --wait`）；MCP 不再在停摆时自己重启
   游戏。
 - **证据** T354 那次重载，以及 `2e836ba`。
+
+### TL-06 route-A 驱动去数据根目录找 run 清单
+
+- **症状** `orient.py` 与 `play-turn.py end` 对一个明明有清单的 run 打印
+  `RUN no run manifest - this session is unlabelled, so nothing checks which playthrough the game
+  belongs to (scripts/run.py init --id <name> --label <text>)`；同时那道唯一能阻止"把回合写进另一局
+  的日记、退役目标与存档"的 `RUN MISMATCH` 守卫**从未触发**。
+- **起因** `run_manifest.path()` 与 `load()` 的默认目录是 `CIV_MCP_DATA_DIR` **本身**，而清单实际住在
+  解析后的 run 目录里（`runs/<run>/run.json`）。`session_info.banner` 与 `play-turn.py` 调用时都没传
+  目录；`play-turn.py` 的 `run_manifest.touch(...)` 也因此是个静默空操作。所有先解析 run 的调用者
+  （`handoff.py`、`server.py`、`fresh-start.py`、`rollback-to-turn.py`）本来就是对的，所以只有这两个
+  驱动暴露了问题。
+- **解决** 先解析 run 目录再取清单，和 `diary_path`、`turn_checks.state_path` 一直以来的做法一致：
+  在 `session_info.banner` 里用 `run_manifest.resolve_data_dir()`，在 `play-turn.py` 里用一个局部
+  `run_dir` 供 `verify` 与 `touch` 共用。
+- **证据** `tests/test_session_info.py::TestTheRunLineFindsTheManifest`（会点名 run 并带上已打到的
+  回合；另一局的清单仍然是响亮的 mismatch），以及实测横幅——它现在读作
+  `RUN china--1894041591 "migrated from china_-1894041591"  (civ/seed match, played to T352)`，
+  而此前是 `RUN no run manifest`。
 
 ## PT —— 与人类协作
 
