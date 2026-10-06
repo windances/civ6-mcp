@@ -158,7 +158,10 @@ scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
 reads in its tool results, records when the request reached it, and falls back to
 `civ6-clean.ps1 -KeepGame` when it is not honoured.
 
-**`-HumanMilitary` splits the command of the match.** It appends a division-of-labour block to the task
+**`-HumanMilitary` splits the command of the match - and as of 2026-10-07 it is withdrawn** (human
+instruction: no human-military half, the session is in charge of everything), so launches do **not**
+pass it and the session commands the military too. The switch is still here for the day the human
+wants the split back. It appends a division-of-labour block to the task
 the session is launched with: the human commands the military units, the Great Generals and the Great
 Admirals, and the session owns every other unit - the Great Scientists and the Great Merchants included
 - plus the cities, the economy, the wonders and the research, and moves first every turn. The block is

@@ -779,3 +779,24 @@ settle 了其中两处、也解释清了第三处：**(28,9) 带着被下令的 
 别处没有：`set_city_production(65536, PROJECT, PROJECT_LAUNCH_MARS_BASE)` 读回
 `PRODUCING|PROJECT_LAUNCH_MARS_BASE|2 turns`（西安有已建成的太空港，当时在生产开拓者），还有一个免费使者
 派给了梵蒂冈城。
+
+**2026-10-07 —— 分工撤销。** 人类指令：不用 human 军事，会话全权负责。从这天起 `scripts/resume-game.ps1`
+的调用**不带** `-HumanMilitary`，所以会话拿到的任务里不再有"分工"那一段：会话同时指挥军事单位、大军事家、
+大海军统帅，以及城市、经济、奇观和研究。有两个后果值得点名：`skip_remaining_units` 重新归会话调用，因为它
+扫的是全部单位、而全部单位现在都是我们的；而 `WHOSE MOVE|` 报告与它写下的 `agent-half.txt` 划分从此只作
+参考——已经没有"人类那一半"要等了，所以 `ready to end` 意味着这个回合可以结束，而不是应该继续等。机制本身
+原样保留（`-HumanMilitary`、`SKILL.md` 里的例外条款、固定 30 秒的等待节奏），在人类重新打开它之前处于休眠；
+`AGENTS.md` 的 Game Recovery 一节就是这么写的。
+
+**任务 046（`use the two Great Merchants, or record why this match cannot`）在 T369 退役**
+（`--done --turn 369`）。** 这个文件问的是一个任何指标都装不下的问题——城邦到底能不能被换来开放边界，
+因为大商人要在那种地块上激活——而两件事把它关掉了。第一，`done when:` 点名的计数是 0：T369 的
+`get_units` 里**没有任何** `UNIT_GREAT_MERCHANT`（T362 还有一个，斯坦福·莱佛士；到 T369 两个都没了）。
+第二，通行权这个问题还是被问了、也拿到了答案：对三个城邦跑了
+`propose_trade(mode="test", request_open_borders=True)` —— 哈图沙（player 18，我们的宗主，13 个使节）、
+撒马尔罕（player 9，格鲁吉亚的宗主）与威尼斯（player 14，我们的宗主，9 个使节）。**三个全部回答
+`REJECTED - will not trade at all`。** 本局的城邦根本不进行任何交易，所以这个文件存在就是为了检验的那根
+杠杆并不存在，商人也无法被走到任何可激活的地块上；文件自己的第 5 步（记录下来并跳过它们）就是它得到的结局。
+**T363–T369 之间买到的东西在任何地方都没有日记**：`.civ6-mcp-data/` 下没有任何文件带着 T362 之后的 agent
+条目，所以局面是从游戏里读的、不是从笔记里读的——T362 的 41 座城对 T369 的 45 座，而这一回合自己的读数
+就是记录。

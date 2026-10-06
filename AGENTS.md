@@ -710,6 +710,13 @@ or keep playing in its session.
 `-Rollback`, `-DryRun`. It reads only passive signals, never launches and never loads, and generates
 the session's task from the facts it just read.
 
+**The division is withdrawn as of 2026-10-07** (human instruction: no human-military half, the
+session is in charge of everything - the Chinese original is in `docs/task-history.md`): sessions
+launch **without** `-HumanMilitary`, the session commands the military units and the Great Generals
+and Great Admirals as well, and `skip_remaining_units` is its to call again, because it sweeps every
+unit and every unit is now ours. Everything from here to the end of this section describes the split,
+and applies **only if the human arms the switch again**.
+
 **`-HumanMilitary` splits the command of the match**, and it is the human's switch to throw: the
 human commands the military units, the Great Generals and the Great Admirals, and the session owns
 every other unit - the Great Scientists and the Great Merchants included - together with the cities,

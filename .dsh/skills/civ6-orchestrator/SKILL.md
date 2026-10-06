@@ -956,6 +956,11 @@ rule vanishing from it means it was done, not that the check broke.
 4. If the World Congress fires this turn, register votes before ending - the
    adapter will otherwise bounce the turn and ask you to vote.
 
+**The division is withdrawn as of 2026-10-07** (human instruction: no human-military half, the
+session is in charge of everything), so the exception below is dormant unless the human arms
+`-HumanMilitary` again: sessions command the military units, the Great Generals and the Great
+Admirals too, and `skip_remaining_units` is yours to call.
+
 Then, as the last action before ending, **call `skip_remaining_units()`
 unconditionally - unless the match is split and the human commands the military.**
 It fortifies combat units and then skips whatever still has moves, so it costs

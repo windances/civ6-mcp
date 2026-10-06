@@ -876,3 +876,29 @@ the turn is not in it and has to be redone in game. This session's T362 half is 
 here and nowhere else: `set_city_production(65536, PROJECT, PROJECT_LAUNCH_MARS_BASE)` read back
 `PRODUCING|PROJECT_LAUNCH_MARS_BASE|2 turns` (Xi'an had a completed Spaceport and was building a
 Settler), and one free envoy went to 梵蒂冈城.
+
+**Task 046 (`use the two Great Merchants, or record why this match cannot`) retired at T369
+(`--done --turn 369`).** The file asked a question no metric can hold - whether a city-state can be
+traded Open Borders at all, since that is where a Great Merchant activates - and two facts closed it.
+First, the count the `done when:` names is 0: `get_units` at T369 lists **no** `UNIT_GREAT_MERCHANT`
+at all (one existed at T362, Stanford Raffles; by T369 both were gone). Second, the passage question
+was asked and answered anyway, with `propose_trade(mode="test", request_open_borders=True)` against
+three city-states - 哈图沙 (player 18, our suzerain, 13 envoys), 撒马尔罕 (player 9, Georgia's
+suzerain) and 威尼斯 (player 14, our suzerain, 9 envoys). **All three answered `REJECTED - will not
+trade at all`.** A city-state in this match does not trade at all, so the passage lever the file
+existed to test does not exist and the merchants could not have been walked to an activation tile;
+the file's own step 5 (record it and skip them) is the outcome it gets. **What T363-T369 bought has
+no diary entry anywhere**: no file under `.civ6-mcp-data/` carries an agent entry past T362, so the
+position was taken from the game rather than from the notes - 41 cities at T362 against 45 at T369,
+and the turn's own reads are the record.
+
+**2026-10-07 - the division of labour is withdrawn.** Human instruction: no human-military half, the
+session is in charge of everything. From this date `scripts/resume-game.ps1` is called **without**
+`-HumanMilitary`, so the task a session is launched with carries no division block: the session
+commands the military units and the Great Generals and Great Admirals as well as the cities, the
+economy, the wonders and the research. Two consequences worth naming: `skip_remaining_units` is the
+session's to call again, because it sweeps every unit and every unit is ours now, and the `WHOSE MOVE|`
+report with its `agent-half.txt` split becomes informational - there is no human half left to wait
+for, so `ready to end` means the turn may be ended, not that anything should be waited for. The
+machinery itself is untouched (`-HumanMilitary`, `SKILL.md`'s carve-out, the fixed 30-second wait
+cadence) and dormant until the human arms it again; `AGENTS.md` says so under Game Recovery.
