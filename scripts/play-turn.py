@@ -735,7 +735,12 @@ async def main() -> int:
                 # written into that run's diary, retired goals and saves - and the turn would look
                 # entirely normal while it happened. Measured 2026-10-03: a session played on for
                 # hours after the loaded game had been swapped underneath it, and nothing noticed.
-                state, detail = run_manifest.verify(run_manifest.load(), civ_name, seed_value)
+                # The manifest lives in the run directory, not at the data root: resolving it the
+                # way `diary_path` does is what makes this guard see the run at all. Read from the
+                # root it found nothing, reported "unset" and skipped the mismatch check entirely
+                # (measured 2026-10-05).
+                run_dir = run_manifest.resolve_data_dir()
+                state, detail = run_manifest.verify(run_manifest.load(run_dir), civ_name, seed_value)
                 if state == "mismatch" and "--force" not in sys.argv:
                     print(f"REFUSING: {detail}")
                     print("  this data directory belongs to another playthrough; playing on would")
@@ -743,7 +748,7 @@ async def main() -> int:
                     print("  Load the run the manifest names, re-point it with scripts/run.py, or")
                     print("  pass --force if you are certain this is the run you mean.")
                     return 1
-                run_manifest.touch(getattr(overview, "turn", 0) or 0)
+                run_manifest.touch(getattr(overview, "turn", 0) or 0, run_dir)
             except Exception as exc:  # noqa: BLE001 - the banner never blocks a turn
                 print(f"SESSION  data_dir={session_info.data_dir()}  (identity unavailable: {exc})")
 

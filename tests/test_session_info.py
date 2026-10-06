@@ -17,6 +17,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from civ_mcp import diary as diary_mod  # noqa: E402
+from civ_mcp import run_manifest  # noqa: E402
 from civ_mcp import session_info  # noqa: E402
 
 
@@ -118,3 +119,45 @@ class TestTheSplitDirectoryWarning:
             json.dumps({"china_911679432": {"x": 1}}), encoding="utf-8"
         )
         assert session_info.other_data_dirs() == []
+
+
+class TestTheRunLineFindsTheManifest:
+    """The manifest lives in the run directory, and the banner has to resolve it there.
+
+    Measured 2026-10-05: `session_info.banner` asked `run_manifest.load()` with no directory, and
+    that default is the **data root**, where `run.json` is not. Every route-A driver therefore
+    printed `RUN no run manifest - this session is unlabelled` for a run that had one, and skipped
+    the mismatch guard along with it - the one check that stops a turn being written into another
+    playthrough's diary, retired goals and saves.
+    """
+
+    def _run(
+        self,
+        data: pathlib.Path,
+        run_id: str = "china--911679432",
+        civ: str = "china",
+        seed: int = 911679432,
+        last_turn: int = 116,
+    ) -> pathlib.Path:
+        run = data / "runs" / run_id
+        run.mkdir(parents=True, exist_ok=True)
+        (data / "current").write_text(run_id, encoding="utf-8")
+        run_manifest.init(run_id, label="a labelled run", civ=civ, seed=seed, data_dir=run)
+        run_manifest.touch(last_turn, run)
+        return run
+
+    def test_the_run_is_named_and_its_played_to_turn_reported(self, session):
+        data, _ = session([row(116)])
+        self._run(data)
+        run_line = next(ln for ln in session_info.banner("china", 911679432, live_turn=116)
+                        if ln.startswith("RUN"))
+        assert "china--911679432" in run_line
+        assert "played to T116" in run_line
+        assert "unlabelled" not in run_line
+
+    def test_a_manifest_for_another_match_is_still_a_loud_mismatch(self, session):
+        data, _ = session([row(116)])
+        self._run(data, civ="rome", seed=1)
+        lines = session_info.banner("china", 911679432, live_turn=116)
+        assert any(ln.startswith("RUN MISMATCH") for ln in lines), lines
+        assert any("STOP" in ln for ln in lines)

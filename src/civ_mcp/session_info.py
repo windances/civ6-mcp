@@ -138,7 +138,15 @@ def banner(civ: str, seed: int, live_turn: int | None = None) -> list[str]:
     # Which playthrough, and does the loaded game actually belong to it. The data directory says
     # where the records are; the run manifest says whose they are, and the two are not the same
     # claim: a session can point at the right directory and the wrong game.
-    lines.extend(run_manifest.lines(civ, seed))
+    #
+    # The manifest lives **in the run directory** (`runs/<run>/run.json`), not at the data root, so
+    # the path has to be resolved the way `diary_path` and `turn_checks.state_path` resolve theirs.
+    # Reading it from the root found nothing and printed "no run manifest - this session is
+    # unlabelled" for a run that had one - and, worse, it skipped the mismatch guard below, which is
+    # the only thing that stops a turn being written into another playthrough (measured 2026-10-05).
+    lines.extend(
+        run_manifest.lines(civ, seed, run_manifest.resolve_data_dir(data_dir()))
+    )
     return lines
 
 
