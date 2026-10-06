@@ -2536,6 +2536,14 @@ def _bring_to_front_win32() -> None:
 
     hwnd = win.window_id
     user32 = ctypes.windll.user32
+    # GetCurrentThreadId is exported by kernel32, NOT by user32.  Asking user32 for it
+    # raises AttributeError, which the `except Exception` below then swallows - so this
+    # function never reached SetForegroundWindow at all and the end_turn re-focus retry
+    # silently did nothing.  Measured T352: four `HANG:352:0_MCP_0352` results with
+    # `.civ6-mcp-data/hang_diagnosis.jsonl` recording "foreground": false, and a probe
+    # showing `user32.GetCurrentThreadId` does not exist while the thread attach through
+    # kernel32 returns 1 and does bring the window forward.
+    kernel32 = ctypes.windll.kernel32
 
     # If already foreground, nothing to do
     if user32.GetForegroundWindow() == hwnd:
@@ -2544,7 +2552,7 @@ def _bring_to_front_win32() -> None:
     try:
         # Attach our thread to the foreground window's thread
         fg_thread = user32.GetWindowThreadProcessId(user32.GetForegroundWindow(), None)
-        our_thread = user32.GetCurrentThreadId()
+        our_thread = kernel32.GetCurrentThreadId()
         attached = False
         if fg_thread != our_thread:
             attached = user32.AttachThreadInput(our_thread, fg_thread, True)
@@ -2557,8 +2565,11 @@ def _bring_to_front_win32() -> None:
 
         if attached:
             user32.AttachThreadInput(our_thread, fg_thread, False)
-    except Exception:
-        log.debug("Could not bring window to front (non-fatal)")
+    except Exception as exc:  # noqa: BLE001 - a failed re-focus is not fatal, but it must be visible
+        # Warning, not debug: this exact swallow hid a real bug for the whole life of the retry.
+        # The call above used `user32.GetCurrentThreadId()`, which does not exist, so every attempt
+        # raised AttributeError and the log line was the only place it could have showed up.
+        log.warning("Could not bring window to front (non-fatal): %s: %s", type(exc).__name__, exc)
 
 
 def _bring_to_front_linux() -> None:
