@@ -495,7 +495,24 @@ def render(facts: dict, result: dict) -> str:
     return "\n".join(lines)
 
 
-def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = False) -> str:
+def _victory_text(facts: dict) -> str | None:
+    """The game's own `GAME OVER` line, when the match is already finished.
+
+    The preflight used to read the turn off the save and never read that line: measured T385, where
+    a "play up to 100 turns" task was handed to a session in a match that had already reported
+    `GAME OVER - VICTORY (Culture)`, and the task published for the conquest that followed was
+    retired as unexecutable minutes later. The line comes from the probe (`get_game_overview`);
+    anything that fills `facts["victory"]` or `facts["probe"]["victory"]` is honoured.
+    """
+    for source in (facts, facts.get("probe") or {}):
+        text = source.get("victory")
+        if text:
+            return str(text).strip()
+    return None
+
+
+def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = False,
+              after_victory: bool = False) -> str:
     """The prompt for the session that takes over, written from the facts.
 
     Deliberately not a copy of the policy: the policy is AGENTS.md and the skill, which the
@@ -507,9 +524,44 @@ def task_text(facts: dict, result: dict, turns: int = 100, rollback: bool = Fals
     ``rollback=True`` is the one scenario that has to be stated rather than computed: the
     human deliberately loaded an earlier save, and everything that says "get to the furthest
     position" is wrong for the rest of that session.
+
+    ``after_victory=True`` is the other one, and it is the human's option (2026-10-07: a victory
+    must not be a stop condition). A finished match without it is *refused* in the task text,
+    because a session launched into one has nothing to play.
     """
+    if not after_victory:
+        after_victory = bool(result.get("after_victory"))
     expected = result["turn"]
-    parts = [
+    if expected is None:
+        # The probe cannot answer while another session holds the tuner, but the saves can: the
+        # report has already read them. Measured 2026-10-08 at T387 - a tuner-busy preflight wrote
+        # "found turn None" into the task a session was launched with, while the same report showed
+        # `AutoSave_0387 holds T386`.
+        newest = (facts.get("saves") or {}).get("newest") or {}
+        expected = newest.get("turn") or "unknown"
+    victory = _victory_text(facts)
+    if victory and after_victory:
+        victory_paragraph = (
+            f"**This match is already won - {victory} - and you are continuing it deliberately.**\n"
+            "The human asked for a won match to stay playable, so the goal is the same as any other\n"
+            "turn: the tasks in `prompts/tasks/tmp/`, the checks, the diary. Two things are specific\n"
+            "to this state. First, the engine may refuse to advance a turn until the victory screen\n"
+            "is cleared: try `dismiss_popup`, read the screen with `.tools/whats-on-screen.py`, and\n"
+            "if the turn still will not advance ask the human to press the victory screen's\n"
+            "\"one more turn\" button - nothing in Lua can see that dialog. Second, `get_game_overview`\n"
+            "keeps printing the `GAME OVER` line, so do not read it as a new stop condition."
+        )
+    elif victory:
+        victory_paragraph = (
+            f"**This match is already won: {victory}.** There is nothing to play here - read the\n"
+            "`GAME OVER` line in `get_game_overview` for yourself, then stop and report. If the human\n"
+            "wants the match continued anyway, the launcher has to pass `-AfterVictory` (handoff's\n"
+            "`--after-victory`): a task published after a victory cannot be executed in that position,\n"
+            "which is what cost a session at T385."
+        )
+    else:
+        victory_paragraph = None
+    parts = ([victory_paragraph] if victory_paragraph else []) + [
         "Take over the live Civilization VI match that the previous session left paused."
         if not rollback
         else "Take over the live Civilization VI match at the position the human deliberately "
@@ -625,6 +677,11 @@ def main(argv: list[str] | None = None) -> int:
         help="the human deliberately loaded an earlier save: forbid rolling forward",
     )
     parser.add_argument("--no-probe", action="store_true", help="passive only; never connect")
+    parser.add_argument(
+        "--after-victory",
+        action="store_true",
+        help="the match is won; keep playing it anyway (the human's option, 2026-10-07)",
+    )
     parser.add_argument("--save", help="override the recommended save name in the report")
     args = parser.parse_args(argv)
 
@@ -632,6 +689,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.save:
         result["save"] = args.save
     result["rollback"] = bool(args.rollback)
+    result["after_victory"] = bool(args.after_victory)
     if args.task:
         path = write_task(args.task, facts, result, turns=args.turns, rollback=args.rollback)
         result["task"] = str(path)

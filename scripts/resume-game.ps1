@@ -40,7 +40,10 @@ param(
     [string] $TaskPath = ".civ6-mcp-data\resume-task.en.txt",
     # The human commands the military units, the Great Generals and the Great Admirals; the session
     # owns everything else. Appends the division to the generated task - see the block further down.
-    [switch] $HumanMilitary
+    [switch] $HumanMilitary,
+    # The human's option (2026-10-07): a won match stays playable. Without it a finished match is
+    # refused in the task text, because a session launched into one has nothing to play (T385).
+    [switch] $AfterVictory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -235,6 +238,7 @@ if ($DryRun) {
     $taskFull = Join-Path $projectRoot $task
     if (-not $TaskFile) {
         $taskArgs = @($handoff, '--task', $TaskPath, '--turns', $Turns)
+    if ($AfterVictory) { $taskArgs += '--after-victory' }
         if ($Rollback) { $taskArgs += '--rollback' }
         $null = & $python @taskArgs 2>$null
     }
@@ -248,7 +252,10 @@ if ($DryRun) {
         Write-Host '--- the division of labour is in the task above ---'
     }
     Write-Host '--- dry run: nothing launched ---'
-    exit 0
+    # The preview's exit code mirrors the verdict: 0 only when a real run could launch. It used to
+    # exit 0 even for TUNER_BUSY, which reads to a scripted caller as a green light (measured
+    # 2026-10-08, while another session held the tuner).
+    exit $(if ($state.verdict.ready) { 0 } else { 3 })
 }
 
 if (-not $state.verdict.ready) {
@@ -291,6 +298,7 @@ if (-not $TaskFile) {
     Write-Host ''
     Write-Host "READY at T$($state.verdict.turn). Writing the task from these facts."
     $taskArgs = @($handoff, '--task', $TaskPath, '--turns', $Turns)
+    if ($AfterVictory) { $taskArgs += '--after-victory' }
     if ($Rollback) { $taskArgs += '--rollback' }
     & $python @taskArgs 2>$null | ForEach-Object { Write-Host $_ }
 }
