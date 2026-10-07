@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `050-take-every-remaining-city-of-georgia-and-india.md` (take every remaining enemy city) and `051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.md` (wake the sleeping rear units and march them to the front).
+**IN FORCE NOW:** `050-take-every-remaining-city-of-georgia-and-india.md` (take every remaining enemy city) and `051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.md` (wake the sleeping rear units and march them to the front) and `052-playing-on-after-a-victory-an-option-not-a-stall.md` (add an option to keep playing after a victory).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
