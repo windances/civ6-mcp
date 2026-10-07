@@ -137,10 +137,10 @@ python scripts\fresh-start.py 352 --apply --force
 ## 把一局交给新会话
 
 ```powershell
-scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback] [-HumanMilitary]
+scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback] [-AfterVictory] [-HumanMilitary]
 #   还有：-TaskFile <f> -TaskPath <f> -Turns N -TimeoutSeconds N -PollSeconds N
 
-python scripts\handoff.py [--json] [--task <路径>]
+python scripts\handoff.py [--json] [--task <路径>] [--after-victory]
 scripts\civ6-clean.ps1 [-DryRun] [-KeepGame] [-Force] [-PID N] [-TunerPort N] [-WebGuiPort N]
 scripts\stop-agent.py [--status | --cancel] [--wait N] [--no-clean] [--note "..."]
 scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
@@ -160,6 +160,20 @@ scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
 约束它的是每回合的报告（`get_notifications` 会追加 `WHOSE MOVE|` 那份划分，并把 `agent-half.txt` 写在
 心跳文件旁边）、`SKILL.md` 里对 `skip_remaining_units` 的例外条款，以及"等人类操作"这件事本来就要由
 会话自己守住。
+
+**`-AfterVictory` 让一局已赢的比赛继续可玩，它由两半组成。** 胜利并不会让引擎停下——胜利画面的
+"再玩一回合"之后一切照常——但 `Game.GetWinningTeam()` 会在这一局剩下的时间里一直保持设置，于是
+`GameState.check_game_over()` 每次调用都报告胜利，`execute_end_turn` 干脆拒绝发送 `ACTION_ENDTURN`
+（2026-10-08 实测：T385 的文化胜利把这一局钉死在 T387，手上还有 53 座城）。所以：
+
+* `-AfterVictory`（handoff 的 `--after-victory`）让生成的任务写明"这局已赢、本会话是有意继续它"，
+  并把胜利画面点为第一道障碍。不传它，已结束的比赛会被**拒绝**——正是 T385 让一个会话作废的那道守卫。
+* **MCP 服务器环境里的 `CIV_MCP_AFTER_VICTORY=1` 才是那道闸门本身**——本工作区的 `.mcp.json` 已经设上。
+  没有它，`end_turn` 依旧返回 `GAME OVER — VICTORY!`，任务里怎么写都没法推进这样的对局。
+  无论开关如何，**失败**都是终局。
+
+胜利面板在 Lua 之外，`dismiss_popup` 看不到它：闸门打开后若回合仍不推进，就用
+`.tools/whats-on-screen.py` 读屏，并请人类按下"再玩一回合"。
 
 ## 任务与文档门禁
 

@@ -592,6 +592,17 @@ async def get_game_overview(ctx: Context) -> str:
                 )
             else:
                 text += f"\n\n*** GAME OVER —VICTORY ***\nYou won a {vtype} victory!"
+                # A won match the human continued reports this line forever
+                # (`Game.GetWinningTeam()` never clears), so say which of the two states
+                # this is. Task 052: a victory is an option, not a stall.
+                from civ_mcp.end_turn import _after_victory_allowed
+
+                if _after_victory_allowed():
+                    text += (
+                        "\nCIV_MCP_AFTER_VICTORY is set, so this match is being played on "
+                        "(the human's \"one more turn\"): the line above is a record, not a "
+                        "stop condition. Play the turn loop."
+                    )
             try:
                 await logger.log_game_over(
                     is_defeat=gameover.is_defeat,

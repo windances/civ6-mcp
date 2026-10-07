@@ -319,6 +319,69 @@ def _turn_regression_allowed() -> bool:
     }
 
 
+def _after_victory_marker() -> pathlib.Path:
+    """The file form of the switch: one marker per checkout, beside the run data.
+
+    ``CIV_MCP_DATA_DIR`` names the data root (the directory holding ``runs/``), and the MCP server
+    has it set for a workspace session - the same root the diary is read from. Resolved at call
+    time, not at import, so the marker can be created while a server is already running (the next
+    one to start sees it).
+    """
+    root = os.environ.get("CIV_MCP_DATA_DIR") or (pathlib.Path.home() / ".civ6-mcp")
+    return pathlib.Path(root) / "after-victory"
+
+
+def _after_victory_allowed() -> bool:
+    """True when a won match is deliberately being played on.
+
+    Two ways in, both explicit: ``CIV_MCP_AFTER_VICTORY=1`` in the MCP environment, or the marker
+    file ``<data root>/after-victory``. The environment variable is the usual one and this
+    workspace's ``.mcp.json`` sets it; the marker exists because the decision has to survive a
+    restart that keeps the environment it was launched with. Task 052 put the human's option into
+    the handoff (``-AfterVictory``); this is the same option at the gate that actually blocked the
+    turn.
+
+    The gate exists because ``Game.GetWinningTeam()`` stays set for the rest of a match once
+    somebody has won, so ``check_game_over()`` reports a victory on **every** call afterwards and
+    a session that only checks that flag can never advance the turn again. Measured: the Culture
+    victory at T385 pinned this match at T387, with 53 cities still in hand, two neighbours still
+    at war and a fully-played turn sitting on the board - the engine was happy to advance and
+    every MCP call refused.
+
+    A **defeat is never covered by this switch**: a rival's win ends the match and there is
+    nothing to play on for.
+    """
+    if os.environ.get("CIV_MCP_AFTER_VICTORY", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return True
+    try:
+        return _after_victory_marker().exists()
+    except (OSError, ValueError):  # unreadable data root is not a reason to refuse a turn
+        return False
+
+
+def _terminal_game_over(gameover, prefix: str = "") -> str | None:
+    """The line a game-over check returns, or ``None`` when the turn must still be played.
+
+    Every game-over site in ``execute_end_turn`` funnels through here so the after-victory
+    decision is made in one place. ``prefix`` carries the site's own context - the post-advance
+    check prefixes ``Turn 387 -> 388`` - so the wording stays where it was.
+    """
+    vtype = gameover.victory_type.replace("VICTORY_", "").replace("_", " ").title()
+    if gameover.is_defeat:
+        return (
+            f"{prefix}GAME OVER — DEFEAT. {gameover.winner_leader} of {gameover.winner_name} "
+            f"won a {vtype} victory. The game has ended. No further actions are possible."
+        )
+    if not _after_victory_allowed():
+        return f"{prefix}GAME OVER — VICTORY! You won a {vtype} victory! The game has ended."
+    return None
+
+
 def unit_signature(units) -> tuple:
     """A cheap fingerprint of the board: what a stale frame changes first.
 
@@ -3093,22 +3156,20 @@ async def execute_end_turn(gs: GameState) -> str:
             "actions will be processed."
         )
 
-    # 0. Game-over check — don't try to advance a finished game
+    # 0. Game-over check — don't try to advance a finished game, unless the human has
+    #    continued a won one (CIV_MCP_AFTER_VICTORY; task 052: an option, not a stall).
     gameover = await gs.check_game_over()
     if gameover is not None:
         gs._pending_end_turn = False
         gs._pending_end_turn_from = None
         gs._last_game_over = gameover
-        vtype = gameover.victory_type.replace("VICTORY_", "").replace("_", " ").title()
-        if gameover.is_defeat:
-            return (
-                f"GAME OVER — DEFEAT. {gameover.winner_leader} of {gameover.winner_name} won a {vtype} victory. "
-                f"The game has ended. No further actions are possible."
-            )
-        else:
-            return (
-                f"GAME OVER — VICTORY! You won a {vtype} victory! The game has ended."
-            )
+        terminal = _terminal_game_over(gameover)
+        if terminal is not None:
+            return terminal
+        log.warning(
+            "Playing on after victory (%s): CIV_MCP_AFTER_VICTORY is set",
+            gameover.victory_type,
+        )
 
     # Record turn number at entry so we can detect external advancement
     # (e.g. game auto-ends turn when skip_remaining_units finishes all moves)
@@ -3893,22 +3954,13 @@ async def execute_end_turn(gs: GameState) -> str:
                     gs._pending_end_turn = False
                     gs._pending_end_turn_from = None
                     gs._last_game_over = gameover
-                    vtype = (
-                        gameover.victory_type.replace("VICTORY_", "")
-                        .replace("_", " ")
-                        .title()
+                    terminal = _terminal_game_over(gameover)
+                    if terminal is not None:
+                        return terminal
+                    log.warning(
+                        "Playing on after victory (%s): CIV_MCP_AFTER_VICTORY is set",
+                        gameover.victory_type,
                     )
-                    if gameover.is_defeat:
-                        return (
-                            f"GAME OVER — DEFEAT. {gameover.winner_leader} "
-                            f"of {gameover.winner_name} won a {vtype} victory. "
-                            f"The game has ended. No further actions are possible."
-                        )
-                    else:
-                        return (
-                            f"GAME OVER — VICTORY! You won a {vtype} victory! "
-                            f"The game has ended."
-                        )
             # Early diplomacy probe — ONE InGame query after ~45s of silence.
             # The CRITICAL constraint (Games 1-5) was about REPEATED InGame
             # queries in a tight loop. A single probe after 45s is safe: if
@@ -4025,19 +4077,13 @@ async def execute_end_turn(gs: GameState) -> str:
             gs._pending_end_turn = False
             gs._pending_end_turn_from = None
             gs._last_game_over = gameover
-            vtype = (
-                gameover.victory_type.replace("VICTORY_", "").replace("_", " ").title()
+            terminal = _terminal_game_over(gameover)
+            if terminal is not None:
+                return terminal
+            log.warning(
+                "Playing on after victory (%s): CIV_MCP_AFTER_VICTORY is set",
+                gameover.victory_type,
             )
-            if gameover.is_defeat:
-                return (
-                    f"GAME OVER — DEFEAT. {gameover.winner_leader} of {gameover.winner_name} won a {vtype} victory. "
-                    f"The game has ended. No further actions are possible."
-                )
-            else:
-                return (
-                    f"GAME OVER — VICTORY! You won a {vtype} victory! "
-                    f"The game has ended."
-                )
 
         # Provide specific blocker info instead of generic message
         details: list[str] = []
@@ -4069,18 +4115,13 @@ async def execute_end_turn(gs: GameState) -> str:
                 gs._pending_end_turn = False
                 gs._pending_end_turn_from = None
                 gs._last_game_over = gameover
-                vtype = (
-                    gameover.victory_type.replace("VICTORY_", "")
-                    .replace("_", " ")
-                    .title()
+                terminal = _terminal_game_over(gameover)
+                if terminal is not None:
+                    return terminal
+                log.warning(
+                    "Playing on after victory (%s): CIV_MCP_AFTER_VICTORY is set",
+                    gameover.victory_type,
                 )
-                if gameover.is_defeat:
-                    return (
-                        f"GAME OVER — DEFEAT. {gameover.winner_leader} of {gameover.winner_name} won a {vtype} victory. "
-                        f"The game has ended. No further actions are possible."
-                    )
-                else:
-                    return f"GAME OVER — VICTORY! You won a {vtype} victory! The game has ended."
             return f"End turn blocked (turn {turn_after or turn_before}): {'; '.join(details)}"
         # No blockers, no diplomacy, no game over — true AI turn hang.
         # Return structured HANG: prefix so server.py can auto-recover.
@@ -4163,18 +4204,13 @@ async def execute_end_turn(gs: GameState) -> str:
     gameover = await gs.check_game_over()
     if gameover is not None:
         gs._last_game_over = gameover
-        vtype = gameover.victory_type.replace("VICTORY_", "").replace("_", " ").title()
-        if gameover.is_defeat:
-            return (
-                f"Turn {turn_before} -> {turn_after}\n"
-                f"GAME OVER — DEFEAT. {gameover.winner_leader} of {gameover.winner_name} won a {vtype} victory. "
-                f"The game has ended. No further actions are possible."
-            )
-        else:
-            return (
-                f"Turn {turn_before} -> {turn_after}\n"
-                f"GAME OVER — VICTORY! You won a {vtype} victory! The game has ended."
-            )
+        terminal = _terminal_game_over(gameover, prefix=f"Turn {turn_before} -> {turn_after}\n")
+        if terminal is not None:
+            return terminal
+        log.warning(
+            "Playing on after victory (%s): CIV_MCP_AFTER_VICTORY is set",
+            gameover.victory_type,
+        )
 
     # Take post-turn snapshot and diff
     snap_after = None

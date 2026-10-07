@@ -922,3 +922,19 @@ after a victory cannot be executed in that position.** `get_game_overview`'s `GA
 what says so, and reading it before publishing a task is cheaper than a session spent discovering
 it - the preflight that generated this task read the turn number (385) off the save without reading
 the victory that made it unplayable.
+
+**T387 - the victory was real, the stall was ours.** Half of that lesson is now wrong, and the half
+that is wrong is the important one: the engine was never dead. `Game.GetWinningTeam()` stays set for
+the rest of a match once somebody has won, so `GameState.check_game_over()` reports a victory on
+every call forever and `execute_end_turn` returned `GAME OVER — VICTORY!` at its first check - before
+the blocker loop, before `ACTION_ENDTURN`. Measured: the Culture victory fired at T385 and the
+position sat pinned at T387 with 53 cities, population 610, gold -45/turn and both neighbours still
+at war, while the turn itself read `ready to end` and every one of the 93 units was spent. Task 052
+built the human's switch into the handoff (`-AfterVictory`) but not into the engine gate, so a
+session launched to continue a won match still could not. Both halves exist now:
+`CIV_MCP_AFTER_VICTORY=1` in the MCP environment (this workspace's `.mcp.json` sets it) or the marker
+file `after-victory` beside the run data, and `_terminal_game_over` decides every one of the five
+game-over sites in `execute_end_turn`. A **defeat** is terminal with the switch open. The victory
+screen is still outside Lua - `dismiss_popup` cannot see it - so if the turn will not advance with
+the gate open, read the screen with `.tools/whats-on-screen.py` and ask the human to press "one more
+turn".

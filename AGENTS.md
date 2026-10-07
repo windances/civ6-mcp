@@ -710,6 +710,21 @@ or keep playing in its session.
 `-Rollback`, `-DryRun`. It reads only passive signals, never launches and never loads, and generates
 the session's task from the facts it just read.
 
+**A finished match is reported by that preflight, and `-AfterVictory` is how a session continues
+one.** A victory does not end the engine's turn loop: the victory screen offers "one more turn",
+after which play is normal - but `Game.GetWinningTeam()` stays set for the rest of the match, so
+`check_game_over()` reports a victory on every call forever and `execute_end_turn` used to return
+`GAME OVER` before it ever sent `ACTION_ENDTURN`. Measured on this match: it pinned the position
+after the victory with 53 cities in hand, both neighbours still at war and the turn itself reading
+`ready to end`, and no MCP call could advance it. Two halves, and both are needed: the launcher's
+`-AfterVictory` makes the generated task say the session is continuing, and
+**`CIV_MCP_AFTER_VICTORY=1` in the MCP environment is the gate itself** (`.mcp.json` sets it for
+this workspace; without it the old refusal stands). `get_game_overview` keeps printing the
+`GAME OVER` line either way - it is a record, not a stop condition. A **defeat** is terminal under
+both. The victory screen is outside Lua, so it stays the first obstacle: `dismiss_popup` cannot
+see it, and if the turn still will not advance, read the screen with `.tools/whats-on-screen.py`
+and ask the human to press "one more turn".
+
 **The division is withdrawn as of 2026-10-07** (human instruction: no human-military half, the
 session is in charge of everything - the Chinese original is in `docs/task-history.md`): sessions
 launch **without** `-HumanMilitary`, the session commands the military units and the Great Generals

@@ -800,3 +800,37 @@ settle 了其中两处、也解释清了第三处：**(28,9) 带着被下令的 
 **T363–T369 之间买到的东西在任何地方都没有日记**：`.civ6-mcp-data/` 下没有任何文件带着 T362 之后的 agent
 条目，所以局面是从游戏里读的、不是从笔记里读的——T362 的 41 座城对 T369 的 45 座，而这一回合自己的读数
 就是记录。
+
+**2026-10-07——分工被撤销。** 人类指令：不要 human 军事那一半，会话全权负责。从这一天起
+`scripts/resume-game.ps1` 调用时**不带** `-HumanMilitary`，所以交给会话的任务里不再带分工段落：军事单位、
+大军事家和大海军统帅，与城市、经济、奇观和研究一样都归会话指挥。两个后果值得点名：`skip_remaining_units`
+重新归会话调用，因为它扫的是全部单位而全部单位现在都是我们的；带 `agent-half.txt` 划分的 `WHOSE MOVE|`
+报告变成信息性的——不再有需要等待的人类那一半，所以 `ready to end` 意味着这一回合可以结束，而不是要等谁。
+机制本身原封不动（`-HumanMilitary`、`SKILL.md` 的例外条款、固定的 30 秒等待节奏），直到人类再次打开它；
+`AGENTS.md` 在 Game Recovery 下写明了这一点。
+
+**任务 049（`take every remaining city of Georgia and India`）在 T385 退休（`--expired --turn 385`）。**
+比赛已经赢了：T385 的 `get_game_overview` 打印 `GAME OVER - VICTORY / You won a Culture victory`，而
+`end_turn` 回答 `GAME OVER — VICTORY! You won a Culture victory! The game has ended.`。引擎不会再处理
+一回合，`dismiss_popup` 也找不到卡住它的弹窗层（`No popups to dismiss`），所以这个局面无法再被推进。这使
+049 成为**无法达成**而不是未完成：它发布于 2026-10-07T23:41，比交接任务还晚一分钟，依据的是人类「继续攻占
+城市」的指令——而 T385 时格鲁吉亚仍握有 8 座城、印度 8 座，每一座都因为回合无法推进而够不着。它退休的理由
+与 045、048 相同，措辞也一样：**因为比赛结束了，而不是因为目标达成了。** T385 那一回合在 `end_turn` 拒绝
+之前已经打到底——84 个单位全部读作 0 移动力，没有任何单位能被下令；一门火箭炮拿了 Forward Observers；
+Victor 被移进 Kutaisi（忠诚度 46/100、每回合 -4.1、没有驻军——`hold-what-you-take` 失败）；第比利斯的
+空队列拿了 `PROJECT_REPAIR_OUTER_DEFENCES`，因为它的外层防御读作 0/400 而 `BUILDING_WALLS` 被以
+`CANNOT_PRODUCE` 拒绝；3556 信仰买下了 Levi Strauss（+2 宜居度）与 Chester Nimitz。**给下一次交接的教训：
+在胜利之后发布的任务无法在那个局面里执行。** `get_game_overview` 的 `GAME OVER` 那一行就是说这件事的，
+在发布任务前读它，比花一个会话去发现它更便宜——生成这个任务的预检只从存档里读了回合号（385），没有读那个
+让它无法游玩的胜利。
+
+**T387——胜利本身不是停止条件，缺的是闸门。** 上面那段教训的结论在 2026-10-08 被推翻了一半：引擎并没有
+死，死的是工具。`Game.GetWinningTeam()` 在一局有人获胜之后会一直保持设置，于是
+`GameState.check_game_over()` 每次调用都报告胜利，而 `execute_end_turn` 过去在第一次检查时就返回
+`GAME OVER — VICTORY!`，既到不了阻塞项循环，也到不了 `ACTION_ENDTURN`。本局实测：文化胜利在 T385 触发，
+局面被钉在 T387——53 座城、人口 610、两个邻国仍在交战、金币 -45/回合，而回合本身读作 `ready to end`、
+所有单位都已行动完毕。任务 052 把人类的开关做进了 handoff（`-AfterVictory`），但没有做进这道引擎闸门；
+现在两半都在：MCP 环境里的 `CIV_MCP_AFTER_VICTORY=1`（本工作区的 `.mcp.json` 已经设上），或数据根目录下
+的 `after-victory` 标记文件，而 `execute_end_turn` 里五处游戏结束检查全部由 `_terminal_game_over` 决定。
+**失败**在开关打开时依然是终局。胜利画面在 Lua 之外，`dismiss_popup` 看不到
+它：闸门打开后若回合仍不推进，就用 `.tools/whats-on-screen.py` 读屏，并请人类按下「再玩一回合」。

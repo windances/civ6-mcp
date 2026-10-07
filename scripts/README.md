@@ -1,4 +1,4 @@
-# scripts
+﻿# scripts
 
 The command-line tools. Everything here runs from the repository root, and `python` below means the
 project virtualenv - `.venv\Scripts\python.exe` on Windows, `.venv/bin/python` elsewhere.
@@ -144,10 +144,10 @@ diary straight back.
 ## Handing a match to a fresh session
 
 ```powershell
-scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback] [-HumanMilitary]
+scripts\resume-game.ps1 [-DryRun] [-Wait] [-Rollback] [-AfterVictory] [-HumanMilitary]
 #   also: -TaskFile <f> -TaskPath <f> -Turns N -TimeoutSeconds N -PollSeconds N
 
-python scripts\handoff.py [--json] [--task <path>]
+python scripts\handoff.py [--json] [--task <path>] [--after-victory]
 scripts\civ6-clean.ps1 [-DryRun] [-KeepGame] [-Force] [-PID N] [-TunerPort N] [-WebGuiPort N]
 scripts\stop-agent.py [--status | --cancel] [--wait N] [--no-clean] [--note "..."]
 scripts\run-dsh-headless.ps1 -TaskFile <f> [-Task <t>] [-DryRun]
@@ -171,6 +171,24 @@ already carries the marker is left as it is. It is a *task*, not a rule - nothin
 session that ignores it. What enforces it is the per-turn report (`get_notifications` appends the
 `WHOSE MOVE|` split and writes `agent-half.txt` beside the heartbeat), `SKILL.md`'s carve-out on
 `skip_remaining_units`, and the fact that the wait for the human is the session's own to keep.
+
+**`-AfterVictory` keeps a won match playable, and it is two halves.** A victory does not stop the
+engine — the victory screen's "one more turn" leaves play entirely normal — but
+`Game.GetWinningTeam()` stays set for the rest of the match, so `GameState.check_game_over()` reports
+a victory on every call forever and `execute_end_turn` refused to send `ACTION_ENDTURN` at all
+(measured 2026-10-08: the Culture victory at T385 pinned this match at T387 with 53 cities in hand).
+So:
+
+* `-AfterVictory` (handoff's `--after-victory`) makes the generated task say the match is already won
+  and that this session is continuing it deliberately, and names the victory screen as the first
+  obstacle. Without it a finished match is *refused*, which is the guard that cost a session at T385.
+* **`CIV_MCP_AFTER_VICTORY=1` in the MCP server's environment is the gate itself** — this
+  workspace's `.mcp.json` sets it. Without it `end_turn` still returns `GAME OVER — VICTORY!` and no
+  session can advance such a match, however the task reads. A **defeat** is terminal either way.
+
+The victory panel is outside Lua, so `dismiss_popup` cannot clear it: if the turn will not advance
+with the gate open, read the screen with `.tools/whats-on-screen.py` and ask the human to press
+"one more turn".
 
 ## Tasks and document gates
 

@@ -26,6 +26,29 @@ why the verdict's job is to say who does what. When it is `in_game` the session'
 **generated from those facts** (`.civ6-mcp-data/resume-task.en.txt`), so no turn number or
 save name in it can go stale.
 
+**A won match is not a dead one, and the tooling used to treat it as one.** `resume-game.ps1
+-AfterVictory` (handoff's `--after-victory`) makes the generated task say the match is already won
+and that this session is continuing it deliberately, and `CIV_MCP_AFTER_VICTORY=1` in the MCP
+environment is the gate that lets `execute_end_turn` actually send `ACTION_ENDTURN`. Both halves are
+needed, and the second was missing until 2026-10-08:
+
+* A victory does **not** stop the engine. The victory screen offers "one more turn", and after it
+  play is normal — cities queue, units move, the AI takes its turn.
+* But `Game.GetWinningTeam()` **stays set for the rest of the match**, so
+  `GameState.check_game_over()` reports a victory on every call forever. `execute_end_turn` used to
+  return `GAME OVER — VICTORY!` at its first check, before the blocker loop and before
+  `ACTION_ENDTURN`, so no MCP call could advance the turn again.
+* Measured on this match: the Culture victory fired at **T385**, and the position sat pinned at
+  **T387** — 53 cities, population 610, both neighbours still at war, gold -45/turn, and the turn
+  itself reading `ready to end` with every unit spent. Nothing was wrong with the game; the guard
+  was answering "has somebody won?" and reading it as "can nothing be done?".
+* The screen is a separate matter: the victory panel is **outside Lua**, so `dismiss_popup` cannot
+  see it. If the turn still will not advance with the gate open, read the screen with
+  `.tools/whats-on-screen.py` and ask the human to press "one more turn".
+* A **defeat** is terminal with or without the switch, and so is a victory with the switch off.
+  `get_game_overview` prints its `GAME OVER` line in every one of those states — it is a record of
+  what the engine reports, not a stop condition, and it says which of the two states it is in.
+
 **The two save families are numbered differently, measured 2026-09-26:** `0_MCP_NNNN` holds
 turn NNNN, and the game's own **`AutoSave_NNNN` holds turn NNNN-1** (`0_MCP_0142` holds T142,
 `AutoSave_0142` holds T141 — three pairs checked). So "the number in the name is the turn" is
