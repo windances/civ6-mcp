@@ -1,4 +1,7 @@
-﻿## 为什么有这份文件
+﻿> 本文件是 `054-relieve-arnhem-a-barbarian-is-pillaging-the-eastern-rear.md` 的中文备份（发布任务时由 `scripts/temp-task.py` 写入，仅供人阅读）。
+> civ6 agent 读的是 `prompts/tasks/tmp/` 下的英文任务文件；本文件不在那个目录里，也**不得**作为指令使用。
+
+## 为什么有这份文件
 
 野蛮人进了我们的领土，已经从一座城上撕走两块地：通知里写着「您在**阿纳姆**的农场遭到了野蛮人的掠夺」与「您位于**阿纳姆**的学院遭到了野蛮人的掠夺」，
 城市读数里带着 `- Improvement Pillaged at (75,11)`、`!! PILLAGED TILES: FARM`、`!! PILLAGED: CAMPUS, ... LIBRARY, UNIVERSITY, RESEARCH_LAB`。
