@@ -902,3 +902,23 @@ report with its `agent-half.txt` split becomes informational - there is no human
 for, so `ready to end` means the turn may be ended, not that anything should be waited for. The
 machinery itself is untouched (`-HumanMilitary`, `SKILL.md`'s carve-out, the fixed 30-second wait
 cadence) and dormant until the human arms it again; `AGENTS.md` says so under Game Recovery.
+
+**Task 049 (`take every remaining city of Georgia and India`) retired at T385 (`--expired --turn
+385`).** The match is already won: `get_game_overview` at T385 prints `GAME OVER - VICTORY / You won
+a Culture victory`, and `end_turn` answers `GAME OVER — VICTORY! You won a Culture victory! The game
+has ended.` The engine will not process another turn, and `dismiss_popup` finds no popup layer
+holding it (`No popups to dismiss`), so the position cannot be played on. That makes 049
+unachievable rather than unfinished: it was published at 2026-10-07T23:41, one minute *after* the
+handoff task, on the human instruction to keep taking cities - and at T385 Georgia still held 8
+cities and India 8, every one of them out of reach because no turn will advance. It is retired for
+the same reason 045 and 048 were, and in the same words: **because the match is over, not because
+the goal was met.** The T385 turn was played as far as the board allowed before `end_turn` refused -
+all 84 units read 0 moves, so no unit could be ordered; a Rocket Artillery took Forward Observers;
+Victor was moved into Kutaisi (loyalty 46/100 losing 4.1/turn with no garrison - the
+`hold-what-you-take` failure); Tbilisi's empty queue took `PROJECT_REPAIR_OUTER_DEFENCES` because its
+outer defences read 0/400 and `BUILDING_WALLS` was refused `CANNOT_PRODUCE`; and 3556 faith bought
+Levi Strauss (+2 amenities) and Chester Nimitz. **The lesson for the next handoff: a task published
+after a victory cannot be executed in that position.** `get_game_overview`'s `GAME OVER` line is
+what says so, and reading it before publishing a task is cheaper than a session spent discovering
+it - the preflight that generated this task read the turn number (385) off the save without reading
+the victory that made it unplayable.
