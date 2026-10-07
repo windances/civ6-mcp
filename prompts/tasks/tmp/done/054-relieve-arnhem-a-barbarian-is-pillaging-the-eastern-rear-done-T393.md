@@ -62,3 +62,10 @@ doctrine has never covered.
      at: 2026-10-08T02:41:50+08:00
      chinese backup: none (--no-cn)
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 054 --done --turn 393
+     at: 2026-10-08T03:09:46+08:00
+     status: done at T393
+     chinese backup: prompts/tasks/cn/054-relieve-arnhem-a-barbarian-is-pillaging-the-eastern-rear.cn.md
+-->
