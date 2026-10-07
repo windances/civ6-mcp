@@ -61,3 +61,10 @@ those hold and record in the diary which turn the victory was reported and wheth
      at: 2026-10-08T00:43:40+08:00
      chinese backup: prompts/tasks/cn/052-playing-on-after-a-victory-an-option-not-a-stall.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 052 --done --turn 387 --note "handoff.py and resume-game.ps1 carry -AfterVictory now, with six tests over the victory branch"
+     at: 2026-10-08T00:59:30+08:00
+     status: done at T387
+     chinese backup: prompts/tasks/cn/052-playing-on-after-a-victory-an-option-not-a-stall.cn.md
+-->
