@@ -2,7 +2,7 @@
 
 added:     2026-10-07 (human instruction: 2026-10-07：人类问"多少个回合能让我们拥有 4 个攻城军团，包括在目标城市前完成集结"，并明确把军事也
            交给会话全权负责（分工撤销）。按 `prompts/tactics/01-unit-production.md` 的编制表建满四个军团，并在 选定的目标城下完成集结后再开打。)
-expires:   turn 393 - 25 turn(s) from T368, the turn the match stands on (read from the save); a hard stop,
+expires:   turn 405 - 30 turn(s) from T382, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
 done when: get_units counts >= 12 UNIT_ROCKET_ARTILLERY, >= 4 UNIT_MODERN_AT and >= 8 of
            UNIT_MODERN_ARMOR/UNIT_MECHANIZED_INFANTRY/UNIT_SPEC_OPS, and at least three corps' worth
@@ -85,7 +85,14 @@ an enemy city - that is "built and assembled", which is what the human asked for
 turn that holds, and record in the diary how many turns it took against the estimate above.
 
 <!-- published by scripts/temp-task.py
-     command: python scripts/temp-task.py --root . add --title "Four assault corps, built and assembled at the front" --instruction @.tmp/task048-instruction.txt --done-when "get_units counts >= 12 UNIT_ROCKET_ARTILLERY, >= 4 UNIT_MODERN_AT and >= 8 of UNIT_MODERN_ARMOR/UNIT_MECHANIZED_INFANTRY/UNIT_SPEC_OPS, and at least three corps' worth of them stand within 3 tiles of an enemy city (get_cities positions)" --overrides "the 'one war city, everything else compounds' default: up to 8 cities may build units until the corps exist, and one Modern AT may be bought with gold; no other queue is touched" --scope "unit production, purchases and assembly for four assault corps; the target choice still belongs to the pre-war gates in tactics/07" --why "build four assault corps and assemble them at the front" --turns 25 --body @.tmp/task048-body.txt --cn @.tmp/task048-cn.txt
-     at: 2026-10-07T01:10:27+08:00
+     command: python scripts/temp-task.py --root . add --title "Four assault corps, built and assembled at the front" --instruction @.tmp/task048-instruction.txt --done-when "get_units counts >= 12 UNIT_ROCKET_ARTILLERY, >= 4 UNIT_MODERN_AT and >= 8 of UNIT_MODERN_ARMOR/UNIT_MECHANIZED_INFANTRY/UNIT_SPEC_OPS, and at least three corps' worth of them stand within 3 tiles of an enemy city (get_cities positions)" --overrides "the 'one war city, everything else compounds' default: up to 8 cities may build units until the corps exist, and one Modern AT may be bought with gold; no other queue is touched" --scope "unit production, purchases and assembly for four assault corps; the target choice still belongs to the pre-war gates in tactics/07" --why "build four assault corps and assemble them at the front" --expires-turn 405 --body @.tmp/task048-body.txt --cn @.tmp/task048-cn.txt --replace --no-commit
+     at: 2026-10-07T10:51:20+08:00
+     chinese backup: prompts/tasks/cn/048-four-assault-corps-built-and-assembled-at-the-front.cn.md
+-->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 048 --expired --turn 385 --no-gate --no-commit --note "The match ended in victory at T385 before the corps counters held: the siege row was at twelve guns and the anti-cavalry row met, but the city-taker row stood at seven of the eight the file asked for, and the assembly was only ever completed around the capital that ended the war. Retired because the match is over, not because the goal was met."
+     at: 2026-10-07T19:02:24+08:00
+     status: expired at T385
      chinese backup: prompts/tasks/cn/048-four-assault-corps-built-and-assembled-at-the-front.cn.md
 -->

@@ -117,11 +117,14 @@ Task 041 was retired as `done/041-attempt-a10-the-two-city-military-opening-done
 Task 042 was retired as `done/042-recover-production-expired-T321.md`.
 
 Task 043 was retired as `done/043-save-for-upgrades-done-T339.md`.
-| `045-two-carriers-with-aircraft.md` | 2026-10-04 | turn 424 | two carriers and their full complement of aircraft, scheduled without cancelling any queue | count == 2 units of type UNIT_AIRCRAFT_CARRIER and count == 4 aircraft (UNIT_JET_FIGHTER, |
-| `048-four-assault-corps-built-and-assembled-at-the-front.md` | 2026-10-07 | turn 393 | build four assault corps and assemble them at the front | get_units counts >= 12 UNIT_ROCKET_ARTILLERY, >= 4 UNIT_MODERN_AT and >= 8 of |
 
 Task 044 was retired as `done/044-schedule-three-modern-armor-done-T356.md`.
 
 Task 047 was retired as `done/047-re-order-the-three-builders-that-could-not-start-on-their-tile-done-T362.md`: CAMP at (28,9) and FARM at (79,18) verified on the map; (61,35) had carried a LUMBER_MILL so the ordered MINE was never buildable; get_builder_tasks names none of the three
 
 Task 046 was retired as `done/046-use-the-two-great-merchants-or-record-why-this-match-cannot-done-T369.md`.
+
+Task 045 was retired as `done/045-two-carriers-with-aircraft-expired-T385.md`: The match ended in victory at T385 before the aircraft complement was complete: the empire held three carriers and two aircraft, the Aerodrome stood in Beijing and its Hangar had two turns left. Retired because the match is over, not because the goal was met.
+
+Task 048 was retired as `done/048-four-assault-corps-built-and-assembled-at-the-front-expired-T385.md`: The match ended in victory at T385 before the corps counters held: the siege row was at twelve guns and the anti-cavalry row met, but the city-taker row stood at seven of the eight the file asked for, and the assembly was only ever completed around the capital that ended the war. Retired because the match is over, not because the goal was met.
+| `049-take-every-remaining-city-of-georgia-and-india.md` | 2026-10-07 | turn 420 | take every remaining enemy city | count == 0 cities owned by Georgia and count == 0 owned by India, as read by get_diplomacy (or the |

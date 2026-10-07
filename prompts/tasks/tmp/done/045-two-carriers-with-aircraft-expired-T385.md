@@ -93,3 +93,10 @@ each queue gave up for them.
      at: 2026-10-04T17:02:37+08:00
      chinese backup: prompts/tasks/cn/045-two-carriers-with-aircraft.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 045 --expired --turn 385 --note "The match ended in victory at T385 before the aircraft complement was complete: the empire held three carriers and two aircraft, the Aerodrome stood in Beijing and its Hangar had two turns left. Retired because the match is over, not because the goal was met."
+     at: 2026-10-07T19:01:04+08:00
+     status: expired at T385
+     chinese backup: prompts/tasks/cn/045-two-carriers-with-aircraft.cn.md
+-->
