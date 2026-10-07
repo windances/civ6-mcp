@@ -2847,6 +2847,17 @@ def _game_probe(timeout: float = 5.0) -> dict:
     lua = (
         "local ok, turn = pcall(function() return Game.GetCurrentGameTurn() end) "
         'print("TURN|" .. tostring(ok and turn or "none")) '
+        # Whether the match is already decided, and which way. `Game.GetWinningTeam()` stays set for
+        # the rest of a match once somebody has won, so it is the only honest source - and the
+        # handoff reads it to tell a session it is continuing a *won* match (task 052's option)
+        # instead of handing it a "play up to N turns" task in a game that is already over. Needs no
+        # UI, like the same call in `lua/overview.py`.
+        "pcall(function() "
+        "local winTeam = Game.GetWinningTeam() "
+        "if winTeam ~= nil and winTeam >= 0 then "
+        "local localTeam = Players[Game.GetLocalPlayer()]:GetTeam() "
+        'print("GAMEOVER|" .. ((winTeam == localTeam) and "VICTORY" or "DEFEAT")) '
+        "end end) "
         f'print("{SENTINEL}")'
     )
 
@@ -2876,16 +2887,30 @@ def _game_probe(timeout: float = 5.0) -> dict:
             await conn.disconnect()
             return {"connected": True, "ingame": False, "turn": None, "note": ""}
         try:
+            # Both lines arrive on one stream (TURN first, then GAMEOVER), so collect rather than
+            # return on the first: the decided-match line is what task 052's handoff reads.
+            turn_value = None
+            game_over = None
             for line in await conn.execute_write(lua, timeout=timeout):
                 if line.startswith("TURN|"):
-                    value = line.split("|", 1)[1]
-                    return {
-                        "connected": True,
-                        "ingame": True,
-                        "turn": int(value) if value.isdigit() else None,
-                        "note": "" if value.isdigit() else f"turn read as {value!r}",
-                    }
-            return {"connected": True, "ingame": True, "turn": None, "note": "no reply"}
+                    turn_value = line.split("|", 1)[1]
+                elif line.startswith("GAMEOVER|"):
+                    game_over = line.split("|", 1)[1].strip() or None
+            if turn_value is None:
+                return {
+                    "connected": True,
+                    "ingame": True,
+                    "turn": None,
+                    "game_over": game_over,
+                    "note": "no reply",
+                }
+            return {
+                "connected": True,
+                "ingame": True,
+                "turn": int(turn_value) if turn_value.isdigit() else None,
+                "game_over": game_over,
+                "note": "" if turn_value.isdigit() else f"turn read as {turn_value!r}",
+            }
         finally:
             await conn.disconnect()
 

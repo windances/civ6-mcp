@@ -508,6 +508,16 @@ def _victory_text(facts: dict) -> str | None:
         text = source.get("victory")
         if text:
             return str(text).strip()
+        # The probe's own answer, from the GAME OVER line `_game_probe` reads off
+        # `Game.GetWinningTeam()`. Only a *victory* is this option's business: the human asked to
+        # play on after winning, and a rival's win ends the match for everyone - so a DEFEAT
+        # returns None and the task is generated as it always was, with no "you are continuing it
+        # deliberately" paragraph.
+        state = str(source.get("game_over") or "").strip().upper()
+        if state == "DEFEAT":
+            return None
+        if state == "VICTORY":
+            return "GAME OVER - VICTORY"
     return None
 
 

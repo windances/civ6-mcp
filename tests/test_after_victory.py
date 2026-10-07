@@ -202,3 +202,41 @@ class TestNoSiteKeepsItsOwnCopyOfTheRefusal:
         assert source.count("GAME OVER — VICTORY!") == 1, (
             "the victory line belongs to _terminal_game_over alone"
         )
+
+
+class TestTheProbeIsWhatFindsIt:
+    """`_game_probe` asks the game whether the match is decided, so the option is never manual.
+
+    The launcher's `-AfterVictory` only *says* the session is continuing; what makes a won match
+    playable is the gate in `end_turn`. Both need the handoff to know the match is over, and the
+    handoff used to read the turn off the save without ever asking - measured T385, where the
+    generated task offered 100 turns of play in a finished match.
+    """
+
+    def test_the_probe_reads_the_winning_team(self):
+        source = (ROOT / "src" / "civ_mcp" / "game_launcher.py").read_text(encoding="utf-8")
+        assert "GAMEOVER|" in source, "the probe no longer asks whether the match is decided"
+        assert "Game.GetWinningTeam()" in source
+        assert '"game_over"' in source, "the answer is not carried out of the probe"
+
+    def test_a_probe_victory_is_enough_without_the_explicit_string(self):
+        facts = _facts(None)
+        facts["probe"] = {"connected": True, "ingame": True, "turn": 387, "game_over": "VICTORY"}
+        text = h.task_text(facts, _result())
+        assert "This match is already won" in text
+        assert "-AfterVictory" in text
+
+    def test_a_defeat_is_not_offered_as_a_match_to_play_on(self):
+        """The human's option is playing on after a *win*; a rival's win ends it for everyone."""
+        facts = _facts(None)
+        facts["probe"] = {"connected": True, "ingame": True, "turn": 387, "game_over": "DEFEAT"}
+        text = h.task_text(facts, _result(), after_victory=True)
+        assert "already won" not in text
+        assert "continuing it deliberately" not in text
+
+    def test_a_live_probe_carries_no_game_over(self):
+        facts = _facts(None)
+        facts["probe"] = {"connected": True, "ingame": True, "turn": 387, "game_over": None}
+        text = h.task_text(facts, {"turn": 387, "ready": True, "blockers": []})
+        assert "GAME OVER" not in text
+        assert "found turn 387" in text
