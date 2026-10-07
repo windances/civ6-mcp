@@ -59,3 +59,10 @@ Retire this file that turn and record in the diary how many turns each civ's rin
      at: 2026-10-07T23:41:07+08:00
      chinese backup: prompts/tasks/cn/049-take-every-remaining-city-of-georgia-and-india.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 049 --expired --turn 385 --note "the game reported GAME OVER - VICTORY (Culture) at T385 and its engine refuses to advance the turn, so the conquest cannot continue: Georgia still held 8 cities and India 8. Retired because the match is over, not because the goal was met."
+     at: 2026-10-07T23:45:20+08:00
+     status: expired at T385
+     chinese backup: prompts/tasks/cn/049-take-every-remaining-city-of-georgia-and-india.cn.md
+-->
