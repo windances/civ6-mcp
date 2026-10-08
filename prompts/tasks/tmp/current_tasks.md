@@ -130,11 +130,13 @@ Task 048 was retired as `done/048-four-assault-corps-built-and-assembled-at-the-
 
 Task 049 was retired as `done/049-take-every-remaining-city-of-georgia-and-india-expired-T385.md`: the game reported GAME OVER - VICTORY (Culture) at T385 and its engine refuses to advance the turn, so the conquest cannot continue: Georgia still held 8 cities and India 8. Retired because the match is over, not because the goal was met.
 | `050-take-every-remaining-city-of-georgia-and-india.md` | 2026-10-07 | turn 420 | take every remaining enemy city | count == 0 cities owned by Georgia and count == 0 owned by India, as read by get_diplomacy (or the |
-| `051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.md` | 2026-10-08 | turn 401 | wake the sleeping rear units and march them to the front | count == 0 of UNIT_ROCKET_ARTILLERY, UNIT_MODERN_AT and UNIT_MODERN_ARMOR carry [SENTRY] or [HOLD] |
-| `055-clear-every-barbarian-out-of-our-territory.md` | 2026-10-08 | turn 412 | hunt down and destroy every barbarian inside our territory, and repair what they took | count == 0 barbarian units and camps within three tiles of any of our cities, with a full |
 
 Task 052 was retired as `done/052-playing-on-after-a-victory-an-option-not-a-stall-done-T387.md`: handoff.py and resume-game.ps1 carry -AfterVictory now, with six tests over the victory branch
 
 Task 053 was retired as `done/053-fire-the-first-volley-tsageri-this-turn-done-T390.md`.
 
 Task 054 was retired as `done/054-relieve-arnhem-a-barbarian-is-pillaging-the-eastern-rear-done-T393.md`.
+
+Task 051 was retired as `done/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front-done-T399.md`.
+
+Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T412.md`.

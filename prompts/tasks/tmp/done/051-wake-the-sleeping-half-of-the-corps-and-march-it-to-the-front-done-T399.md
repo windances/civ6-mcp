@@ -54,3 +54,10 @@ Retire this file that turn and record in the diary how many turns the wake-up co
      at: 2026-10-08T00:22:12+08:00
      chinese backup: prompts/tasks/cn/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 051 --done --turn 399
+     at: 2026-10-08T08:44:39+08:00
+     status: done at T399
+     chinese backup: prompts/tasks/cn/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.cn.md
+-->

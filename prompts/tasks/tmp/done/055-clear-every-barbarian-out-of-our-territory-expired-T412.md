@@ -77,3 +77,10 @@ opening again.
      at: 2026-10-08T03:02:33+08:00
      chinese backup: prompts/tasks/cn/055-clear-every-barbarian-out-of-our-territory.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py --root . retire 055 --expired --turn 412
+     at: 2026-10-08T09:45:25+08:00
+     status: expired at T412
+     chinese backup: prompts/tasks/cn/055-clear-every-barbarian-out-of-our-territory.cn.md
+-->
