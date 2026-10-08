@@ -141,5 +141,7 @@ Task 051 was retired as `done/051-wake-the-sleeping-half-of-the-corps-and-march-
 Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T412.md`.
 
 Task 050 was retired as `done/050-take-every-remaining-city-of-georgia-and-india-expired-T420.md`: Conquest incomplete: Georgia held 3 cities (Telavi 28,39; Batumi 25,33; Omalo 25,45) and India 2 (Agra 10,38; Ahmadabad 3,41) when the hard stop arrived; the order continues under the standing no-peace conquest directive.
-| `056-stage-ranged-and-siege-units-at-their-own-maximum-range.md` | 2026-10-09 | turn 451 | keep ranged units outside the range the city can answer at, by using the range they actually have | count == 0 lines in prompts/tactics that state range 2 as the placement rule for ranged or siege |
 | `057-get-oil-flowing-find-a-source-improve-it-or-buy-it.md` | 2026-10-09 | turn 456 | put a source of oil on our books, because the pool is empty and the units that burn it cannot be replaced | count == 0 unimproved oil tiles inside our borders, and the resource line shows OIL >= 1 per turn, |
+| `058-assemble-the-siege-corps-and-take-venice-analysis-staging-then-fire.md` | 2026-10-09 | turn 462 | take the city-state the file names with the pre-war analysis, the staging table and the fire the doctrine asks for | count == 1 city named Venice in get_cities under China, with >= 4 shooters having fired on the turn |
+
+Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-done-T441.md`.

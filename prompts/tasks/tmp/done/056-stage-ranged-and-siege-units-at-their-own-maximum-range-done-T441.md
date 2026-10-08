@@ -67,3 +67,10 @@ promoted unit - its range, the tile it was moved to, and whether the city could 
      at: 2026-10-09T02:56:20+08:00
      chinese backup: prompts/tasks/cn/056-stage-ranged-and-siege-units-at-their-own-maximum-range.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py --root . retire 056 --done --turn 441
+     at: 2026-10-09T04:42:48+08:00
+     status: done at T441
+     chinese backup: prompts/tasks/cn/056-stage-ranged-and-siege-units-at-their-own-maximum-range.cn.md
+-->

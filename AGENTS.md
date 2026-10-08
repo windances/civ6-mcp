@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `056-stage-ranged-and-siege-units-at-their-own-maximum-range.md` (keep ranged units outside the range the city can answer at, by using the range they actually have) and `057-get-oil-flowing-find-a-source-improve-it-or-buy-it.md` (put a source of oil on our books, because the pool is empty and the units that burn it cannot be replaced).
+**IN FORCE NOW:** `057-get-oil-flowing-find-a-source-improve-it-or-buy-it.md` (put a source of oil on our books, because the pool is empty and the units that burn it cannot be replaced) and `058-assemble-the-siege-corps-and-take-venice-analysis-staging-then-fire.md` (take the city-state the file names with the pre-war analysis, the staging table and the fire the doctrine asks for).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
