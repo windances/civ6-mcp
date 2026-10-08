@@ -129,7 +129,6 @@ Task 045 was retired as `done/045-two-carriers-with-aircraft-expired-T385.md`: T
 Task 048 was retired as `done/048-four-assault-corps-built-and-assembled-at-the-front-expired-T385.md`: The match ended in victory at T385 before the corps counters held: the siege row was at twelve guns and the anti-cavalry row met, but the city-taker row stood at seven of the eight the file asked for, and the assembly was only ever completed around the capital that ended the war. Retired because the match is over, not because the goal was met.
 
 Task 049 was retired as `done/049-take-every-remaining-city-of-georgia-and-india-expired-T385.md`: the game reported GAME OVER - VICTORY (Culture) at T385 and its engine refuses to advance the turn, so the conquest cannot continue: Georgia still held 8 cities and India 8. Retired because the match is over, not because the goal was met.
-| `050-take-every-remaining-city-of-georgia-and-india.md` | 2026-10-07 | turn 420 | take every remaining enemy city | count == 0 cities owned by Georgia and count == 0 owned by India, as read by get_diplomacy (or the |
 
 Task 052 was retired as `done/052-playing-on-after-a-victory-an-option-not-a-stall-done-T387.md`: handoff.py and resume-game.ps1 carry -AfterVictory now, with six tests over the victory branch
 
@@ -140,3 +139,6 @@ Task 054 was retired as `done/054-relieve-arnhem-a-barbarian-is-pillaging-the-ea
 Task 051 was retired as `done/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front-done-T399.md`.
 
 Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T412.md`.
+
+Task 050 was retired as `done/050-take-every-remaining-city-of-georgia-and-india-expired-T420.md`: Conquest incomplete: Georgia held 3 cities (Telavi 28,39; Batumi 25,33; Omalo 25,45) and India 2 (Agra 10,38; Ahmadabad 3,41) when the hard stop arrived; the order continues under the standing no-peace conquest directive.
+| `056-stage-ranged-and-siege-units-at-their-own-maximum-range.md` | 2026-10-09 | turn 451 | keep ranged units outside the range the city can answer at, by using the range they actually have | count == 0 lines in prompts/tactics that state range 2 as the placement rule for ranged or siege |

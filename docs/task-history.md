@@ -929,7 +929,27 @@ the rest of a match once somebody has won, so `GameState.check_game_over()` repo
 every call forever and `execute_end_turn` returned `GAME OVER — VICTORY!` at its first check - before
 the blocker loop, before `ACTION_ENDTURN`. Measured: the Culture victory fired at T385 and the
 position sat pinned at T387 with 53 cities, population 610, gold -45/turn and both neighbours still
-at war, while the turn itself read `ready to end` and every one of the 93 units was spent. Task 052
+at war, while the turn itself read `ready to end` and every one of the 93 units was spent.
+
+**T420 - task 050 reached its hard stop with five enemy cities still standing, and retired as
+`expired`.** The file was published at T385 with `expires: turn 420`, 35 turns out, on the strength
+of the production estimate alone; it then ran through the pause it was never playable in and through
+the T388-T419 window, in which the two rings went from 10 and 8 cities to **3 and 2**. Read from the
+game at T420: Georgia held Telavi (28,39, walls 400), Batumi (25,33, walls 400) and Omalo (25,45,
+walls 400); India held Agra (10,38, walls 300) and Ahmadabad (3,41, walls 100). Our military was
+3836 against their 199 and 80. The `done when:` (`count == 0` for both) did not hold, so the file was
+retired `--expired` rather than `--done`, and the conquest continues under the standing no-peace
+conquest directive - a retired task is not a retired order. Two things about the turn itself are
+worth keeping: **every one of the 165 units read 0 moves** (the engine's own known glitch - the
+MCP's `get_units` note says it was seen in 8 of 195 logged turns, and the turn start showed
+`WHOSE MOVE|ready to end`), so the turn was production and blockers only; and the **Future
+Tech/Future Civic choice is still unsatisfiable through the MCP** - `set_research` answers
+`ALREADY_COMPLETED` for both because the Lua guard's `HasTech()` is true for a repeatable Future
+Tech, which leaves two `ENDTURN_BLOCKING_RESEARCH`/`_CIVIC` entries standing. `end_turn` proceeds
+past them on `UI.CanEndTurn()=true despite blockers`, so they cost the turn nothing but they will be
+there every turn from now on.
+
+Task 052
 built the human's switch into the handoff (`-AfterVictory`) but not into the engine gate, so a
 session launched to continue a won match still could not. Both halves exist now:
 `CIV_MCP_AFTER_VICTORY=1` in the MCP environment (this workspace's `.mcp.json` sets it) or the marker

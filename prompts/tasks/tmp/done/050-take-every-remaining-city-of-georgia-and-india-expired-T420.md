@@ -69,3 +69,10 @@ how many turns each ring took, and whether the victory screen pause cost anythin
      at: 2026-10-07T23:56:49+08:00
      chinese backup: prompts/tasks/cn/050-take-every-remaining-city-of-georgia-and-india.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 050 --expired --turn 420 --note "Conquest incomplete: Georgia held 3 cities (Telavi 28,39; Batumi 25,33; Omalo 25,45) and India 2 (Agra 10,38; Ahmadabad 3,41) when the hard stop arrived; the order continues under the standing no-peace conquest directive."
+     at: 2026-10-08T18:47:10+08:00
+     status: expired at T420
+     chinese backup: prompts/tasks/cn/050-take-every-remaining-city-of-georgia-and-india.cn.md
+-->

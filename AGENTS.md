@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `050-take-every-remaining-city-of-georgia-and-india.md` (take every remaining enemy city).
+**IN FORCE NOW:** `056-stage-ranged-and-siege-units-at-their-own-maximum-range.md` (keep ranged units outside the range the city can answer at, by using the range they actually have).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
@@ -512,6 +512,10 @@ engineer per turn.
 - **Dedication**: new era - `get_dedications` -> `choose_dedication`
 - **City Capture**: conquered or disloyal city -
   `city_action(city_id, "keep"/"raze"/"liberate_founder"/"liberate_previous")`
+  The **run log carries the internal call, not this name**: a capture decision is logged as
+  `resolve_city_capture` and a city strike as `city_attack`, so a reader who greps the log for
+  `city_action` finds nothing and a reader who greps this reference for `resolve_city_capture` finds
+  nothing either. `city_action` is the public tool for both; this line is the mapping.
 - Move responses show the **target tile**, not arrival position (async pathfinding). **A move or
   attack that reports `STOPPED_SHORT` or `STOPPED_MID_PATH` may still have taken effect** - measured
   T141, a Horseman's attack reported "could not reach target" while the target was left at 26 HP.
