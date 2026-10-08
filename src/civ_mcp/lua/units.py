@@ -1514,7 +1514,7 @@ for _, u in Players[me]:GetUnits():Members() do
         if cs > 0 or rs > 0 then
             local uType = entry and entry.UnitType or "?"
             if string.find(pc, "SIEGE") then
-                table.insert(siege, {uType, ux, uy})
+                table.insert(siege, {uType, ux, uy, entry and entry.Range or 1})
             elseif string.find(pc, "MELEE") or string.find(pc, "CAVALRY") then
                 table.insert(screens, {ux, uy})
             end
@@ -1590,7 +1590,11 @@ for _, s in ipairs(siege) do
     print("SIEGE_POSTURE|" .. s[1] .. "|" .. s[2] .. "," .. s[3] .. "|enemy:" .. eDist
         .. "|screen:" .. scrDist .. "|screen_enemy:" .. scrEnemyDist
         .. "|city:" .. cDist .. "|" .. cName:gsub("|", "/")
-        .. "|warcity:" .. wDist .. "|" .. wName:gsub("|", "/"))
+        .. "|warcity:" .. wDist .. "|" .. wName:gsub("|", "/")
+        -- The gun's own range, appended last so an older parser reads the fields it knows and
+        -- ignores this one. `city_distance` is measured to the city; whether the gun can *fire*
+        -- from there is this number against that one (human instruction 2026-10-08).
+        .. "|range:" .. (s[4] or 2))
 end
 print("{SENTINEL}")
 """.replace("{SENTINEL}", SENTINEL)
@@ -1603,7 +1607,9 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
     is judged against, which exists before a declaration - and ``warcity`` (added 2026-10-02) is the
     nearest city of a civilisation **we are at war with**, which is the only one a siege rule may
     count. A server that predates the field sends eight tokens and ``warcity`` reads 999, "no enemy
-    city in sight", never "the friend's city next door".
+    city in sight", never "the friend's city next door". ``range`` (added 2026-10-08) is the gun's
+    own attack range, appended after ``warcity`` so the older fields keep their positions; it is
+    what decides whether ``city_distance`` is a firing position or a walk.
     """
     postures: list[SiegePosture] = []
     for line in lines:
@@ -1628,6 +1634,13 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
         if len(parts) >= 10 and parts[8].startswith("warcity:"):
             war_city_distance = number(parts[8])
             war_city_name = parts[9]
+        # The gun's own range, appended by the current server. An older one does not send it and the
+        # floor - 2 - is the reading, never 999.
+        unit_range = 2
+        if len(parts) >= 11 and parts[10].startswith("range:"):
+            unit_range = number(parts[10])
+            if unit_range < 1 or unit_range > 9:
+                unit_range = 2
 
         postures.append(
             SiegePosture(
@@ -1641,6 +1654,7 @@ def parse_siege_posture_response(lines: list[str]) -> list[SiegePosture]:
                 city_name=parts[7],
                 war_city_distance=war_city_distance,
                 war_city_name=war_city_name,
+                range=unit_range,
             )
         )
     return postures
@@ -2918,13 +2932,29 @@ if not pTarget then
     return
 end
 __MARCH__
+-- How far out the ring runs: the longest attack range any of our shooters has, so a gun that
+-- outranges the city's two-tile strike is offered the tile it can actually fire from with no
+-- answer (human instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排). Two is the floor -
+-- every unpromoted shooter has it - and four is the cap this scan bothers with. The common case,
+-- an army of range-2 guns, builds exactly the ring it built before.
+local maxRange = 2
+for _, u in Players[me]:GetUnits():Members() do
+    if u:GetX() ~= -9999 then
+        local ui = GameInfo.Units[u:GetType()]
+        if ui and ((ui.RangedCombat or 0) > 0 or (ui.Bombard or 0) > 0) then
+            local ur = ui.Range or 1
+            if ur > maxRange then maxRange = ur end
+        end
+    end
+end
+if maxRange > 4 then maxRange = 4 end
 local ring = {}
-for dx = -2, 2 do for dy = -2, 2 do
+for dx = -maxRange, maxRange do for dy = -maxRange, maxRange do
     local px, py = tx + dx, ty + dy
     local p = Map.GetPlot(px, py)
     if p then
         local d = Map.GetPlotDistance(tx, ty, px, py)
-        if d >= 1 and d <= 2 then
+        if d >= 1 and d <= maxRange then
             local passable = not p:IsImpassable()
             -- The map's own sight numbers, for the manual's line-of-sight rule (manual:999: "a
             -- unit cannot see a target if a blocking object is between the two units, such as a
@@ -2945,17 +2975,20 @@ for dx = -2, 2 do for dy = -2, 2 do
         end
     end
 end end
--- One row per ring tile, and for a distance-2 tile the tiles strictly between it and the target:
--- the distance-1 ring tiles that are also adjacent to it, found with the game's own
--- `Map.GetPlotDistance` rather than a hand-computed hex offset (hand-computed hex has been wrong
--- twice in this war). `-1` marks an intervening tile no shot crosses: impassable covers Mountains,
+-- One row per ring tile, and for every tile at distance 2 or more the tiles strictly between it
+-- and the target, found with the game's own `Map.GetPlotDistance` rather than a hand-computed hex
+-- offset (hand-computed hex has been wrong twice in this war): a tile `n` is between the shooter's
+-- tile `t` and the target when `dist(t,n) + dist(n,target) == dist(t,target)`. For a distance-2
+-- tile that reduces to exactly the distance-1 ring tiles adjacent to it, which is what this test
+-- used to spell out. `-1` marks an intervening tile no shot crosses: impassable covers Mountains,
 -- the Natural Wonders and Ice, which the manual calls impenetrable.
 for _, t in ipairs(ring) do
     local via = ""
-    if t.d == 2 then
+    if t.d >= 2 then
         local parts = {}
         for _, n in ipairs(ring) do
-            if n.d == 1 and Map.GetPlotDistance(t.x, t.y, n.x, n.y) == 1 then
+            if n.d >= 1 and n.d < t.d
+                and (Map.GetPlotDistance(t.x, t.y, n.x, n.y) + n.d) == t.d then
                 parts[#parts + 1] = n.x .. "," .. n.y .. "," .. (n.passable and n.sight or -1)
             end
         end
@@ -2972,7 +3005,8 @@ end
 -- no HP, no walls and no supply line, and one unit walking onto its tile destroys it. The flag is
 -- read from the game rather than from the tile's improvement, so a camp somebody else already
 -- cleared reads as a plain tile, and a city tile never reads as a camp. A failed call leaves the
--- flag false, which is the city wording - the safe default for a plan that fires from range 2.
+-- flag false, which is the city wording - the safe default for a plan that fires from 2, the floor
+-- every unpromoted shooter has.
 local isCamp = false
 pcall(function()
     isCamp = (Cities.GetCityInPlot(tx, ty) == nil)
@@ -3084,7 +3118,10 @@ for _, u in Players[me]:GetUnits():Members() do
             print("UNIT|" .. ut .. "|" .. u:GetID() .. "|"
                 .. ux .. "," .. uy .. "|" .. moves .. "|" .. role
                 .. "|d" .. Map.GetPlotDistance(ux, uy, tx, ty) .. "|cs" .. cs
-                .. "|hp" .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage())
+                .. "|hp" .. (u:GetMaxDamage() - u:GetDamage()) .. "/" .. u:GetMaxDamage()
+                -- The unit's own range, so the plan ranks ring tiles against the range this gun
+                -- actually has rather than a constant 2 (human instruction 2026-10-08).
+                .. "|rg" .. (info and info.Range or 1))
             -- The engine's own answer for a gun that is **already** where it would fire from: the
             -- same `CanStartOperation(RANGE_ATTACK)` the attack path uses, aimed at the target
             -- tile. It is what turns the map's sight numbers above into a reading for a unit in
@@ -3302,7 +3339,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
         if line.startswith("STAGEPLAN|") and len(parts) >= 3:
             plan.target = parts[1]
             # `camp:1` is printed by the current server; an older one printed neither token, and the
-            # city wording is the safe default for a plan that fires from range 2.
+            # city wording is the safe default for a plan that fires from 2, the floor.
             plan.camp = any(token == "camp:1" for token in parts[2:])
         elif line.startswith("RING|") and len(parts) >= 5:
             x, y = (int(v) for v in parts[1].split(","))
@@ -3345,11 +3382,16 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
             x, y = (int(v) for v in parts[3].split(","))
             distance = strength = 0
             hp = max_hp = 0
+            # The floor, for a line that does not carry `rg`: the plan then behaves exactly as it
+            # did before per-unit ranges existed.
+            unit_range = 2
             for token in parts[6:]:
                 if token.startswith("d"):
                     distance = int(_number(token[1:]))
                 elif token.startswith("cs"):
                     strength = int(_number(token[2:]))
+                elif token.startswith("rg"):
+                    unit_range = int(_number(token[2:]))
                 elif token.startswith("hp") and "/" in token:
                     cur, _, total = token[2:].partition("/")
                     hp, max_hp = int(_number(cur)), int(_number(total))
@@ -3366,6 +3408,7 @@ def parse_staging_plan_response(lines: list[str]) -> StagingPlan:
                     strength=strength,
                     hp=hp,
                     max_hp=max_hp,
+                    range=unit_range,
                 )
             )
         elif line.startswith("RALLYRING|") and len(parts) >= 5:

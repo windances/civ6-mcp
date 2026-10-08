@@ -1666,7 +1666,11 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
             f" yet, and this is the state `tactics/04` plans the rally for:"
         ]
     else:
-        lines = [f"SIEGE POSTURE (T{turn}) - front line in front, siege behind, at range 2:"]
+        lines = [
+            f"SIEGE POSTURE (T{turn}) - front line in front, siege behind, each gun at its own range"
+            f" (a city's strike reaches 2, so a range-3 or 4 gun that fires from 3 or 4 is not"
+            f" answered at all):"
+        ]
     for entry in posture:
         where = f"{getattr(entry, 'unit_type', '?')}@({getattr(entry, 'x', '?')},{getattr(entry, 'y', '?')})"
         enemy = int(getattr(entry, "enemy_distance", 999) or 999)
@@ -1689,17 +1693,27 @@ def _siege_posture_event(posture: list, metrics: dict, turn: int) -> str | None:
         # Staging is the answer (tactics/04): arrive together, inside the ring, before opening.
         # It prints for **one** gun too (human instruction 2026-09-30: one is a legitimate plan), so
         # `SIEGE FIRE: 1/1` is the sanctioned single-gun assault and `0/1` is a gun out of position.
+        #
+        # "In position" is the gun's **own** range against the distance, not a constant 2 (human
+        # instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排). The distance-4 and -6 guns in
+        # that measured case were counted as contributing nothing, which is only true of a range-2
+        # gun; a Rocket Artillery carrying Advanced Rangefinding fires from 3 or 4 with no answer.
         cannot_fire = [
-            (getattr(e, "unit_type", "?"), int(getattr(e, "city_distance", 999) or 999))
+            (
+                getattr(e, "unit_type", "?"),
+                int(getattr(e, "city_distance", 999) or 999),
+                max(int(getattr(e, "range", 2) or 2), 2),
+            )
             for e in posture
-            if int(getattr(e, "city_distance", 999) or 999) > 2
+            if int(getattr(e, "city_distance", 999) or 999)
+            > max(int(getattr(e, "range", 2) or 2), 2)
         ]
         lines.append(
             f"  SIEGE FIRE: {len(posture) - len(cannot_fire)}/{len(posture)} siege unit(s) inside"
-            f" range 2 of the target"
+            f" their own range of the target"
             + (
                 " - OUT OF RANGE: "
-                + ", ".join(f"{name} at distance {dist}" for name, dist in cannot_fire)
+                + ", ".join(f"{name} at distance {dist} (range {rng})" for name, dist, rng in cannot_fire)
                 + ". They contribute nothing where they stand: walk them into the ring together"
                 " before firing again, and remember that a unit which spends its move arriving"
                 " cannot fire the same turn (a two-tile move, a river or a hill costs both points)."

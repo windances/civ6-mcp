@@ -19,15 +19,19 @@ This module exists because the one thing the plan could not answer is the one th
 whether a firing tile is worth walking to. Two measured cases: at 阿斯特拉罕 only one of the
 distance-2 tiles had line of sight, and 圣彼得堡 opened with one Trebuchet firing while two guns
 stood at distance 4 and 6. The staging plan's rows used to claim `FIRE from here` for **any**
-distance-2 tile, which is a guess about the map that the map itself can answer.
+distance-2 tile, which is a guess about the map that the map itself can answer. The ring now runs
+out to each shooter's own range (human instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排),
+and the query fills `between` at every distance, so the same rule answers a range-3 or range-4
+firing tile as readily as a range-2 one.
 
 What is deliberately *not* claimed here is a single definite answer where the map leaves two. A
-hex tile at distance 2 has either one or two tiles strictly between it and the target, and which one
-the engine draws its line through is not something the map data states - so when one candidate line
-is clear and the other is blocked the verdict is `maybe`, and the row says to verify on arrival. The
-engine's own answer (`get_staging_plan` asks it as `CANFIRE` for every gun already on a ring tile)
-**overrides** this module: that is a reading, not a prediction, and it is how the model gets checked
-against the game tile by tile as a train arrives.
+hex tile at distance 2 has either one or two tiles strictly between it and the target (a tile at
+distance 3 or 4 has more, and the query reports them all), and which one the engine draws its line
+through is not something the map data states - so when one candidate line is clear and the other is
+blocked the verdict is `maybe`, and the row says to verify on arrival. The engine's own answer
+(`get_staging_plan` asks it as `CANFIRE` for every gun already on a ring tile) **overrides** this
+module: that is a reading, not a prediction, and it is how the model gets checked against the game
+tile by tile as a train arrives.
 """
 
 from __future__ import annotations

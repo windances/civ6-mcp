@@ -382,18 +382,19 @@ before the declaration and again the turn the stack forms:
    and the tile that would work instead. A gun sent to a ruled-out tile is a wasted march, and the
    plan's `FIRE`/`NO LOS` verdicts, not the distance, are what `n shooter(s) in position` counts.
 3. **Assign tiles by role, and keep the two sets apart: melee goes ADJACENT (distance 1) to the city,
-   shooters go on the ring (distance 2), and at least one adjacent tile stays free for the capture
+   shooters go on the farthest ring tile their own range reaches (2 is the floor, not the rule),
+   and at least one adjacent tile stays free for the capture
    move.** Our own stack is the most common obstacle to our own ring: at 阿斯特拉罕 the shooters
    occupied both adjacent tiles — the only ones the melee could have used — and the assault had no
    unit able to reach the city until they moved.
 4. **Write the order of arrival down** — which unit takes which tile on which turn — because the
    move-cost arithmetic above decides whether the ring fills in one turn or three.
 5. **Count shots, not units. This is the measurement the whole step exists for.** Three siege units
-   is a roster; the city only feels the ones inside range 2 with LOS. Measured over the T139–T159
+   is a roster; the city only feels the ones inside their own range with LOS. Measured over the T139–T159
    war: 阿斯特拉罕 had **one** distance-2 tile with LOS out of three candidates, 沃罗涅什 fired from
    two, 圣彼得堡 spent T151–T152 with **one** siege unit in range while the other two stood at
    distance 4 and 6, and 喀山 opened on T159 with all three at distance **3, 4 and 4** — zero shots.
-   `SIEGE POSTURE` now ends with a `SIEGE FIRE: n/m siege units inside range 2` line and names the
+   `SIEGE POSTURE` now ends with a `SIEGE FIRE: n/m siege units inside their own range` line and names the
    out-of-range ones: **read it before writing the turn's plan, and if n < m the plan is to walk the
    others in, not to fire again.** A unit that spends its move arriving fires **next** turn — a
    two-tile move, a river crossing or a hill each cost both movement points (measured four turns

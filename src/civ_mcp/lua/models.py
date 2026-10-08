@@ -672,7 +672,11 @@ class PathingEstimate:
 
 @dataclass
 class StagingRingTile:
-    """One tile of the target city's ring, at distance 1 (melee/adjacent) or 2 (shooting).
+    """One tile of the target city's ring, at distance 1 (melee/adjacent) up to a shooter's own range.
+
+    ``distance`` runs from 1 to the longest range any of our shooters has (capped at 4), so a
+    promoted gun that outranges the city's two-tile strike is offered the tile it can actually fire
+    from with no answer (human instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排).
 
     ``hills`` / ``sight`` / ``between`` are the map facts the manual's line-of-sight rule is
     applied to (see `civ_mcp.los`): ``sight`` is the game's own ``SightThroughModifier`` for the
@@ -715,6 +719,12 @@ class StagingUnit:
     strength: int = 0  # combat strength, for ordering units within a role
     hp: int = 0
     max_hp: int = 0
+    # The unit's own attack range, from the game's `GameInfo.Units[...].Range`. Human instruction
+    # 2026-10-08: 远程部队攻击位置优先按射程最大来安排 - a city's strike reaches exactly two tiles, so a
+    # shooter with range 3 or 4 fires with **no retaliation at all**. Two is the floor, not the rule,
+    # so this is what `staging` ranks ring tiles against. 2 is the reading for a server that does not
+    # send the field, because 2 is the floor the doctrine has always used - never a range of 1.
+    range: int = 2
 
     @property
     def wounded(self) -> bool:
@@ -1108,6 +1118,11 @@ class SiegePosture:
     city_name: str = ""
     war_city_distance: int = 999
     war_city_name: str = ""
+    # The unit's own attack range (`GameInfo.Units[...].Range`). ``city_distance`` is measured to
+    # the city, not to this: a gun with range 3 is *in position* three tiles out, because a city's
+    # strike reaches only two and cannot answer it. 2 is the reading for a server that does not send
+    # the field - the floor, and never a range of 1.
+    range: int = 2
 
     @property
     def exposed(self) -> bool:

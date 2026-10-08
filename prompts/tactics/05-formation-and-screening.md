@@ -7,19 +7,21 @@ Read when the stack is formed and about to advance on the target.
 ```
         [ target city ]            city ranged strike: 2 tiles
           melee / anti-cav / cavalry     <-- front line, adjacent to the city
-              ranged (range 2)           <-- behind the melee, 2 tiles from the city
-                 siege (range 2)         <-- behind the melee, 2 tiles: the tile to protect
+              ranged (own range)         <-- behind the melee, at the farthest tile that fires
+                 siege (own range)       <-- behind the melee, as far out as its range allows
 ```
 
 - **The units that can take a hit stand in front**: melee, anti-cavalry, cavalry. They hold the
   tile the enemy can reach first.
-- **Ranged and siege stand behind them** at range 2. A Catapult is the most expensive unit in
-  the stack and the least able to survive one turn of attention; its tile is the one the
-  formation exists to protect.
+- **Ranged and siege stand behind them at their own maximum range** (human instruction 2026-10-08:
+  远程部队攻击位置优先按射程最大来安排). A city strike reaches exactly two tiles, so a shooter with
+  range 3 or 4 - any unit carrying Advanced Rangefinding or the equivalent - fires from 3 or 4 tiles
+  and takes **no retaliation at all**. Two tiles is the *floor*, not the rule.
 - **Never adjacent.** A siege unit adjacent to the city takes the city's strike and the
   garrison's counterattack at the same time, and it does that with the lowest HP pool in the
-  army. Range 2 is where a Catapult belongs, and it is the range it was built for.
-- **China's Crouching Tiger (range 1)** is the exception that proves the rule: it has to stand
+  army. An unpromoted Catapult belongs at 2 because that is all it has; dropping a promoted unit to
+  2 throws away the range it was promoted for.
+- **China's Crouching Tiger (range 1)** is the exception on the other side: it has to stand
   adjacent to what it shoots, so a melee unit must hold the tile in front of it, always.
 
 ## The test, not the intention
@@ -38,9 +40,11 @@ unit is**:
 ## Order of advance
 
 1. **Screen first**: the melee moves to the tile adjacent to the city (or to the enemy stack).
-2. **Then the ranged and siege** move to their range-2 tiles behind it — the tiles `get_staging_plan`
-   marks `FIRE`, not the ones it marks `NO LINE OF SIGHT` (range 2 without a line is not a firing
-   position, and the plan names a tile that works instead).
+2. **Then the ranged and siege** move to the farthest tiles that can fire — the ones `get_staging_plan`
+   marks `FIRE`, never the ones it marks `NO LINE OF SIGHT` (a tile inside the range with no line is
+   not a firing position, and the plan names one that works instead). Fill the **farthest** firing
+   tile first; a tile at 2 is a fallback for a unit whose range is 2, or for one whose longer tiles
+   are taken.
 3. **No support unit at all**: neither a ram nor a tower is built or fielded (human instruction
    2026-09-30: 不生产也不使用撞锤/攻城塔), including any ram the empire already owns - it stays a garrison
    unit. A support only works from the tile adjacent to the city and only for melee, so the tile it
@@ -67,7 +71,7 @@ None of it was a rules problem - it was geometry, and it is measurable.
 - Never leave a siege unit adjacent to a city, a fortification or an enemy melee unit.
 - Never put two support units (ram + tower) where one is doing no work, and never park a tower
   beside the ranged line - it helps melee only.
-- Never advance into range 2 of a second enemy city while the first one is unscreened.
+- Never advance into a second enemy city's two-tile strike while the first one is unscreened.
 - Never let the formation break to chase a scout or a civilian.
 - **Never leave a wounded unit inside an enemy's reach.** A unit at 60 HP or less within two tiles
   of an enemy is a unit you have already lost: it attacks for proportionally less (manual p.88) and

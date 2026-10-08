@@ -56,7 +56,7 @@ instead of arguing from feeling:
 - **Never trade one-for-one.** Two or three attackers on one target kill; one attacker trades
   and the target heals about twenty points a turn.
 - **A siege unit is never the unit that takes the hit**, and never stands adjacent to what it
-  is bombarding (range 2).
+  is bombarding. It fires from the farthest tile its own range reaches; 2 is the floor, not the rule.
 - **Ranged cannot capture a city.** Only a melee unit walking in finishes it.
 - **Proposals, not orders.** Return only JSON matching `contracts/worker-proposal.schema.json`,
   with `worker: "military-map"`. Do not request tools and do not assume access to the live

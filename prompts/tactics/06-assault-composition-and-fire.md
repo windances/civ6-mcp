@@ -10,7 +10,7 @@ Read once the stack is in contact with the target city and the assault is runnin
 | Melee | 2 | **Melee, anti-cavalry and cavalry can take the city** - and a melee unit walking in is what finishes it. One holds the front tile, one is kept for the capture move. |
 | Anti-cavalry | 1 | Answer the enemy's cavalry when it comes for the guns (`counter-the-cavalry`). |
 | Ram / tower | **0, always** | Neither is built and neither is fielded (human instruction 2026-09-30: 不生产也不使用撞锤/攻城塔). They help **melee only**, must stand adjacent to the city, and both die at `CIVIC_CIVIL_ENGINEERING`; the Catapult is the wall-breaker. |
-| Ranged | 4 | Take the **city's HP** down (and kill anything that comes out to relieve it). Range 2, no retaliation. Never aim at a garrison that is inside - it takes no damage there. |
+| Ranged | 4 | Take the **city's HP** down (and kill anything that comes out to relieve it). At its own maximum range (2 is the floor, not the rule), no retaliation. Never aim at a garrison that is inside - it takes no damage there. |
 | Cavalry | 1 | Hunt survivors and reach the enemy's ranged and siege units. Never the unit holding the front tile. |
 
 ## Read the defender before you build the fire plan / 先读守军，再排火力
@@ -250,7 +250,8 @@ the checks keep talking about the assault:
   and their field army comes back for it: Moscow drew a Horseman, a Swordsman and a city-state
   Warrior within a few turns of the capture. Without an anti-cavalry unit the Horseman walks past
   the ring to the Catapults (`counter-the-cavalry`), so the defence's order of work is: the melee on
-  the ring tiles, the ranged behind them at range 2 - note that a ranged unit at y=35 cannot reach a
+  the ring tiles, the ranged behind them on the farthest tiles their own range reaches - note that a
+  ranged unit at y=35 cannot reach a
   target at y=40, the firing positions *are* the ring tiles - and the cavalry as the mobile answer,
   never the siege train.
 

@@ -302,14 +302,38 @@ class TestTheQuery:
         assert "tinfo.SightThroughModifier" in q and "finfo.SightThroughModifier" in q
         assert "tinfo.Hills" in q
 
-    def test_the_tiles_between_a_distance_two_pair_come_from_the_games_own_distance(self):
+    def test_the_tiles_between_a_pair_come_from_the_games_own_distance(self):
+        """Generalised 2026-10-08 to `dist(t,n) + dist(n,target) == dist(t,target)`.
+
+        For a distance-2 tile that reduces to exactly the distance-1 ring tiles adjacent to it -
+        the rule this test used to pin by hand - and it now also reports the intervening tiles at
+        distance 3 and 4, which is what a promoted gun's own range needs.
+        """
         from civ_mcp import lua as lq
 
         q = lq.build_staging_plan_query(60, 29)
         assert 'via = "|via:"' in q
-        assert "n.d == 1 and Map.GetPlotDistance(t.x, t.y, n.x, n.y) == 1" in q
+        assert "if t.d >= 2 then" in q
+        assert "if n.d >= 1 and n.d < t.d" in q
+        assert "(Map.GetPlotDistance(t.x, t.y, n.x, n.y) + n.d) == t.d" in q
         # An impassable tile between blocks everything: the manual calls those impenetrable.
         assert "(n.passable and n.sight or -1)" in q
+
+    def test_the_ring_runs_out_to_the_longest_range_in_the_army(self):
+        """Human instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排.
+
+        The ring has to *contain* a promoted gun's firing tiles, or the plan can only ever offer it
+        a range-2 position. Two is the floor, and an army of range-2 guns builds exactly the ring it
+        always did.
+        """
+        from civ_mcp import lua as lq
+
+        q = lq.build_staging_plan_query(60, 29)
+        assert "local maxRange = 2" in q
+        assert "local ur = ui.Range or 1" in q
+        assert "if maxRange > 4 then maxRange = 4 end" in q
+        assert "for dx = -maxRange, maxRange do for dy = -maxRange, maxRange do" in q
+        assert "if d >= 1 and d <= maxRange then" in q
 
     def test_the_engine_is_asked_for_every_gun_in_range_and_a_spent_one_says_so(self):
         from civ_mcp import lua as lq

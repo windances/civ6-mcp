@@ -32,14 +32,25 @@ from .lua import models as m
 # nothing can stand between it and the target.
 _SHOOTERS = ("siege", "ranged")
 
-# Role → the ring distance it wants. Siege and ranged shoot from 2; melee takes the adjacent
-# tile; a short-ranged unit (Crouching Tiger, range 1) stands adjacent with the melee.
-_PREFERRED_DISTANCE = {
-    "siege": (2,),
-    "ranged": (2, 1),
-    "short-ranged": (1, 2),
-    "melee": (1, 2),
-}
+# The ring distance a unit wants, best first. A shooter's **own range** comes first (human
+# instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排): a city's strike reaches exactly two
+# tiles, so a gun with range 3 or 4 that fires from 3 or 4 takes no retaliation at all. Two is the
+# *floor*, not the rule - a closer tile is the fallback for a gun whose longer tiles are occupied,
+# ruled out by line of sight, or do not exist. Melee takes the adjacent tile, and China's Crouching
+# Tiger (a `short-ranged` role, range 1) stands adjacent with the melee, because it has no choice.
+_MELEE_DISTANCE = (1, 2)
+
+
+def _preferred_distances(unit: m.StagingUnit) -> tuple[int, ...]:
+    """The ring distances this unit wants, best first, read off its own range."""
+    if unit.role not in _SHOOTERS:
+        return _MELEE_DISTANCE
+    own = max(int(getattr(unit, "range", 2) or 2), 2)
+    if unit.role == "siege":
+        # A siege unit is never adjacent to what it bombards: the adjacent tile belongs to the
+        # screen, and the city's strike lands there with no answer. Rank it below every firing tile.
+        return tuple(range(own, 1, -1))
+    return tuple(range(own, 0, -1))
 
 # Ordered by what the assault needs first when two units want the same tile.
 _ROLE_PRIORITY = {"siege": 0, "melee": 1, "short-ranged": 2, "ranged": 3}
@@ -65,7 +76,7 @@ class Assignment:
     note: str = ""
     # The line-of-sight verdict for a shooter's tile (`civ_mcp.los`), None for everyone else. A
     # ring tile that cannot fire is a walk, not a firing position: the row used to claim
-    # `FIRE from here` for every distance-2 tile, which the map itself can answer.
+    # `FIRE from here` for every tile of the ring, which the map itself can answer.
     los: los.Verdict | None = None
     # True for a gun in the ring with no movement left: it cannot shoot this turn, so it is not a
     # shooter in position however clear its line is (`tactics/04`: arriving costs the shot).
@@ -124,10 +135,10 @@ def _los_rank(unit: m.StagingUnit, tile: m.StagingRingTile, plan: m.StagingPlan)
 
     Only a **ruled-out** tile is demoted, and that is deliberate. A `maybe` (two candidate lines
     with one clear) and an unread tile both keep their distance preference, because the doctrine's
-    choice of range 2 must not be overturned by a question the map cannot answer - and a server
-    that sends no sight data has to keep the plan it produced before this verdict existed. What
-    the verdict changes is that a gun is never *sent* to a tile that provably cannot shoot: it
-    ranks below a tile that works, including the adjacent one.
+    choice of the unit's own range must not be overturned by a question the map cannot answer - and
+    a server that sends no sight data has to keep the plan it produced before this verdict existed.
+    What the verdict changes is that a gun is never *sent* to a tile that provably cannot shoot: it
+    ranks below a tile that works, including a closer one.
     """
     if unit.role not in _SHOOTERS:
         return 0
@@ -137,7 +148,7 @@ def _los_rank(unit: m.StagingUnit, tile: m.StagingRingTile, plan: m.StagingPlan)
 
 def _distance_rank(unit: m.StagingUnit, tile: m.StagingRingTile) -> int:
     """How well this tile suits this unit; lower is better."""
-    preferred = _PREFERRED_DISTANCE.get(unit.role, (2, 1))
+    preferred = _preferred_distances(unit)
     return preferred.index(tile.distance) if tile.distance in preferred else len(preferred)
 
 

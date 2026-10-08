@@ -69,7 +69,8 @@ the front (`one-garrison-per-city`).
    攻城塔) - the Catapult is the wall-breaker, and a support unit that only helps melee beside a city
    is production the siege could have had. **A ram the empire already owns is not an exception**: it
    is not fielded either, and it is a garrison unit like any other.
-2. **Then the screens**: melee to hold the front tile, ranged to fire from range 2.
+2. **Then the screens**: melee to hold the front tile, ranged to fire from the farthest tile its
+   own range reaches (2 is the floor, not the rule: a promoted gun fires from 3 or 4).
 3. **Then the economy buildings** the empire is short of (food first where a city is stalled).
 
    **One exception, and it is a timing one: while the train is the bottleneck, a feature removal

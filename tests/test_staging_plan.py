@@ -632,3 +632,74 @@ class TestTheAssemblyRingInTheQuery:
         assert "RALLY" not in text
         assert "assembly tile(s)" not in text
 
+
+class TestOwnRange:
+    """Human instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排.
+
+    A city's strike reaches exactly two tiles, so a gun with range 3 or 4 that fires from 3 or 4
+    takes **no retaliation at all**. The tile a shooter wants is therefore its OWN range, with two
+    as the floor - a closer tile is only the fallback for a gun whose longer tiles are taken,
+    ruled out by line of sight, or do not exist.
+    """
+
+    def test_a_range_two_gun_still_wants_the_distance_two_tile(self):
+        assert st._preferred_distances(unit(1, "UNIT_TREBUCHET", "siege")) == (2,)
+        assert st._preferred_distances(unit(2, "UNIT_CROSSBOWMAN", "ranged")) == (2, 1)
+
+    def test_a_promoted_gun_wants_its_own_range_first(self):
+        ranged = unit(3, "UNIT_ROCKET_ARTILLERY", "ranged")
+        ranged.range = 4
+        assert st._preferred_distances(ranged) == (4, 3, 2, 1)
+        siege = unit(4, "UNIT_ROCKET_ARTILLERY", "siege")
+        siege.range = 3
+        # A siege unit is never adjacent to what it bombards, so 2 is the closest it is offered.
+        assert st._preferred_distances(siege) == (3, 2)
+
+    def test_a_range_three_gun_is_placed_on_the_distance_three_tile(self):
+        gun = unit(1, "UNIT_ROCKET_ARTILLERY", "siege")
+        gun.range = 3
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=54, y=41, distance=3),
+        ]
+        options = [
+            m.StagingOption(unit_id=1, x=55, y=41, turns=0, this_turn=True),
+            m.StagingOption(unit_id=1, x=54, y=41, turns=0, this_turn=True),
+        ]
+        result = st.assign(plan([gun], options, ring))
+        assert result.placed[0].tile.distance == 3
+
+    def test_a_range_two_gun_on_the_same_ring_takes_the_distance_two_tile(self):
+        gun = unit(1, "UNIT_TREBUCHET", "siege")
+        ring = [
+            m.StagingRingTile(x=55, y=41, distance=2),
+            m.StagingRingTile(x=54, y=41, distance=3),
+        ]
+        options = [
+            m.StagingOption(unit_id=1, x=55, y=41, turns=0, this_turn=True),
+            m.StagingOption(unit_id=1, x=54, y=41, turns=0, this_turn=True),
+        ]
+        result = st.assign(plan([gun], options, ring))
+        assert result.placed[0].tile.distance == 2
+
+    def test_the_parser_reads_the_units_own_range_and_defaults_to_two(self):
+        from civ_mcp import lua as lq
+
+        parsed = lq.parse_staging_plan_response(
+            [
+                "STAGEPLAN|60,29|ring:1|camp:0",
+                "RING|59,28|2|ok|land|via:59,27,0",
+                "UNIT|UNIT_ROCKET_ARTILLERY|7|60,36|3|siege|d2|cs70|hp100/100|rg3",
+            ]
+        )
+        assert parsed.units[0].range == 3
+        # An older server sends no `rg` token: the reading is the floor, 2, never 1.
+        older = lq.parse_staging_plan_response(
+            [
+                "STAGEPLAN|60,29|ring:1|camp:0",
+                "RING|59,28|2|ok|land|via:59,27,0",
+                "UNIT|UNIT_CATAPULT|8|60,36|3|siege|d2|cs35|hp100/100",
+            ]
+        )
+        assert older.units[0].range == 2
+

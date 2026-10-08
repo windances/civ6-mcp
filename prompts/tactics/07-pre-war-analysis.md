@@ -352,8 +352,9 @@ city, so production buys the *next* war while gold and policy buy this one.
 
 ## Step 5 — assembly, and the turn the order is given
 
-- Rally **one tile outside the target's range** (a city that has walls shoots at range 2), siege at
-  range 2-3 with line of sight confirmed, melee at range 1 ready to walk in. **Melee on the ring,
+- Rally **one tile outside the target's range** (a city that has walls shoots two tiles), siege at
+  the farthest tile its own range reaches with line of sight confirmed - 3 or 4 for a promoted gun,
+  which is outside the city's answer entirely - melee at range 1 ready to walk in. **Melee on the ring,
   shooters one tile behind it, and at least one ring tile left free for the capture move** — at
   阿斯特拉罕 the shooters occupied both adjacent tiles and the melee could not reach the city.
 - Do not wait for a straggler: start when the fire is positive and a capture unit is in reach;

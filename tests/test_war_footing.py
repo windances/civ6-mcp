@@ -518,13 +518,13 @@ class TestSiegePosture:
         """A single gun is a sanctioned plan (human instruction 2026-09-30), so 1/1 is success."""
         entry = self.posture(city_distance=2, enemy_distance=1, screen_enemy_distance=2)
         text = et._siege_posture_event([entry], et._siege_metrics([entry]), 116)
-        assert "SIEGE FIRE: 1/1 siege unit(s) inside range 2" in text
+        assert "SIEGE FIRE: 1/1 siege unit(s) inside their own range" in text
         assert "full train, fire it" in text
 
     def test_one_gun_out_of_the_ring_is_told_it_contributes_nothing(self):
         entry = self.posture(enemy_distance=999, screen_enemy_distance=999, city_distance=4)
         text = et._siege_posture_event([entry], et._siege_metrics([entry]), 116)
-        assert "SIEGE FIRE: 0/1 siege unit(s) inside range 2" in text
+        assert "SIEGE FIRE: 0/1 siege unit(s) inside their own range" in text
         assert "OUT OF RANGE" in text
         assert "at distance 4" in text
 
@@ -541,7 +541,7 @@ class TestSiegePosture:
             self.posture(x=55, y=39, enemy_distance=3, screen_enemy_distance=2, city_distance=4),
         ]
         text = et._siege_posture_event(entries, et._siege_metrics(entries), 159)
-        assert "SIEGE FIRE: 1/3 siege unit(s) inside range 2" in text
+        assert "SIEGE FIRE: 1/3 siege unit(s) inside their own range" in text
         assert "OUT OF RANGE" in text
         assert text.count("at distance 4") == 2
         assert "cannot fire the same turn" in text
@@ -552,9 +552,53 @@ class TestSiegePosture:
             self.posture(x=55, y=42, city_distance=2, enemy_distance=1, screen_enemy_distance=2),
         ]
         text = et._siege_posture_event(entries, et._siege_metrics(entries), 160)
-        assert "SIEGE FIRE: 2/2 siege unit(s) inside range 2" in text
+        assert "SIEGE FIRE: 2/2 siege unit(s) inside their own range" in text
         assert "full train, fire it" in text
         assert "OUT OF RANGE" not in text
+
+    def test_a_promoted_gun_counts_as_in_position_at_its_own_range(self):
+        """Human instruction 2026-10-08: 远程部队攻击位置优先按射程最大来安排.
+
+        A city's strike reaches exactly two tiles, so a gun with range 3 firing from 3 is in
+        position and is not being answered. Counting every gun past two tiles as "OUT OF RANGE"
+        is only true of a range-2 gun.
+        """
+        entry = self.posture(city_distance=3, enemy_distance=4, screen_enemy_distance=3, range=3)
+        text = et._siege_posture_event([entry], et._siege_metrics([entry]), 434)
+        assert "SIEGE FIRE: 1/1 siege unit(s) inside their own range" in text
+        assert "full train, fire it" in text
+        assert "OUT OF RANGE" not in text
+
+    def test_the_same_tile_is_out_of_range_for_a_range_two_gun(self):
+        """The counter is per unit: one rule for the whole train is the defect this replaces."""
+        entries = [
+            self.posture(
+                x=55, y=41, city_distance=3, enemy_distance=4, screen_enemy_distance=3, range=3
+            ),
+            self.posture(
+                x=55, y=42, city_distance=3, enemy_distance=4, screen_enemy_distance=3, range=2
+            ),
+        ]
+        text = et._siege_posture_event(entries, et._siege_metrics(entries), 434)
+        assert "SIEGE FIRE: 1/2 siege unit(s) inside their own range" in text
+        assert "at distance 3 (range 2)" in text
+        assert "at distance 3 (range 3)" not in text
+
+    def test_the_parser_reads_the_guns_own_range_and_defaults_to_two(self):
+        entries = lq.parse_siege_posture_response(
+            [
+                "SIEGE_POSTURE|UNIT_ROCKET_ARTILLERY|24,42|enemy:1|screen:2|screen_enemy:3"
+                "|city:3|Batumi|warcity:3|Batumi|range:3",
+            ]
+        )
+        assert entries[0].range == 3
+        older = lq.parse_siege_posture_response(
+            [
+                "SIEGE_POSTURE|UNIT_CATAPULT|24,42|enemy:1|screen:2|screen_enemy:3"
+                "|city:3|Batumi|warcity:3|Batumi",
+            ]
+        )
+        assert older[0].range == 2, "no range token must read as the floor, never 999"
 
     def test_the_parser_reads_the_line_and_ignores_junk(self):
         entry = lq.parse_siege_posture_response(
