@@ -212,7 +212,21 @@ for row in GameInfo.{gi_table}() do
     end
 end
 if idx == nil then {_bail(f"ERR:{err_label}_NOT_FOUND|{name}")} end
-if Players[id]:{player_method}():{has_method}(idx) and not repeatable then
+-- The hard gate, and it needs no column: refuse "already researched" only when there is something
+-- else left to research. When every other entry is already in the books, the endgame repeatable tech
+-- or civic is the only selectable thing there is - refusing it is what left
+-- `ENDTURN_BLOCKING_RESEARCH`/`_CIVIC` standing with nothing the MCP could set (measured, this
+-- match). `repeatable` above stays as the direct answer where the data carries it.
+local alternatives = 0
+do
+    local entries = Players[id]:{player_method}()
+    for row in GameInfo.{gi_table}() do
+        if row.Index ~= idx and not entries:{has_method}(row.Index) then
+            alternatives = alternatives + 1
+        end
+    end
+end
+if Players[id]:{player_method}():{has_method}(idx) and not repeatable and alternatives > 0 then
     {_bail(f"ERR:ALREADY_COMPLETED|{name} is already researched")}
 end
 local params = {{}}
