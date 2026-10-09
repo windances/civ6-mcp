@@ -834,3 +834,14 @@ Victor 被移进 Kutaisi（忠诚度 46/100、每回合 -4.1、没有驻军—�
 的 `after-victory` 标记文件，而 `execute_end_turn` 里五处游戏结束检查全部由 `_terminal_game_over` 决定。
 **失败**在开关打开时依然是终局。胜利画面在 Lua 之外，`dismiss_popup` 看不到
 它：闸门打开后若回合仍不推进，就用 `.tools/whats-on-screen.py` 读屏，并请人类按下「再玩一回合」。
+
+**T420 - 任务 050 在硬停点退役，敌人还剩五座城，结局是 `expired`。** 该文件 T385 发布，写着 `expires: turn 420`（35 回合之后），依据只有产能估算；
+它随后穿过了那段它根本无法执行的暂停期，又走完 T388-T419 窗口——两个包围圈从 10 城与 8 城变成 **3 城与 2 城**。T420 从游戏实测：
+格鲁吉亚持 Telavi (28,39，墙 400)、Batumi (25,33，墙 400)、Omalo (25,45，墙 400)；印度持 Agra (10,38，墙 300)、Ahmadabad (3,41，墙 100)。
+我军 3836 对敌 199 与 80。它的 done when 要求两边 `count == 0`，不成立，所以按 `--expired` 退役而不是 `--done`；
+征服由常设的无和平征服指令继续——**任务退役不等于命令退役**。回合本身有两点值得记：
+**165 个单位全部读到 0 移动力**（引擎已知故障；MCP 的 `get_units` 说明这是 195 个已记录回合里的第 8 次，回合开始显示 `WHOSE MOVE|ready to end`），
+所以那一回合只做了生产与 blocker；以及 **Future Tech/Future Civic 的选择在 MCP 里仍然无法满足**——`set_research` 对两者都答
+`ALREADY_COMPLETED`，因为 Lua 守卫的 `HasTech()` 对可重复的 Future Tech 为真，于是 `ENDTURN_BLOCKING_RESEARCH`/`_CIVIC` 两条一直挂着。
+`end_turn` 靠 `UI.CanEndTurn()=true despite blockers` 越过它们，所以不花回合，但从今往后每回合都会在。
+（T420 之后已修：`tech.py` 的守卫现在只在"别的还有可研究项"时才拒绝，终局那条可重复项因此可以被选中。）
