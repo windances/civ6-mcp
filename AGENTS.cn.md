@@ -448,6 +448,8 @@ military unit moving onto its tile destroys it"、Spearmen 是反骑兵的，以
 - **奉献**：新纪元——`get_dedications` -> `choose_dedication`
 - **城池占领**：被征服或忠诚度不足的城池——
   `city_action(city_id, "keep"/"raze"/"liberate_founder"/"liberate_previous")`
+  运行日志里记的是**内部调用名**，不是这个名字：占领决议记为 `resolve_city_capture`，城市射击记为 `city_attack`。
+  所以在日志里搜 `city_action` 什么也找不到，在本参考里搜 `resolve_city_capture` 同样找不到——两者都是同一个公开工具 `city_action`，这一行就是映射。
 - 移动回复显示的是**目标地块**，不是抵达位置（异步寻路）。**一次报告 `STOPPED_SHORT` 或
   `STOPPED_MID_PATH` 的移动或攻击可能已经生效**——实测 T141，一个 Horseman 的攻击报告"无法抵达
   目标"，而目标被留在了 26 HP。在重新下达任何报告了短距离或部分移动的指令之前，用 `get_units` 重读
