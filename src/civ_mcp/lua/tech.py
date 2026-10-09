@@ -196,11 +196,23 @@ def _build_set_ingame(
     return f"""
 local id = Game.GetLocalPlayer()
 local idx = nil
+local repeatable = false
 for row in GameInfo.{gi_table}() do
-    if row.{type_field} == "{name}" then idx = row.Index; break end
+    if row.{type_field} == "{name}" then
+        idx = row.Index
+        -- A repeatable tech or civic (Future Tech, Future Civic) is *selectable after it is
+        -- researched* - that is the whole point of it - and `HasTech`/`HasCivic` stays true once it
+        -- is. Refusing on that flag left `ENDTURN_BLOCKING_RESEARCH`/`_CIVIC` standing forever with
+        -- nothing the MCP could select (measured, this match: "the Tech/Future Civic choice is still
+        -- unsatisfiable through the MCP - set_research answers ALREADY_COMPLETED for both because the
+        -- Lua guard's HasTech() is true for a repeatable Future Tech"). Read the column defensively:
+        -- a table without it yields nil, which is the old behaviour.
+        repeatable = (row.Repeatable == true) or (row.Repeatable == 1)
+        break
+    end
 end
 if idx == nil then {_bail(f"ERR:{err_label}_NOT_FOUND|{name}")} end
-if Players[id]:{player_method}():{has_method}(idx) then
+if Players[id]:{player_method}():{has_method}(idx) and not repeatable then
     {_bail(f"ERR:ALREADY_COMPLETED|{name} is already researched")}
 end
 local params = {{}}
