@@ -3843,12 +3843,20 @@ for _, city in pCities:Members() do
                         if okP and pil then
                             local impInfo = GameInfo.Improvements[impIdx]
                             local impName = impInfo and impInfo.ImprovementType or "UNKNOWN"
-                            -- Find nearest builder
+                            -- Find the nearest builder THAT CAN ACT. Measured T434: 3 of 4 `improve`
+                            -- orders died with CANNOT_IMPROVE|Builder has no moves remaining this turn
+                            -- because this pick looked at distance alone, and the nearest builder had
+                            -- already spent its movement. One that cannot start the job this turn is
+                            -- only the fallback, so the row still names somebody.
                             local nearId, nearDist = -1, 999
+                            local fallbackId, fallbackDist = -1, 999
                             for _, b in ipairs(builders) do
                                 local d = Map.GetPlotDistance(b.x, b.y, px, py)
-                                if d < nearDist then nearDist = d; nearId = b.id end
+                                if (b.moves or 0) > 0 then
+                                    if d < nearDist then nearDist = d; nearId = b.id end
+                                elseif d < fallbackDist then fallbackDist = d; fallbackId = b.id end
                             end
+                            if nearId == -1 then nearId, nearDist = fallbackId, fallbackDist end
                             print("TASK|urgent|" .. px .. "," .. py .. "|REPAIR|" .. impName:gsub("IMPROVEMENT_", "") .. "|pillaged|" .. cityName .. "|" .. nearId .. "|" .. nearDist)
                         end
                     -- Check for unimproved resource tiles
