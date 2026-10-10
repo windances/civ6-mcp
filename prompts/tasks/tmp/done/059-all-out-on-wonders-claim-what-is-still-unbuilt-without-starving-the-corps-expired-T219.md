@@ -63,3 +63,10 @@ decision the next window needs.
      at: 2026-10-09T04:52:01+08:00
      chinese backup: prompts/tasks/cn/059-all-out-on-wonders-claim-what-is-still-unbuilt-without-starving-the-corps.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 059 --expired --turn 219 --note "cleared by the human after the rollback to T218: the file assumed a fifty-city empire"
+     at: 2026-10-10T12:44:03+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/059-all-out-on-wonders-claim-what-is-still-unbuilt-without-starving-the-corps.cn.md
+-->
