@@ -96,3 +96,10 @@ turn that holds, and record in the diary how many turns it took against the esti
      status: expired at T385
      chinese backup: prompts/tasks/cn/048-four-assault-corps-built-and-assembled-at-the-front.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 048 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:28+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/048-four-assault-corps-built-and-assembled-at-the-front.cn.md
+-->

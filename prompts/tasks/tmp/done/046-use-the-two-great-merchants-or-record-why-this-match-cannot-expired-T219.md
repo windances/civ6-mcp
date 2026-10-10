@@ -63,3 +63,10 @@ can reach it is the open question.
      status: done at T369
      chinese backup: prompts/tasks/cn/046-use-the-two-great-merchants-or-record-why-this-match-cannot.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 046 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:27+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/046-use-the-two-great-merchants-or-record-why-this-match-cannot.cn.md
+-->

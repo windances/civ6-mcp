@@ -76,3 +76,10 @@ how many turns each ring took, and whether the victory screen pause cost anythin
      status: expired at T420
      chinese backup: prompts/tasks/cn/050-take-every-remaining-city-of-georgia-and-india.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 050 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:30+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/050-take-every-remaining-city-of-georgia-and-india.cn.md
+-->

@@ -64,3 +64,10 @@ with a 0-tile idle builder.
      status: done at T362
      chinese backup: prompts/tasks/cn/047-re-order-the-three-builders-that-could-not-start-on-their-tile.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 047 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:28+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/047-re-order-the-three-builders-that-could-not-start-on-their-tile.cn.md
+-->

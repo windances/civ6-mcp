@@ -158,3 +158,10 @@ until T250 retires it.
      status: expired at T250
      chinese backup: prompts/tasks/cn/019-two-scouts-to-sea.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 019 --expired --turn 219 --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:02:12+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/019-two-scouts-to-sea.cn.md
+-->

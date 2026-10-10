@@ -151,3 +151,107 @@ Task 058 was retired as `done/058-assemble-the-siege-corps-and-take-venice-analy
 Task 059 was retired as `done/059-all-out-on-wonders-claim-what-is-still-unbuilt-without-starving-the-corps-expired-T219.md`: cleared by the human after the rollback to T218: the file assumed a fifty-city empire
 
 Task 060 was retired as `done/060-assemble-the-force-and-take-samarkand-after-the-venice-question-is-settled-expired-T219.md`: cleared by the human after the rollback to T218: the corps and the targets are from the discarded branch
+
+Task 019 was restored by the rollback to T219: it was retired at T250, after the target turn, so its `done when:` is false again there.
+
+Task 020 was restored by the rollback to T219: it was retired at T224, after the target turn, so its `done when:` is false again there.
+
+Task 021 was restored by the rollback to T219: it was retired at T270, after the target turn, so its `done when:` is false again there.
+
+Task 022 was restored by the rollback to T219: it was retired at T241, after the target turn, so its `done when:` is false again there.
+
+Task 023 was restored by the rollback to T219: it was retired at T259, after the target turn, so its `done when:` is false again there.
+
+Task 024 was restored by the rollback to T219: it was retired at T221, after the target turn, so its `done when:` is false again there.
+
+Task 025 was restored by the rollback to T219: it was retired at T251, after the target turn, so its `done when:` is false again there.
+
+Task 026 was restored by the rollback to T219: it was retired at T261, after the target turn, so its `done when:` is false again there.
+
+Task 027 was restored by the rollback to T219: it was retired at T259, after the target turn, so its `done when:` is false again there.
+
+Task 028 was restored by the rollback to T219: it was retired at T288, after the target turn, so its `done when:` is false again there.
+
+Task 029 was restored by the rollback to T219: it was retired at T288, after the target turn, so its `done when:` is false again there.
+
+Task 042 was restored by the rollback to T219: it was retired at T321, after the target turn, so its `done when:` is false again there.
+
+Task 043 was restored by the rollback to T219: it was retired at T339, after the target turn, so its `done when:` is false again there.
+
+Task 044 was restored by the rollback to T219: it was retired at T356, after the target turn, so its `done when:` is false again there.
+
+Task 045 was restored by the rollback to T219: it was retired at T385, after the target turn, so its `done when:` is false again there.
+
+Task 046 was restored by the rollback to T219: it was retired at T369, after the target turn, so its `done when:` is false again there.
+
+Task 047 was restored by the rollback to T219: it was retired at T362, after the target turn, so its `done when:` is false again there.
+
+Task 048 was restored by the rollback to T219: it was retired at T385, after the target turn, so its `done when:` is false again there.
+
+Task 049 was restored by the rollback to T219: it was retired at T385, after the target turn, so its `done when:` is false again there.
+
+Task 050 was restored by the rollback to T219: it was retired at T420, after the target turn, so its `done when:` is false again there.
+
+Task 051 was restored by the rollback to T219: it was retired at T399, after the target turn, so its `done when:` is false again there.
+
+Task 052 was restored by the rollback to T219: it was retired at T387, after the target turn, so its `done when:` is false again there.
+
+Task 053 was restored by the rollback to T219: it was retired at T390, after the target turn, so its `done when:` is false again there.
+
+Task 054 was restored by the rollback to T219: it was retired at T393, after the target turn, so its `done when:` is false again there.
+
+Task 055 was restored by the rollback to T219: it was retired at T412, after the target turn, so its `done when:` is false again there.
+
+Task 056 was restored by the rollback to T219: it was retired at T441, after the target turn, so its `done when:` is false again there.
+
+Task 019 was retired as `done/019-two-scouts-to-sea-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 020 was retired as `done/020-take-brussels-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 021 was retired as `done/021-siege-legion-overseas-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 022 was retired as `done/022-take-haarlem-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 023 was retired as `done/023-dutch-siege-corps-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 024 was retired as `done/024-take-brussels-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 025 was retired as `done/025-two-scouts-to-sea-contact-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 026 was retired as `done/026-coastal-navy-frigates-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 027 was retired as `done/027-kill-apostles-mobile-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 028 was retired as `done/028-development-science-wonders-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 029 was retired as `done/029-two-scouts-sea-info-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 042 was retired as `done/042-recover-production-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 043 was retired as `done/043-save-for-upgrades-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 044 was retired as `done/044-schedule-three-modern-armor-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 045 was retired as `done/045-two-carriers-with-aircraft-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 046 was retired as `done/046-use-the-two-great-merchants-or-record-why-this-match-cannot-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 047 was retired as `done/047-re-order-the-three-builders-that-could-not-start-on-their-tile-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 048 was retired as `done/048-four-assault-corps-built-and-assembled-at-the-front-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 049 was retired as `done/049-take-every-remaining-city-of-georgia-and-india-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 050 was retired as `done/050-take-every-remaining-city-of-georgia-and-india-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 051 was retired as `done/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 052 was retired as `done/052-playing-on-after-a-victory-an-option-not-a-stall-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 053 was retired as `done/053-fire-the-first-volley-tsageri-this-turn-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 054 was retired as `done/054-relieve-arnhem-a-barbarian-is-pillaging-the-eastern-rear-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+
+Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219

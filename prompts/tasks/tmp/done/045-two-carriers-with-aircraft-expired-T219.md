@@ -100,3 +100,10 @@ each queue gave up for them.
      status: expired at T385
      chinese backup: prompts/tasks/cn/045-two-carriers-with-aircraft.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 045 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:26+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/045-two-carriers-with-aircraft.cn.md
+-->

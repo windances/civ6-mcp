@@ -61,3 +61,10 @@ Retire this file that turn and record in the diary how many turns the wake-up co
      status: done at T399
      chinese backup: prompts/tasks/cn/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 051 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:31+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/051-wake-the-sleeping-half-of-the-corps-and-march-it-to-the-front.cn.md
+-->

@@ -68,3 +68,10 @@ those hold and record in the diary which turn the victory was reported and wheth
      status: done at T387
      chinese backup: prompts/tasks/cn/052-playing-on-after-a-victory-an-option-not-a-stall.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 052 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:32+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/052-playing-on-after-a-victory-an-option-not-a-stall.cn.md
+-->

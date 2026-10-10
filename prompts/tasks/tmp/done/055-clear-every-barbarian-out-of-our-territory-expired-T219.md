@@ -84,3 +84,10 @@ opening again.
      status: expired at T412
      chinese backup: prompts/tasks/cn/055-clear-every-barbarian-out-of-our-territory.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 055 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:34+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/055-clear-every-barbarian-out-of-our-territory.cn.md
+-->

@@ -135,3 +135,10 @@ Every mechanical half already has a rule or a tactic - `siege-train`, `screen-th
 objective at all**: the standing doctrine says a city-state is not a conquest target and may be attacked
 only for a stated reason, the human has said otherwise for 布鲁塞尔, and that reversal has to travel to
 the turn loop as a file with the instruction written in it as the reason of record.
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 024 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:19+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/024-take-brussels.cn.md
+-->

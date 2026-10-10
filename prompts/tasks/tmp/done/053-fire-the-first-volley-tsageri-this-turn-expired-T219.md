@@ -85,3 +85,10 @@ Tsageri falls, with Akhalkalaki (35,44) the only one needing no wall work at all
      status: done at T390
      chinese backup: prompts/tasks/cn/053-fire-the-first-volley-tsageri-this-turn.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 053 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:32+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/053-fire-the-first-volley-tsageri-this-turn.cn.md
+-->

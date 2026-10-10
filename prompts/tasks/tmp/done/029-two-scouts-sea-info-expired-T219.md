@@ -165,3 +165,10 @@ civilization is still unmet - what the fog did, not that nobody looked.
      status: expired at T288
      chinese backup: prompts/tasks/cn/029-two-scouts-sea-info.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 029 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:23+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/029-two-scouts-sea-info.cn.md
+-->

@@ -75,3 +75,10 @@ standing in are building.
      status: expired at T321
      chinese backup: prompts/tasks/cn/042-recover-production.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 042 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:24+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/042-recover-production.cn.md
+-->

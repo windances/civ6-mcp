@@ -87,3 +87,10 @@ cities built them and what each queue gave up for it.
      status: done at T356
      chinese backup: prompts/tasks/cn/044-schedule-three-modern-armor.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 044 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:25+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/044-schedule-three-modern-armor.cn.md
+-->

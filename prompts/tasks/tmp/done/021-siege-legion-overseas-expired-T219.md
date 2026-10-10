@@ -192,3 +192,10 @@ the clock ran out, which is the failure mode the next campaign's deadline was ch
      status: expired at T270
      chinese backup: prompts/tasks/cn/021-siege-legion-overseas.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 021 --expired --turn 219 --no-gate --no-commit --note "cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219"
+     at: 2026-10-10T13:05:17+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/021-siege-legion-overseas.cn.md
+-->
