@@ -79,3 +79,10 @@ march length, the opening turn of the assault, and the fire count that took the 
      at: 2026-10-09T04:55:53+08:00
      chinese backup: prompts/tasks/cn/060-assemble-the-force-and-take-samarkand-after-the-venice-question-is-settled.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 060 --expired --turn 219 --note "cleared by the human after the rollback to T218: the corps and the targets are from the discarded branch"
+     at: 2026-10-10T12:48:06+08:00
+     status: expired at T219
+     chinese backup: prompts/tasks/cn/060-assemble-the-force-and-take-samarkand-after-the-venice-question-is-settled.cn.md
+-->

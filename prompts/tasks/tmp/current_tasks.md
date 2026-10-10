@@ -141,7 +141,6 @@ Task 051 was retired as `done/051-wake-the-sleeping-half-of-the-corps-and-march-
 Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T412.md`.
 
 Task 050 was retired as `done/050-take-every-remaining-city-of-georgia-and-india-expired-T420.md`: Conquest incomplete: Georgia held 3 cities (Telavi 28,39; Batumi 25,33; Omalo 25,45) and India 2 (Agra 10,38; Ahmadabad 3,41) when the hard stop arrived; the order continues under the standing no-peace conquest directive.
-| `060-assemble-the-force-and-take-samarkand-after-the-venice-question-is-settled.md` | 2026-10-09 | turn 469 | take the second city-state with the same three phases, and settle which of the two sieges the corps does first | count == 1 city named Samarkand in our cities, with >= 4 shooters having fired on the turn it fell, |
 
 Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-done-T441.md`.
 
@@ -150,3 +149,5 @@ Task 057 was retired as `done/057-get-oil-flowing-find-a-source-improve-it-or-bu
 Task 058 was retired as `done/058-assemble-the-siege-corps-and-take-venice-analysis-staging-then-fire-expired-T218.md`: cleared by the human after the rollback to T218: the file was written for the post-T420 empire the rollback discarded
 
 Task 059 was retired as `done/059-all-out-on-wonders-claim-what-is-still-unbuilt-without-starving-the-corps-expired-T219.md`: cleared by the human after the rollback to T218: the file assumed a fifty-city empire
+
+Task 060 was retired as `done/060-assemble-the-force-and-take-samarkand-after-the-venice-question-is-settled-expired-T219.md`: cleared by the human after the rollback to T218: the corps and the targets are from the discarded branch
