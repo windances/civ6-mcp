@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `061-061-three-scouts-explore-and-contact.md` (keep three scouts exploring and making contact, and do not let them be drawn into a fight).
+**IN FORCE NOW:** `061-061-three-scouts-explore-and-contact.md` (keep three scouts exploring and making contact, and do not let them be drawn into a fight) and `062-two-siege-corps.md` (assemble two siege corps of four ranged, two melee and two fast units each, and build only what the inventory shows missing).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and

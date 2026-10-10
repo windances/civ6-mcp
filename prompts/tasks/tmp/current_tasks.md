@@ -256,3 +256,4 @@ Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-exp
 
 Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
 | `061-061-three-scouts-explore-and-contact.md` | 2026-10-10 | turn 249 | keep three scouts exploring and making contact, and do not let them be drawn into a fight | count >= 3 scout-line units are alive and outside our own territory with a move or automate order in |
+| `062-two-siege-corps.md` | 2026-10-10 | turn 269 | assemble two siege corps of four ranged, two melee and two fast units each, and build only what the inventory shows missing | count == 2 corps, each an eight-unit group holding at least four ranged, two melee and two fast |
