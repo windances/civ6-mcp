@@ -263,3 +263,18 @@ numbers if the snapshot has them; the attack order for this turn (which unit hit
 capture unit; and anything that makes the assault fail (unscreened siege, missing melee, no
 siege, ram lost, a relieving stack). Where a number is missing from the snapshot, name the
 missing number rather than filling it in.
+
+## The taking unit's attack counts too (human instruction 2026-10-08)
+
+The melee unit that walks into the city is also a weapon, and the arithmetic has to carry it:
+
+- A melee attack against a city reduces the CITY CENTRE pool - the same pool the guns are breaking, not the
+  walls. Add it to the per-turn damage when the plan is made, or the estimate says one turn more than the
+  truth.
+- The walk-in is a MOVE, not an attack: a melee unit that attacks a city on turn N cannot enter it on turn N.
+  So the choice is explicit - spend the melee's attack to finish the pool a turn sooner, or hold it adjacent
+  with its movement unspent so it takes the city the turn the pool reaches zero.
+- It pays damage back. A melee attack on a city draws a counter-blow; a melee unit that dies on the doorstep
+  has cost the corps a slot, its promotions and the turns spent walking there.
+- The rule that follows: the guns break the pool, and the taking unit spends its attack only when that attack
+  is what ends the pool that turn. Otherwise it stands adjacent, unspent, and waits for the zero.
