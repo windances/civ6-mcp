@@ -12,7 +12,7 @@ doesn't enter your world model. The patterns below exist to compensate for this.
 
 ## Temporary tasks are files: read `prompts/tasks/tmp/` at the start of every turn
 
-**IN FORCE NOW:** `061-061-three-scouts-explore-and-contact.md` (keep three scouts exploring and making contact, and do not let them be drawn into a fight) and `062-two-siege-corps.md` (assemble two siege corps of four ranged, two melee and two fast units each, and build only what the inventory shows missing) and `063-barbarian-clearing-corps.md` (form a seven-slot barbarian-clearing corps once the two siege corps are complete, then clear every camp and raider from our ground) and `064-fix-what-caps-production.md` (fix what caps a city's productivity - housing, food, amenities and pillaged ground - before anything new is built).
+**IN FORCE NOW:** `061-061-three-scouts-explore-and-contact.md` (keep three scouts exploring and making contact, and do not let them be drawn into a fight) and `062-two-siege-corps.md` (assemble two siege corps of four ranged, two melee and two fast units each, and build only what the inventory shows missing) and `063-barbarian-clearing-corps.md` (form a seven-slot barbarian-clearing corps once the two siege corps are complete, then clear every camp and raider from our ground) and `064-fix-what-caps-production.md` (fix what caps a city's productivity - housing, food, amenities and pillaged ground - before anything new is built) and `065-naval-corps.md` (build a naval corps of two ranged and two melee ships in the coastal cities).
 
 A temporary instruction is **a file, not a paragraph in this reference**. This section is the
 *procedure* for them: how to obtain them, how to read one, how to tell which are still in force, and
