@@ -278,3 +278,59 @@ The melee unit that walks into the city is also a weapon, and the arithmetic has
   has cost the corps a slot, its promotions and the turns spent walking there.
 - The rule that follows: the guns break the pool, and the taking unit spends its attack only when that attack
   is what ends the pool that turn. Otherwise it stands adjacent, unspent, and waits for the zero.
+
+## The siege, in order - four phases, none of them optional (human instruction 2026-10-08)
+
+This is the whole assault, in the order it happens. Phase 1 is `tactics/07-pre-war-analysis.md` and phase 2 is
+`tactics/04-staging-out-of-range.md`; phases 3 and 4 are this file. It is written in one place because a skipped
+phase is how a corps dies in front of a city it could have taken.
+
+### Phase 1 - the pre-war analysis, before a unit moves
+
+- `get_target_report` on the target tile: the walls and their pool, the CITY CENTRE pool, the garrison, the defence
+  strength, the enemy units within three tiles, and the per-tile FIRE verdicts. It works before a declaration and in fog.
+- The arithmetic, in the diary: what the walls are, what each gun does per turn against that pool, what the city heals
+  back (about twenty points a turn), how many turns that is, and what it costs.
+- If the arithmetic says the siege cannot be won, it is not opened. Name the one unit or the one change that would win it.
+- A city-state Suzerain holding a defensive pact is read before anything is declared, and named.
+
+### Phase 2 - the staging, before the first move
+
+- `get_staging_plan`: one row per unit, the tile it goes to, the turn it arrives, and whether that tile can shoot.
+- The FARTHEST firing tile is filled first, and each shooter stands at its OWN range. A gun that closes to two tiles
+  when it could fire from three has volunteered to be hit.
+- Never two units on one tile. Melee and anti-cavalry in front of the guns; the guns never adjacent to the city.
+
+### Phase 3 - the walls to zero, then the pool to zero
+
+Two pools, in this order, and the tool prints both - read them, do not assume:
+
+- While the wall pool stands, ranged and siege fire reduce THE WALLS. That is what the guns are for in this phase.
+- Once the walls are zero, the same fire reduces the CITY CENTRE pool.
+- A melee attack does not strip walls: it goes at the city itself, and it draws a counter-blow. That is why the taking
+  unit is the finisher, not the wall-breaker - it is spent once, at the end, not every turn at the start.
+- The city heals about twenty points a turn. Skipping a turn of fire can undo one volley, so the fire is continuous until
+  the city is ours or the arithmetic says break off.
+
+### Phase 4 - the walk-in, and the capture
+
+- The city is taken by a MOVE, not by damage: a melee unit moves onto the city tile while the centre pool is zero.
+- Only a melee-class unit can do it - ranged and siege units never capture.
+- The walk-in needs the unit adjacent with movement left, so the plan holds it unspent when the pool is within one turn
+  of zero (the choice is written out in the section above).
+- Then the capture is resolved with the keep decision and ONE garrison unit stays in the city. A city left without a
+  garrison is a city that flips back.
+
+### Minimising losses - the rules that buy it
+
+1. Fire from outside the city's answer range, at each unit's own range. Damage taken is damage that was not necessary.
+2. Never end a move adjacent to the city with a unit that cannot survive the strike - the city strike reaches two tiles
+   and hits the nearest thing.
+3. Screen in front: melee and anti-cavalry take the counter-blows that the guns would otherwise eat.
+4. Hit the city every turn, or do not start: a city at partial damage heals, and a paused siege is a siege that pays twice.
+5. Withdraw and heal a unit below roughly half strength instead of trading it for one more volley. A promotion and a
+   veteran unit are worth more than sixty points of wall.
+6. Break off when the wall pool regenerates faster than the fire takes it, and say so in the diary. A siege that cannot
+   finish is a corps the empire cannot use elsewhere.
+7. Never a battering ram and never a siege tower - the standing match rule. The wall is opened by fire, or by waiting.
+8. One corps per city, unless a second corps still has enough shooters to break its own pool - two thin attacks kill neither.
