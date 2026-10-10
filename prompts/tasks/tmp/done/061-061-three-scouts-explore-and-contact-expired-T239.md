@@ -105,3 +105,10 @@ and refusing every fight is cheaper than replacing them one at a time." --cn "ä¸
      at: 2026-10-10T13:29:22+08:00
      chinese backup: prompts/tasks/cn/061-061-three-scouts-explore-and-contact.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 061 --expired --turn 239 --note "replaced by 071: one scout instead of three, on the human instruction"
+     at: 2026-10-10T23:44:43+08:00
+     status: expired at T239
+     chinese backup: prompts/tasks/cn/061-061-three-scouts-explore-and-contact.cn.md
+-->
