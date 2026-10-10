@@ -76,3 +76,10 @@ its turn cost, the staging table's opening turn, and the fire count that took th
      at: 2026-10-09T04:48:01+08:00
      chinese backup: prompts/tasks/cn/058-assemble-the-siege-corps-and-take-venice-analysis-staging-then-fire.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 058 --expired --turn 218 --note "cleared by the human after the rollback to T218: the file was written for the post-T420 empire the rollback discarded"
+     at: 2026-10-10T12:38:55+08:00
+     status: expired at T218
+     chinese backup: prompts/tasks/cn/058-assemble-the-siege-corps-and-take-venice-analysis-staging-then-fire.cn.md
+-->
