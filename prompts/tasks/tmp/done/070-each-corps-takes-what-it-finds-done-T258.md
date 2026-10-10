@@ -127,3 +127,10 @@ Never propose peace. Never field a battering ram or a siege tower. Never open a 
      at: 2026-10-10T23:25:08+08:00
      chinese backup: prompts/tasks/cn/070-each-corps-takes-what-it-finds.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 070 --done --turn 258
+     at: 2026-10-11T00:40:13+08:00
+     status: done at T258
+     chinese backup: prompts/tasks/cn/070-each-corps-takes-what-it-finds.cn.md
+-->

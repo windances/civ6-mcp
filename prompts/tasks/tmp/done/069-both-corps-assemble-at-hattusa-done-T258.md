@@ -114,3 +114,10 @@ the snapshot. The first corps may join that fight; two corps on one city is allo
      at: 2026-10-10T22:48:39+08:00
      chinese backup: prompts/tasks/cn/069-both-corps-assemble-at-hattusa.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 069 --done --turn 258 --note "both siege corps have assembled at the rally area near Hattusa, confirmed by the human"
+     at: 2026-10-11T00:41:12+08:00
+     status: done at T258
+     chinese backup: prompts/tasks/cn/069-both-corps-assemble-at-hattusa.cn.md
+-->

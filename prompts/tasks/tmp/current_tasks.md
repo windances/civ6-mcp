@@ -260,8 +260,6 @@ Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maxi
 | `064-fix-what-caps-production.md` | 2026-10-10 | turn 264 | fix what caps a city's productivity - housing, food, amenities and pillaged ground - before anything new is built | count == 0 cities where housing minus pop is <= 1, count == 0 cities with food_surplus <= 0, count |
 | `065-naval-corps.md` | 2026-10-10 | turn 274 | build a naval corps of two ranged and two melee ships in the coastal cities | count == 2 naval ranged units and count == 2 naval melee units, all four alive and within three |
 | `067-second-corps-rallies-near-hattusa.md` | 2026-10-10 | turn 288 | rally the second siege corps near the city-state the human named, and designate the first newly seen city as its target | count == 8 second-corps units alive inside one rally area within six tiles of Hattusa, and the diary |
-| `069-both-corps-assemble-at-hattusa.md` | 2026-10-10 | turn 273 | march both siege corps to the rally area near the city-state the human named, under strength, on the human instruction | count >= 6 units of the two siege corps, at least two of them from each corps, alive inside one |
-| `070-each-corps-takes-what-it-finds.md` | 2026-10-10 | turn 297 | let both siege corps act independently and take every enemy city they discover, one at a time, under the siege doctrine | count >= 4 enemy cities have been taken since this file was published, each with its three phases |
 | `071-one-scout-explore-and-contact.md` | 2026-10-10 | turn 272 | keep a single scout exploring and making contact, and do not let it be drawn into a fight | count >= 1 scout-line unit is alive and outside our own territory with a move or automate order in |
 | `072-count-the-taking-unit-attack.md` | 2026-10-11 | turn 285 | count the taking unit attack as pool damage, and choose explicitly between spending it and holding it for the walk-in | count >= 1 siege plan in the diary carries the taking unit attack in its per-turn pool arithmetic |
 
@@ -270,3 +268,7 @@ Task 066 was retired as `done/066-first-corps-takes-brussels-done-T227.md`: the 
 Task 068 was retired as `done/068-open-the-assault-now-under-strength-done-T227.md`: an assault opened under strength: corps A entered at 8 of 8 with its five Bombards attached, corps B at 2 of 8 alive (ranged 1, melee 1, fast 0, with 3 ranged / 1 melee / 2 fast still in queues); Brussels fell at T227 on the T226-T227 fire, with the role-by-role strength recorded in the T226 and T227 diary entries
 
 Task 061 was retired as `done/061-061-three-scouts-explore-and-contact-expired-T239.md`: replaced by 071: one scout instead of three, on the human instruction
+
+Task 070 was retired as `done/070-each-corps-takes-what-it-finds-done-T258.md`.
+
+Task 069 was retired as `done/069-both-corps-assemble-at-hattusa-done-T258.md`: both siege corps have assembled at the rally area near Hattusa, confirmed by the human

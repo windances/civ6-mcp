@@ -120,3 +120,10 @@ used well rather than simply used.
      at: 2026-10-10T22:39:01+08:00
      chinese backup: prompts/tasks/cn/068-open-the-assault-now-under-strength.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 068 --done --turn 227 --note "an assault opened under strength: corps A entered at 8 of 8 with its five Bombards attached, corps B at 2 of 8 alive (ranged 1, melee 1, fast 0, with 3 ranged / 1 melee / 2 fast still in queues); Brussels fell at T227 on the T226-T227 fire, with the role-by-role strength recorded in the T226 and T227 diary entries"
+     at: 2026-10-10T22:48:18+08:00
+     status: done at T227
+     chinese backup: prompts/tasks/cn/068-open-the-assault-now-under-strength.cn.md
+-->

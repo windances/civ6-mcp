@@ -370,12 +370,7 @@ that trusted it would record itself achieved on the turn a snapshot read failed,
 file and restored only under a new id - a false achievement is permanent, which is why this goal waits
 for evidence that the list it is reading is real.
 
-<!-- check
-id: use-the-great-scientist
-require: units(GREAT_SCIENTIST) == 0 and units(BUILDER, TRADER, SETTLER) > 0
-message: A Great Scientist of ours still holds her charge. The game names the requirement when she is asked to activate: a city that holds an Artifact. Walk her to one and activate her there. Deleting her clears this line as well and is the one outcome that wastes her - if she cannot be placed, say so in the diary instead. The two Great Merchants are the same question behind a harder door (their activation tile belongs to a city-state) and they are not a goal here for the reason above: their metric would be satisfied by deleting them.
-once: true
--->
+<!-- achieved T221: use-the-great-scientist (game: china_-1894041591) (original in archive/turn-checks-20261010-222329.md) -->
 
 ## Per-turn habits
 

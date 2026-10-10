@@ -143,3 +143,10 @@ finished until they are written.
      at: 2026-10-10T22:21:23+08:00
      chinese backup: prompts/tasks/cn/066-first-corps-takes-brussels.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 066 --done --turn 227 --note "the first corps' target Brussels (69,29) is a Chinese city (id 1310739, pop 7, Cuirassier garrison, loyalty 50 gaining +14/turn); the three phases are in the T220/T226/T227 diary entries; SHORTFALL recorded - only two of the corps' shooters (Bombards 4128794 and 4980745) fired on the turn it fell, so the four-shooter clause did not hold, because melee attacks on the garrison-less city are retaliation-free at 69 damage and the Cuirassier's attack captured it outright"
+     at: 2026-10-10T22:46:04+08:00
+     status: done at T227
+     chinese backup: prompts/tasks/cn/066-first-corps-takes-brussels.cn.md
+-->
