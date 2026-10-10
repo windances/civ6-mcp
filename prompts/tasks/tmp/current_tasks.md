@@ -255,3 +255,4 @@ Task 054 was retired as `done/054-relieve-arnhem-a-barbarian-is-pillaging-the-ea
 Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
 
 Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
+| `061-061-three-scouts-explore-and-contact.md` | 2026-10-10 | turn 249 | keep three scouts exploring and making contact, and do not let them be drawn into a fight | count >= 3 scout-line units are alive and outside our own territory with a move or automate order in |
