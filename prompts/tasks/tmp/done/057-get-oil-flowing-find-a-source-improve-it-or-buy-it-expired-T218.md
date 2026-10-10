@@ -66,3 +66,10 @@ the `moves` check recorded. Then retire this file.
      at: 2026-10-09T04:15:52+08:00
      chinese backup: prompts/tasks/cn/057-get-oil-flowing-find-a-source-improve-it-or-buy-it.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 057 --expired --turn 218 --note "cleared by the human after the rollback to T218: the file was written for the post-T420 empire the rollback discarded"
+     at: 2026-10-10T12:31:42+08:00
+     status: expired at T218
+     chinese backup: prompts/tasks/cn/057-get-oil-flowing-find-a-source-improve-it-or-buy-it.cn.md
+-->
