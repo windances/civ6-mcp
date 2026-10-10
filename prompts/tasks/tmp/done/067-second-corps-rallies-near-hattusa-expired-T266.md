@@ -136,3 +136,10 @@ does not take the corps away from task 062's composition, and it does not touch 
      at: 2026-10-10T22:29:09+08:00
      chinese backup: prompts/tasks/cn/067-second-corps-rallies-near-hattusa.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 067 --expired --turn 266 --note "withdrawn by the human: the second corps no longer rallies at a named city-state, because the new file lets each corps choose its own enemy target"
+     at: 2026-10-11T01:27:24+08:00
+     status: expired at T266
+     chinese backup: prompts/tasks/cn/067-second-corps-rallies-near-hattusa.cn.md
+-->

@@ -256,7 +256,6 @@ Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-exp
 
 Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
 | `063-barbarian-clearing-corps.md` | 2026-10-10 | turn 279 | form a seven-slot barbarian-clearing corps once the two siege corps are complete, then clear every camp and raider from our ground | count == 0 barbarian camps and count == 0 barbarian units inside our borders or within three tiles |
-| `067-second-corps-rallies-near-hattusa.md` | 2026-10-10 | turn 288 | rally the second siege corps near the city-state the human named, and designate the first newly seen city as its target | count == 8 second-corps units alive inside one rally area within six tiles of Hattusa, and the diary |
 | `071-one-scout-explore-and-contact.md` | 2026-10-10 | turn 272 | keep a single scout exploring and making contact, and do not let it be drawn into a fight | count >= 1 scout-line unit is alive and outside our own territory with a move or automate order in |
 | `072-count-the-taking-unit-attack.md` | 2026-10-11 | turn 285 | count the taking unit attack as pool damage, and choose explicitly between spending it and holding it for the walk-in | count >= 1 siege plan in the diary carries the taking unit attack in its per-turn pool arithmetic |
 | `064-fix-what-caps-production.md` | 2026-10-11 | turn 300 | fix what caps a city productivity - housing, food, amenities and pillaged ground - and measure progress against the turn this revision was published | count == 0 cities newly added to any of the four cap lists for five consecutive turns, while each of |
@@ -273,3 +272,5 @@ Task 061 was retired as `done/061-061-three-scouts-explore-and-contact-expired-T
 Task 070 was retired as `done/070-each-corps-takes-what-it-finds-done-T258.md`.
 
 Task 069 was retired as `done/069-both-corps-assemble-at-hattusa-done-T258.md`: both siege corps have assembled at the rally area near Hattusa, confirmed by the human
+
+Task 067 was retired as `done/067-second-corps-rallies-near-hattusa-expired-T266.md`: withdrawn by the human: the second corps no longer rallies at a named city-state, because the new file lets each corps choose its own enemy target
