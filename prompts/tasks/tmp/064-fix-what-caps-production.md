@@ -1,8 +1,10 @@
 ﻿# TEMP TASK 064 - Raise the cap on every city before building inside it
 
 added:     2026-10-11 (human instruction: 优先解决影响生产力的因数，保持城市健康发展。)
-expires:   turn 300 - 40 turn(s) from T260, the turn the match stands on (read from the save); a hard stop,
-           retired either way on that turn
+expires:   turn 340 - a hard stop, retired either way on that turn. Extended from turn 300 on turn 291,
+           because the four caps are standing work on a nineteen-city empire and not a window: the
+           same revision measures progress from the turn it was published, so the finish line does
+           not move.
 done when: count == 0 cities newly added to any of the four cap lists for five consecutive turns, while each of
            the four lists - housing minus pop <= 1, food surplus <= 0, amenities below 3, pillaged
            districts or buildings - is strictly shorter than on the turn this revision was

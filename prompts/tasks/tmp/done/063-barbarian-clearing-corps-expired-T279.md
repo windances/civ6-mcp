@@ -124,3 +124,10 @@ melee slot's job. A siege unit cannot do it - it cannot attack units at all |
      at: 2026-10-10T21:35:27+08:00
      chinese backup: prompts/tasks/cn/063-barbarian-clearing-corps.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 063 --expired --turn 279
+     at: 2026-10-11T12:18:45+08:00
+     status: expired at T279
+     chinese backup: prompts/tasks/cn/063-barbarian-clearing-corps.cn.md
+-->
