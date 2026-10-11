@@ -81,3 +81,10 @@ replaced or healed. A corps of eight on paper and six in the field is not what t
      at: 2026-10-11T01:14:20+08:00
      chinese backup: prompts/tasks/cn/062-two-siege-corps.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 062 --done --turn 284
+     at: 2026-10-11T12:14:41+08:00
+     status: done at T284
+     chinese backup: prompts/tasks/cn/062-two-siege-corps.cn.md
+-->
