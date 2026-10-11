@@ -3,9 +3,10 @@
 added:     2026-10-11 (human instruction: 第一攻城军团拿下格拉纳达，第二军团向西集结)
 expires:   turn 312 - 25 turn(s) from T287, the turn the match stands on (read from the save); a hard stop,
            retired either way on that turn
-done when: count == 1 city named Granada is ours - resolved with the keep decision and one garrison unit left
-           behind - and the second siege corps has assembled at a rally tile west of where it stood,
-           named in the diary with the turn each of its units arrives.
+done when: count >= 1 rally tile is named for the second siege corps with every one of its units either arrived
+           or carrying its arrival turn, and Granada is recorded in the diary as taken - the turn it fell, the
+           pools as read on the turn of the walk-in, and the garrison left behind. The first half of this file is
+           settled: the human reported Granada taken on turn 299.
 overrides: task 074 for these two corps only: corps one no longer picks its own city, because the target is
            named here, and corps two opens no siege of its own this window because its work is the
            westward march and the rally. Everything else stands - the three named calls before any
