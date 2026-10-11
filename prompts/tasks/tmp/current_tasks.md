@@ -255,8 +255,6 @@ Task 054 was retired as `done/054-relieve-arnhem-a-barbarian-is-pillaging-the-ea
 Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
 
 Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
-| `063-barbarian-clearing-corps.md` | 2026-10-10 | turn 279 | form a seven-slot barbarian-clearing corps once the two siege corps are complete, then clear every camp and raider from our ground | count == 0 barbarian camps and count == 0 barbarian units inside our borders or within three tiles |
-| `072-count-the-taking-unit-attack.md` | 2026-10-11 | turn 285 | count the taking unit attack as pool damage, and choose explicitly between spending it and holding it for the walk-in | count >= 1 siege plan in the diary carries the taking unit attack in its per-turn pool arithmetic |
 | `064-fix-what-caps-production.md` | 2026-10-11 | turn 300 | fix what caps a city productivity - housing, food, amenities and pillaged ground - and measure progress against the turn this revision was published | count == 0 cities newly added to any of the four cap lists for five consecutive turns, while each of |
 | `073-staging-table-before-the-first-volley.md` | 2026-10-11 | turn 301 | require the staging table per assault before its first volley, and record it in the diary | count >= 1 staging table per assault exists - a get_staging_plan call whose output is written into |
 | `065-naval-corps.md` | 2026-10-11 | turn 299 | build a fleet of two melee and three ranged warships, commission them as they appear, and clear barbarians and enemy units from our coast | count >= 5 ships in the fleet - at least two naval melee and three naval ranged - and count == 0 |
@@ -278,3 +276,7 @@ Task 067 was retired as `done/067-second-corps-rallies-near-hattusa-expired-T266
 Task 071 was retired as `done/071-one-scout-explore-and-contact-expired-T278.md`: six turns past its hard stop and never satisfied: the single scout was never confirmed alive outside our territory
 
 Task 062 was retired as `done/062-two-siege-corps-done-T284.md`.
+
+Task 063 was retired as `done/063-barbarian-clearing-corps-expired-T279.md`.
+
+Task 072 was retired as `done/072-count-the-taking-unit-attack-expired-T287.md`: two turns past its hard stop: the taking unit arithmetic was folded into task 074 own text

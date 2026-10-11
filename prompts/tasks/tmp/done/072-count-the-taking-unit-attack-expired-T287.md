@@ -51,3 +51,10 @@ pool, and SIEGE PROGRESS and TAKE THE CITY in the end_turn result are the confir
      at: 2026-10-11T00:02:57+08:00
      chinese backup: prompts/tasks/cn/072-count-the-taking-unit-attack.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 072 --expired --turn 287 --note "two turns past its hard stop: the taking unit arithmetic was folded into task 074 own text"
+     at: 2026-10-11T12:19:28+08:00
+     status: expired at T287
+     chinese backup: prompts/tasks/cn/072-count-the-taking-unit-attack.cn.md
+-->
