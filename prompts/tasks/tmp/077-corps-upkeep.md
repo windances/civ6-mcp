@@ -41,8 +41,9 @@ estimate the march by hand - the game paths the map, we do not.
 ## The general, and the shape of the war
 
 8. A Great General or Great Admiral travels with the corps it strengthens and is never activated for the one-off - the aura is the whole value, and activation retires it.
-9. One war at a time (tactics/08): a corps does not open a second front while its own city is under siege, and a corps that has just taken a city garrisons it before it
-prepares the next target.
+9. Several wars may run at once and several cities may be under attack at the same time (human instruction: 全帝国可以有多场战争，允许同时攻击多座城市). What a corps
+still does before it opens anything is the arithmetic, and after it takes a city it leaves a garrison. It does not wait for the other
+corps to finish.
 10. The screen leads: the melee and anti-cavalry line arrives first and stands between the raiders and our ground; ranged and siege stage behind them. A corps whose
 screen is short does not open an assault - it is the file that says so, and task 074 is the file that says how.
 
@@ -121,3 +122,8 @@ next siege.
      at: 2026-10-11T14:34:40+08:00
      chinese backup: prompts/tasks/cn/077-corps-upkeep.cn.md
 -->
+
+12. A shortfall is filled from inside the army first, then from a city queue, and a purchase only above the gold reserve the directive sets -
+new hulls never eat the upgrade budget.
+13. Holding an assault is not holding fire: a legal attack in range is still taken, because turn-checks `use-your-attacks` bounces the turn while
+any unit leaves an attack unused. Screen short means do not OPEN the siege; it never means do not shoot.

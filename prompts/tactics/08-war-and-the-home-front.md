@@ -78,6 +78,12 @@ not fighting from; the war city's queue is siege, melee, upgrades and its own wa
 
 ## Step 2 — split the cities once: one war city, everything else compounds
 
+**全帝国可以有多场战争，允许同时攻击多座城市** (human instruction): the empire may fight several wars at once, and several cities may be under attack
+at the same time. This supersedes the one-war-city rule below wherever the two disagree. What the old rule was protecting
+still holds and is not relaxed: the gold floor, the development queues, the pre-war arithmetic that decides whether a siege is
+winnable, and one garrison per captured city. The change is that a second front is now permitted, not that the checks are gone.
+
+
 - **The war city** — the highest-production city — builds units, siege and the Encampment/Barracks,
   and nothing else for the duration. That is the queue the whole army comes out of.
 - **Every other city builds the next district, or its building.** In this war: 西安 Campus (5t),

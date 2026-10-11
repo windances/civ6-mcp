@@ -39,10 +39,13 @@ units within three tiles. A city is a candidate only if the arithmetic on those 
 9. Once the first volley is fired the target is frozen. No shopping for a better city mid-siege.
 10. The two corps pick different cities unless only one is worth taking. Two thin attacks kill neither.
 
-## One war at a time
+## How many wars
 
-11. The empire fights one war at a time (tactics/08): a corps does not open a second front while the first city is still under siege, and a corps that has taken its city
-garrisons it before it prepares the next one.
+11. Several wars may be fought at the same time and several cities may be under attack at once (human instruction: 全帝国可以有多场战争，允许同时攻击多座城市).
+This supersedes the one-war rule in tactics/08: the two corps may besiege two different cities on the same turn, and a corps that has taken
+its city garrisons it and prepares the next one without waiting for the other front to finish.
+12. What is still not permitted is a siege the arithmetic says we lose, and a city left without a garrison after it falls. Both corps open
+their own siege on the numbers, and both leave a garrison.
 
 ## Then the four phases, every time
 

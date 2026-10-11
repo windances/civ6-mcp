@@ -336,7 +336,7 @@ how the programme read this obligation - as a status line rather than as work. T
 corrected 60% -> 50% to match `Expansion2_Civilizations.xml:73` and the directive's own correction;
 the archived copy still says 60%.
 -->
-<!-- achieved T219: dynasty-cycle-wonder (game: china_-1894041591) (original in archive/turn-checks-20261010-125939.md) -->
+<!-- achieved T266: dynasty-cycle-wonder (game: china_-1894041591) (original in archive/turn-checks-20261011-012528.md) -->
 
 <!-- check
 id: idle-district-slot
@@ -370,7 +370,7 @@ that trusted it would record itself achieved on the turn a snapshot read failed,
 file and restored only under a new id - a false achievement is permanent, which is why this goal waits
 for evidence that the list it is reading is real.
 
-<!-- achieved T221: use-the-great-scientist (game: china_-1894041591) (original in archive/turn-checks-20261010-222329.md) -->
+<!-- achieved T266: use-the-great-scientist (game: china_-1894041591) (original in archive/turn-checks-20261011-012528.md) -->
 
 ## Per-turn habits
 
