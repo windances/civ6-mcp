@@ -88,3 +88,10 @@ boost and a war we cannot see coming. One scout that never fights is the cheapes
      at: 2026-10-10T23:52:21+08:00
      chinese backup: prompts/tasks/cn/071-one-scout-explore-and-contact.cn.md
 -->
+
+<!-- retired by scripts/temp-task.py
+     command: python scripts/temp-task.py retire 071 --expired --turn 278 --note "six turns past its hard stop and never satisfied: the single scout was never confirmed alive outside our territory"
+     at: 2026-10-11T11:08:58+08:00
+     status: expired at T278
+     chinese backup: prompts/tasks/cn/071-one-scout-explore-and-contact.cn.md
+-->

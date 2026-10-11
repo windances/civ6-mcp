@@ -256,12 +256,12 @@ Task 055 was retired as `done/055-clear-every-barbarian-out-of-our-territory-exp
 
 Task 056 was retired as `done/056-stage-ranged-and-siege-units-at-their-own-maximum-range-expired-T219.md`: cleared in bulk on the human's instruction after the rollback; new tasks will be published for T219
 | `063-barbarian-clearing-corps.md` | 2026-10-10 | turn 279 | form a seven-slot barbarian-clearing corps once the two siege corps are complete, then clear every camp and raider from our ground | count == 0 barbarian camps and count == 0 barbarian units inside our borders or within three tiles |
-| `071-one-scout-explore-and-contact.md` | 2026-10-10 | turn 272 | keep a single scout exploring and making contact, and do not let it be drawn into a fight | count >= 1 scout-line unit is alive and outside our own territory with a move or automate order in |
 | `072-count-the-taking-unit-attack.md` | 2026-10-11 | turn 285 | count the taking unit attack as pool damage, and choose explicitly between spending it and holding it for the walk-in | count >= 1 siege plan in the diary carries the taking unit attack in its per-turn pool arithmetic |
 | `064-fix-what-caps-production.md` | 2026-10-11 | turn 300 | fix what caps a city productivity - housing, food, amenities and pillaged ground - and measure progress against the turn this revision was published | count == 0 cities newly added to any of the four cap lists for five consecutive turns, while each of |
 | `073-staging-table-before-the-first-volley.md` | 2026-10-11 | turn 301 | require the staging table per assault before its first volley, and record it in the diary | count >= 1 staging table per assault exists - a get_staging_plan call whose output is written into |
 | `065-naval-corps.md` | 2026-10-11 | turn 299 | build a fleet of two melee and three ranged warships, commission them as they appear, and clear barbarians and enemy units from our coast | count >= 5 ships in the fleet - at least two naval melee and three naval ranged - and count == 0 |
 | `062-two-siege-corps.md` | 2026-10-11 | turn 286 | complete the two siege corps as rosters of eight, with the rally-tile position clause removed | count == 2 corps of eight units each - at least four ranged, two melee and two fast in each, |
+| `074-each-corps-picks-its-own-city.md` | 2026-10-11 | turn 307 | let each siege corps choose its own enemy city and take it | count >= 2 enemy cities have been captured since this file was published, at least one by each of |
 
 Task 066 was retired as `done/066-first-corps-takes-brussels-done-T227.md`: the first corps' target Brussels (69,29) is a Chinese city (id 1310739, pop 7, Cuirassier garrison, loyalty 50 gaining +14/turn); the three phases are in the T220/T226/T227 diary entries; SHORTFALL recorded - only two of the corps' shooters (Bombards 4128794 and 4980745) fired on the turn it fell, so the four-shooter clause did not hold, because melee attacks on the garrison-less city are retaliation-free at 69 damage and the Cuirassier's attack captured it outright
 
@@ -274,3 +274,5 @@ Task 070 was retired as `done/070-each-corps-takes-what-it-finds-done-T258.md`.
 Task 069 was retired as `done/069-both-corps-assemble-at-hattusa-done-T258.md`: both siege corps have assembled at the rally area near Hattusa, confirmed by the human
 
 Task 067 was retired as `done/067-second-corps-rallies-near-hattusa-expired-T266.md`: withdrawn by the human: the second corps no longer rallies at a named city-state, because the new file lets each corps choose its own enemy target
+
+Task 071 was retired as `done/071-one-scout-explore-and-contact-expired-T278.md`: six turns past its hard stop and never satisfied: the single scout was never confirmed alive outside our territory
